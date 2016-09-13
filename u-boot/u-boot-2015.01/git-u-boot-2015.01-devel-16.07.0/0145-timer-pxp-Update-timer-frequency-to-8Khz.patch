@@ -1,0 +1,34 @@
+From 3facf777a93b3bf07db4c8ae43ecd573262cc42b Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Wed, 11 Mar 2015 12:51:20 +0200
+Subject: [PATCH 0145/1240] timer: pxp: Update timer frequency to 8Khz
+
+	Time frequency on PXP should be set to 8KHz (according to
+	a calculation done manually by reading the timer counter manually
+	and calculating the ticks-per-second).
+
+Change-Id: Id2624bc5f112e432d80104d6379619ec94e1275b
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17464
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ include/configs/armada8k.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index 3e7352a..f020a4a 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -46,7 +46,7 @@
+ #define CONFIG_REMAKE_ELF
+ 
+ /* Clock Definitions */
+-#define COUNTER_FREQUENCY	(46300)
++#define COUNTER_FREQUENCY	(8000)
+ #define CONFIG_MSS_FREQUENCY	(125000)
+ 
+ /* SPL */
+-- 
+1.9.1
+

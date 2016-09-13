@@ -1,0 +1,69 @@
+From 99990a8a1ba2984fbf1962bfb87288f97bc5ff42 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Thu, 31 Mar 2016 21:03:13 +0300
+Subject: [PATCH 098/239] mv_ddr: apn806: Add customer board topology
+
+Change-Id: Ife24dd0b431d4bbfbc502d76430de84eb37e01c0
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28718
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28856
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_brd.c | 34 +++++++++++++++++------
+ 1 file changed, 26 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_brd.c b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_brd.c
+index 0f5ce15..c7dbffd 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_brd.c
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_brd.c
+@@ -111,21 +111,39 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define BUS_WIDTH_DB_70x0	BUS_WIDTH_8
+ #endif /* CONFIG_DDR4 */
+ 
+-/* Marvell board - Board_ID = DB_68XX_ID = 1 (DDR3/4)*/
+ static struct hws_topology_map board_topology_map = {
++#if defined(a70x0)
++/* FIXME: MISL board 2CS 4Gb x8 devices of micron - 2133P */
+ 	0x1, /* active interfaces */
+-	/* cs_mask, mirror, dqs_swap, ck_swap X PUPs */
++	/* cs_mask, mirror, dqs_swap, ck_swap X subphys */
+ 	{ { { {0x1, 0x0, 0, 0},
+ 	      {0x1, 0x0, 0, 0},
+ 	      {0x1, 0x0, 0, 0},
+ 	      {0x1, 0x0, 0, 0} },
+-	    SPEED_BIN_DDR_DB_70x0,	/* speed_bin */
+-	    BUS_WIDTH_DB_70x0,		/* memory_width */
+-	    MEM_4G,			/* mem_size */
+-	    DDR_FREQ_800,		/* frequency */
+-	    0, 0,			/* cas_l, cas_wl */
+-	    HWS_TEMP_LOW} },		/* temperature */
++	   SPEED_BIN_DDR_DB_70x0,	/* speed_bin */
++	   BUS_WIDTH_DB_70x0,		/* memory_width */
++	   MEM_4G,			/* mem_size */
++	   DDR_FREQ_800,		/* frequency */
++	   0, 0,			/* cas_l, cas_wl */
++	   HWS_TEMP_LOW} },		/* temperature */
+ 	BUS_MASK_32BIT			/* Buses mask */
++#elif defined(a70x0_cust)
++/* Customer board with 1CS 8Gb x4 devices of Samsung 2400 (17-17-17) */
++	0x1, /* active interfaces */
++	/* cs_mask, mirror, dqs_swap, ck_swap X subphys */
++	{ { { {0x1, 0x0, 0, 0},
++	      {0x1, 0x0, 0, 0},
++	      {0x1, 0x0, 0, 0},
++	      {0x1, 0x0, 0, 0} },
++	   SPEED_BIN_DDR_2400S,		/* speed_bin */
++	   BUS_WIDTH_DB_70x0,		/* memory_width */
++	   MEM_8G,			/* mem_size */
++	   DDR_FREQ_800,		/* frequency */
++	   0, 0,			/* cas_l, cas_wl */
++	   HWS_TEMP_LOW} },		/* temperature */
++	BUS_MASK_32BIT			/* Buses mask */
++
++#endif
+ };
+ 
+ struct hws_topology_map *ddr3_get_topology_map(void)
+-- 
+1.9.1
+

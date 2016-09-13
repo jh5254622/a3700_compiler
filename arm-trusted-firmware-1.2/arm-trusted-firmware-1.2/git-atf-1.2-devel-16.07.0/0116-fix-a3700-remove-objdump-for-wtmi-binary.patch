@@ -1,0 +1,32 @@
+From 95b5209dfec879a7db95253bf51b1290f00aabea Mon Sep 17 00:00:00 2001
+From: Wilson Ding <dingwei@marvell.com>
+Date: Fri, 15 Apr 2016 11:08:35 +0800
+Subject: [PATCH 116/239] fix: a3700: remove objdump for wtmi binary
+
+- This patch is to temporarily disable objdump in wtmi Makefile,
+  which causes the segment fault in 32-bits architecture machine.
+
+Change-Id: Iece7063b5494c96a75187ccbc085ad1c7d990aa4
+Signed-off-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29085
+Reviewed-by: Terry Zhou <bjzhou@marvell.com>
+---
+ tools/wtp/wtmi/Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/wtp/wtmi/Makefile b/tools/wtp/wtmi/Makefile
+index 55c6e3a..9b7d6dc 100644
+--- a/tools/wtp/wtmi/Makefile
++++ b/tools/wtp/wtmi/Makefile
+@@ -4,7 +4,7 @@ all:
+ 	$(CROSS)as -mcpu=cortex-m3  -o wtmi.o wtmi.S
+ 	$(CROSS)gcc -nostdlib -T wtmi.ld -Xlinker "--build-id=none" wtmi.o -o wtmi.elf
+ 	$(CROSS)objcopy -S -O binary wtmi.elf wtmi.bin
+-	$(CROSS)objdump -D -S wtmi.elf > wtmi.dis
++#	$(CROSS)objdump -D -S wtmi.elf > wtmi.dis
+ 
+ clean:
+ 	@rm *.elf *.bin *dis 2>/dev/null
+-- 
+1.9.1
+

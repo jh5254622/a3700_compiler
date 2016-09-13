@@ -1,0 +1,84 @@
+From 1dbfea12cd27051dc5241b7c54774dfc6a3eead5 Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Tue, 26 Jan 2016 15:32:49 +0200
+Subject: [PATCH 0733/1240] psci: disable psci configuration when running in
+ EL2
+
+psci should be configured only when u-boot is running in
+EL3 (i.e. u-boot was not loaded by ATF).
+otherwise, ATF will configure and enable the psci.
+In addition, psci entry in Linux dtb is not updated in
+this case.
+
+Change-Id: I2d48f5d34512fb9d4c09aa0de5f67efcec0b501f
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27025
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/cpu-dt.c   | 3 ++-
+ arch/arm/cpu/armv8/cpu.c      | 7 +++++++
+ arch/arm/include/asm/system.h | 1 +
+ arch/arm/lib/bootm.c          | 3 ++-
+ 4 files changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/cpu-dt.c b/arch/arm/cpu/armv8/cpu-dt.c
+index 91712c2..585eb19 100644
+--- a/arch/arm/cpu/armv8/cpu-dt.c
++++ b/arch/arm/cpu/armv8/cpu-dt.c
+@@ -164,7 +164,8 @@ static void cpu_update_dt_spin_table(void *blob)
+ int cpu_update_dt(void *fdt)
+ {
+ #ifdef CONFIG_ARMV8_PSCI
+-	cpu_update_dt_psci(fdt);
++	if (is_psci_enabled())
++		cpu_update_dt_psci(fdt);
+ #else
+ 	cpu_update_dt_spin_table(fdt);
+ #endif
+diff --git a/arch/arm/cpu/armv8/cpu.c b/arch/arm/cpu/armv8/cpu.c
+index 55d2654..059aae6 100644
+--- a/arch/arm/cpu/armv8/cpu.c
++++ b/arch/arm/cpu/armv8/cpu.c
+@@ -63,4 +63,11 @@ void setup_psci(void)
+ 	psci_arch_init();
+ }
+ 
++int is_psci_enabled(void)
++{
++	/* PSCI setup should be exeuted only when u-boot is in EL3
++	  (i.e. no ATF). otherwise, ATF will configure it */
++	return current_el() == 3;
++}
++
+ #endif
+diff --git a/arch/arm/include/asm/system.h b/arch/arm/include/asm/system.h
+index a2074a4..ff68d03 100644
+--- a/arch/arm/include/asm/system.h
++++ b/arch/arm/include/asm/system.h
+@@ -81,6 +81,7 @@ void smp_kick_all_cpus(void);
+ void setup_psci(void);
+ void fixup_vectors(void);
+ void psci_arch_init(void);
++int is_psci_enabled(void);
+ extern char __secure_start[];
+ extern char __secure_end[];
+ #endif
+diff --git a/arch/arm/lib/bootm.c b/arch/arm/lib/bootm.c
+index 0430fa5..800ff8c 100644
+--- a/arch/arm/lib/bootm.c
++++ b/arch/arm/lib/bootm.c
+@@ -276,7 +276,8 @@ static void boot_jump_linux(bootm_headers_t *images, int flag)
+ 
+ 	if (!fake) {
+ #ifdef CONFIG_ARMV8_PSCI
+-		setup_psci();
++		if (is_psci_enabled())
++			setup_psci();
+ #endif
+ 		do_nonsec_virt_switch();
+ 		kernel_entry(images->ft_addr, NULL, NULL, NULL);
+-- 
+1.9.1
+

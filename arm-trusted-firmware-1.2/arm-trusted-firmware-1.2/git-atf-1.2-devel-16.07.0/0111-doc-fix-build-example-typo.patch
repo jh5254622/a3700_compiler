@@ -1,0 +1,30 @@
+From c7254f259c64752a615ad044e442e438bb57b021 Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Wed, 13 Apr 2016 16:24:02 +0300
+Subject: [PATCH 111/239] doc: fix build example typo
+
+Change-Id: I17d993e532c1101038b4fd989046a5112db1e261
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29004
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ docs/marvell/build.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/docs/marvell/build.txt b/docs/marvell/build.txt
+index a481fe9..d90d0f4 100644
+--- a/docs/marvell/build.txt
++++ b/docs/marvell/build.txt
+@@ -50,7 +50,7 @@ Build Instruction:
+ 	- USE_COHERENT_MEM: This flag determines whether to include the coherent memory region in the
+ 						BL memory map or not. It should be set to 0.
+ 
+-	For example: in order to build and image in release mode with log level up to warnings run:
++	For example: in order to build the image in debug mode with log level up to 'notice' level run:
+ 	# make DEBUG=1 USE_COHERENT_MEM=0 LOG_LEVEL=20 PLAT=<MARVELL_PLATFORM> all fip
+ 
+ 	Supported MARVELL_PLATFORM are:
+-- 
+1.9.1
+

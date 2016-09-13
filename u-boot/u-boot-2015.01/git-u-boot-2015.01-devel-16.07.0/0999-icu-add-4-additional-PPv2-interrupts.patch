@@ -1,0 +1,49 @@
+From 5d624f473bf4436d5391f1144249f95b4f062721 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 30 Mar 2016 11:26:31 +0300
+Subject: [PATCH 0999/1240] icu: add 4 additional PPv2 interrupts
+
+This is a temporary solution to allow proper testing of PPv2
+on a7040-RZ AND a7040-A0.
+Once the ICU will be moved to ATF (and new mapping method
+is implemented) it will be removed.
+
+Change-Id: I57e0b552c913ca98662d3c50d6c8506259be13a8
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28659
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/misc/mvebu_icu.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/misc/mvebu_icu.c b/drivers/misc/mvebu_icu.c
+index 4134fe6..952fdbb 100644
+--- a/drivers/misc/mvebu_icu.c
++++ b/drivers/misc/mvebu_icu.c
+@@ -57,7 +57,7 @@ struct icu_msi {
+ };
+ 
+ #define NS_MULTI_IRQS		40
+-#define NS_SINGLE_IRQS		23
++#define NS_SINGLE_IRQS		27
+ #define REI_IRQS		10
+ #define SEI_IRQS		20
+ #define MAX_ICU_IRQS		207
+@@ -147,6 +147,13 @@ static struct icu_irq irq_map_ns_single[NS_SINGLE_IRQS] = {
+ 	{123, 57, 0}, /* UART 1 irq */
+ 	{124, 58, 0}, /* UART 2 irq */
+ 	{125, 59, 0}, /* UART 3 irq */
++
++	/* Temporary PPv2 interrupts
++	 * should be moved to second interrupt bank */
++	{55, 60, 0}, /* PPv2 irq */
++	{56, 61, 0}, /* PPv2 irq */
++	{57, 62, 0}, /* PPv2 irq */
++	{58, 63, 0}, /* PPv2 irq */
+ };
+ 
+ /* SEI - System Error Interrupts */
+-- 
+1.9.1
+

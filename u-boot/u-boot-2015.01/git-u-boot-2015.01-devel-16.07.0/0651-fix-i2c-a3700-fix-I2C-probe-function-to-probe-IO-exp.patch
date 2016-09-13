@@ -1,0 +1,51 @@
+From 94eecd67917d30ba695394808b94e16f3da7e587 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Tue, 5 Jan 2016 19:44:34 +0800
+Subject: [PATCH 0651/1240] fix: i2c: a3700: fix I2C probe function to probe
+ IO-expander successfully
+
+issue: Most of the i2c devices can be found using i2c probe except
+      the IO-expander.
+fix: According to I2C specification,
+     the I2C master need to send I2C start twice during read operation,
+     the R/W bit should be 0 for the first time, and 1 for the second time.
+     However the old probe code just sends start once with R/W 1 for read
+     operation.
+     It will not work for some I2C device which follows the specification
+     strictly such as the IO-expander PCA9555.
+     This patch turns to use write operation to detect I2C device, which is
+     more simple and adopt by most of the I2C drivers.
+
+Change-Id: Ia4acb3b75cddbd4efb9122b3c46721d80533c820
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26543
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/i2c/mv_i2c.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/i2c/mv_i2c.c b/drivers/i2c/mv_i2c.c
+index f15276b..e805973 100644
+--- a/drivers/i2c/mv_i2c.c
++++ b/drivers/i2c/mv_i2c.c
+@@ -357,13 +357,13 @@ int i2c_probe(uchar chip)
+ 	msg.condition = I2C_COND_START;
+ 	msg.acknack   = I2C_ACKNAK_WAITACK;
+ 	msg.direction = I2C_WRITE;
+-	msg.data      = (chip << 1) + 1;
++	msg.data      = (chip << 1);
+ 	if (i2c_transfer(&msg))
+ 		return -1;
+ 
+ 	msg.condition = I2C_COND_STOP;
+-	msg.acknack   = I2C_ACKNAK_SENDNAK;
+-	msg.direction = I2C_READ;
++	msg.acknack   = I2C_ACKNAK_WAITACK;
++	msg.direction = I2C_WRITE;
+ 	msg.data      = 0x00;
+ 	if (i2c_transfer(&msg))
+ 		return -1;
+-- 
+1.9.1
+

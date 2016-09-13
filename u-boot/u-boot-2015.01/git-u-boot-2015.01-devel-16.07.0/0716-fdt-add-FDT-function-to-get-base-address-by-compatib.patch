@@ -1,0 +1,75 @@
+From dcc3df04a86d27132e5f0a70345122c84a33d4b0 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 25 Jan 2016 10:39:30 +0200
+Subject: [PATCH 0716/1240] fdt: add FDT function to get base address by
+ compatible search
+
+- This is util function to search for the compatible and return the base
+  address in the node
+
+Change-Id: I44fe5db077af0960b04959ba4903bdec8dee0928
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26984
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/fdt.c       | 15 ++++++++++++++-
+ arch/arm/include/asm/arch-mvebu/fdt.h |  3 ++-
+ 2 files changed, 16 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/fdt.c b/arch/arm/cpu/mvebu-common/fdt.c
+index 3e64c87..050587c 100644
+--- a/arch/arm/cpu/mvebu-common/fdt.c
++++ b/arch/arm/cpu/mvebu-common/fdt.c
+@@ -18,7 +18,6 @@
+ 
+ #include <common.h>
+ #include <asm/arch-mvebu/fdt.h>
+-#include <fdtdec.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+@@ -58,3 +57,17 @@ void *fdt_get_regs_base(const void *blob, int node, uintptr_t reg)
+ 	reg = reg + ranges->parent_bus_address - ranges->child_bus_address;
+ 	return fdt_get_regs_base(blob, parent, reg);
+ }
++
++void *fdt_get_reg_offs_by_compat(enum fdt_compat_id compat_id)
++{
++	int node;
++	const char *compat_str;
++
++	compat_str = fdtdec_get_compatible(compat_id);
++	node = fdt_node_offset_by_compatible(gd->fdt_blob, -1, compat_str);
++	if (node < 0) {
++		error("No %s node found in FDT blob\n", compat_str);
++		return 0;
++	}
++	return fdt_get_regs_offs(gd->fdt_blob, node, "reg");
++}
+diff --git a/arch/arm/include/asm/arch-mvebu/fdt.h b/arch/arm/include/asm/arch-mvebu/fdt.h
+index c8fd5c2..92754c4 100644
+--- a/arch/arm/include/asm/arch-mvebu/fdt.h
++++ b/arch/arm/include/asm/arch-mvebu/fdt.h
+@@ -18,6 +18,7 @@
+ 
+ #ifndef _MVEBU_FDT_H_
+ #define _MVEBU_FDT_H_
++#include <fdtdec.h>
+ 
+ struct fdt_range {
+ 	u32 child_bus_address;
+@@ -25,9 +26,9 @@ struct fdt_range {
+ 	u32 size;
+ };
+ 
+-
+ void *fdt_get_regs_offs(const void *blob, int node, const char *prop_name);
+ void *fdt_get_regs_base(const void *blob, int node, uintptr_t reg);
++void *fdt_get_reg_offs_by_compat(enum fdt_compat_id compat_id);
+ 
+ #endif /* _MVEBU_FDT_H_ */
+ 
+-- 
+1.9.1
+

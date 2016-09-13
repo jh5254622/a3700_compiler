@@ -1,0 +1,31 @@
+From fc2d9848adb64b852f2f988280a56acdff0b3d09 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Thu, 3 Dec 2015 10:59:01 +0200
+Subject: [PATCH 0564/1240] fix: dts: a3700: fix board name in dts according to
+ PCB on board
+
+Change-Id: Ia0fc3e3eb3ebe242a09aeffe82167b86f1fef2e3
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25579
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/armada-lp-db.dts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/armada-lp-db.dts b/arch/arm/dts/armada-lp-db.dts
+index 49d3bca..7a65be4 100644
+--- a/arch/arm/dts/armada-lp-db.dts
++++ b/arch/arm/dts/armada-lp-db.dts
+@@ -4,7 +4,7 @@
+ #include "armada-lp.dtsi"
+ 
+ / {
+-	model = "DB0-MV-ARMADALP";
++	model = "DB-88F3720-DDR3-Modular";
+ 	compatible = "marvell,armada-lp-db0", "marvell,armada-lp";
+ 
+ 	soc {
+-- 
+1.9.1
+

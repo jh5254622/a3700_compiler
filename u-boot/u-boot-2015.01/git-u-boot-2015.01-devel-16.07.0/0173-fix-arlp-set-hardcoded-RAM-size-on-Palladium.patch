@@ -1,0 +1,48 @@
+From b9d914b05b4a2fefb1655011d0a5012f7aa628da Mon Sep 17 00:00:00 2001
+From: Jing Hua <jinghua@marvell.com>
+Date: Sun, 12 Apr 2015 16:29:05 +0800
+Subject: [PATCH 0173/1240] fix: arlp: set hardcoded RAM size on Palladium
+
+	- set static 256MB DRAM size for Palladium.
+	Normally this value should be read from DRAM address
+	decoding registers.
+	Temporarily add hardcoded value, until DRAM windows
+	will be configured properly.
+
+Change-Id: Ibf1c08d29cfdb40dc3ace1cd21f3a9997ccf9302
+Signed-off-by: Jing Hua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/18241
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/adec_mbus.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/arch/arm/cpu/mvebu-common/adec_mbus.c b/arch/arm/cpu/mvebu-common/adec_mbus.c
+index db70648..4aa5134 100644
+--- a/arch/arm/cpu/mvebu-common/adec_mbus.c
++++ b/arch/arm/cpu/mvebu-common/adec_mbus.c
+@@ -177,6 +177,12 @@ int adec_init(struct adec_win *windows)
+ 
+ int dram_init(void)
+ {
++#ifdef CONFIG_PALLADIUM
++	/* NO DRAM init sequence in Pallaidum, so set static DRAM size of 256MB */
++	gd->bd->bi_dram[0].start = 0;
++	gd->bd->bi_dram[0].size = 0x10000000;
++	gd->ram_size = gd->bd->bi_dram[0].size;
++#else
+ 	int cs;
+ 	u32 ctrl, size, base;
+ 
+@@ -204,6 +210,7 @@ int dram_init(void)
+ 		error("No DRAM banks detected");
+ 		return 1;
+ 	}
++#endif
+ 
+ 	return 0;
+ }
+-- 
+1.9.1
+

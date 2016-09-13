@@ -1,0 +1,1215 @@
+From 090ddd0f3c7671f1e465d5ed5de98c009f09bcd0 Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Thu, 31 Dec 2015 18:29:16 +0200
+Subject: [PATCH 0693/1240] dts: a8k: add 7 Device tree files according to the
+ different configurations of Armada-70x0
+
+- Set 7 new Device tree files for Armada-70x0 Board.
+- Changed armada-70x0-db.dts name and set it as default device tree.
+
+Change-Id: I4cec4c23d6bdd302e1546b94dafb5962485c098a
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26444
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Nitzan Zorea <nzorea@marvell.com>
+---
+ arch/arm/dts/Makefile                           |  10 +-
+ arch/arm/dts/armada-7040-rz-db_all_pci.dts      | 124 +++++++++++++++++++++
+ arch/arm/dts/armada-7040-rz-db_kr.dts           | 133 +++++++++++++++++++++++
+ arch/arm/dts/armada-7040-rz-db_nand.dts         | 136 +++++++++++++++++++++++
+ arch/arm/dts/armada-7040-rz-db_rgmii_only.dts   | 139 ++++++++++++++++++++++++
+ arch/arm/dts/armada-7040-rz-db_router.dts       | 135 +++++++++++++++++++++++
+ arch/arm/dts/armada-7040-rz-db_rxaui.dts        | 131 ++++++++++++++++++++++
+ arch/arm/dts/armada-7040-rz-db_rxaui_pci.dts    | 128 ++++++++++++++++++++++
+ arch/arm/dts/armada-8040-rz1-db.dts             | 135 -----------------------
+ arch/arm/include/asm/arch-armada8k/board-info.h |  18 +--
+ configs/mvebu_armada70x0_defconfig              |   2 +-
+ 11 files changed, 945 insertions(+), 146 deletions(-)
+ create mode 100644 arch/arm/dts/armada-7040-rz-db_all_pci.dts
+ create mode 100644 arch/arm/dts/armada-7040-rz-db_kr.dts
+ create mode 100644 arch/arm/dts/armada-7040-rz-db_nand.dts
+ create mode 100644 arch/arm/dts/armada-7040-rz-db_rgmii_only.dts
+ create mode 100644 arch/arm/dts/armada-7040-rz-db_router.dts
+ create mode 100644 arch/arm/dts/armada-7040-rz-db_rxaui.dts
+ create mode 100644 arch/arm/dts/armada-7040-rz-db_rxaui_pci.dts
+ delete mode 100644 arch/arm/dts/armada-8040-rz1-db.dts
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index fe59ea4..0c7c11c 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -60,8 +60,14 @@ dtb-$(CONFIG_TARGET_ARMADA_8K) += apn-806-db.dtb \
+ 		       apn-806-pd-a0.dtb \
+ 		       apn-806-db-dop.dtb \
+ 		       armada-80x0-db.dtb \
+-		       armada-8040-rz1-db.dtb \
+-		       armada-70x0-pd.dtb
++		       armada-70x0-pd.dtb \
++		       armada-7040-rz-db_nand.dtb \
++		       armada-7040-rz-db_router.dtb \
++		       armada-7040-rz-db_all_pci.dtb \
++		       armada-7040-rz-db_rgmii_only.dtb \
++		       armada-7040-rz-db_kr.dtb \
++		       armada-7040-rz-db_rxaui_pci.dtb \
++		       armada-7040-rz-db_rxaui.dtb
+ 
+ targets += $(dtb-y)
+ 
+diff --git a/arch/arm/dts/armada-7040-rz-db_all_pci.dts b/arch/arm/dts/armada-7040-rz-db_all_pci.dts
+new file mode 100644
+index 0000000..748f080
+--- /dev/null
++++ b/arch/arm/dts/armada-7040-rz-db_all_pci.dts
+@@ -0,0 +1,124 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/dts-v1/;
++
++#include "armada-70x0.dtsi" /* include SoC device tree */
++#include "armada-70x0-dev-info.dtsi" /* include Marvell specific info (S@R, MPP cmd) */
++
++/ {
++	model = "DB-ARMADA-7040R-Z1 (ALL_PCI)";
++	compatible = "marvell,armada-70x0-db", "marvell,armada-70x0";
++	fdt_config_id = <2>;
++	board_id = <0x11>;
++
++	memory {
++		device_type = "memory";
++		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
++	};
++	ap-806 {
++		internal-regs {
++			spi0: spi@510600 {
++				status = "okay";
++			};
++			i2c0: i2c@511000 {
++				status = "okay";
++			};
++		};
++
++		pcie-controller {
++			pcie@1,0 {
++				status = "okay";
++			};
++		};
++	};
++	cp110-master {
++		internal-regs {
++			spi@700600 {
++				status = "okay";
++			};
++			i2c@701000 {
++				status = "okay";
++			};
++			mmc@780000 {
++				status = "okay";
++			};
++
++			pinctl@440000 {
++					/* MPP Bus:
++					   RGMII0 [0-12]
++					   SPI    [13-16]
++					   SATA1  [28]
++					   UART0  [29-30]
++					   SMI	  [32,34]
++					   SATA0  [36]
++					   I2C	  [37-38]
++					   UART1  [40-41]
++					   XSMI	  [42-43]
++					   RGMII1 [44-55]
++					   SD	  [56-62]
++					*/
++					/*   0   1   2   3   4   5   6   7   8   9 */
++				pin-func = < 3   3   3   3   3   3   3   3   3   3
++					     3   3   0   3   3   3   3   0   0   0
++					     0   0   0   0   0   0   0   0   9   0xA
++					     0xA 0   7   0   7   0   6   2   2   0
++					     7   7   8   8   1   1   1   1   1   1
++					     1 	 1   1   1   1   1   0xE 0xE 0xE 0xE
++					     0xE 0xE 0xE 0>;
++			};
++
++			comphy {
++				compatible = "marvell,mvebu-comphy", "marvell,comphy-cp110";
++				mux-bitcount = <4>;
++				max-lanes = <6>;
++				reg-comphy = <0x441000 0x8>;
++				reg-hpipe3 = <0x120800 0x8>;
++				/* Serdes Configuration:
++					Lane 0-3: PEX0x4
++					Lane 4:   PEX1x1
++					Lane 5:   PEX2x1
++				*/
++				phy0 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy1 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy2 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy3 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy4 {
++					phy-type = <PHY_TYPE_PEX1>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy5 {
++					phy-type = <PHY_TYPE_PEX2>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++			};
++		};
++	};
++};
+diff --git a/arch/arm/dts/armada-7040-rz-db_kr.dts b/arch/arm/dts/armada-7040-rz-db_kr.dts
+new file mode 100644
+index 0000000..472e12a
+--- /dev/null
++++ b/arch/arm/dts/armada-7040-rz-db_kr.dts
+@@ -0,0 +1,133 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/dts-v1/;
++
++#include "armada-70x0.dtsi" /* include SoC device tree */
++#include "armada-70x0-dev-info.dtsi" /* include Marvell specific info (S@R, MPP cmd) */
++
++/ {
++	model = "DB-ARMADA-7040R-Z1 (KR)";
++	compatible = "marvell,armada-70x0-db", "marvell,armada-70x0";
++	fdt_config_id = <3>;
++	board_id = <0x11>;
++
++	memory {
++		device_type = "memory";
++		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
++	};
++	ap-806 {
++		internal-regs {
++			spi0: spi@510600 {
++				status = "okay";
++			};
++			i2c0: i2c@511000 {
++				status = "okay";
++			};
++		};
++
++		pcie-controller {
++			pcie@1,0 {
++				status = "okay";
++			};
++		};
++	};
++	cp110-master {
++		internal-regs {
++			spi@700600 {
++				status = "okay";
++			};
++			i2c@701000 {
++				status = "okay";
++			};
++			sata@540000 {
++				status = "okay";
++			};
++			sata@550000 {
++				status = "okay";
++			};
++			mmc@780000 {
++				status = "okay";
++			};
++
++			pinctl@440000 {
++					/* MPP Bus:
++					   RGMII0 [0-12]
++					   SPI    [13-16]
++					   SATA1  [28]
++					   UART0  [29-30]
++					   SMI	  [32,34]
++					   SATA0  [36]
++					   I2C	  [37-38]
++					   UART1  [40-41]
++					   XSMI	  [42-43]
++					   RGMII1 [44-55]
++					   SD	  [56-62]
++					*/
++					/*   0   1   2   3   4   5   6   7   8   9 */
++				pin-func = < 3   3   3   3   3   3   3   3   3   3
++					     3   3   0   3   3   3   3   0   0   0
++					     0   0   0   0   0   0   0   0   9   0xA
++					     0xA 0   7   0   7   0   6   2   2   0
++					     7   7   8   8   1   1   1   1   1   1
++					     1 	 1   1   1   1   1   0xE 0xE 0xE 0xE
++					     0xE 0xE 0xE 0>;
++			};
++
++			comphy {
++				compatible = "marvell,mvebu-comphy", "marvell,comphy-cp110";
++				mux-bitcount = <4>;
++				max-lanes = <6>;
++				reg-comphy = <0x441000 0x8>;
++				reg-hpipe3 = <0x120800 0x8>;
++				/* Serdes Configuration:
++					Lane 0: PEX0x1
++					Lane 1: SATA0
++					Lane 2: 10GKR
++					Lane 3: SATA1
++					Lane 4: PEX1x1
++					Lane 5: PEX2x1
++				*/
++				phy0 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy1 {
++					phy-type = <PHY_TYPE_SATA0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy2 {
++					phy-type = <PHY_TYPE_KR>;
++					phy-speed = <PHY_SPEED_10_3125G>;
++				};
++				phy3 {
++					phy-type = <PHY_TYPE_SATA1>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy4 {
++					phy-type = <PHY_TYPE_PEX1>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy5 {
++					phy-type = <PHY_TYPE_PEX2>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++			};
++		};
++	};
++};
+diff --git a/arch/arm/dts/armada-7040-rz-db_nand.dts b/arch/arm/dts/armada-7040-rz-db_nand.dts
+new file mode 100644
+index 0000000..9b02402
+--- /dev/null
++++ b/arch/arm/dts/armada-7040-rz-db_nand.dts
+@@ -0,0 +1,136 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/dts-v1/;
++
++#include "armada-70x0.dtsi" /* include SoC device tree */
++#include "armada-70x0-dev-info.dtsi" /* include Marvell specific info (S@R, MPP cmd) */
++
++/ {
++	model = "DB-ARMADA-7040R-Z1 (NAND)";
++	compatible = "marvell,armada-70x0-db", "marvell,armada-70x0";
++	fdt_config_id = <4>;
++	board_id = <0x11>;
++
++	memory {
++		device_type = "memory";
++		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
++	};
++	ap-806 {
++		internal-regs {
++			spi0: spi@510600 {
++				status = "okay";
++			};
++			i2c0: i2c@511000 {
++				status = "okay";
++			};
++		};
++
++		pcie-controller {
++			pcie@1,0 {
++				status = "okay";
++			};
++		};
++	};
++	cp110-master {
++		internal-regs {
++			spi@700600 {
++				status = "okay";
++			};
++			i2c@701000 {
++				status = "okay";
++			};
++			sata@550000 {
++				status = "okay";
++			};
++			usb3@500000 {
++				status = "okay";
++			};
++			usb3@510000 {
++				status = "okay";
++			};
++			mmc@780000 {
++				status = "okay";
++			};
++
++			pinctl@440000 {
++					/* MPP Bus:
++					   RGMII0 [0-12]
++					   NAND   [13,16-27]
++					   SATA1  [28]
++					   UART0  [29-30]
++					   SMI	  [32,34]
++					   SATA0  [36]
++					   I2C	  [37-38]
++					   UART1  [40-41]
++					   XSMI	  [42-43]
++					   RGMII1 [44-55]
++					   SD	  [56-62]
++					*/
++					/*   0   1   2   3   4   5   6   7   8   9 */
++				pin-func = < 3   3   3   3   3   3   3   3   3   3
++					     3   3   0   2   0   1   1   1   1   1
++					     1   1   1   1   1   1   1   1   9   0xA
++					     0xA 0   7   0   7   0   6   2   2   0
++					     7   7   8   8   1   1   1   1   1   1
++					     1 	 1   1   1   1   1   0xE 0xE 0xE 0xE
++					     0xE 0xE 0xE 0>;
++			};
++
++			comphy {
++				compatible = "marvell,mvebu-comphy", "marvell,comphy-cp110";
++				mux-bitcount = <4>;
++				max-lanes = <6>;
++				reg-comphy = <0x441000 0x8>;
++				reg-hpipe3 = <0x120800 0x8>;
++				/* Serdes Configuration:
++					Lane 0: PEX0x1
++					Lane 1: USB3-HOST0
++					Lane 2: 10GKR
++					Lane 3: SATA1
++					Lane 4: USB3-HOST1
++					Lane 5: PEX2x1
++				*/
++				phy0 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy1 {
++					phy-type = <PHY_TYPE_USB3_HOST0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy2 {
++					phy-type = <PHY_TYPE_KR>;
++					phy-speed = <PHY_SPEED_10_3125G>;
++				};
++				phy3 {
++					phy-type = <PHY_TYPE_SATA1>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy4 {
++					phy-type = <PHY_TYPE_USB3_HOST1>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy5 {
++					phy-type = <PHY_TYPE_PEX2>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++			};
++		};
++	};
++};
+diff --git a/arch/arm/dts/armada-7040-rz-db_rgmii_only.dts b/arch/arm/dts/armada-7040-rz-db_rgmii_only.dts
+new file mode 100644
+index 0000000..a515b50
+--- /dev/null
++++ b/arch/arm/dts/armada-7040-rz-db_rgmii_only.dts
+@@ -0,0 +1,139 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/dts-v1/;
++
++#include "armada-70x0.dtsi" /* include SoC device tree */
++#include "armada-70x0-dev-info.dtsi" /* include Marvell specific info (S@R, MPP cmd) */
++
++/ {
++	model = "DB-ARMADA-7040R-Z1 (RGMII_ONLY)";
++	compatible = "marvell,armada-70x0-db", "marvell,armada-70x0";
++	fdt_config_id = <5>;
++	board_id = <0x11>;
++
++	memory {
++		device_type = "memory";
++		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
++	};
++	ap-806 {
++		internal-regs {
++			spi0: spi@510600 {
++				status = "okay";
++			};
++			i2c0: i2c@511000 {
++				status = "okay";
++			};
++		};
++
++		pcie-controller {
++			pcie@1,0 {
++				status = "okay";
++			};
++		};
++	};
++	cp110-master {
++		internal-regs {
++			spi@700600 {
++				status = "okay";
++			};
++			i2c@701000 {
++				status = "okay";
++			};
++			sata@540000 {
++				status = "okay";
++			};
++			sata@550000 {
++				status = "okay";
++			};
++			usb3@500000 {
++				status = "okay";
++			};
++			usb3@510000 {
++				status = "okay";
++			};
++			mmc@780000 {
++				status = "okay";
++			};
++
++			pinctl@440000 {
++					/* MPP Bus:
++					   RGMII0 [0-12]
++					   SPI    [13-16]
++					   SATA1  [28]
++					   UART0  [29-30]
++					   SMI	  [32,34]
++					   SATA0  [36]
++					   I2C	  [37-38]
++					   UART1  [40-41]
++					   XSMI	  [42-43]
++					   RGMII1 [44-55]
++					   SD	  [56-62]
++					*/
++					/*   0   1   2   3   4   5   6   7   8   9 */
++				pin-func = < 3   3   3   3   3   3   3   3   3   3
++					     3   3   0   3   3   3   3   0   0   0
++					     0   0   0   0   0   0   0   0   9   0xA
++					     0xA 0   7   0   7   0   6   2   2   0
++					     7   7   8   8   1   1   1   1   1   1
++					     1 	 1   1   1   1   1   0xE 0xE 0xE 0xE
++					     0xE 0xE 0xE 0>;
++			};
++
++			comphy {
++				compatible = "marvell,mvebu-comphy", "marvell,comphy-cp110";
++				mux-bitcount = <4>;
++				max-lanes = <6>;
++				reg-comphy = <0x441000 0x8>;
++				reg-hpipe3 = <0x120800 0x8>;
++				/* Serdes Configuration:
++					Lane 0: PEX0x1
++					Lane 1: USB3-HOST0
++					Lane 2: SATA0
++					Lane 3: SATA1
++					Lane 4: USB3-HOST1
++					Lane 5: PEX2x1
++				*/
++				phy0 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy1 {
++					phy-type = <PHY_TYPE_USB3_HOST0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy2 {
++					phy-type = <PHY_TYPE_SATA0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy3 {
++					phy-type = <PHY_TYPE_SATA1>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy4 {
++					phy-type = <PHY_TYPE_USB3_HOST1>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy5 {
++					phy-type = <PHY_TYPE_PEX2>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++			};
++		};
++	};
++};
+diff --git a/arch/arm/dts/armada-7040-rz-db_router.dts b/arch/arm/dts/armada-7040-rz-db_router.dts
+new file mode 100644
+index 0000000..f1d23db
+--- /dev/null
++++ b/arch/arm/dts/armada-7040-rz-db_router.dts
+@@ -0,0 +1,135 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/dts-v1/;
++
++#include "armada-70x0.dtsi" /* include SoC device tree */
++#include "armada-70x0-dev-info.dtsi" /* include Marvell specific info (S@R, MPP cmd) */
++
++/ {
++	model = "DB-ARMADA-7040R-Z1 (ROUTER)";
++	compatible = "marvell,armada-70x0-db", "marvell,armada-70x0";
++	fdt_config_id = <1>;
++	board_id = <0x11>;
++
++	memory {
++		device_type = "memory";
++		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
++	};
++	ap-806 {
++		internal-regs {
++			spi0: spi@510600 {
++				status = "okay";
++			};
++			i2c0: i2c@511000 {
++				status = "okay";
++			};
++		};
++
++		pcie-controller {
++			pcie@1,0 {
++				status = "okay";
++			};
++		};
++	};
++	cp110-master {
++		internal-regs {
++			spi@700600 {
++				status = "okay";
++			};
++			i2c@701000 {
++				status = "okay";
++			};
++			usb3@500000 {
++				status = "okay";
++			};
++			usb3@510000 {
++				status = "okay";
++			};
++			sata@550000 {
++				status = "okay";
++			};
++			mmc@780000 {
++				status = "okay";
++			};
++
++			pinctl@440000 {
++					/* MPP Bus:
++					   TDM	 [0-12]
++					   SPI   [13-16]
++					   SATA1 [28]
++					   UART0 [29-30]
++					   SMI	 [32,34]
++					   SATA0 [36]
++					   I2C	 [37-38]
++					   UART1 [40-41]
++					   XSMI	 [42-43]
++					   SD	 [56-62]
++					*/
++					/*   0   1   2   3   4   5   6   7   8   9 */
++				pin-func = < 4   4   4   4   4   4   4   4   4   4
++					     4   4   0   3   3   3   3   0   0   0
++					     0   0   0   0   0   0   0   0   9   0xA
++					     0xA 0   7   0   7   0   6   2   2   0
++					     7   7   8   8   0   0   0   0   0   0
++					     0 	 0   0   0   0   0   0xE 0xE 0xE 0xE
++					     0xE 0xE 0xE 0>;
++			};
++
++			comphy {
++				compatible = "marvell,mvebu-comphy", "marvell,comphy-cp110";
++				mux-bitcount = <4>;
++				max-lanes = <6>;
++				reg-comphy = <0x441000 0x8>;
++				reg-hpipe3 = <0x120800 0x8>;
++				/* Serdes Configuration:
++					Lane 0: SGMII2
++					Lane 1: USB3-HOST0
++					Lane 2: SGMII0
++					Lane 3: SATA1
++					Lane 4: USB3-HOST1
++					Lane 5: PEX2x1
++				*/
++				phy0 {
++					phy-type = <PHY_TYPE_SGMII2>;
++					phy-speed = <PHY_SPEED_1_25G>;
++				};
++				phy1 {
++					phy-type = <PHY_TYPE_USB3_HOST0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy2 {
++					phy-type = <PHY_TYPE_SGMII0>;
++					phy-speed = <PHY_SPEED_1_25G>;
++				};
++				phy3 {
++					phy-type = <PHY_TYPE_SATA1>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy4 {
++					phy-type = <PHY_TYPE_USB3_HOST1>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy5 {
++					phy-type = <PHY_TYPE_PEX2>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++			};
++		};
++	};
++};
+diff --git a/arch/arm/dts/armada-7040-rz-db_rxaui.dts b/arch/arm/dts/armada-7040-rz-db_rxaui.dts
+new file mode 100644
+index 0000000..5d8d822
+--- /dev/null
++++ b/arch/arm/dts/armada-7040-rz-db_rxaui.dts
+@@ -0,0 +1,131 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/dts-v1/;
++
++#include "armada-70x0.dtsi" /* include SoC device tree */
++#include "armada-70x0-dev-info.dtsi" /* include Marvell specific info (S@R, MPP cmd) */
++
++/ {
++	model = "DB-ARMADA-7040R-Z1 (RXAUI)";
++	compatible = "marvell,armada-70x0-db", "marvell,armada-70x0";
++	fdt_config_id = <6>;
++	board_id = <0x11>;
++
++	memory {
++		device_type = "memory";
++		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
++	};
++	ap-806 {
++		internal-regs {
++			spi0: spi@510600 {
++				status = "okay";
++			};
++			i2c0: i2c@511000 {
++				status = "okay";
++			};
++		};
++
++		pcie-controller {
++			pcie@1,0 {
++				status = "okay";
++			};
++		};
++	};
++	cp110-master {
++		internal-regs {
++			spi@700600 {
++				status = "okay";
++			};
++			i2c@701000 {
++				status = "okay";
++			};
++			sata@540000 {
++				status = "okay";
++			};
++			sata@550000 {
++				status = "okay";
++			};
++			mmc@780000 {
++				status = "okay";
++			};
++
++			pinctl@440000 {
++					/* MPP Bus:
++					   SPI   [13-16]
++					   SATA1 [28]
++					   UART0 [29-30]
++					   SMI	 [32,34]
++					   SATA0 [36]
++					   I2C	 [37-38]
++					   UART1 [40-41]
++					   XSMI	 [42-43]
++					   SD	 [56-62]
++					*/
++					/*   0   1   2   3   4   5   6   7   8   9 */
++				pin-func = < 0   0   0   0   0   0   0   0   0   0
++					     0   0   0   3   3   3   3   0   0   0
++					     0   0   0   0   0   0   0   0   9   0xA
++					     0xA 0   7   0   7   0   6   2   2   0
++					     7   7   8   8   0   0   0   0   0   0
++					     0 	 0   0   0   0   0   0xE 0xE 0xE 0xE
++					     0xE 0xE 0xE 0>;
++			};
++
++			comphy {
++				compatible = "marvell,mvebu-comphy", "marvell,comphy-cp110";
++				mux-bitcount = <4>;
++				max-lanes = <6>;
++				reg-comphy = <0x441000 0x8>;
++				reg-hpipe3 = <0x120800 0x8>;
++				/* Serdes Configuration:
++					Lane 0: SATA0
++					Lane 1: SATA1
++					Lane 2: SGMII0
++					Lane 3: SGMII2
++					Lane 4: RXAUI
++					Lane 5: RXAUI
++				*/
++				phy0 {
++					phy-type = <PHY_TYPE_SATA0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy1 {
++					phy-type = <PHY_TYPE_SATA1>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy2 {
++					phy-type = <PHY_TYPE_SGMII0>;
++					phy-speed = <PHY_SPEED_1_25G>;
++				};
++				phy3 {
++					phy-type = <PHY_TYPE_SGMII2>;
++					phy-speed = <PHY_SPEED_1_25G>;
++				};
++				phy4 {
++					phy-type = <PHY_TYPE_RXAUI>;
++					phy-speed = <PHY_SPEED_6_25G>;
++				};
++				phy5 {
++					phy-type = <PHY_TYPE_RXAUI>;
++					phy-speed = <PHY_SPEED_6_25G>;
++				};
++			};
++		};
++	};
++};
+diff --git a/arch/arm/dts/armada-7040-rz-db_rxaui_pci.dts b/arch/arm/dts/armada-7040-rz-db_rxaui_pci.dts
+new file mode 100644
+index 0000000..bedad79
+--- /dev/null
++++ b/arch/arm/dts/armada-7040-rz-db_rxaui_pci.dts
+@@ -0,0 +1,128 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/dts-v1/;
++
++#include "armada-70x0.dtsi" /* include SoC device tree */
++#include "armada-70x0-dev-info.dtsi" /* include Marvell specific info (S@R, MPP cmd) */
++
++/ {
++	model = "DB-ARMADA-7040R-Z1 (RXAUI_PCI)";
++	compatible = "marvell,armada-70x0-db", "marvell,armada-70x0";
++	fdt_config_id = <7>;
++	board_id = <0x11>;
++
++	memory {
++		device_type = "memory";
++		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
++	};
++	ap-806 {
++		internal-regs {
++			spi0: spi@510600 {
++				status = "okay";
++			};
++			i2c0: i2c@511000 {
++				status = "okay";
++			};
++		};
++
++		pcie-controller {
++			pcie@1,0 {
++				status = "okay";
++			};
++		};
++	};
++	cp110-master {
++		internal-regs {
++			spi@700600 {
++				status = "okay";
++			};
++			i2c@701000 {
++				status = "okay";
++			};
++			sata@540000 {
++				status = "okay";
++			};
++			mmc@780000 {
++				status = "okay";
++			};
++
++			pinctl@440000 {
++					/* MPP Bus:
++					   SPI   [13-16]
++					   SATA1 [28]
++					   UART0 [29-30]
++					   SMI	 [32,34]
++					   SATA0 [36]
++					   I2C	 [37-38]
++					   UART1 [40-41]
++					   XSMI	 [42-43]
++					   SD	 [56-62]
++					*/
++					/*   0   1   2   3   4   5   6   7   8   9 */
++				pin-func = < 0   0   0   0   0   0   0   0   0   0
++					     0   0   0   3   3   3   3   0   0   0
++					     0   0   0   0   0   0   0   0   9   0xA
++					     0xA 0   7   0   7   0   6   2   2   0
++					     7   7   8   8   0   0   0   0   0   0
++					     0 	 0   0   0   0   0   0xE 0xE 0xE 0xE
++					     0xE 0xE 0xE 0>;
++			};
++
++			comphy {
++				compatible = "marvell,mvebu-comphy", "marvell,comphy-cp110";
++				mux-bitcount = <4>;
++				max-lanes = <6>;
++				reg-comphy = <0x441000 0x8>;
++				reg-hpipe3 = <0x120800 0x8>;
++				/* Serdes Configuration:
++					Lane 0: PEX0x1
++					Lane 1: SATA0
++					Lane 2: SGMII0
++					Lane 3: SGMII2
++					Lane 4: RXAUI
++					Lane 5: RXAUI
++				*/
++				phy0 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy1 {
++					phy-type = <PHY_TYPE_SATA0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy2 {
++					phy-type = <PHY_TYPE_SGMII0>;
++					phy-speed = <PHY_SPEED_1_25G>;
++				};
++				phy3 {
++					phy-type = <PHY_TYPE_SGMII2>;
++					phy-speed = <PHY_SPEED_1_25G>;
++				};
++				phy4 {
++					phy-type = <PHY_TYPE_RXAUI>;
++					phy-speed = <PHY_SPEED_6_25G>;
++				};
++				phy5 {
++					phy-type = <PHY_TYPE_RXAUI>;
++					phy-speed = <PHY_SPEED_6_25G>;
++				};
++			};
++		};
++	};
++};
+diff --git a/arch/arm/dts/armada-8040-rz1-db.dts b/arch/arm/dts/armada-8040-rz1-db.dts
+deleted file mode 100644
+index 1164ca2..0000000
+--- a/arch/arm/dts/armada-8040-rz1-db.dts
++++ /dev/null
+@@ -1,135 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-/dts-v1/;
+-
+-#include "armada-70x0.dtsi" /* include SoC device tree */
+-#include "armada-70x0-dev-info.dtsi" /* include Marvell specific info (S@R, MPP cmd) */
+-
+-/ {
+-	model = "DB-ARMADA-8040R-Z1 (PEX_SGMIIx2_SATA_USB3x2)";
+-	compatible = "marvell,armada-70x0-db", "marvell,armada-70x0";
+-	fdt_config_id = <1>;
+-	board_id = <0x11>;
+-
+-	memory {
+-		device_type = "memory";
+-		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
+-	};
+-	ap-806 {
+-		internal-regs {
+-			spi0: spi@510600 {
+-				status = "okay";
+-			};
+-			i2c0: i2c@511000 {
+-				status = "okay";
+-			};
+-		};
+-
+-		pcie-controller {
+-			pcie@1,0 {
+-				status = "okay";
+-			};
+-		};
+-	};
+-	cp110-master {
+-		internal-regs {
+-			spi@700600 {
+-				status = "okay";
+-			};
+-			i2c@701000 {
+-				status = "okay";
+-			};
+-			usb3@500000 {
+-				status = "okay";
+-			};
+-			usb3@510000 {
+-				status = "okay";
+-			};
+-			sata@550000 {
+-				status = "okay";
+-			};
+-			mmc@780000 {
+-				status = "okay";
+-			};
+-
+-			pinctl@440000 {
+-					/* MPP Bus:
+-					   TDM	 [0-12]
+-					   SPI   [13-16]
+-					   SATA1 [28]
+-					   UART0 [29-30]
+-					   SMI	 [32,34]
+-					   SATA0 [36]
+-					   I2C	 [37-38]
+-					   UART1 [40-41]
+-					   XSMI	 [42-43]
+-					   SD	 [56-62]
+-					*/
+-					/*   0   1   2   3   4   5   6   7   8   9 */
+-				pin-func = < 4   4   4   4   4   4   4   4   4   4
+-					     4   4   0   3   3   3   3   0   0   0
+-					     0   0   0   0   0   0   0   0   9   0xA
+-					     0xA 0   7   0   7   0   6   2   2   0
+-					     7   7   8   8   0   0   0   0   0   0
+-					     0 	 0   0   0   0   0   0xE 0xE 0xE 0xE
+-					     0xE 0xE 0xE 0>;
+-			};
+-
+-			comphy {
+-				compatible = "marvell,mvebu-comphy", "marvell,comphy-cp110";
+-				mux-bitcount = <4>;
+-				max-lanes = <6>;
+-				reg-comphy = <0x441000 0x8>;
+-				reg-hpipe3 = <0x120800 0x8>;
+-				/* Serdes Configuration:
+-					Lane 0: SGMII2
+-					Lane 1: USB3-HOST0
+-					Lane 2: SGMII0
+-					Lane 3: SATA1
+-					Lane 4: USB3-HOST1
+-					Lane 5: PEX2x1
+-				*/
+-				phy0 {
+-					phy-type = <PHY_TYPE_SGMII2>;
+-					phy-speed = <PHY_SPEED_1_25G>;
+-				};
+-				phy1 {
+-					phy-type = <PHY_TYPE_USB3_HOST0>;
+-					phy-speed = <PHY_SPEED_5G>;
+-				};
+-				phy2 {
+-					phy-type = <PHY_TYPE_SGMII0>;
+-					phy-speed = <PHY_SPEED_1_25G>;
+-				};
+-				phy3 {
+-					phy-type = <PHY_TYPE_SATA1>;
+-					phy-speed = <PHY_SPEED_5G>;
+-				};
+-				phy4 {
+-					phy-type = <PHY_TYPE_USB3_HOST1>;
+-					phy-speed = <PHY_SPEED_5G>;
+-				};
+-				phy5 {
+-					phy-type = <PHY_TYPE_PEX2>;
+-					phy-speed = <PHY_SPEED_5G>;
+-				};
+-			};
+-		};
+-	};
+-};
+diff --git a/arch/arm/include/asm/arch-armada8k/board-info.h b/arch/arm/include/asm/arch-armada8k/board-info.h
+index 063dc35..a0d0a94 100644
+--- a/arch/arm/include/asm/arch-armada8k/board-info.h
++++ b/arch/arm/include/asm/arch-armada8k/board-info.h
+@@ -17,17 +17,19 @@
+  */
+ 
+ /* APN-806 Marvell boards */
+-#define APN_806_MARVELL_BOARD_ID_BASE	 0x10
+-#define APN_806_DB			(APN_806_MARVELL_BOARD_ID_BASE + 0)
+-#define APN_806_MARVELL_MAX_BOARD_ID	(APN_806_MARVELL_BOARD_ID_BASE + 1)
+-#define APN_806_MARVELL_BOARD_NUM	(APN_806_MARVELL_MAX_BOARD_ID - APN_806_MARVELL_BOARD_ID_BASE)
++#define A8K_MARVELL_BOARD_ID_BASE			0x10
++#define A8K_APN_806_DB					(A8K_MARVELL_BOARD_ID_BASE + 0)
++#define A8K_7040_RZ					(A8K_MARVELL_BOARD_ID_BASE + 1)
++#define A8K_MARVELL_MAX_BOARD_ID			(A8K_MARVELL_BOARD_ID_BASE + 2)
++#define A8K_MARVELL_BOARD_NUM				(A8K_MARVELL_MAX_BOARD_ID - A8K_MARVELL_BOARD_ID_BASE)
+ 
+-#define MARVELL_BOARD_ID_BASE		APN_806_MARVELL_BOARD_ID_BASE
+-#define MV_MAX_MARVELL_BOARD_ID		APN_806_MARVELL_MAX_BOARD_ID
+-#define MV_MARVELL_BOARD_NUM		APN_806_MARVELL_BOARD_NUM
+-#define MV_DEFAULT_BOARD_ID		APN_806_DB
++#define MARVELL_BOARD_ID_BASE				 A8K_MARVELL_BOARD_ID_BASE
++#define MV_MAX_MARVELL_BOARD_ID				 A8K_MARVELL_MAX_BOARD_ID
++#define MV_MARVELL_BOARD_NUM				 A8K_MARVELL_BOARD_NUM
++#define MV_DEFAULT_BOARD_ID					 A8K_APN_806_DB
+ 
+ #define BOARD_DEV_TWSI_INIT_EEPROM 0x57
+ #define DEFAULT_FDT_PER_BOARD { \
+ 				0x04,	/* default fdt configuration for apn-806-db board */		  \
++				0x01,	/* default fdt configuration for armada-8040-rz1-db board */      \
+ }
+diff --git a/configs/mvebu_armada70x0_defconfig b/configs/mvebu_armada70x0_defconfig
+index 2650500..ac936fe 100644
+--- a/configs/mvebu_armada70x0_defconfig
++++ b/configs/mvebu_armada70x0_defconfig
+@@ -24,7 +24,7 @@ CONFIG_CMD_MVEBU_TSEN=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_MULTI_DT_FILE=y
+-+S:CONFIG_DEFAULT_DEVICE_TREE="armada-8040-rz1-db"
+++S:CONFIG_DEFAULT_DEVICE_TREE="armada-7040-rz-db_router"
+ CONFIG_MVEBU_PCI=y
+ CONFIG_MVEBU_CCU=y
+ CONFIG_MVEBU_RFU=y
+-- 
+1.9.1
+

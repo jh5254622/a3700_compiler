@@ -1,0 +1,143 @@
+From 7e82a8b7e4092cf5626e688c6050b1210ee4697f Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 23 Nov 2015 16:29:03 +0200
+Subject: [PATCH 0536/1240] dts: a80x0, a70x0: update device tree of
+ Armada-80x0/70x0
+
+- Added MPP for device tree
+- Added SPI node for device tree
+
+Change-Id: Iec07c9c8fc1463257043dd8975b9577d3c30396b
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25175
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/armada-70x0-db.dts | 14 ++++++++++++++
+ arch/arm/dts/armada-70x0.dtsi   |  7 +++++++
+ arch/arm/dts/armada-80x0-db.dts | 29 +++++++++++++++++++++++++++++
+ arch/arm/dts/armada-80x0.dtsi   |  7 +++++++
+ arch/arm/dts/cp110.dtsi         | 18 ++++++++++++++++++
+ 5 files changed, 75 insertions(+)
+
+diff --git a/arch/arm/dts/armada-70x0-db.dts b/arch/arm/dts/armada-70x0-db.dts
+index 3f3066d..723e56c 100644
+--- a/arch/arm/dts/armada-70x0-db.dts
++++ b/arch/arm/dts/armada-70x0-db.dts
+@@ -28,4 +28,18 @@
+ 		device_type = "memory";
+ 		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
+ 	};
++	cp110-master {
++		internal-regs {
++			pinctl@440000 {
++					/*   0 1 2 3 4 5 6 7 8 9 */
++				pin-func = < 0 0 0 0 0 0 0 0 0 0
++					     0 0 0 0 0 0 0 0 0 0
++					     0 0 0 0 0 0 0 0 0 0
++					     0 0 0 0 0 0 0 0 0 0
++					     0 0 0 0 0 0 0 0 0 0
++					     0 0 0 0 0 0 6 6 6 6
++					     0 0 0 0>;
++			};
++		};
++	};
+ };
+diff --git a/arch/arm/dts/armada-70x0.dtsi b/arch/arm/dts/armada-70x0.dtsi
+index a10389e..68ed617 100644
+--- a/arch/arm/dts/armada-70x0.dtsi
++++ b/arch/arm/dts/armada-70x0.dtsi
+@@ -21,4 +21,11 @@
+ 
+ / {
+ 	compatible = "marvell,armada-70x0";
++	ap-806 {
++		internal-regs {
++			spi@510600 {
++				status = "disabled";
++			};
++		};
++	};
+ };
+diff --git a/arch/arm/dts/armada-80x0-db.dts b/arch/arm/dts/armada-80x0-db.dts
+index 20d8fca..06d9d70 100644
+--- a/arch/arm/dts/armada-80x0-db.dts
++++ b/arch/arm/dts/armada-80x0-db.dts
+@@ -28,4 +28,33 @@
+ 		device_type = "memory";
+ 		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
+ 	};
++	cp110-master {
++		internal-regs {
++			pinctl@440000 {
++					/*   0 1 2 3 4 5 6 7 8 9 */
++				pin-func = < 0 0 0 0 0 0 0 0 0 0
++					     0 0 0 0 0 0 0 0 0 0
++					     0 0 0 0 0 0 0 0 0 0
++					     0 0 0 0 0 0 0 0 0 0
++					     0 0 0 0 0 0 0 0 0 0
++					     0 0 0 0 0 0 6 6 6 6
++					     0 0 0 0>;
++			};
++		};
++	};
++	cp110-slave {
++		internal-regs {
++			pinctl@440000 {
++					/*   0 1 2 3 4 5 6 7 8 9 */
++				pin-func = < 0 0 0 0 0 0 0 0 0 0
++					     0 0 0 0 0 0 0 0 0 0
++					     0 0 0 0 0 0 0 0 0 0
++					     0 0 0 0 0 0 0 0 0 0
++					     0 0 0 0 0 0 0 0 0 0
++					     0 0 0 0 0 0 6 6 6 6
++					     0 0 0 0>;
++			};
++		};
++	};
++
+ };
+diff --git a/arch/arm/dts/armada-80x0.dtsi b/arch/arm/dts/armada-80x0.dtsi
+index 1cbaafd..ac6cb0c 100644
+--- a/arch/arm/dts/armada-80x0.dtsi
++++ b/arch/arm/dts/armada-80x0.dtsi
+@@ -22,4 +22,11 @@
+ 
+ / {
+ 	compatible = "marvell,armada-80x0";
++	ap-806 {
++		internal-regs {
++			spi@510600 {
++				status = "disabled";
++			};
++		};
++	};
+ };
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index 87dbfa6..93295fc 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -23,3 +23,21 @@ map-iob {
+ 	windows = <0x0 0xf8000000 0x0 0x1000000 0x2 /* PEX1_X1 window */
+ 		0x0 0xf9000000 0x0 0x1000000 0x5 /* NAND window */>;
+ };
++
++spi@700600 {
++	compatible = "marvell,orion-spi";
++	reg = <0x700600 0x50>;
++	spi-max-frequency = <10000000>;
++	clock = <&tclk>;
++	cpol-cs-bitmap = <1>; /* bit i is set if the CPOL of
++				CS-i is enabled or not */
++	status = "disable";
++};
++
++pinctl@440000 {
++	compatible = "marvell,mvebu-pinctl";
++	bank-name ="cp-110";
++	reg = <0x440000 0x10>;
++	pin-count = <63>;
++	max-func = <0xf>;
++};
+-- 
+1.9.1
+

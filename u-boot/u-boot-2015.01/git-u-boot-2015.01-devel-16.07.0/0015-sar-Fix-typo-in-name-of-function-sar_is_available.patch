@@ -1,0 +1,54 @@
+From 3032c260f7691867c82a8f82096d7df7dbbf156e Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 27 Feb 2014 09:34:18 +0200
+Subject: [PATCH 0015/1240] sar: Fix typo in name of function sar_is_available
+
+Change-Id: I4c87b40ec8e1b6d25b7d6f53c6d2a1bf574b0e56
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ board/mvebu/common/sar.c | 2 +-
+ board/mvebu/common/sar.h | 2 +-
+ common/mvebu/cmd_sar.c   | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/board/mvebu/common/sar.c b/board/mvebu/common/sar.c
+index d402fa0..90d8df5 100644
+--- a/board/mvebu/common/sar.c
++++ b/board/mvebu/common/sar.c
+@@ -220,7 +220,7 @@ struct sar_var *sar_id_to_var(int id)
+ 
+ 
+ /* Interface to SatR command */
+-int sar_is_avaialble(void)
++int sar_is_available(void)
+ {
+ 	if (board_get_sar_table() == NULL)
+ 		return 0;
+diff --git a/board/mvebu/common/sar.h b/board/mvebu/common/sar.h
+index 286b669..6aaa126 100644
+--- a/board/mvebu/common/sar.h
++++ b/board/mvebu/common/sar.h
+@@ -62,6 +62,6 @@ int  sar_write_key(const char *key, int val);
+ int  sar_print_key(const char *key);
+ void sar_list_keys(void);
+ int  sar_list_key_opts(const char *key);
+-int  sar_is_avaialble(void);
++int  sar_is_available(void);
+ 
+ #endif /* _SAR_H_ */
+diff --git a/common/mvebu/cmd_sar.c b/common/mvebu/cmd_sar.c
+index bb2f823..29dce08 100644
+--- a/common/mvebu/cmd_sar.c
++++ b/common/mvebu/cmd_sar.c
+@@ -32,7 +32,7 @@ int do_sar_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+ 	const char *key = NULL;
+ 	int value = 0;
+ 
+-	if (sar_is_avaialble() == 0) {
++	if (sar_is_available() == 0) {
+ 		printf("Error: SAR variables not available for this board\n");
+ 		return 1;
+ 	}
+-- 
+1.9.1
+

@@ -1,0 +1,139 @@
+From c44e32cad2c735204bbfc7a46116c1bd31fb6168 Mon Sep 17 00:00:00 2001
+From: Jing Hua <jinghua@marvell.com>
+Date: Wed, 24 Jun 2015 10:29:51 +0800
+Subject: [PATCH 0297/1240] uart: fdt: arlp: add clock frequency and baudrate
+ in FDT serial node
+
+	- add clock frequency and baudrate info in FDT serial node, to calculate UART divider.
+	  baudrate = clock / 16 / divider
+	- update file doc/device-tree-bindings/README.mvebu, add armadaLP uart part.
+	- add file doc/device-tree-bindings/serial/mvebu-serial.txt, including
+	  armadaLP serial node device-tree binding information.
+
+Change-Id: If2d2de4ec5bc803a88e88527917c2c599f53d972
+Signed-off-by: Jing Hua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20420
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/armada-lp-palladium.dts             |  2 ++
+ arch/arm/dts/armada-lp.dtsi                      |  2 ++
+ doc/device-tree-bindings/README.mvebu            |  2 ++
+ doc/device-tree-bindings/serial/mvebu-serial.txt | 21 +++++++++++++++++++++
+ drivers/serial/serial_mvebu.c                    | 19 +++++++++++--------
+ 5 files changed, 38 insertions(+), 8 deletions(-)
+ create mode 100644 doc/device-tree-bindings/serial/mvebu-serial.txt
+
+diff --git a/arch/arm/dts/armada-lp-palladium.dts b/arch/arm/dts/armada-lp-palladium.dts
+index ced9f96..741dfec 100644
+--- a/arch/arm/dts/armada-lp-palladium.dts
++++ b/arch/arm/dts/armada-lp-palladium.dts
+@@ -10,6 +10,8 @@
+ 	soc {
+ 		internal-regs {
+ 			serial: serial@12000 {
++				clock_frequency = <4800>;
++				baudrate = <300>;
+ 				status = "okay";
+ 			};
+ 		};
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index 913ae43..3261942 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -21,6 +21,8 @@
+ 			serial: serial@12000 {
+ 				compatible = "marvell,armadalp-uart";
+ 				reg = <0x12000 0x20>;
++				clock_frequency = <40000000>;
++				baudrate = <115200>;
+ 				status = "disabled";
+ 			};
+ 		};
+diff --git a/doc/device-tree-bindings/README.mvebu b/doc/device-tree-bindings/README.mvebu
+index f3ec199..ece934e 100644
+--- a/doc/device-tree-bindings/README.mvebu
++++ b/doc/device-tree-bindings/README.mvebu
+@@ -51,6 +51,8 @@ Group Ltd.
+ 				DRIVER = ccu/iob/rfu/mbus
+ 			2.1.5 /soc/internal-regs/comphy:
+ 				Specify the COMPHY interface, check doc/device-tree-bindings/comphy/mvebu_comphy.txt
++			2.1.6 /soc/internal-regs/serial/ node;
++				Specify the UART interface for armadaLP, check doc/device-tree-bindings/serial/mvebu-serial.txt
+ 
+ 3) /sar/ node:
+ 	Specify the sample at reset database, check
+diff --git a/doc/device-tree-bindings/serial/mvebu-serial.txt b/doc/device-tree-bindings/serial/mvebu-serial.txt
+new file mode 100644
+index 0000000..c0e3d68
+--- /dev/null
++++ b/doc/device-tree-bindings/serial/mvebu-serial.txt
+@@ -0,0 +1,21 @@
++Marvell ArmadaLP UART bindings
++====================
++
++This UART driver supports Marvell ArmadaLP SoC, which implements the uart core operations.
++The node name is serial0 to show that it's UART-0, for UART-1 should be serial1.
++
++The armadaLP serial node requires the following properties:
++	- compatible
++		should be "marvell,armadalp-uart"
++	- reg: the base address of the UART unit
++	- clock_frequency: input clock frequency of UART unit
++	- baudrate: the baudrate of the UART unit
++
++Example for armadaLP UART-0 node:
++	serial: serial@12000 {
++		compatible = "marvell,armadalp-uart";
++		reg = <0x12000 0x20>;
++		clock_frequency = <4800>;
++		baudrate = <115200>;
++		status = "okay";
++	};
+diff --git a/drivers/serial/serial_mvebu.c b/drivers/serial/serial_mvebu.c
+index e004164..704f921 100644
+--- a/drivers/serial/serial_mvebu.c
++++ b/drivers/serial/serial_mvebu.c
+@@ -27,6 +27,8 @@ DECLARE_GLOBAL_DATA_PTR;
+ 
+ /* to use global variables before u-boot relocation, initialize it to something !=0 */
+ unsigned int mvebu_uart_reg_base = 100;
++unsigned int mvebu_uart_clock_frequency = 100;
++unsigned int mvebu_uart_baudrate = 100;
+ 
+ #define MVEBU_UART_BASE(x)	mvebu_uart_reg_base
+ 
+@@ -60,14 +62,13 @@ unsigned int mvebu_uart_reg_base = 100;
+ 
+ static void mvebu_serial_setbrg(void)
+ {
+-	/* No Operation */;
+-#ifdef CONFIG_PALLADIUM
+-	/* following are all temporary settings for Palladium, will be removed later */
+-	/* for palladium, we use 300 brg */
+-	UART_REG_WRITE(UART_BAUD_REG, 0x1);
+-	UART_REG_WRITE(UART_POSSR_REG, 0x0);
+-
+-#endif
++	/*
++	 * calculate divider.
++	 * baudrate = clock / 16 / divider
++	 */
++	UART_REG_WRITE(UART_BAUD_REG, (mvebu_uart_clock_frequency / mvebu_uart_baudrate / 16));
++	/* set Programmable Oversampling Stack to 0, UART defaults to 16X scheme */
++	UART_REG_WRITE(UART_POSSR_REG, 0);
+ }
+ 
+ /*
+@@ -123,6 +124,8 @@ static int mvebu_serial_init(void)
+ 			continue;
+ 
+ 		mvebu_uart_reg_base = (unsigned int)fdt_get_regs_offs(gd->fdt_blob, node, "reg");
++		mvebu_uart_clock_frequency = (unsigned int)fdtdec_get_int(gd->fdt_blob, node, "clock_frequency", 0);
++		mvebu_uart_baudrate = (unsigned int)fdtdec_get_int(gd->fdt_blob, node, "baudrate", 0);
+ 	}
+ 
+ 	/* 115200KBps fixed Baud rate  */
+-- 
+1.9.1
+

@@ -1,0 +1,78 @@
+From 2dc3ad13396fc982d797d4ce4627eabc8f23fe24 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 18 May 2016 13:50:39 +0300
+Subject: [PATCH 1150/1240] doc: gpio: update GPIO documentation for
+ Armada-70x0/80x0 support
+
+Change-Id: I9be59710ec1c4d27e8e45d84ee53804075b8dd09
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29795
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Gina Tadmore <gina@marvell.com>
+---
+ doc/device-tree-bindings/gpio/mvebu-gpio.txt | 39 +++++++++++++++++++++++-----
+ 1 file changed, 33 insertions(+), 6 deletions(-)
+
+diff --git a/doc/device-tree-bindings/gpio/mvebu-gpio.txt b/doc/device-tree-bindings/gpio/mvebu-gpio.txt
+index 5cb861f..d750f5c 100644
+--- a/doc/device-tree-bindings/gpio/mvebu-gpio.txt
++++ b/doc/device-tree-bindings/gpio/mvebu-gpio.txt
+@@ -3,16 +3,15 @@ MVEBU GPIO DT bindings
+ Required properties:
+ - compatible:           Should be "marvell,mvebu-gpio"
+ - reg:                  The register base for the GPIO bank controller
+-- bank-name:            The gpio bank name
+-- ngpios:               gpio count in bank
++- bank-name:            The GPIO bank name
++- ngpios:               GPIO count in bank
+ 
+ Optional properties:
+ None
+ 
+-
+ Examples:
+-Let's take Armada3700 as an example.
+-Armada3700 has two GPIO banks, one is north bridge GPIO bank and aother is south bridge GPIO bank.
++Armada3700 example:
++Armada3700 has two GPIO banks, one is the Northbridge GPIO bank and the other is the Southbridge GPIO bank..
+ 
+ 	gpio0: gpio@13800 {
+ 		compatible = "marvell,mvebu-gpio";
+@@ -36,4 +35,32 @@ For example, mmc1 can use the gpio1's 22nd pin for SDIO VCC setting as below.
+ mmc1: mmc@D0000 {
+ 	sdio-vcc-gpio = <&gpio1 ARMADA_3700_GPIO(BANK_1, 22) GPIO_ACTIVE_HIGH>;
+ 	status = "okay";
+-};
+\ No newline at end of file
++};
++
++Armada-70x0e example:
++Armada-70x0 include AP-806, CP-110: AP-806 have 20 pins, and CP-110 have 63 pins
++AP-806 has 1 bank with 20 pins, CP-110 has 2 banks (1st bank: 0-31, 2nd bank: 32-62)
++AP-806 GPIO example node:
++	gpio0: gpio@6F5040 {
++		compatible = "marvell,mvebu-gpio";
++		reg = <0x6F5040 0x40>;
++		bank-name = "armada-ap806";
++		ngpios = <ARMADA_AP806_GPIO_COUNT>;
++		status = "okay";
++	};
++CP-110 GPIO example node:
++	gpio1: gpio@440100 {
++		compatible = "marvell,mvebu-gpio";
++		reg = <0x440100 0x40>;
++		bank-name = "armada-cp0";
++		ngpios = <ARMADA_CP0_B0_GPIO_COUNT>;
++		status = "okay";
++	};
++
++When unit (USB/PEX/MMC) needs to use GPIO, the unit driver should support this.
++If the unit driver is supports GPIO setting, need to use one of the macros AP_GPIO, CP0_GPIO, CP1_GPIO
++For example: USB use GPIO pin #12 in the CP0 for VBUS enable as below:
++	usb3@500000 {
++		gpio-vbus = <&gpio1 CP0_GPIO(12) GPIO_ACTIVE_LOW>;
++		status = "okay";
++	};
+-- 
+1.9.1
+

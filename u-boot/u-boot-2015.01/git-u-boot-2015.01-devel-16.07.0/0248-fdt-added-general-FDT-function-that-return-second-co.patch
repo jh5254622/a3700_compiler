@@ -1,0 +1,83 @@
+From 90deb3945a2c08496dca613be408af8ef689db48 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 8 Jul 2015 11:37:06 +0300
+Subject: [PATCH 0248/1240] fdt: added general FDT function that return second
+ compatible of a given node
+
+- Generally each node has at least one compatible string attached to it.
+- This function looks through our list of known compatible strings and
+  returns the corresponding ID which matches the compatible string, that
+  different than the first compatible in the node
+
+Change-Id: I22ca0e8a3b7b3611b4cde8cb5ee4ec7d114fe060
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/21129
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ include/fdtdec.h | 14 ++++++++++++++
+ lib/fdtdec.c     | 16 ++++++++++++++--
+ 2 files changed, 28 insertions(+), 2 deletions(-)
+
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 9ad1123..f94a6e4 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -204,6 +204,20 @@ int fdtdec_next_alias(const void *blob, const char *name,
+ enum fdt_compat_id fdtdec_lookup(const void *blob, int node);
+ 
+ /**
++ * Find the second comaptible ID for a given node.
++ *
++ * Generally each node has at least one compatible string attached to it.
++ * This function looks through our list of known compatible strings and
++ * returns the corresponding ID which matches the compatible string, that
++ * different than the first compatible in the node
++ * @param blob          FDT blob to use
++ * @param node          Node containing compatible string to find
++ * @param compat        compatible ID of the first compatible
++ * @return compatible ID, or COMPAT_UNKNOWN if we cannot find a match
++ */
++enum fdt_compat_id fdtdec_next_lookup(const void *blob, int node, enum fdt_compat_id compat);
++
++/**
+  * Find the next compatible node for a peripheral.
+  *
+  * Do the first call with node = 0. This function will return a pointer to
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 68bcd36..aeeaa2d 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -180,6 +180,19 @@ enum fdt_compat_id fdtdec_lookup(const void *blob, int node)
+ 	return COMPAT_UNKNOWN;
+ }
+ 
++enum fdt_compat_id fdtdec_next_lookup(const void *blob, int node, enum fdt_compat_id compat)
++{
++	enum fdt_compat_id id;
++
++	for (id = COMPAT_UNKNOWN; id < COMPAT_COUNT; id++) {
++		if (id == compat)
++			continue;
++		if (0 == fdt_node_check_compatible(blob, node, compat_names[id]))
++			return id;
++	}
++	return COMPAT_UNKNOWN;
++}
++
+ int fdtdec_next_compatible(const void *blob, int node,
+ 		enum fdt_compat_id id)
+ {
+@@ -194,8 +207,7 @@ int fdtdec_next_compatible_subnode(const void *blob, int node,
+ 	} while (*depthp > 1);
+ 
+ 	/* If this is a direct subnode, and compatible, return it */
+-	if (*depthp == 1 && 0 == fdt_node_check_compatible(
+-						blob, node, compat_names[id]))
++	if (*depthp == 1 && 0 == fdt_node_check_compatible(blob, node, compat_names[id]))
+ 		return node;
+ 
+ 	return -FDT_ERR_NOTFOUND;
+-- 
+1.9.1
+

@@ -1,0 +1,91 @@
+From d367c6a48e726aa53fa6d5ca471933cfc20f7984 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Tue, 28 Jun 2016 02:34:39 +0800
+Subject: [PATCH 230/239] avs: a3700: init CPU voltage by AVS according to
+ frequency
+
+This patch moves the initial AVS seting for CPU voltage
+from ddr-x.txt to clock-x-y.txt.
+The initial CPU voltage is as below:
+CPU frequency      CPU voltage         AVS loads
+  1200MHZ             1200mV             39
+  1000MHZ             1150mV             35
+ <=800MHZ             1110mV             31
+
+Change-Id: I167467126d185c76421f962e65ae19946288a24d
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30745
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ tools/wtp/clocks-1000-800.txt | 4 ++++
+ tools/wtp/clocks-600-600.txt  | 4 ++++
+ tools/wtp/clocks-800-800.txt  | 4 ++++
+ tools/wtp/ddr3-600.txt        | 4 ----
+ tools/wtp/ddr3-800.txt        | 4 ----
+ 5 files changed, 12 insertions(+), 8 deletions(-)
+
+diff --git a/tools/wtp/clocks-1000-800.txt b/tools/wtp/clocks-1000-800.txt
+index 16ca4b3..32d3bb1 100644
+--- a/tools/wtp/clocks-1000-800.txt
++++ b/tools/wtp/clocks-1000-800.txt
+@@ -48,3 +48,7 @@ WRITE: 0xC0013210 0x0014B014A
+ ; Switch all clocks to back dividers
+ WRITE: 0xC0013010 0x00009FFF
+ WRITE: 0xC0018010 0x000007AA
++; AVS enable
++WRITE: 0xC0011500 0x98E2FFFF    ;# Set VDD to 1150mV and soft reset AVS
++WRITE: 0xC0011500 0x18E2FFFF    ;# release AVS reset
++WRITE: 0xC0011500 0x58E2FFFF    ;# Enable AVS
+diff --git a/tools/wtp/clocks-600-600.txt b/tools/wtp/clocks-600-600.txt
+index a2df961..4803532 100644
+--- a/tools/wtp/clocks-600-600.txt
++++ b/tools/wtp/clocks-600-600.txt
+@@ -48,3 +48,7 @@ WRITE: 0xC0013210 0x0014B014D
+ ; Switch all clocks to back dividers
+ WRITE: 0xC0013010 0x00009FFF
+ WRITE: 0xC0018010 0x000007AA
++; AVS enable
++WRITE: 0xC0011500 0x97E2FFFF    ;# Set VDD to 1100mV and soft reset AVS
++WRITE: 0xC0011500 0x17E2FFFF    ;# release AVS reset
++WRITE: 0xC0011500 0x57E2FFFF    ;# Enable AVS
+diff --git a/tools/wtp/clocks-800-800.txt b/tools/wtp/clocks-800-800.txt
+index 52a0c19..b0c9ac5 100644
+--- a/tools/wtp/clocks-800-800.txt
++++ b/tools/wtp/clocks-800-800.txt
+@@ -48,3 +48,7 @@ WRITE: 0xC0013210 0x0014B014A
+ ; Switch all clocks to back dividers
+ WRITE: 0xC0013010 0x00009FFF
+ WRITE: 0xC0018010 0x000007AA
++; AVS enable
++WRITE: 0xC0011500 0x97E2FFFF    ;# Set VDD to 1100mV and soft reset AVS
++WRITE: 0xC0011500 0x17E2FFFF    ;# release AVS reset
++WRITE: 0xC0011500 0x57E2FFFF    ;# Enable AVS
+diff --git a/tools/wtp/ddr3-600.txt b/tools/wtp/ddr3-600.txt
+index b79d43c..0412ed8 100644
+--- a/tools/wtp/ddr3-600.txt
++++ b/tools/wtp/ddr3-600.txt
+@@ -94,7 +94,3 @@ WRITE: 0xC0001020 0x80000000
+ ; Trigger DDR init for channel 0
+ WRITE: 0xC0000020 0x11000001
+ WAIT_FOR_BIT_SET: 0xC0000008 0x00000001 0x00001000
+-; AVS enable
+-WRITE: 0xC0011500 0x98A2FFFF	;# Set VDD to 1150mV and soft reset AVS
+-WRITE: 0xC0011500 0x18A2FFFF	;# release AVS reset
+-WRITE: 0xC0011500 0x58A2FFFF	;# Enable AVS
+diff --git a/tools/wtp/ddr3-800.txt b/tools/wtp/ddr3-800.txt
+index 59a9405..5a6fa6b 100644
+--- a/tools/wtp/ddr3-800.txt
++++ b/tools/wtp/ddr3-800.txt
+@@ -94,7 +94,3 @@ WRITE: 0xC0001020 0x80000000
+ ; Trigger DDR init for channel 0
+ WRITE: 0xC0000020 0x11000001
+ WAIT_FOR_BIT_SET: 0xC0000008 0x00000001 0x00001000
+-; AVS enable
+-WRITE: 0xC0011500 0x98A2FFFF	;# Set VDD to 1150mV and soft reset AVS
+-WRITE: 0xC0011500 0x18A2FFFF	;# release AVS reset
+-WRITE: 0xC0011500 0x58A2FFFF	;# Enable AVS
+-- 
+1.9.1
+

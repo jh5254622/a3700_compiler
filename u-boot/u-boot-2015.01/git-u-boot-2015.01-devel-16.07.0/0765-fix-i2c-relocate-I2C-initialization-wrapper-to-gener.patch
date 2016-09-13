@@ -1,0 +1,100 @@
+From bfc43c5c3307ec29f4a56343a2a5ed3c1fafff39 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Thu, 28 Jan 2016 17:44:02 +0200
+Subject: [PATCH 0765/1240] fix: i2c: relocate I2C initialization wrapper to
+ generic SoC code
+
+- I2C wrapper will be needed by other drivers than fdt_eeprom.c
+- relocate wrapper to generic SoC code location, and add proper inclusion
+
+Change-Id: I7dc0100863dcc6165d2fcd6f46702d9756a1aeba
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27073
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/soc-init.c  | 14 ++++++++++++++
+ arch/arm/include/asm/arch-mvebu/soc.h |  1 +
+ board/mvebu/common/fdt_eeprom.c       | 14 ++------------
+ 3 files changed, 17 insertions(+), 12 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index 27d0dd8..53b2ce2 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -19,6 +19,7 @@
+ #include <config.h>
+ #include <common.h>
+ #include <errno.h>
++#include <i2c.h>
+ #include <asm/system.h>
+ #include <asm/bitops.h>
+ #include <asm/arch-mvebu/mvebu.h>
+@@ -41,6 +42,19 @@
+ #include <asm/arch-mvebu/mbus.h>
+ #endif
+ 
++#if defined(CONFIG_HARD_I2C) || defined(CONFIG_SYS_I2C)
++/* General I2C initialization wrapper */
++int init_func_i2c(void)
++{
++#ifdef CONFIG_SYS_I2C
++	i2c_init_all();
++#else
++	i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
++#endif
++	return 0;
++}
++#endif
++
+ #ifdef CONFIG_SCSI_AHCI_PLAT
+ void __board_ahci_power_on(void)
+ {
+diff --git a/arch/arm/include/asm/arch-mvebu/soc.h b/arch/arm/include/asm/arch-mvebu/soc.h
+index 631529c..ccc1e85 100644
+--- a/arch/arm/include/asm/arch-mvebu/soc.h
++++ b/arch/arm/include/asm/arch-mvebu/soc.h
+@@ -36,6 +36,7 @@ void board_usb_vbus_set(void);
+ #endif
+ int mvebu_soc_init(void);
+ void mvebu_print_soc_info(void);
++int init_func_i2c(void);
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+diff --git a/board/mvebu/common/fdt_eeprom.c b/board/mvebu/common/fdt_eeprom.c
+index 141e625..769ac88 100644
+--- a/board/mvebu/common/fdt_eeprom.c
++++ b/board/mvebu/common/fdt_eeprom.c
+@@ -16,6 +16,8 @@
+  * ***************************************************************************
+  */
+ 
++#include <common.h>
++#include <asm/arch-mvebu/soc.h>
+ #include <fdtdec.h>
+ #include <libfdt.h>
+ #include "fdt_eeprom.h"
+@@ -25,18 +27,6 @@ struct eeprom_struct fdt_config_val = FDT_DEFAULT_VALUE;
+ struct board_config_struct_info *board_cfg = &(fdt_config_val.board_config);
+ struct fdt_config_types_info fdt_config_types_info[] = MV_EEPROM_CONFIG_INFO;
+ 
+-#if defined(CONFIG_HARD_I2C) || defined(CONFIG_SYS_I2C)
+-static int init_func_i2c(void)
+-{
+-#ifdef CONFIG_SYS_I2C
+-	i2c_init_all();
+-#else
+-	i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
+-#endif
+-	return 0;
+-}
+-#endif
+-
+ uint32_t mvebu_checksum8(uint8_t *start, uint32_t len)
+ {
+ 	uint32_t sum = 0;
+-- 
+1.9.1
+

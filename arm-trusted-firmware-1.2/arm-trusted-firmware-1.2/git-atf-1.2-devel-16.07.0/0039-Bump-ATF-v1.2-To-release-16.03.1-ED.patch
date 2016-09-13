@@ -1,0 +1,24 @@
+From ea1a5b58fa8047e81f701b6197c0d8902e463b9d Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Mon, 7 Mar 2016 19:00:23 +0200
+Subject: [PATCH 039/239] Bump ATF v1.2 To release 16.03.1 ED
+
+Change-Id: I8894ee04a0be155a87abe8f66573b53335a1fad6
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28087
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ version.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/version.mk b/version.mk
+index 1ded604..9d94c96 100644
+--- a/version.mk
++++ b/version.mk
+@@ -1 +1 @@
+-BUILD_STRING = 16.03.0 ED
++BUILD_STRING = 16.03.1 ED
+-- 
+1.9.1
+

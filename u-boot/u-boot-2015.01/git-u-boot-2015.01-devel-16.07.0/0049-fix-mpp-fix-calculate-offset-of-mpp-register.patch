@@ -1,0 +1,41 @@
+From 252c91f8347dc604929b456b8d0a44bafcd3f5d2 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 3 Aug 2014 22:58:53 +0300
+Subject: [PATCH 0049/1240] fix: mpp: fix calculate offset of mpp register
+
+	- fix the calculation of mpp register offset
+	the base_addr is pointer, when adding u32 variable,
+	the value doubled by 4
+
+Change-Id: I3f7803e1c03806bbd0d0f97df84eeef40e0d0bf7
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/9803
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/mpp.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/mpp.c b/arch/arm/cpu/mvebu-common/mpp.c
+index 0ca84d5..485052a 100644
+--- a/arch/arm/cpu/mvebu-common/mpp.c
++++ b/arch/arm/cpu/mvebu-common/mpp.c
+@@ -53,13 +53,13 @@ static void set_field(int mpp_id, int value, u32 *base_ptr)
+ 
+ static u8 get_field(int mpp_id, u32 *base_ptr)
+ {
+-	int reg_offset;
++	u32 reg_offset;
+ 	int field_offset;
+ 	u32 reg;
+ 	u8 value;
+ 
+ 	/* Calculate register address and bit in register */
+-	reg_offset   = 4 * (mpp_id >> (MPP_FIELD_BITS));
++	reg_offset   = mpp_id >> (MPP_FIELD_BITS);
+ 	field_offset = (MPP_BIT_CNT) * (mpp_id & MPP_FIELD_MASK);
+ 
+ 	reg = readl(base_ptr + reg_offset);
+-- 
+1.9.1
+

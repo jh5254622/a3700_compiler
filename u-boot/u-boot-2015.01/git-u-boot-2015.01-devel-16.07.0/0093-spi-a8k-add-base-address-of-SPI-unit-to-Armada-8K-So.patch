@@ -1,0 +1,30 @@
+From 71b299326ab5099b7fbfbdfff930aa13942b565c Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 2 Nov 2014 21:42:24 +0200
+Subject: [PATCH 0093/1240] spi: a8k: add base address of SPI unit to Armada 8K
+ SoC
+
+Change-Id: I2533b5ca04bea0be4a2dab133d9e4438cfda4784
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/13996
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/include/asm/arch-armada8k/regs-base.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm/include/asm/arch-armada8k/regs-base.h b/arch/arm/include/asm/arch-armada8k/regs-base.h
+index b1b3132..4bee8ff 100644
+--- a/arch/arm/include/asm/arch-armada8k/regs-base.h
++++ b/arch/arm/include/asm/arch-armada8k/regs-base.h
+@@ -29,6 +29,7 @@
+ #define MVEBU_ADEC_RFU_BASE 	(MVEBU_REGS_BASE + 0x680000)
+ #define MVEBU_ADEC_IOB_BASE 	(MVEBU_REGS_BASE + 0x2810000)
+ 
++#define MVEBU_SPI_REGS_BASE(x)	(MVEBU_REGS_BASE + 0x500000)
+ #define MVEBU_UART_BASE(x)	(MVEBU_REGS_BASE + 0x512000 + (0x100 * x))
+ #define MVEBU_MISC_REGS_BASE	(MVEBU_REGS_BASE + 0x18200)
+ #define MVEBU_DEVICE_ID_REG	(MVEBU_MISC_REGS_BASE + 0x38)
+-- 
+1.9.1
+

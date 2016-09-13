@@ -1,0 +1,31 @@
+From c7599b649bde232ed425a8dee9e193d8ae93e67b Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 30 Jul 2015 11:03:16 +0300
+Subject: [PATCH 0290/1240] gitignore: added doimage binary to git ignore
+
+Change-Id: I716676cce32153747312d6f1704e3a823c6ed629
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22330
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ .gitignore | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/.gitignore b/.gitignore
+index 554f358..f8accc8 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -81,6 +81,9 @@ GRTAGS
+ GSYMS
+ GTAGS
+ 
++# Tools
++tools/doimage
++
+ *.orig
+ *~
+ \#*#
+-- 
+1.9.1
+

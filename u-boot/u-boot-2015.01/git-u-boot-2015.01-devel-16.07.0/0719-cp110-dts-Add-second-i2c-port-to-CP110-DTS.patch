@@ -1,0 +1,41 @@
+From e5cc9960230de179f71b8bb04ff57bc8fc812672 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Tue, 19 Jan 2016 17:54:05 +0200
+Subject: [PATCH 0719/1240] cp110: dts: Add second i2c port to CP110 DTS
+
+- Add second i2c port to CP110 DTS
+
+Change-Id: Ibe4caf28fd67cf6d27c442ec71311d8c7673acd1
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26896
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/cp110.dtsi | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index 8100d39..deb53c7 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -35,11 +35,16 @@ spi@700600 {
+ 				CS-i is enabled or not */
+ 	status = "disable";
+ };
+-i2c@701000 {
++i2c@701000 { /* i2c0 */
+ 	compatible = "marvell,mvebu-i2c";
+ 	reg = <0x701000 0x100>;
+ 	status = "disabled";
+ };
++i2c@701100 { /* i2c1 */
++	compatible = "marvell,mvebu-i2c";
++	reg = <0x701100 0x100>;
++	status = "disabled";
++};
+ sata@540000 { /* SATA0 */
+ 	compatible = "marvell,mvebu-sata";
+ 	reg = <540000 0x200>;
+-- 
+1.9.1
+

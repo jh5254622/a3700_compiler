@@ -1,0 +1,28 @@
+From fd02e7bf000e525df30d772e0a7c6438e2d1d4eb Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Tue, 16 Dec 2014 11:13:45 +0200
+Subject: [PATCH 0096/1240] config: changed earlyprintk to earlycon for
+ linux-3.17
+
+Change-Id: Ia75960be437be39c13eb079dd6d2ef88af8589ad
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ include/configs/armada8k.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index 8072d55..197c415 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -72,7 +72,7 @@
+ #define CONFIG_BAUDRATE                 4000
+ 
+ #undef CONFIG_BOOTARGS
+-#define CONFIG_BOOTARGS			"console=ttyS0,5652 earlyprintk=uart8250-32bit,0xf0512000,5652"
++#define CONFIG_BOOTARGS			"console=ttyS0,5652 earlycon=uart8250,mmio32,0xf0512000 mem=128M"
+ 
+ #undef  CONFIG_EXTRA_ENV_SETTINGS
+ #define CONFIG_EXTRA_ENV_SETTINGS	"kernel_addr=0x107ffc0\0"	\
+-- 
+1.9.1
+

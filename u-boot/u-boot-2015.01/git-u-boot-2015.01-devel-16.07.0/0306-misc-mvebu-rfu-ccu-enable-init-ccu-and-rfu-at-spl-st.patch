@@ -1,0 +1,186 @@
+From db5e0a14e818fc9f0d6137315909087f1a5d78f0 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Wed, 5 Aug 2015 09:17:22 +0300
+Subject: [PATCH 0306/1240] misc: mvebu: rfu: ccu: enable init ccu and rfu at
+ spl stage
+
+- malloc is disable at spl stage - remove malloc from ccu and rfu drivers,
+  use static arrays instead.
+- when run init ccu and rfu at spl stage, still need to init the ccu and rfu
+  sw structures to enable u-boot map command
+
+Change-Id: I1b8bebbdb48fd087a75c0fd89bff6aaf6532f319
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22524
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/soc-init.c  | 12 ++++++++++--
+ arch/arm/include/asm/arch-mvebu/ccu.h |  2 +-
+ arch/arm/include/asm/arch-mvebu/rfu.h |  2 +-
+ drivers/misc/mvebu_ccu.c              | 17 ++++++++---------
+ drivers/misc/mvebu_rfu.c              | 15 +++++++--------
+ 5 files changed, 27 insertions(+), 21 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index a5baf2c..ef2db9d 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -56,15 +56,23 @@ int soc_late_init(void) __attribute__((weak, alias("__soc_late_init")));
+ int mvebu_soc_init()
+ {
+ 	int ret;
++#if defined(CONFIG_MVEBU_CCU) || defined(CONFIG_MVEBU_RFU)
++	/* ccu and rfu init support 2 modes:
++	   1. regular mode - init both sw structures and configure windows
++	   2. sw init - in case that the ccu and rfu were initialized at the SPL,
++					init only the ccu and rfu sw structures
++	   By default use the regular mode */
++	bool sw_init = false;
++#endif
+ 
+ 	soc_init();
+ 
+ 	/* Initialize physical memory map */
+ #ifdef CONFIG_MVEBU_CCU
+-	init_ccu();
++	init_ccu(sw_init);
+ #endif
+ #ifdef CONFIG_MVEBU_RFU
+-	init_rfu();
++	init_rfu(sw_init);
+ #endif
+ #ifdef CONFIG_MVEBU_IOB
+ 	init_iob();
+diff --git a/arch/arm/include/asm/arch-mvebu/ccu.h b/arch/arm/include/asm/arch-mvebu/ccu.h
+index 672071e..c1fb2b1 100644
+--- a/arch/arm/include/asm/arch-mvebu/ccu.h
++++ b/arch/arm/include/asm/arch-mvebu/ccu.h
+@@ -20,7 +20,7 @@
+ #define _CCU_H_
+ 
+ void dump_ccu(void);
+-int init_ccu(void);
++int init_ccu(bool sw_init);
+ 
+ #endif /* _CCU_H_ */
+ 
+diff --git a/arch/arm/include/asm/arch-mvebu/rfu.h b/arch/arm/include/asm/arch-mvebu/rfu.h
+index 35d43e1..4a9f239 100644
+--- a/arch/arm/include/asm/arch-mvebu/rfu.h
++++ b/arch/arm/include/asm/arch-mvebu/rfu.h
+@@ -20,7 +20,7 @@
+ #define _RFU_H_
+ 
+ void dump_rfu(void);
+-int init_rfu(void);
++int init_rfu(bool sw_init);
+ 
+ #endif /* _RFU_H_ */
+ 
+diff --git a/drivers/misc/mvebu_ccu.c b/drivers/misc/mvebu_ccu.c
+index e726393..fbd585e 100644
+--- a/drivers/misc/mvebu_ccu.c
++++ b/drivers/misc/mvebu_ccu.c
+@@ -23,7 +23,6 @@
+ #include <asm/system.h>
+ #include <asm/io.h>
+ #include <fdtdec.h>
+-#include <malloc.h>
+ #include <asm/arch-mvebu/mvebu.h>
+ #include <asm/arch-mvebu/fdt.h>
+ #include <asm/arch-mvebu/ccu.h>
+@@ -179,9 +178,9 @@ void dump_ccu(void)
+ 	return;
+ }
+ 
+-int init_ccu(void)
++int init_ccu(bool sw_init)
+ {
+-	struct ccu_win *memory_map, *win;
++	struct ccu_win memory_map[CCU_MAX_WIN_NUM], *win;
+ 	const void *blob = gd->fdt_blob;
+ 	u32 win_id, win_reg;
+ 	u32 node, win_count;
+@@ -200,15 +199,16 @@ int init_ccu(void)
+ 
+ 	/* Get the maximum number of CCU windows supported */
+ 	ccu_info->max_win = fdtdec_get_int(blob, node, "max-win", 0);
+-	if (ccu_info->max_win == 0) {
++	if ((ccu_info->max_win == 0) || (ccu_info->max_win > CCU_MAX_WIN_NUM)) {
+ 		ccu_info->max_win = CCU_MAX_WIN_NUM;
+ 		error("failed reading max windows number, set window max size to %d\n", ccu_info->max_win);
+ 	}
+ 
+-	memory_map = malloc(ccu_info->max_win * sizeof(struct ccu_win));
+-	if (memory_map == 0) {
+-		error("failed allocating struct to init windows configuration\n");
+-		return -1;
++	if (sw_init) {
++		/* init only the ccu_info structure without updating the ccu windows.
++			The ccu_info is required for the dump_ccu function */
++		debug("Done SW CCU Address decoding Initializing\n");
++		return 0;
+ 	}
+ 
+ 	/* Get the array of the windows and fill the map data */
+@@ -240,7 +240,6 @@ int init_ccu(void)
+ 		ccu_enable_win(win, win_id);
+ 	}
+ 
+-	free(memory_map);
+ 	debug("Done CCU Address decoding Initializing\n");
+ 	debug_exit();
+ 
+diff --git a/drivers/misc/mvebu_rfu.c b/drivers/misc/mvebu_rfu.c
+index 4ca1d19..d1d52f1 100644
+--- a/drivers/misc/mvebu_rfu.c
++++ b/drivers/misc/mvebu_rfu.c
+@@ -23,7 +23,6 @@
+ #include <asm/system.h>
+ #include <asm/io.h>
+ #include <fdtdec.h>
+-#include <malloc.h>
+ #include <asm/arch-mvebu/mvebu.h>
+ #include <asm/arch-mvebu/fdt.h>
+ #include <asm/arch-mvebu/rfu.h>
+@@ -158,9 +157,9 @@ void dump_rfu(void)
+ 	return;
+ }
+ 
+-int init_rfu(void)
++int init_rfu(bool sw_init)
+ {
+-	struct rfu_win *memory_map, *win;
++	struct rfu_win memory_map[RFU_MAX_TID], *win;
+ 	const void *blob = gd->fdt_blob;
+ 	u32 win_id, win_reg, trgt_id;
+ 	u32 node, win_count;
+@@ -177,10 +176,11 @@ int init_rfu(void)
+ 	/* Get the base address of the address decoding MBUS */
+ 	rfu_base = (void *)fdt_get_regs_offs(blob, node, "reg");
+ 
+-	memory_map = malloc(RFU_MAX_TID * sizeof(struct rfu_win));
+-	if (memory_map == 0) {
+-		error("failed allocating struct to init windows configuration\n");
+-		return -1;
++	if (sw_init) {
++		/* init only the rfu_base without update the rfu windows.
++			The rfu_base required for the dump_rfu function */
++		debug("Done SW RFU Address decoding Initializing\n");
++		return 0;
+ 	}
+ 
+ 	/* Get the array of the windows and fill the map data */
+@@ -204,7 +204,6 @@ int init_rfu(void)
+ 		rfu_enable_win(win, win->target_id);
+ 	}
+ 
+-	free(memory_map);
+ 	debug("Done RFU Address decoding Initializing\n");
+ 	debug_exit();
+ 
+-- 
+1.9.1
+

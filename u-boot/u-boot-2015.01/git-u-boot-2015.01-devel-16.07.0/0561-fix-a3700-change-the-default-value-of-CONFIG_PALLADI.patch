@@ -1,0 +1,58 @@
+From 81d5cf1c236a1ff9528e200d63295cc7b264999e Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Tue, 1 Dec 2015 22:13:40 +0800
+Subject: [PATCH 0561/1240] fix: a3700: change the default value of
+ CONFIG_PALLADIUM from y to n
+
+    default value of CONFIG_PALLADIUM used to be y, so when using mvebu_armadalp_defconfig
+    to build u-boot for real DB board, in the image there is CONFIG_PALLADIUM too.
+
+    To fix this:
+     - in Kconfig file, change the default value of CONFIG_PALLADIUM from y to n.
+     - for defconfig of armadalp_palladium_defconfig, enable CONFIG_PALLADIUM.
+
+Change-Id: I13ad245f8096e17ccb0f16dbd8cfddcdb1200704
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25489
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ arch/arm/cpu/armv8/armadalp/Kconfig        | 9 ++++++++-
+ configs/mvebu_armadalp_palladium_defconfig | 1 +
+ 2 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/armv8/armadalp/Kconfig b/arch/arm/cpu/armv8/armadalp/Kconfig
+index 95d0892..f2228e0 100644
+--- a/arch/arm/cpu/armv8/armadalp/Kconfig
++++ b/arch/arm/cpu/armv8/armadalp/Kconfig
+@@ -26,7 +26,14 @@ config ARMV8_PSCI
+ 
+ config PALLADIUM
+ 	bool "Support palladium emulation"
+-	default y
++	default n
++	help
++	  Choose this option to enable
++	  Palladium support.
++	  There are certain differences
++	  between palladium and real SoC,
++	  like Clock and PHY, this should
++	  not be enabled for real SoC.
+ 
+ config MVEBU_SPL_A3700_GPIO
+ 	bool "GPIO configuration for A3700 in SPL"
+diff --git a/configs/mvebu_armadalp_palladium_defconfig b/configs/mvebu_armadalp_palladium_defconfig
+index 2ff6faf..c92a737 100644
+--- a/configs/mvebu_armadalp_palladium_defconfig
++++ b/configs/mvebu_armadalp_palladium_defconfig
+@@ -2,6 +2,7 @@ CONFIG_SPL=y
+ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_ARMADA_LP=y
+++S:CONFIG_PALLADIUM=y
+ CONFIG_MVNETA=y
+ CONFIG_MV_INCLUDE_SATA=y
+ CONFIG_SCSI_AHCI_PLAT=y
+-- 
+1.9.1
+

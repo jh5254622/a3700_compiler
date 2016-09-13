@@ -1,0 +1,37 @@
+From b9ef3a887b3378e24949ec5b3515091fb084bbbf Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Tue, 22 Dec 2015 21:54:11 +0800
+Subject: [PATCH 0609/1240] fix: spl: mveub: set correct cntfrq_el0 value for
+ SPL
+
+    cntfrq_el0 register used to be set to value COUNTER_FREQUENCY
+    in start.S for u-boot only (not for SPL), which makes all the
+    delay routine not accurate at all in SPL.
+    To fix this, add cntfrq_el0 setting for SPL also in start.S
+
+Change-Id: I7aa49498bd430d16305aa100d057e341a9b22a3b
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26220
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/start.S | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/arch/arm/cpu/armv8/start.S b/arch/arm/cpu/armv8/start.S
+index a277e95..c2ffdc7 100644
+--- a/arch/arm/cpu/armv8/start.S
++++ b/arch/arm/cpu/armv8/start.S
+@@ -28,6 +28,9 @@ _start:
+ 	stp	x27, x28,[sp, #-16]!
+ 	stp	x29, x30,[sp, #-16]!
+ 
++	ldr	x0, =COUNTER_FREQUENCY
++	msr	cntfrq_el0, x0	/* Initialize CNTFRQ */
++
+ 	bl	board_init_f
+ 	ldp	x29, x30,[sp], #16	/* @ restore regs and return */
+ 	ldp	x27, x28,[sp], #16
+-- 
+1.9.1
+

@@ -1,0 +1,88 @@
+From aaf57d00b36747856d706e0fa23e8c5b50b52b46 Mon Sep 17 00:00:00 2001
+From: Ofer Heifetz <oferh@marvell.com>
+Date: Tue, 12 Jan 2016 11:43:37 +0200
+Subject: [PATCH 38/66] package/dt: add Data Test Program support
+
+Change-Id: Id9a543e5d203f12bd934d70e3f1b54d42367505a
+Signed-off-by: Ofer Heifetz <oferh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26724
+Reviewed-by: Lior Amsalem <alior@marvell.com>
+Tested-by: Shadi Ammouri <shadi@marvell.com>
+---
+ package/Config.in    |  1 +
+ package/dt/Config.in | 13 +++++++++++++
+ package/dt/dt.mk     | 30 ++++++++++++++++++++++++++++++
+ 3 files changed, 44 insertions(+)
+ create mode 100755 package/dt/Config.in
+ create mode 100755 package/dt/dt.mk
+
+diff --git a/package/Config.in b/package/Config.in
+index bdc3063..eadd145 100644
+--- a/package/Config.in
++++ b/package/Config.in
+@@ -64,6 +64,7 @@ menu "Debugging, profiling and benchmark"
+ 	source "package/cache-calibrator/Config.in"
+ 	source "package/dhrystone/Config.in"
+ 	source "package/dmalloc/Config.in"
++        source "package/dt/Config.in"
+ 	source "package/dropwatch/Config.in"
+ 	source "package/dstat/Config.in"
+ 	source "package/duma/Config.in"
+diff --git a/package/dt/Config.in b/package/dt/Config.in
+new file mode 100755
+index 0000000..6728d07
+--- /dev/null
++++ b/package/dt/Config.in
+@@ -0,0 +1,13 @@
++config BR2_PACKAGE_DT
++	bool "dt"
++	help
++	  dt is a generic data test program used to verify proper
++	  operation of peripherals, file systems, device drivers,
++	  or any data stream supported by the operating system.
++	  In its' simplest mode of operation, dt writes and then
++	  verifys its' default data pattern, then displays
++	  performance statisics and other test parameters
++	  before exiting. Since verification of data is performed,
++	  dt can be thought of as a generic diagnostic tool.
++
++	  http://www.scsifaq.org/RMiller_Tools/dt.html
+diff --git a/package/dt/dt.mk b/package/dt/dt.mk
+new file mode 100755
+index 0000000..9b1e2fc
+--- /dev/null
++++ b/package/dt/dt.mk
+@@ -0,0 +1,30 @@
++#############################################################
++#
++# dt
++#
++#############################################################
++DT_VERSION:=15.14
++DT_SOURCE:=dt-source.tar.gz
++DT_SITE:=http://www.scsifaq.org/RMiller_Tools/ftp/dt
++DT_SUBDIR = dt.d-WIP
++
++define DT_BUILD_CMDS
++	$(MAKE) -C $(@D)/$(DT_SUBDIR) CC="$(TARGET_CC)" LD="$(TARGET_LD)" CFLAGS="$(TARGET_CFLAGS) -D__GNUC__ -DFIFO -DMMAP -D__linux__ -D_GNU_SOURCE" makedep
++	$(MAKE) -C $(@D)/$(DT_SUBDIR) CC="$(TARGET_CC)" LD="$(TARGET_LD)" CFLAGS="$(TARGET_CFLAGS) -DFIFO -DMMAP -DTTY -D__linux__ -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64"
++endef
++
++define DT_CONFIGURE_CMDS
++	cd $(@D)/$(DT_SUBDIR); ln -sf Makefile.linux Makefile
++endef
++
++define DT_INSTALL_TARGET_CMDS
++	install -D $(@D)/${DT_SUBDIR}/dt $(TARGET_DIR)/usr/bin/dt
++endef
++
++define DT_CLEAN_CMDS
++	rm -f $(TARGET_DIR)/usr/bin/dt
++	-$(MAKE) -C $(@D)/${DT_SUBDIR} clean
++endef
++
++$(eval $(generic-package))
++$(eval $(package,dt))
+-- 
+1.9.1
+

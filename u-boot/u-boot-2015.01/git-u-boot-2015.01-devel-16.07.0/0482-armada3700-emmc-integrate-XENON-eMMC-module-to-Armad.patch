@@ -1,0 +1,174 @@
+From 7a9b75bdf96e6e9ee4bc47aca50011cf4be48581 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Mon, 3 Aug 2015 16:16:02 +0800
+Subject: [PATCH 0482/1240] armada3700: emmc: integrate XENON eMMC module to
+ Armada-3700
+
+  - Add XENON eMMC node in FDT
+  - Support XENON eMMC in default cofig
+  - Support XENON eMMC compilation macro in KCONFIG
+    and mvebu-common.h
+Change-Id: Ibc7be9ed7bc82b11759573827942d10fd3698f17
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22445
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Kconfig          | 11 ++++++++++-
+ arch/arm/dts/armada-lp-db.dts              |  3 +++
+ arch/arm/dts/armada-lp-palladium.dts       |  3 +++
+ arch/arm/dts/armada-lp.dtsi                |  5 +++++
+ configs/mvebu_armadalp_defconfig           |  1 +
+ configs/mvebu_armadalp_palladium_defconfig |  1 +
+ include/configs/mvebu-common.h             |  9 ++++++++-
+ include/fdtdec.h                           |  1 +
+ lib/fdtdec.c                               |  2 ++
+ 9 files changed, 34 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index a31a1b8..b17bb44 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -73,8 +73,17 @@ config DDR_OVER_PCI_SIZE
+ 	  only when DDR over PCI is
+ 	  used.
+ 
+-endmenu
++config XENON_MMC
++	bool "XENON MMC support"
++	default n
++	select CMD_MMC
++	help
++	  Choose this option to add support
++	  for Marvell XENON MMC driver, using Marvell xenon_mmc.c
++	  driver.
++	  base address is configured under XENON_MMC_BASE
+ 
++endmenu
+ 
+ choice
+ 	prompt "Flash for image"
+diff --git a/arch/arm/dts/armada-lp-db.dts b/arch/arm/dts/armada-lp-db.dts
+index 3c2a282..d510df1 100644
+--- a/arch/arm/dts/armada-lp-db.dts
++++ b/arch/arm/dts/armada-lp-db.dts
+@@ -32,6 +32,9 @@
+ 			sata: sata@e0000 {
+ 				status = "okay";
+ 			};
++			mmc0: mmc@D8000 {
++				status = "okay";
++			};
+ 		};
+ 	};
+ };
+diff --git a/arch/arm/dts/armada-lp-palladium.dts b/arch/arm/dts/armada-lp-palladium.dts
+index b4fe9fd..ac7bb61 100644
+--- a/arch/arm/dts/armada-lp-palladium.dts
++++ b/arch/arm/dts/armada-lp-palladium.dts
+@@ -34,6 +34,9 @@
+ 			sata: sata@e0000 {
+ 				status = "okay";
+ 			};
++			mmc0: mmc@D8000 {
++				status = "okay";
++			};
+ 		};
+ 	};
+ };
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index 85e6aed..0c059de 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -99,6 +99,11 @@
+ 				reg = <0xe0000 0x200>;
+ 				status = "disabled";
+ 			};
++			mmc0: mmc@D8000 {
++				compatible = "marvell,xenon-sdhci";
++				reg = <0xD8000 0x300>;
++				status = "disabled";
++			};
+ 		};
+ 	};
+ };
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index 5fa824d..6ca1b14 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -17,6 +17,7 @@ CONFIG_CUSTOMER_BOARD=y
+ +S:CONFIG_MVEBU_MBUS=y
+ +S:CONFIG_MVEBU_MBUS_SPL_ONLY=y
+ CONFIG_MVEBU_ADVK_PCIE=y
++CONFIG_XENON_MMC=y
+ CONFIG_CMD_BDI=y
+ CONFIG_CMD_SPI=y
+ CONFIG_CMD_BOOTD=y
+diff --git a/configs/mvebu_armadalp_palladium_defconfig b/configs/mvebu_armadalp_palladium_defconfig
+index 7b347ef..e98b46a 100644
+--- a/configs/mvebu_armadalp_palladium_defconfig
++++ b/configs/mvebu_armadalp_palladium_defconfig
+@@ -16,6 +16,7 @@ CONFIG_I2C_MV_PAD_REG=n
+ +S:CONFIG_MVEBU_MBUS=y
+ +S:CONFIG_MVEBU_MBUS_SPL_ONLY=y
+ CONFIG_MVEBU_ADVK_PCIE=y
++CONFIG_XENON_MMC=y
+ CONFIG_CMD_BDI=y
+ CONFIG_CMD_BOOTD=y
+ CONFIG_CMD_RUN=y
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 92f3ee2..b9a87c5 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -256,7 +256,7 @@
+ 	#define CONFIG_SYS_I2C_SLAVE		0x0*/
+ #endif
+ #if defined(CONFIG_MVEBU_I2C) || defined(CONFIG_I2C_MV)
+-	#define CONFIG_SYS_I2C_SPEED            100000  /* I2C speed default */
++#define CONFIG_SYS_I2C_SPEED            100000  /* I2C speed default */
+ #endif
+ 
+ /* RTC */
+@@ -292,6 +292,13 @@
+ 	#define  CONFIG_SYS_MMC_MAX_DEVICE
+ #endif
+ 
++/* XENON MMC */
++#ifdef CONFIG_XENON_MMC
++#define  CONFIG_MMC
++#define  CONFIG_CMD_MMC
++#define  CONFIG_GENERIC_MMC
++#endif /* CONFIG_XENON_MMC */
++
+ /* PCI-E */
+ #if defined(CONFIG_MVEBU_PCI) || defined(CONFIG_MVEBU_DW_PCIE)
+ 	#define CONFIG_PCI
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 8de03fb..b9774f2 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -158,6 +158,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_ARMADA_LP_DB1,
+ 	COMPAT_MVEBU_ARMADA_LP_CUSTOMER,
+ 	COMPAT_MVEBU_ADVK_PCIE,
++	COMPAT_MVEBU_XENON_MMC,
+ 
+ 	COMPAT_COUNT,
+ };
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 1f0a7e9..2a5f168 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -120,6 +120,8 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_ARMADA_LP_DB1, "marvell,armada-lp-db1"),
+ 	COMPAT(MVEBU_ARMADA_LP_CUSTOMER, "marvell,armada-lp-customer"),
+ 	COMPAT(MVEBU_ADVK_PCIE, "marvell,advk-pcie"),
++	COMPAT(MVEBU_XENON_MMC, "marvell,xenon-sdhci"),
++
+ };
+ 
+ const char *fdtdec_get_compatible(enum fdt_compat_id id)
+-- 
+1.9.1
+

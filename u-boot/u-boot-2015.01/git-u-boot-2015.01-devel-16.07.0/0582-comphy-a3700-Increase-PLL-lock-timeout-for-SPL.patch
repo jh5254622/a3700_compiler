@@ -1,0 +1,37 @@
+From 6b663c4166ed01953f095db5c64542009d7b7e2f Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Thu, 10 Dec 2015 14:20:58 +0200
+Subject: [PATCH 0582/1240] comphy: a3700: Increase PLL lock timeout for SPL
+
+- Temporarely increase PLL lock timeout for COMPHY
+  init procedure until the timer function get fixed
+  in SPL
+
+Change-Id: I1653b6749ec62e8c63cf323f3fd83fd1a301ada1
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25785
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/phy/comphy_a3700.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/phy/comphy_a3700.h b/drivers/phy/comphy_a3700.h
+index 2ced4e0..e8e53cc 100644
+--- a/drivers/phy/comphy_a3700.h
++++ b/drivers/phy/comphy_a3700.h
+@@ -22,8 +22,8 @@
+ #include <asm/arch-mvebu/comphy_hpipe.h>
+ 
+ #define DEFAULT_REFCLK_MHZ		25
+-#define PLL_SET_DELAY_US		600
+-#define PLL_LOCK_TIMEOUT		1000
++#define PLL_SET_DELAY_US		1000
++#define PLL_LOCK_TIMEOUT		2000
+ #define POLL_16B_REG			1
+ #define POLL_32B_REG			0
+ 
+-- 
+1.9.1
+

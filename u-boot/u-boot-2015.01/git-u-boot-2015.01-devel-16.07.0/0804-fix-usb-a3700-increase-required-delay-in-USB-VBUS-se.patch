@@ -1,0 +1,67 @@
+From 067fcc384ebf7783208f0817a1de8d799b7dabb3 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Thu, 4 Feb 2016 11:09:53 +0200
+Subject: [PATCH 0804/1240] fix: usb: a3700: increase required delay in USB
+ VBUS sequence
+
+A3700 DB board has USB type-C port, with dual side connectivity option.
+this option is supported by PERICOM Switch/mux.
+
+proper MUX functionality for USB3.0 speed requires proper VBUS signal
+VBUS signal must be lowered down.
+(and required for for ID signal for Host/Device detection)
+
+Eventually, a full VBUS flow will include a check for ID pin, after VBUS signal
+settled down. than only enable VBUS if detected Host mode.
+
+* this ID pin can also indicate if :
+  1. Host mode: a Device is actually connected to port
+  2. Device mode: if PC connected to port
+  This can improve the detection flow and continue/stop USB enumeration accordingly.
+
+Change-Id: I6651ee5293fc815bcda99a11e48a70d20cc35a45
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27220
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/cpu/armv8/armadalp/soc-init.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armadalp/soc-init.c b/arch/arm/cpu/armv8/armadalp/soc-init.c
+index 283d4a5..e233ed6 100644
+--- a/arch/arm/cpu/armv8/armadalp/soc-init.c
++++ b/arch/arm/cpu/armv8/armadalp/soc-init.c
+@@ -197,6 +197,8 @@ void board_usb_vbus_init(void)
+ 		return;
+ 	}
+ 
++	printf("Enable USB VBUS.\n");
++
+ 	/* initialize I2C */
+ 	init_func_i2c();
+ 
+@@ -216,7 +218,9 @@ void board_usb_vbus_init(void)
+ 	if (ret_read || ret_write)
+ 		error("failed to lower USB VBUS power on I2C IO expander\n");
+ 
+-	udelay(500000); /* required delay to let output value settle */
++	/* required delay for configuration to settle - must wait for power on port is disabled
++	 * in case VBUS signal was high, required 3 seconds delay to let VBUS signal fully settle down */
++	udelay(3000000);
+ 
+ 	/* Enable VBUS power: Set output value of VBUS pin as enabled */
+ 	out_val[0] |= (1 << I2C_IO_REG_0_USB_H_OFF);
+@@ -225,7 +229,7 @@ void board_usb_vbus_init(void)
+ 	if (ret_write)
+ 		error("failed to raise USB VBUS power on I2C IO expander\n");
+ 
+-	udelay(500000);/* required delay to let output value settle */
++	udelay(500000); /* required delay to let output value settle up*/
+ 
+ #endif /* CONFIG_DEVEL_BOARD */
+ 
+-- 
+1.9.1
+

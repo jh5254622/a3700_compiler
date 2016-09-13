@@ -1,0 +1,111 @@
+From 2b80ef195e6b40ebf0f2283b870626f157dc2bf4 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Tue, 19 Jan 2016 10:43:18 +0200
+Subject: [PATCH 0710/1240] ddr: Add dedicated DLL tuning configuration
+
+- Add CONFIG_MVEBU_DLL_TUNE_SUPPORT configuration
+  parameter to DDR driver
+- Add DLL tining stub to A8K DDR driver
+- Disable DDR PHY and MAC inits in A3700 DDR driver
+  as they are not yet implemented properly for
+  A3700 platform
+- Enable DLL tuning in the default A3700 configuration
+
+Change-Id: I7e9ac4dcaf33c4b97cc81541418e2bb61238d130
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26872
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ configs/mvebu_armadalp_defconfig | 1 +
+ drivers/ddr/Kconfig              | 8 ++++++++
+ drivers/ddr/ddr_mckinley6_8k.c   | 6 ++++++
+ drivers/ddr/ddr_mckinley6_arlp.c | 6 ++++++
+ drivers/ddr/mvebu_ddr.c          | 3 +--
+ 5 files changed, 22 insertions(+), 2 deletions(-)
+
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index fc2a2d2..9816f20 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -38,3 +38,4 @@ CONFIG_USB=y
+ CONFIG_USB_XHCI_HCD=y
+ +S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+ +S:CONFIG_MVEBU_MK6_SUPPORT=y
+++S:CONFIG_MVEBU_DLL_TUNE_SUPPORT=y
+diff --git a/drivers/ddr/Kconfig b/drivers/ddr/Kconfig
+index fef8441..3b55337 100644
+--- a/drivers/ddr/Kconfig
++++ b/drivers/ddr/Kconfig
+@@ -54,5 +54,13 @@ config MVEBU_MK6_SUPPORT
+ 	  to add this option to SPL code,
+ 	  need to add +S:CONFIG_MVEBU_MK6_SUPPORT to defconfig file
+ 
++config MVEBU_DLL_TUNE_SUPPORT
++	  bool "Support for DDR DLL tune"
++	  depends on MVEBU_MK6_SUPPORT
++	  help
++	  Choose this option to add support
++	  for DDR DLL tune procedure support
++
++
+ endchoice
+ endmenu
+diff --git a/drivers/ddr/ddr_mckinley6_8k.c b/drivers/ddr/ddr_mckinley6_8k.c
+index d6eb521..1303271 100644
+--- a/drivers/ddr/ddr_mckinley6_8k.c
++++ b/drivers/ddr/ddr_mckinley6_8k.c
+@@ -1173,3 +1173,9 @@ void mvebu_dram_phy_init(struct mvebu_dram_config *dram_config)
+ #endif
+ 	debug_exit();
+ }
++
++
++void mvebu_dram_dll_tune(struct mvebu_dram_config *dram_config)
++{
++	return;
++}
+diff --git a/drivers/ddr/ddr_mckinley6_arlp.c b/drivers/ddr/ddr_mckinley6_arlp.c
+index f1b2807..555728b 100644
+--- a/drivers/ddr/ddr_mckinley6_arlp.c
++++ b/drivers/ddr/ddr_mckinley6_arlp.c
+@@ -79,6 +79,9 @@ void mvebu_dram_mac_init(struct mvebu_dram_config *dram_config)
+ 	struct mvebu_mckinley_config *mac_config = &mckinley_mac_config[0];
+ 	u32 freq_indx, reg, idx, size;
+ 
++	/* This function has to be re-implemented for ArLP. Currently it is invalid */
++	return;
++
+ 	debug_enter();
+ 	debug("Set bypass to clock gate: 0xF06f0098 - 0x0040004e\n");
+ 	writel(0x0040004e, 0xF06f0098);
+@@ -169,6 +172,9 @@ void mvebu_dram_phy_init(struct mvebu_dram_config *dram_config)
+ 	struct mvebu_mckinley_config *phy_config = &mckinley_phy_config[0];
+ 	u32 freq_indx, reg, cs_mask;
+ 
++	/* This function has to be re-implemented for ArLP. Currently it is invalid */
++	return;
++
+ 	debug_enter();
+ 	/* for now set the frequency to 650 (index 0) */
+ 	freq_indx = 0;
+diff --git a/drivers/ddr/mvebu_ddr.c b/drivers/ddr/mvebu_ddr.c
+index bf6b6f7..3546bae 100644
+--- a/drivers/ddr/mvebu_ddr.c
++++ b/drivers/ddr/mvebu_ddr.c
+@@ -30,10 +30,9 @@
+ #ifdef CONFIG_MVEBU_STATIC_SUPPORT
+ static void static_dram_init(struct mvebu_dram_config *config)
+ {
+-#ifndef CONFIG_TARGET_ARMADA_LP
+ 	mvebu_dram_mac_init(config);
+ 	mvebu_dram_phy_init(config);
+-#else
++#ifdef CONFIG_MVEBU_DLL_TUNE_SUPPORT
+ 	mvebu_dram_dll_tune(config);
+ #endif
+ 	printf("Static DRAM initialization is DONE..\n");
+-- 
+1.9.1
+

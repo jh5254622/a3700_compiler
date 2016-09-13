@@ -1,0 +1,42 @@
+From f15ce379aef4ddf7587e0f118d6ef8592b1f45c4 Mon Sep 17 00:00:00 2001
+From: Jing Hua <jinghua@marvell.com>
+Date: Mon, 9 Feb 2015 17:24:46 +0800
+Subject: [PATCH 0122/1240] fix: Kconfig: add SF and PCI command in
+ common/Kconfig
+
+	add SF and PCI command section in common/Kconfig, so they could be
+	seen in menuconfig.
+
+Change-Id: I2ff1a1d3992135f2e2921f1badb27ea0a29d44bc
+Signed-off-by: Jing Hua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/16576
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ common/Kconfig | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/common/Kconfig b/common/Kconfig
+index d300d8d..25f239a 100644
+--- a/common/Kconfig
++++ b/common/Kconfig
+@@ -181,6 +181,16 @@ config CMD_SPI
+ 	help
+ 	  SPI utility command.
+ 
++config CMD_SF
++	bool "ssf"
++	help
++	  SF utility command.
++
++config CMD_PCI
++	bool "pci"
++	help
++	  PCI utility command.
++
+ config CMD_I2C
+ 	bool "i2c"
+ 	help
+-- 
+1.9.1
+

@@ -1,0 +1,35 @@
+From c0ff037f04f44c9794aa44d62892f228c206e4d9 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Tue, 1 Dec 2015 12:07:58 +0200
+Subject: [PATCH 0559/1240] fix: usb3: a3700: Change the USB3 clock
+ configuration for 25MHz
+
+- Fix the wrong REF clock configuration in USB3 COMPHY init
+  procedure. The current dosumentation has a wrong value in
+  this field description.
+
+Change-Id: Ib784569d44deb43c536ee61f9556aae6b5ea46df
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25472
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ drivers/phy/comphy_a3700.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/phy/comphy_a3700.c b/drivers/phy/comphy_a3700.c
+index 2c52006..ef4cde3 100644
+--- a/drivers/phy/comphy_a3700.c
++++ b/drivers/phy/comphy_a3700.c
+@@ -328,7 +328,7 @@ static int comphy_usb3_power_up(enum phy_speed speed)
+ 	if (comphy_get_ref_clk() == 40)
+ 		reg_set16((void __iomem *)PWR_PLL_CTRL_ADDR(USB3), 0xFCA3, 0xFFFF); /* 40 MHz */
+ 	else
+-		reg_set16((void __iomem *)PWR_PLL_CTRL_ADDR(USB3), 0xFCA1, 0xFFFF); /* 25 MHz */
++		reg_set16((void __iomem *)PWR_PLL_CTRL_ADDR(USB3), 0xFCA2, 0xFFFF); /* 25 MHz */
+ 
+ 	/*
+ 	 * 4. Change RX wait
+-- 
+1.9.1
+

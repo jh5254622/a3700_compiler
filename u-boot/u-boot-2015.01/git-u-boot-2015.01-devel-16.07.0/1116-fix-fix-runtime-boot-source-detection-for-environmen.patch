@@ -1,0 +1,75 @@
+From 69a4e9100de6bf09edae1769732b3c6d0b8a5fbb Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Mon, 25 Apr 2016 17:44:45 +0300
+Subject: [PATCH 1116/1240] fix: fix runtime boot source detection for
+ environment initizliation
+
+- add SPI AP support
+- prevent calling uninitialized routines
+
+Change-Id: Ifd0230c6246143ff887826b1662ec23dd74e1959
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29289
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ common/mvebu/env_bootdev.c | 18 ++++++++++++++++--
+ 1 file changed, 16 insertions(+), 2 deletions(-)
+
+diff --git a/common/mvebu/env_bootdev.c b/common/mvebu/env_bootdev.c
+index fd55f5d..7dbcb8e 100644
+--- a/common/mvebu/env_bootdev.c
++++ b/common/mvebu/env_bootdev.c
+@@ -46,6 +46,7 @@ int env_init(void)
+ 		nand_env_init();
+ 		break;
+ 	case BOOTSRC_SPI:
++	case BOOTSRC_AP_SPI:
+ 		sf_env_init();
+ 		break;
+ 	case BOOTSRC_AP_SD_EMMC:
+@@ -54,10 +55,17 @@ int env_init(void)
+ 		break;
+ 	default:
+ 		error("Sample at reset boot source type %x is not supported\n", sar.bootsrc.type);
++		return 0;
+ 	}
+ 
+ 	debug_exit();
+-	return gd->arch.env_func.init_env();
++
++	/* if pointer initialized & routine returned 0 (successfully) */
++	if (gd->arch.env_func.init_env && !(gd->arch.env_func.init_env()))
++			return 0;
++
++	error("Failed to initialize environment variables.\n");
++	return 0;
+ }
+ 
+ void env_relocate_spec(void)
+@@ -77,6 +85,7 @@ void env_relocate_spec(void)
+ 		env_name_spec = "NAND Flash";
+ 		break;
+ 	case BOOTSRC_SPI:
++	case BOOTSRC_AP_SPI:
+ 		sf_env_init();
+ 		env_name_spec = "SPI Flash";
+ 		break;
+@@ -87,9 +96,14 @@ void env_relocate_spec(void)
+ 		break;
+ 	default:
+ 		error("Sample at reset boot source type %x is not supported\n", sar.bootsrc.type);
++		return;
+ 	}
+ 
+ 	debug_exit();
+-	gd->arch.env_func.reloc_env();
++
++	if (gd->arch.env_func.reloc_env)
++		gd->arch.env_func.reloc_env();
++	else
++		error("Failed to initialize environment variables.\n");
+ }
+ 
+-- 
+1.9.1
+

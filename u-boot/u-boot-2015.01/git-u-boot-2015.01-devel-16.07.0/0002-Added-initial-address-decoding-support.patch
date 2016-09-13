@@ -1,0 +1,624 @@
+From ce5037b9781535bbebd931b28bf926833e063a9e Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 2 Feb 2014 14:00:33 +0200
+Subject: [PATCH 0002/1240] Added initial address decoding support
+
+	- Added mvebu-common folder to host all common SOC code
+	- Added address decoding unit to mvebu-common
+
+Change-Id: I5a4cf77430fddba77e3c8104b62df923b363348c
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/Makefile                         |   1 +
+ arch/arm/cpu/armv8/armada8k/Makefile          |  21 ++++++
+ arch/arm/cpu/armv8/armada8k/memory-map.c      |  31 ++++++++
+ arch/arm/cpu/armv8/armada8k/soc-init.c        |  36 +++++++++
+ arch/arm/cpu/mvebu-common/Makefile            |  20 +++++
+ arch/arm/cpu/mvebu-common/adec.c              | 101 ++++++++++++++++++++++++++
+ arch/arm/include/asm/arch-armada8k/armada8k.h |  27 +++++++
+ arch/arm/include/asm/arch-mvebu/adec.h        |  59 +++++++++++++++
+ arch/arm/include/asm/arch-mvebu/mvebu.h       |  27 +++++++
+ board/mvebu/armada8021-pxp/armada8021-pxp.c   |  27 ++++++-
+ common/Makefile                               |   1 +
+ common/cmd_mvebu.c                            |  38 ++++++++++
+ include/configs/armada8021-pxp.h              |  26 +++++--
+ include/configs/mvebu-common.h                |  32 ++++++++
+ 14 files changed, 438 insertions(+), 9 deletions(-)
+ create mode 100644 arch/arm/cpu/armv8/armada8k/Makefile
+ create mode 100644 arch/arm/cpu/armv8/armada8k/memory-map.c
+ create mode 100644 arch/arm/cpu/armv8/armada8k/soc-init.c
+ create mode 100644 arch/arm/cpu/mvebu-common/Makefile
+ create mode 100644 arch/arm/cpu/mvebu-common/adec.c
+ create mode 100644 arch/arm/include/asm/arch-armada8k/armada8k.h
+ create mode 100644 arch/arm/include/asm/arch-mvebu/adec.h
+ create mode 100644 arch/arm/include/asm/arch-mvebu/mvebu.h
+ create mode 100644 common/cmd_mvebu.c
+ create mode 100644 include/configs/mvebu-common.h
+
+diff --git a/arch/arm/cpu/Makefile b/arch/arm/cpu/Makefile
+index 35d8d38..caa8503 100644
+--- a/arch/arm/cpu/Makefile
++++ b/arch/arm/cpu/Makefile
+@@ -4,3 +4,4 @@ obj-$(CONFIG_TEGRA30) += tegra30-common/
+ obj-$(CONFIG_TEGRA114) += tegra114-common/
+ obj-$(CONFIG_TEGRA124) += tegra124-common/
+ obj-$(CONFIG_TEGRA) += tegra-common/
++obj-$(CONFIG_MVEBU) += mvebu-common/
+diff --git a/arch/arm/cpu/armv8/armada8k/Makefile b/arch/arm/cpu/armv8/armada8k/Makefile
+new file mode 100644
+index 0000000..ae3593d
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armada8k/Makefile
+@@ -0,0 +1,21 @@
++#
++# *****************************************************************************
++#  Copyright (C) Marvell International Ltd. and its affiliates
++# *****************************************************************************
++# Marvell GPL License Option
++# If you received this File from Marvell, you may opt to use, redistribute
++# and/or modify this File in accordance with the terms and conditions of the
++# General Public License Version 2, June 1991 (the "GPL License"), a copy of
++# which is available along with the File in the license.txt file or by writing
++# to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++# MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++#
++# THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++# WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++# EXPRESSLY DISCLAIMED.  The GPL License provides additional details about this
++# warranty disclaimer.
++# *****************************************************************************
++#
++
++obj-y += soc-init.o
++obj-y += memory-map.o
+diff --git a/arch/arm/cpu/armv8/armada8k/memory-map.c b/arch/arm/cpu/armv8/armada8k/memory-map.c
+new file mode 100644
+index 0000000..6d2b2eb
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armada8k/memory-map.c
+@@ -0,0 +1,31 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch-mvebu/adec.h>
++
++struct adec_win memory_map[] = {
++	{0x0,     0x40000000, DRAM_0_TID, 0},
++	{0x40000000, 0x20000000, IO_0_TID, 0},
++	/* Invalid entry closes the array */
++	{0x0, 0x0, INVALID_TID, 0}
++};
++
++
+diff --git a/arch/arm/cpu/armv8/armada8k/soc-init.c b/arch/arm/cpu/armv8/armada8k/soc-init.c
+new file mode 100644
+index 0000000..cd52e50
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armada8k/soc-init.c
+@@ -0,0 +1,36 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#define DEBUG
++
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch-mvebu/adec.h>
++#include <asm/arch-armada8k/armada8k.h>
++
++extern struct adec_win memory_map[];
++
++int a8k_init(void)
++{
++	debug("Initialixing A8K\n");
++
++	adec_ap_init(memory_map, (void *)MVEBU_ADEC_AP_BASE);
++
++	return 0;
++}
+diff --git a/arch/arm/cpu/mvebu-common/Makefile b/arch/arm/cpu/mvebu-common/Makefile
+new file mode 100644
+index 0000000..d30717b
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/Makefile
+@@ -0,0 +1,20 @@
++#
++# *****************************************************************************
++#  Copyright (C) Marvell International Ltd. and its affiliates
++# *****************************************************************************
++# Marvell GPL License Option
++# If you received this File from Marvell, you may opt to use, redistribute
++# and/or modify this File in accordance with the terms and conditions of the
++# General Public License Version 2, June 1991 (the "GPL License"), a copy of
++# which is available along with the File in the license.txt file or by writing
++# to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++# MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++#
++# THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++# WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++# EXPRESSLY DISCLAIMED.  The GPL License provides additional details about this
++# warranty disclaimer.
++# *****************************************************************************
++#
++
++obj-$(CONFIG_ADEC) += adec.o
+diff --git a/arch/arm/cpu/mvebu-common/adec.c b/arch/arm/cpu/mvebu-common/adec.c
+new file mode 100644
+index 0000000..81c4d86
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/adec.c
+@@ -0,0 +1,101 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG */
++/* #define DEBUG_REG */
++
++#include <common.h>
++#include <asm/system.h>
++#include <asm/io.h>
++#include <asm/arch-mvebu/adec.h>
++
++void __iomem *ap_adec_base;
++
++static void adec_win_to_range(uintptr_t base_addr, uintptr_t win_size,
++			u32 *alr, u32 *ahr)
++{
++	uintptr_t end = (base_addr + win_size - 1);
++
++	(*alr) = (u32)((base_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
++	(*ahr) = (u32)((end >> ADDRESS_SHIFT) & ADDRESS_MASK);
++}
++
++static void adec_enable_ap_win(struct adec_win *win, int win_id)
++{
++	u32 ccu_win_cr;
++	u32 alr, ahr;
++
++	ccu_win_cr = WIN_ENABLE_BIT;
++	ccu_win_cr |= (win->target_id & TARGET_ID_MASK) << TARGET_ID_OFFSET;
++	ccu_win_cr |= (win->rar_enable & RAR_EN_MASK) << RAR_EN_OFFSET;
++
++	writel(ccu_win_cr, ap_adec_base + CCU_WIN_CR_OFFSET(win_id));
++
++	adec_win_to_range(win->base_addr, win->win_size, &alr, &ahr);
++
++	writel(alr, ap_adec_base + CCU_WIN_ALR_OFFSET(win_id));
++	writel(ahr, ap_adec_base + CCU_WIN_AHR_OFFSET(win_id));
++}
++
++void adec_dump(void)
++{
++	int win_id;
++	u32 ccu_win_cr;
++	u32 alr, ahr;
++	u8 target_id;
++	uintptr_t start, end;
++
++	printf("id target  start              end\n");
++	printf("----------------------------------------------\n");
++
++	/* Dump all AP windows */
++	for (win_id = 0; win_id < MAX_AP_WINDOWS; win_id++) {
++		ccu_win_cr = readl(ap_adec_base + CCU_WIN_CR_OFFSET(win_id));
++		if (ccu_win_cr & WIN_ENABLE_BIT) {
++			target_id = (ccu_win_cr >> TARGET_ID_OFFSET) & TARGET_ID_MASK;
++			alr = readl(ap_adec_base + CCU_WIN_ALR_OFFSET(win_id));
++			ahr = readl(ap_adec_base + CCU_WIN_AHR_OFFSET(win_id));
++			start = (uintptr_t)(alr << ADDRESS_SHIFT);
++			end = (uintptr_t)((ahr + 0x10) << ADDRESS_SHIFT);
++			printf("%02d %02d      0x%016lx 0x%016lx\n", win_id, target_id, start, end);
++		}
++	}
++
++	return;
++}
++
++int adec_ap_init(struct adec_win *windows, void __iomem *ap_base)
++{
++	int win_id;
++
++	debug("Initialzing AP ADEC unit\n");
++	ap_adec_base = ap_base;
++
++	for (win_id = 0; win_id < MAX_AP_WINDOWS; win_id++) {
++		if (windows->target_id == INVALID_TID)
++			break;
++
++		adec_enable_ap_win(windows, win_id);
++		windows++;
++	}
++
++	debug("Done AP ADEC init\n");
++
++	return 0;
++}
+diff --git a/arch/arm/include/asm/arch-armada8k/armada8k.h b/arch/arm/include/asm/arch-armada8k/armada8k.h
+new file mode 100644
+index 0000000..7919e0d
+--- /dev/null
++++ b/arch/arm/include/asm/arch-armada8k/armada8k.h
+@@ -0,0 +1,27 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#ifndef _ARMADA8K_H_
++#define _ARMADA8K_H_
++
++#include <asm/arch-mvebu/mvebu.h>
++
++int a8k_init(void);
++
++#endif	/* _ARMADA8K_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/adec.h b/arch/arm/include/asm/arch-mvebu/adec.h
+new file mode 100644
+index 0000000..6dfcfa9
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/adec.h
+@@ -0,0 +1,59 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#ifndef _ADEC_H_
++#define _ADEC_H_
++
++#define RAR_EN_OFFSET		(13)
++#define RAR_EN_MASK		(1)
++#define TARGET_ID_OFFSET	(8)
++#define TARGET_ID_MASK		(0x1F)
++#define WIN_ENABLE_BIT		(0x1)
++
++#define ADDRESS_SHIFT		(20)
++#define ADDRESS_MASK		(0xFFFFFFF0)
++
++#define MAX_AP_WINDOWS		(8)
++#define MAX_CP_WINDOWS		(16)
++
++#define CCU_WIN_CR_OFFSET(win)	(0 + (12 * win))
++#define CCU_WIN_ALR_OFFSET(win)	(4 + (12 * win))
++#define CCU_WIN_AHR_OFFSET(win)	(8 + (12 * win))
++
++enum adec_target_ids_ap {
++	IO_0_TID    = 0x0,
++	DRAM_0_TID  = 0x3,
++	DRAM_1_TID  = 0x6,
++	IO_1_TID    = 0x9,
++	CFG_REG_TID = 0x10,
++	INVALID_TID = 0x1F
++};
++
++struct adec_win {
++	uintptr_t base_addr;
++	uintptr_t win_size;
++	u8 target_id;
++	bool rar_enable;
++};
++
++
++void adec_dump(void);
++int adec_ap_init(struct adec_win *windows, void __iomem *ap_base);
++
++#endif /* _ADEC_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/mvebu.h b/arch/arm/include/asm/arch-mvebu/mvebu.h
+new file mode 100644
+index 0000000..6f8def6
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/mvebu.h
+@@ -0,0 +1,27 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#ifndef _MVEBU_H_
++#define _MVEBU_H_
++
++#define MVEBU_CFG_BASE	(0x90000000)
++
++#define MVEBU_ADEC_AP_BASE (MVEBU_CFG_BASE + 0x0)
++
++#endif	/* MVEBU_H */
+diff --git a/board/mvebu/armada8021-pxp/armada8021-pxp.c b/board/mvebu/armada8021-pxp/armada8021-pxp.c
+index 1c54a2f..51625f5 100644
+--- a/board/mvebu/armada8021-pxp/armada8021-pxp.c
++++ b/board/mvebu/armada8021-pxp/armada8021-pxp.c
+@@ -1,21 +1,40 @@
+ /*
+- * (C) Copyright 2013
+- * Yehuda Yitschak <yehuday@marvell.com>
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
+  *
+- * SPDX-License-Identifier:	GPL-2.0+
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
+  */
++
++/* #define DEBUG*/
++
+ #include <common.h>
+ #include <malloc.h>
+ #include <errno.h>
+ #include <netdev.h>
+ #include <asm/io.h>
++#include <asm/arch-armada8k/armada8k.h>
+ #include <linux/compiler.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+ int board_init(void)
+ {
+-	debug( "Start Initializing Armada8021-pxp board");
++	debug("Start Armada8021-pxp board init\n");
++
++	a8k_init();
++
+ 	return 0;
+ }
+ 
+diff --git a/common/Makefile b/common/Makefile
+index c668a2f..bc99d4b 100644
+--- a/common/Makefile
++++ b/common/Makefile
+@@ -253,6 +253,7 @@ obj-$(CONFIG_FIT_SIGNATURE) += image-sig.o
+ obj-$(CONFIG_IO_TRACE) += iotrace.o
+ obj-y += memsize.o
+ obj-y += stdio.o
++obj-$(CONFIG_MVEBU) += cmd_mvebu.o
+ 
+ # This option is not just y/n - it can have a numeric value
+ ifdef CONFIG_FASTBOOT_FLASH_MMC_DEV
+diff --git a/common/cmd_mvebu.c b/common/cmd_mvebu.c
+new file mode 100644
+index 0000000..dd2b4f1
+--- /dev/null
++++ b/common/cmd_mvebu.c
+@@ -0,0 +1,38 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#include <config.h>
++#include <common.h>
++#include <command.h>
++
++#include <asm/arch-mvebu/adec.h>
++
++int dump_memory_map_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
++			char * const argv[])
++{
++	adec_dump();
++	return 0;
++}
++
++U_BOOT_CMD(
++	map,      1,     1,      dump_memory_map_cmd,
++	"map	- Display address decode windows\n",
++	"\n"
++	"\tDisplay address decode windows\n"
++);
+diff --git a/include/configs/armada8021-pxp.h b/include/configs/armada8021-pxp.h
+index cd2df1c..d09e994 100644
+--- a/include/configs/armada8021-pxp.h
++++ b/include/configs/armada8021-pxp.h
+@@ -1,13 +1,27 @@
+ /*
+- * Configuration for Versatile Express. Parts were derived from other ARM
+- *   configurations.
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
+  *
+- * SPDX-License-Identifier:	GPL-2.0+
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
+  */
+ 
+ #ifndef __ARMADA8021_PXP_H
+ #define __ARMADA8021_PXP_H
+ 
++#include "mvebu-common.h"
++
+ #define DEBUG
+ 
+ #define CONFIG_REMAKE_ELF
+@@ -16,6 +30,9 @@
+ 
+ /*#define CONFIG_SYS_GENERIC_BOARD*/
+ 
++/* Has ADEC address decode unit */
++#define CONFIG_ADEC
++
+ #define CONFIG_SYS_NO_FLASH
+ 
+ #define CONFIG_SUPPORT_RAW_INITRD
+@@ -113,7 +130,7 @@
+ 					 (void *)CONFIG_SYS_SERIAL1}
+ #define CONFIG_CONS_INDEX		0
+ 
+-#define CONFIG_BAUDRATE			115200
++#define CONFIG_BAUDRATE			38400
+ #define CONFIG_SYS_BAUDRATE_TABLE	{ 9600, 19200, 38400, 57600, 115200 }
+ #define CONFIG_SYS_SERIAL0		V2M_UART0
+ #define CONFIG_SYS_SERIAL1		V2M_UART1
+@@ -176,7 +193,6 @@
+ 
+ /* Monitor Command Prompt */
+ #define CONFIG_SYS_CBSIZE		512	/* Console I/O Buffer Size */
+-#define CONFIG_SYS_PROMPT		"VExpress64# "
+ #define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE + \
+ 					sizeof(CONFIG_SYS_PROMPT) + 16)
+ #define CONFIG_SYS_HUSH_PARSER
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+new file mode 100644
+index 0000000..b318924
+--- /dev/null
++++ b/include/configs/mvebu-common.h
+@@ -0,0 +1,32 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#ifndef _MVEBU_COMMON_H_
++#define _MVEBU_COMMON_H_
++#include <asm/sizes.h>
++#include <linux/stringify.h>
++
++/*
++ * High Level Configuration Options
++ */
++#define CONFIG_MVEBU			/* an mvebu generic machine */
++
++#define CONFIG_SYS_PROMPT		"Marvell>> "
++
++#endif /* _MVEBU_COMMON_H_ */
+-- 
+1.9.1
+

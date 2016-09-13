@@ -1,0 +1,33 @@
+From 304bafad1c3e3c671a12baa7356c30edc64d3452 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 3 Sep 2015 10:54:40 +0300
+Subject: [PATCH 0404/1240] dts: moved pci memory space to 1G
+
+Now that PCI is functional in u-boot we need to supply
+a valid PCI memory space that doesnt overlap with DDR
+
+Change-Id: I5272a72522e0158f04c152c25f45c437b1074794
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23403
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/apn-806.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/apn-806.dtsi b/arch/arm/dts/apn-806.dtsi
+index fe8d376..5d8e51b 100644
+--- a/arch/arm/dts/apn-806.dtsi
++++ b/arch/arm/dts/apn-806.dtsi
+@@ -126,7 +126,7 @@
+ 
+ 			pcie@1,0 {
+ 				reg = <0x50000000 0x2000>;
+-				mem = <0x0 0x10000000>;
++				mem = <0x40000000 0x40000000>;
+ 				status = "okay";
+ 			};
+ 		};
+-- 
+1.9.1
+

@@ -1,0 +1,50 @@
+From c552d40a76bbbc5ac28dd27fedbd4f664090bf2f Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Thu, 18 Feb 2016 13:37:23 +0200
+Subject: [PATCH 019/239] atf: remove deprecated functionality (clear warnings)
+
+- Add compilation flag to checks and remove deprecated functionality.
+- fix GIC code to use the new header file (instead of deprecated one).
+
+Change-Id: I17f34998efd89a2e5cec83da69f6a75465bcc8a4
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27625
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ Makefile                             | 2 +-
+ plat/marvell/common/aarch64/gic_64.S | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 9cfcb81..19bf052 100644
+--- a/Makefile
++++ b/Makefile
+@@ -92,7 +92,7 @@ TRUSTED_BOARD_BOOT		:= 0
+ # The platform Makefile is free to override this value.
+ PROGRAMMABLE_RESET_ADDRESS	:= 0
+ # Build flag to treat usage of deprecated platform and framework APIs as error.
+-ERROR_DEPRECATED		:= 0
++ERROR_DEPRECATED		:= 1
+ # By default, consider that the platform may release several CPUs out of reset.
+ # The platform Makefile is free to override this value.
+ COLD_BOOT_SINGLE_CPU		:= 0
+diff --git a/plat/marvell/common/aarch64/gic_64.S b/plat/marvell/common/aarch64/gic_64.S
+index 46aeb13..bac5da1 100644
+--- a/plat/marvell/common/aarch64/gic_64.S
++++ b/plat/marvell/common/aarch64/gic_64.S
+@@ -8,8 +8,8 @@
+  */
+ 
+ #include <asm/linkage.h>
+-#include <gic_v2.h>
+-
++#include <gicv2.h>
++#include <gic_common.h>
+ 
+ #define GICD_IGROUPRn		0x0080
+ #define GICD_IGROUPMODRn	0x0d00
+-- 
+1.9.1
+

@@ -1,0 +1,61 @@
+From 75d27c6b8b97088f1cb572e4c64840e6e7ef6571 Mon Sep 17 00:00:00 2001
+From: Wilson Ding <dingwei@marvell.com>
+Date: Sun, 17 Apr 2016 23:27:31 +0800
+Subject: [PATCH 124/239] make: a3700: add uart image build to ATF Makefile
+
+- The patch is to add the Armada3700's recovery image compilation to
+  ATF's Makefile.
+- The build targets are located in build/a3700_z/release/uart-images.
+
+Change-Id: Id3ec44084a14ee2b010ee08391d636db3ddcb7f5
+Signed-off-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29125
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ Makefile | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/Makefile b/Makefile
+index 78cbaa1..44ca913 100644
+--- a/Makefile
++++ b/Makefile
+@@ -391,9 +391,13 @@ BOOTDEV			:= SATA
+ PARTNUM			:= 0
+ endif
+ 
++SPL_BASENAME		:= $(shell basename $(SPL_IMAGE))
++
+ TIM_IMAGE		:= $(shell grep "Image Filename:" -m 1 $(DOIMAGE_CFG) | cut -c 17-)
+ TIMBLDARGS		:= $(SECURE) $(BOOTDEV) $(IMAGESPATH) $(CLOCKSPATH) $(CLOCKSPRESET) \
+ 				$(PARTNUM) $(DOIMAGE_CFG) $(TIMNCFG) $(TIMNSIG)
++TIMBLDUARTARGS		:= $(SECURE) UART $(IMAGESPATH) $(CLOCKSPATH) $(CLOCKSPRESET) \
++				0 $(DOIMAGE_CFG) $(TIMNCFG) $(TIMNSIG)
+ DOIMAGE_FLAGS		:= -r $(DOIMAGE_CFG)
+ 
+ else
+@@ -659,6 +663,21 @@ ifeq (${PLAT},a3700_z)
+ fip: ${BUILD_PLAT}/${FIP_NAME} ${DOIMAGETOOL}
+ 	$(shell truncate -s %128K ${BUILD_PLAT}/bl1.bin)
+ 	$(shell cat ${BUILD_PLAT}/bl1.bin ${BUILD_PLAT}/${FIP_NAME} > ${BUILD_PLAT}/${BOOT_IMAGE})
++	@echo
++	@echo "Building uart images"
++	$(TIMBUILD) $(TIMBLDUARTARGS)
++	@cp $(SPL_IMAGE) $(BUILD_PLAT)
++	sed -i 's|SPL_IMAGE|$(BUILD_PLAT)/$(SPL_BASENAME)|1' $(DOIMAGE_CFG)
++	sed -i 's|WTMI_IMG|$(WTMI_IMG)|1' $(DOIMAGE_CFG)
++	sed -i 's|BOOT_IMAGE|$(BUILD_PLAT)/$(BOOT_IMAGE)|1' $(DOIMAGE_CFG)
++	$(DOIMAGETOOL) $(DOIMAGE_FLAGS)
++	@mkdir uart-images
++	@mv -t uart-images $(TIM_IMAGE) $(DOIMAGE_CFG)
++	@find . -name "*_h.*" |xargs cp -t uart-images
++	@tar czf uart-images.tgz uart-images
++	@mv uart-images* $(BUILD_PLAT)/
++	@echo
++	@echo "Building flash image"
+ 	$(TIMBUILD) $(TIMBLDARGS)
+ 	sed -i 's|SPL_IMAGE|$(SPL_IMAGE)|1' $(DOIMAGE_CFG)
+ 	sed -i 's|WTMI_IMG|$(WTMI_IMG)|1' $(DOIMAGE_CFG)
+-- 
+1.9.1
+

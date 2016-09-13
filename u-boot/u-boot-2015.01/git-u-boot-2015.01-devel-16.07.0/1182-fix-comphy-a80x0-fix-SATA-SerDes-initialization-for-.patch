@@ -1,0 +1,113 @@
+From 546660eae4abe39b5dea3b052a13eb415d72db5e Mon Sep 17 00:00:00 2001
+From: Igal Liberman <igall@marvell.com>
+Date: Tue, 31 May 2016 18:36:09 +0300
+Subject: [PATCH 1182/1240] fix: comphy: a80x0: fix SATA SerDes initialization
+ for CP1
+
+During comphy intialization for sata, power up/down
+sequence is performed. This patch fix a bug which caused
+running the power up/down sequence twice for CP0.
+This patch add correct parsing of SATA base address
+for multi CP support.
+
+Change-Id: I41da1e9585770937100d33b2002ad03327340652
+Signed-off-by: Igal Liberman <igall@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30236
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/include/asm/arch-mvebu/comphy.h |  1 +
+ drivers/phy/comphy_core.c                |  3 ++-
+ drivers/phy/comphy_cp110.c               | 32 ++++++++++++++++++++++++++------
+ 3 files changed, 29 insertions(+), 7 deletions(-)
+
+diff --git a/arch/arm/include/asm/arch-mvebu/comphy.h b/arch/arm/include/asm/arch-mvebu/comphy.h
+index 1ed1e4a..bf0ebdf 100644
+--- a/arch/arm/include/asm/arch-mvebu/comphy.h
++++ b/arch/arm/include/asm/arch-mvebu/comphy.h
+@@ -86,6 +86,7 @@ struct chip_serdes_phy_config {
+ 	void __iomem *hpipe3_base_addr;
+ 	u32 comphy_lanes_count;
+ 	u32 comphy_mux_bitcount;
++	u32 comphy_index;
+ };
+ 
+ void reg_set(void __iomem *addr, u32 data, u32 mask);
+diff --git a/drivers/phy/comphy_core.c b/drivers/phy/comphy_core.c
+index b2dd0d5..447b41c 100644
+--- a/drivers/phy/comphy_core.c
++++ b/drivers/phy/comphy_core.c
+@@ -200,7 +200,8 @@ u32 comphy_init(const void *blob)
+ 			comphy_map_data[lane].speed = PHY_TYPE_INVALID;
+ 			lane++;
+ 		}
+-
++		/* Save comphy index for MultiCP devices (A8K) */
++		ptr_chip_cfg->comphy_index = i;
+ 		/* PHY power UP sequence */
+ 		ptr_chip_cfg->ptr_comphy_chip_init(ptr_chip_cfg, comphy_map_data);
+ 		/* PHY print SerDes status */
+diff --git a/drivers/phy/comphy_cp110.c b/drivers/phy/comphy_cp110.c
+index cd60acc..09ad65b 100644
+--- a/drivers/phy/comphy_cp110.c
++++ b/drivers/phy/comphy_cp110.c
+@@ -526,21 +526,40 @@ static int comphy_usb3_power_up(u32 lane, void __iomem *hpipe_base, void __iomem
+ 	return ret;
+ }
+ 
+-static int comphy_sata_power_up(u32 lane, void __iomem *hpipe_base, void __iomem *comphy_base)
++static int comphy_sata_power_up(u32 lane, void __iomem *hpipe_base, void __iomem *comphy_base,
++				int comphy_index)
+ {
+-	u32 mask, data, ret = 1;
++	u32 mask, data, i, ret = 1;
+ 	void __iomem *hpipe_addr = HPIPE_ADDR(hpipe_base, lane);
+ 	void __iomem *sd_ip_addr = SD_ADDR(hpipe_base, lane);
+ 	void __iomem *comphy_addr = COMPHY_ADDR(comphy_base, lane);
+-	void __iomem *sata_base;
+ 	void __iomem *addr;
++	void __iomem *sata_base;
++	int sata_node = -1; /* Set to -1 in order to read the first sata node */
+ 
+ 	debug_enter();
+-	sata_base = fdt_get_reg_offs_by_compat(COMPAT_MVEBU_SATA);
++
++	/* Assumption - each CP has only one SATA controller
++	 * Calling fdt_node_offset_by_compatible first time (with sata_node = -1
++	 * will return the first node always.
++	 * In order to parse each CPs SATA node, fdt_node_offset_by_compatible
++	 * must be called again (according to the CP id)
++	 */
++	for (i = 0; i < (comphy_index + 1); i++)
++		sata_node = fdt_node_offset_by_compatible(gd->fdt_blob, sata_node,
++							  fdtdec_get_compatible(COMPAT_MVEBU_SATA));
++
++	if (sata_node == 0) {
++		error("SATA node not found in FDT\n");
++		return 0;
++	}
++
++	sata_base = fdt_get_regs_offs(gd->fdt_blob, sata_node, "reg");
+ 	if (sata_base == 0) {
+-		debug("SATA address not found in FDT\n");
++		error("SATA address not found in FDT\n");
+ 		return 0;
+ 	}
++
+ 	debug("SATA address found in FDT %p\n", sata_base);
+ 
+ 	debug("stage: MAC configuration - power down comphy\n");
+@@ -1490,7 +1509,8 @@ int comphy_cp110_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy
+ 		case PHY_TYPE_SATA1:
+ 		case PHY_TYPE_SATA2:
+ 		case PHY_TYPE_SATA3:
+-			ret = comphy_sata_power_up(lane, hpipe_base_addr, comphy_base_addr);
++			ret = comphy_sata_power_up(lane, hpipe_base_addr, comphy_base_addr,
++						   ptr_chip_cfg->comphy_index);
+ 			break;
+ 		case PHY_TYPE_USB3_HOST0:
+ 		case PHY_TYPE_USB3_HOST1:
+-- 
+1.9.1
+

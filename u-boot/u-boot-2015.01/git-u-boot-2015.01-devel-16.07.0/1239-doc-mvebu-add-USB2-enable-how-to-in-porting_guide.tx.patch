@@ -1,0 +1,61 @@
+From f5241e050b720444c46f359d38b2e3356e643ce5 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Thu, 30 Jun 2016 23:19:50 +0800
+Subject: [PATCH 1239/1240] doc: mvebu: add USB2 enable how-to in
+ porting_guide.txt
+
+- Now there is no concurrent support for EHCI and XHCI in u-boot,
+  only one of them could be compiled into u-boot image. By default
+  XHCI is enabled.
+- Add enable USB2 how-to in porting_guide.txt.
+
+Change-Id: Ifabfa7a5a5dfc6abce4a3b67a2f70cfd6108b8e7
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30861
+Reviewed-by: Gina Tadmore <gina@marvell.com>
+Tested-by: Wilson Ding <dingwei@marvell.com>
+---
+ doc/mvebu/porting_guide.txt | 27 +++++++++++++++++++++++++--
+ 1 file changed, 25 insertions(+), 2 deletions(-)
+
+diff --git a/doc/mvebu/porting_guide.txt b/doc/mvebu/porting_guide.txt
+index df59c94..5604a87 100644
+--- a/doc/mvebu/porting_guide.txt
++++ b/doc/mvebu/porting_guide.txt
+@@ -54,8 +54,31 @@ Customer board porting procedure
+ 			o Save and exit
+ 		>> make savedefconfnig
+ 		>> cp defconfig configs/my_board_defconfig
+-
+-	2.2. Compilation sanity
++	2.2. Select USB2.0 or USB3.0 host controller (Armada-3700 only)
++	-----------------------
++	Currently there is no concurrent support for both EHCI and XHCI in u-boot, so only one of them can be compiled
++	into u-boot image. By default XHCI is enabled, to enable EHCI instead:
++		>> make my_board_defconfig
++		>> make menuconfig
++			o Disable CONFIG_USB_XHCI_HCD.
++				-> Device Drivers -> Support for Host-side USB -> Unselect "xHCI HCD (USB 3.0) support"
++			o Enable CONFIG_USB_EHCI_HCD:
++				-> Device Drivers -> Support for Host-side USB -> Select "EHCI HCD (USB 2.0) support"
++			o Enable CONFIG_USB_EHCI_MARVELL_BYPASS_BRG_ADDR_DEC:
++				-> Device Drivers -> Support for Host-side USB -> EHCI HCD (USB 2.0) support
++					-> Select "Bypass MARVELL USB 2.0 bridge address decode setting"
++			o Enable CONFIG_USB_EHCI_MARVELL_SBUSCFG:
++				-> Device Drivers -> Support for Host-side USB -> EHCI HCD (USB 2.0) support
++					-> Select "MARVELL USB 2.0 sbuscfg setting"
++			o Save and exit
++	To switch back to XHCI:
++		>> make menuconfig
++			o Disable CONFIG_USB_EHCI_HCD:
++				-> Device Drivers -> Support for Host-side USB -> Unselect "EHCI HCD (USB 2.0) support"
++			o Enable CONFIG_USB_XHCI_HCD.
++				-> Device Drivers -> Support for Host-side USB -> Select "xHCI HCD (USB 3.0) support"
++			o Save and exit
++	2.3. Compilation sanity
+ 	-----------------------
+ 	Now, compile U-Boot to make sure that everything was set properly.
+ 	(Refer to doc/mvebu/build.txt for detailed build instructions).
+-- 
+1.9.1
+

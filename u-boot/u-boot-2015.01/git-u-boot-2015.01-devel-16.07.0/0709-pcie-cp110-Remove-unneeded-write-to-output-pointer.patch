@@ -1,0 +1,34 @@
+From 59b20c97423dce4306640598e9da11ef05e934fd Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Mon, 18 Jan 2016 15:06:44 +0200
+Subject: [PATCH 0709/1240] pcie: cp110: Remove unneeded write to output
+ pointer
+
+	Write to "val" in dw_pcie_read_config() is useless as the
+	output value is overridden in the next instruction.
+
+Change-Id: I1b1fcc6d569e0a665458186a7d145917e7609d71
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26845
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/pci/pcie_dw.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/drivers/pci/pcie_dw.c b/drivers/pci/pcie_dw.c
+index 7396d7d..a765d60 100644
+--- a/drivers/pci/pcie_dw.c
++++ b/drivers/pci/pcie_dw.c
+@@ -158,7 +158,6 @@ static int dw_pcie_read_config(struct pci_controller *hose, pci_dev_t bdf,
+ 
+ 	va_address = set_cfg_address(hose, (uintptr_t)hose->priv_data, bdf, where);
+ 
+-	writel(0xffffffff, val);
+ 	*val = readl(va_address);
+ 
+ 	debug("(addr,val)=(0x%04x, 0x%08x)\n", where, (*val));
+-- 
+1.9.1
+

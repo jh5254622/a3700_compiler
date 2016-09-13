@@ -1,0 +1,33 @@
+From 8b4da06a48e5a25695ce3638082f83b7d7ac04b3 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sat, 29 Aug 2015 23:30:36 +0300
+Subject: [PATCH 0377/1240] fix: spi: fixed the default value of CPOL per
+ Chip-Select to be 0
+
+- Set wrong default value for CPOL per Chip-Select (1 << cs)
+
+Change-Id: I927a3845ab48417d677e992c0db80785653335f7
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23301
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/spi/mvebu_spi.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/spi/mvebu_spi.c b/drivers/spi/mvebu_spi.c
+index 4e25325..2587a82 100644
+--- a/drivers/spi/mvebu_spi.c
++++ b/drivers/spi/mvebu_spi.c
+@@ -169,7 +169,7 @@ struct spi_slave *spi_setup_slave(unsigned int bus, unsigned int cs,
+ 			spi_bus.base_reg = fdt_get_regs_offs(gd->fdt_blob, node, "reg");
+ 			spi_bus.max_freq = fdtdec_get_int(gd->fdt_blob, node, "spi-max-frequency", CONFIG_MIN_SPI_CLK);
+ 			clock = soc_clock_get(gd->fdt_blob, node);
+-			cpol = (1 << cs) & fdtdec_get_int(gd->fdt_blob, node, "cpol-cs-bitmap", (1 << cs));
++			cpol = (1 << cs) & fdtdec_get_int(gd->fdt_blob, node, "cpol-cs-bitmap", 0);
+ 		}
+ 	}
+ 
+-- 
+1.9.1
+

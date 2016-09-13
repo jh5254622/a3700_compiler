@@ -1,0 +1,147 @@
+From 95c247c408b7bf6478498da46ca7e0e483016b1c Mon Sep 17 00:00:00 2001
+From: Ahmad Abbas <ahmada@marvell.com>
+Date: Wed, 2 Mar 2016 12:20:36 +0200
+Subject: [PATCH 0916/1240] menuconfig: mvebu: menuconfig clean up - SOC
+ Options
+
+moved LLC, ap806-support and FLC to Soc options under Marvell platform
+options.
+
+Change-Id: Ibe0dc0aeaacceb5e7d05a954abdc59152a9a2766
+Signed-off-by: Ahmad Abbas <ahmada@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27519
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada3700/Kconfig |  9 -------
+ arch/arm/cpu/armv8/armada8k/Kconfig   | 36 -------------------------
+ board/mvebu/Kconfig                   | 51 +++++++++++++++++++++++++++++++++++
+ 3 files changed, 51 insertions(+), 45 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada3700/Kconfig b/arch/arm/cpu/armv8/armada3700/Kconfig
+index 4302a5f..4e3d7d7 100644
+--- a/arch/arm/cpu/armv8/armada3700/Kconfig
++++ b/arch/arm/cpu/armv8/armada3700/Kconfig
+@@ -35,14 +35,5 @@ config PALLADIUM
+ 	  like Clock and PHY, this should
+ 	  not be enabled for real SoC.
+ 
+-config MVEBU_A3700_CLOCK
+-	bool "Armada-3700  clock support"
+-	default n
+-	help
+-	  Choose this option to support
+-	  Marvell Armada-3700 clock driver.
+-	  For the first stage all clocks will be enabled
+-	  by default.
+-
+ endif
+ 
+diff --git a/arch/arm/cpu/armv8/armada8k/Kconfig b/arch/arm/cpu/armv8/armada8k/Kconfig
+index f40c4ef..62a09f5 100644
+--- a/arch/arm/cpu/armv8/armada8k/Kconfig
++++ b/arch/arm/cpu/armv8/armada8k/Kconfig
+@@ -28,40 +28,4 @@ config PALLADIUM
+ 	bool "Support palladium emulation"
+ 	default n
+ 
+-config MVEBU_LLC_ENABLE
+-	depends on TARGET_ARMADA_8K && !MVEBU_SPL_DDR_OVER_PCI_SUPPORT && !SPL_BUILD
+-	bool "Enable LLC support"
+-	default y
+-	help
+-	  Enable LLC in PSCI code
+-
+-config MVEBU_LLC_EXCLUSIVE_EN
+-	depends on MVEBU_LLC_ENABLE
+-	bool "LLC Exclusive mode"
+-	default n
+-	help
+-	  Enable LLC in exclusive mode.
+-	  When Set
+-	  1. Upon a Read hit, the CL is evicted from the LLC
+-	  2. Read Allocate directive is ignored (i.e. no Linefilll done into LLC as a result of a read that misses)
+-
+-
+-config MVEBU_FLC
+-	bool "MBUS Final Level Cache driver"
+-	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+-	default n
+-	help
+-	  Choose this option to add support
+-	  for Final Level Cache for the Marvell McKinley
+-	  Memory Controller driver.
+-	  This driver enable FLC and open the FLC windows.
+-
+-config AP806_Z_SUPPORT
+-	bool "Enable support for AP-806-Z1 & Z2"
+-	default n
+-	help
+-	  Choose this option to add support
+-	  for Marvell's AP-806-Z1/Z2 devices
+-	  This configurations controlls all sorts of fixes
+-	  relevant only for the Z1 & Z2 stepping of AP-806
+ endif
+diff --git a/board/mvebu/Kconfig b/board/mvebu/Kconfig
+index bbd323e..c64c5b5 100644
+--- a/board/mvebu/Kconfig
++++ b/board/mvebu/Kconfig
+@@ -25,4 +25,55 @@ config DEVEL_BOARD
+ source "board/mvebu/common/Kconfig"
+ endmenu
+ 
++menu "Soc Options"
++
++config MVEBU_LLC_ENABLE
++	depends on TARGET_ARMADA_8K && !MVEBU_SPL_DDR_OVER_PCI_SUPPORT && !SPL_BUILD
++	bool "Enable Last Level Cache (LLC) support"
++	default y
++	help
++	  Enable LLC in PSCI code
++
++config MVEBU_LLC_EXCLUSIVE_EN
++	depends on MVEBU_LLC_ENABLE
++	bool "LLC Exclusive mode"
++	default n
++	help
++	  Enable LLC in exclusive mode.
++	  When Set
++	  1. Upon a Read hit, the CL is evicted from the LLC
++	  2. Read Allocate directive is ignored (i.e. no Linefilll done into LLC as a result of a read that misses)
++
++
++config MVEBU_FLC
++	bool "Enable Final Level Cache (FLC) driver"
++	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
++	default n
++	help
++	  Choose this option to add support
++	  for Final Level Cache for the Marvell McKinley
++	  Memory Controller driver.
++	  This driver enable FLC and open the FLC windows.
++
++config AP806_Z_SUPPORT
++	bool "Enable support for AP-806-Z1 & Z2"
++	default n
++	help
++	  Choose this option to add support
++	  for Marvell's AP-806-Z1/Z2 devices
++	  This configurations controlls all sorts of fixes
++	  relevant only for the Z1 & Z2 stepping of AP-806
++
++config MVEBU_A3700_CLOCK
++	bool "Armada-3700  clock support"
++	depends on TARGET_ARMADA_3700
++	default n
++	help
++	  Choose this option to support
++	  Marvell Armada-3700 clock driver.
++	  For the first stage all clocks will be enabled
++	  by default.
++
++endmenu
++
+ endmenu
+-- 
+1.9.1
+

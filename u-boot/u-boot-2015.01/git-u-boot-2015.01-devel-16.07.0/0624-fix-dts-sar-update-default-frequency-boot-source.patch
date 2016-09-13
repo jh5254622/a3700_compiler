@@ -1,0 +1,54 @@
+From 269b0c6972665a1e15bcabe35c747848dd7f3b01 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Wed, 30 Dec 2015 17:13:45 +0200
+Subject: [PATCH 0624/1240] fix: dts: sar: update default frequency & boot
+ source
+
+	- add 1200/650 frequency option, and this option set by default.
+	- change first option name of boot source to "BootRom + SPI", and this option set by default.
+
+Change-Id: If24227a8c2d7e37ecb1a323d131dafc1dd209321
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26421
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/apn-806-db.dtsi | 13 +++++--------
+ 1 file changed, 5 insertions(+), 8 deletions(-)
+
+diff --git a/arch/arm/dts/apn-806-db.dtsi b/arch/arm/dts/apn-806-db.dtsi
+index f6ff73f..c747eb5 100644
+--- a/arch/arm/dts/apn-806-db.dtsi
++++ b/arch/arm/dts/apn-806-db.dtsi
+@@ -46,12 +46,9 @@
+ 			description = "CPU/DDR frequencies";
+ 			start-bit = <0>;
+ 			bit-length = <5>;
+-			option-cnt = <4>;
+-			options = "0x4", "2500/525 Mhz",
+-				"0x6", "2500/800 Mhz",
+-				"0x9", "2200/800 Mhz",
+-				"0x13", "1600/800 Mhz";
+-			default = <0x9>;
++			option-cnt = <1>;
++			options = "0x17", "1200/650 Mhz";
++			default = <0x17>;
+ 			swap-bit;
+ 			status = "okay";
+ 		};
+@@ -61,10 +58,10 @@
+ 			start-bit = <5>;
+ 			bit-length = <2>;
+ 			option-cnt = <3>;
+-			options = "0x0", "BootRoom",
++			options = "0x0", "BootRom + SPI",
+ 				"0x1", "Companion Device",
+ 				"0x2", "SPI";
+-			default = <0x2>;
++			default = <0x0>;
+ 			status = "okay";
+ 		};
+ 		c2c_ihb {
+-- 
+1.9.1
+

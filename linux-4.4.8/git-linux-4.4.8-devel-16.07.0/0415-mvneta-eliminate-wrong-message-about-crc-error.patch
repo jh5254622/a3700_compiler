@@ -1,0 +1,39 @@
+From c6ec6fbd30ac7127b72f69daee92f88b03c68d5d Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Wed, 18 May 2016 22:57:58 +0300
+Subject: [PATCH 415/538] mvneta: eliminate wrong message about crc error.
+
+- there are few reasons in mvneta_rx() function
+when received packet is dropped.
+crc error should be printed only if error bit [16] is set in rx_desc
+
+Change-Id: I29828ab79f90e9e501c9a0987c11b2f6a55d33ec
+Signed-off-by: Dmitri Epshtein <dima@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29802
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Nir Erez <nerez@marvell.com>
+Reviewed-by: Lior Amsalem <alior@marvell.com>
+---
+ drivers/net/ethernet/marvell/mvneta.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/ethernet/marvell/mvneta.c b/drivers/net/ethernet/marvell/mvneta.c
+index eff4ee4..1a02fbf 100644
+--- a/drivers/net/ethernet/marvell/mvneta.c
++++ b/drivers/net/ethernet/marvell/mvneta.c
+@@ -1694,9 +1694,10 @@ static int mvneta_rx(struct mvneta_port *pp, int rx_todo,
+ 
+ 		if (!mvneta_rxq_desc_is_first_last(rx_status) ||
+ 		    (rx_status & MVNETA_RXD_ERR_SUMMARY)) {
+-		err_drop_frame:
+-			dev->stats.rx_errors++;
+ 			mvneta_rx_error(pp, rx_desc);
++
++err_drop_frame:
++			dev->stats.rx_errors++;
+ 			/* leave the descriptor untouched */
+ 			continue;
+ 		}
+-- 
+1.9.1
+

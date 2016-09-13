@@ -1,0 +1,133 @@
+From 7d6944587d4de84fd33b8a568c8dbf4cc3ec9626 Mon Sep 17 00:00:00 2001
+From: Shaker Daibes <shaker@marvell.com>
+Date: Wed, 2 Sep 2015 17:43:57 +0300
+Subject: [PATCH 0420/1240] dts: apn806,a38x: updated regs offset calculation
+ method.
+
+- using ranges property instead of reg property
+  in internal nodes in the fdt
+- The ranges property can describe an address translation
+  between the child bus and the parent bus
+- If the property is not defined, it specifies that parent
+  and child address space is identical
+- To regs offset calculation we use bottom-up recursion
+
+Change-Id: Ia6682363c77765d9011a3e1501e5e1975888130b
+Signed-off-by: Shaker Daibes <shaker@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23387
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/fdt.c       | 34 ++++++++++++++++++++--------------
+ arch/arm/dts/apn-806.dtsi             |  2 +-
+ arch/arm/dts/armada-385-db.dts        |  4 ++--
+ arch/arm/include/asm/arch-mvebu/fdt.h |  9 ++++++++-
+ 4 files changed, 31 insertions(+), 18 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/fdt.c b/arch/arm/cpu/mvebu-common/fdt.c
+index 9b93fa4..876ee87 100644
+--- a/arch/arm/cpu/mvebu-common/fdt.c
++++ b/arch/arm/cpu/mvebu-common/fdt.c
+@@ -24,29 +24,35 @@ DECLARE_GLOBAL_DATA_PTR;
+ 
+ void *fdt_get_regs_offs(const void *blob, int node, const char *prop_name)
+ {
+-	void *base;
+-	u32 reg;
+-
+-	base = fdt_get_regs_base();
++	uintptr_t reg;
+ 	reg = fdtdec_get_addr(blob, node, prop_name);
+ 	if (reg == FDT_ADDR_T_NONE)
+ 		return NULL;
+-
+-	return base + reg;
++	return fdt_get_regs_base(blob, node, reg);
+ }
+ 
+-void *fdt_get_regs_base(void)
++void *fdt_get_regs_base(const void *blob, int node, uintptr_t reg)
+ {
+-	int node;
++	int parent;
++	struct fdt_range bus_info, *ranges;
+ 
+-	if (gd->arch.reg_base)
+-		return gd->arch.reg_base;
++	parent = fdt_parent_offset(blob, node);
++	/* check if we reached the root */
++	if (parent <= 0)
++		return (void *)reg;
+ 
+-	node = fdt_node_offset_by_compatible(gd->fdt_blob, -1, "marvell,internal-regs");
++	ranges = &bus_info;
+ #if defined(CONFIG_MVEBU_SPL_DIFFRENT_BASE_ADDR) && defined(CONFIG_SPL_BUILD)
+-	gd->arch.reg_base = (void *)((uintptr_t)fdtdec_get_addr(gd->fdt_blob, node, "reg-spl"));
++	if (strncmp(fdt_get_name(blob, parent, NULL), "internal-regs", 13) == 0)
++		if (fdtdec_get_int_array_count(blob, parent, "ranges-spl", (u32 *)ranges, 3) == -FDT_ERR_NOTFOUND)
++			return NULL;
+ #else
+-	gd->arch.reg_base = (void *)((uintptr_t)fdtdec_get_addr(gd->fdt_blob, node, "reg"));
++	/* if there is no "ranges" property in current node then skip it */
++	if (fdtdec_get_int_array_count(blob, parent, "ranges", (u32 *)ranges, 3) == -FDT_ERR_NOTFOUND)
++		return fdt_get_regs_base(blob, parent, reg);
+ #endif
+-	return gd->arch.reg_base;
++	if (reg < ranges->child_bus_address || reg > (ranges->child_bus_address + ranges->size))
++		printf("%s register base address not in the ranges\n", fdt_get_name(blob, node, NULL));
++	reg = reg + ranges->parent_bus_address - ranges->child_bus_address;
++	return fdt_get_regs_base(blob, parent, reg);
+ }
+diff --git a/arch/arm/dts/apn-806.dtsi b/arch/arm/dts/apn-806.dtsi
+index 1837b76..7468647 100644
+--- a/arch/arm/dts/apn-806.dtsi
++++ b/arch/arm/dts/apn-806.dtsi
+@@ -38,7 +38,7 @@
+ 			compatible = "marvell,internal-regs";
+ 			#address-cells = <1>;
+ 			#size-cells = <1>;
+-			reg = <0xf0000000 0x4>;
++			ranges = <0x0000 0xf0000000 0x1000000>;
+ 
+ 			tclk: tclk {
+ 				compatible = "marvell,tclk";
+diff --git a/arch/arm/dts/armada-385-db.dts b/arch/arm/dts/armada-385-db.dts
+index 4ea3cce..8355ad3 100644
+--- a/arch/arm/dts/armada-385-db.dts
++++ b/arch/arm/dts/armada-385-db.dts
+@@ -40,8 +40,8 @@
+ 			compatible = "marvell,internal-regs";
+ 			#address-cells = <1>;
+ 			#size-cells = <1>;
+-			reg = <0xf1000000 0x4>;
+-			reg-spl = <0xd0000000 0x4>;
++			ranges = <0x0000 0xf1000000 0x1000000>;
++			ranges-spl = <0x0000 0xd0000000 0x1000000>;
+ 
+ 			tclk: tclk {
+ 				compatible = "marvell,tclk";
+diff --git a/arch/arm/include/asm/arch-mvebu/fdt.h b/arch/arm/include/asm/arch-mvebu/fdt.h
+index ba803a8..c8fd5c2 100644
+--- a/arch/arm/include/asm/arch-mvebu/fdt.h
++++ b/arch/arm/include/asm/arch-mvebu/fdt.h
+@@ -19,8 +19,15 @@
+ #ifndef _MVEBU_FDT_H_
+ #define _MVEBU_FDT_H_
+ 
++struct fdt_range {
++	u32 child_bus_address;
++	u32 parent_bus_address;
++	u32 size;
++};
++
++
+ void *fdt_get_regs_offs(const void *blob, int node, const char *prop_name);
+-void *fdt_get_regs_base(void);
++void *fdt_get_regs_base(const void *blob, int node, uintptr_t reg);
+ 
+ #endif /* _MVEBU_FDT_H_ */
+ 
+-- 
+1.9.1
+

@@ -1,0 +1,52 @@
+From 7b0a33a7126305174acb5c8748349216fb447782 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 3 Aug 2014 23:01:30 +0300
+Subject: [PATCH 0050/1240] fix: mpp: fix the function that check if bus is
+ enabled
+
+	- before this fix the function ignored if there was more than
+	  option/alternative for one bus
+	- in this way, count not equal pins for every bus
+	- if all the alternatives are disabled return 0
+
+Change-Id: Ie156bbdeca81492c582656205a6509de0b0ed5df
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/9804
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/mpp.c | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/mpp.c b/arch/arm/cpu/mvebu-common/mpp.c
+index 485052a..db6a382 100644
+--- a/arch/arm/cpu/mvebu-common/mpp.c
++++ b/arch/arm/cpu/mvebu-common/mpp.c
+@@ -130,17 +130,22 @@ int mpp_is_bus_enabled(struct mpp_bus *bus)
+ {
+ 	int bus_alt;
+ 	int pin;
++	int bus_active = 0;
+ 
+ 	for (bus_alt = 0; bus_alt < bus->bus_cnt; bus_alt++) {
+ 		for (pin = 0; pin < bus->pin_cnt; pin++) {
+ 			u8 id = bus->pin_data[bus_alt][pin].id;
+ 			u8 val = bus->pin_data[bus_alt][pin].val;
+ 			if (mpp_get_pin(id) != val)
+-				return 0;
++				break;
++		}
++		if (pin == bus->pin_cnt) {
++			bus_active = 1;
++			break;
+ 		}
+ 	}
+ 
+-	return 1;
++	return bus_active;
+ }
+ 
+ int mpp_is_bus_valid(struct mpp_bus *bus)
+-- 
+1.9.1
+

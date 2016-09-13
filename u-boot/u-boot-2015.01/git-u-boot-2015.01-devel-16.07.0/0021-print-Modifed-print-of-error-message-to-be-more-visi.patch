@@ -1,0 +1,31 @@
+From a73e9f3f3317abbfc9342f6c28d0535c22e6c79d Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 30 Mar 2014 12:30:52 +0300
+Subject: [PATCH 0021/1240] print: Modifed print of error message to be more
+ visible
+
+Change-Id: Ibca324cf44e234c1ead69b7730de44613a49a99d
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ include/common.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+ mode change 100644 => 100755 include/common.h
+
+diff --git a/include/common.h b/include/common.h
+old mode 100644
+new mode 100755
+index 29350e4..a4d3e5e
+--- a/include/common.h
++++ b/include/common.h
+@@ -128,7 +128,7 @@ void __assert_fail(const char *assertion, const char *file, unsigned line,
+ 		__assert_fail(#x, __FILE__, __LINE__, __func__); })
+ 
+ #define error(fmt, args...) do {					\
+-		printf("ERROR: " pr_fmt(fmt) "\nat %s:%d/%s()\n",	\
++		printf("\nERROR: " pr_fmt(fmt) "\nat %s:%d/%s()\n",	\
+ 			##args, __FILE__, __LINE__, __func__);		\
+ } while (0)
+ 
+-- 
+1.9.1
+

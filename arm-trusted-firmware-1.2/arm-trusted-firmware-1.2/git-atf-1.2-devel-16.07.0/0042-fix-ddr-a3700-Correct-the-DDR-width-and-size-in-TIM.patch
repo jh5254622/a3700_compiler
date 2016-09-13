@@ -1,0 +1,77 @@
+From 78714179f3205963026a2d3bdfafa77991417542 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Sun, 6 Mar 2016 11:43:12 +0200
+Subject: [PATCH 042/239] fix: ddr: a3700: Correct the DDR width and size in
+ TIM
+
+- Set correct DDR bus width (16 bit) and size (512MB)
+  in 600 and 800 MHz DDR TIM descriptor components
+
+Change-Id: I8f56ad485e5038b4d6fc111f08c88f4b58de2e49
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28049
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ tools/wtp/ddr-600.txt | 5 ++++-
+ tools/wtp/ddr-800.txt | 3 ++-
+ 2 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/tools/wtp/ddr-600.txt b/tools/wtp/ddr-600.txt
+index 041a960..ebad38c 100644
+--- a/tools/wtp/ddr-600.txt
++++ b/tools/wtp/ddr-600.txt
+@@ -9,7 +9,7 @@ WRITE: 0xC0000344 0x100000AA
+ WRITE: 0xC0000310 0x00200000
+ WRITE: 0xC0000304 0x00000000
+ WRITE: 0xC0000308 0x00000000
+-WRITE: 0xC0000200 0x000E0001
++WRITE: 0xC0000200 0x000D0001
+ WRITE: 0xC0000204 0x00000000
+ WRITE: 0xC0000220 0x13020532
+ WRITE: 0xC0000044 0x00030200
+@@ -43,6 +43,7 @@ WRITE: 0xC00003c4 0x00000000
+ WRITE: 0xC00003dc 0x00081239
+ WRITE: 0xC00002c8 0x00000000
+ WRITE: 0xC0000064 0x00000006
++WRITE: 0xC0000044 0x00030200
+ ; DDR PHY init
+ WRITE: 0xC0001004 0x10077779
+ WRITE: 0xC0001008 0x1FF00770
+@@ -86,9 +87,11 @@ WRITE: 0xC0001064 0x08080000
+ WRITE: 0xC0001068 0x08080000
+ WRITE: 0xC000106c 0x08080000
+ WRITE: 0xC0001070 0x08080000
++WRITE: 0xC0001074 0x20200000
+ WRITE: 0xC0001020 0x20000000
+ WRITE: 0xC0001020 0x40000000
+ WRITE: 0xC0001020 0x80000000
++; Trigger DDR init for channel 0
+ WRITE: 0xC0000020 0x11000001
+ WAIT_FOR_BIT_SET: 0xC0000008 0x00000001 0x00001000
+ ; AVS enable
+diff --git a/tools/wtp/ddr-800.txt b/tools/wtp/ddr-800.txt
+index 210b2c8..89cde60 100644
+--- a/tools/wtp/ddr-800.txt
++++ b/tools/wtp/ddr-800.txt
+@@ -59,7 +59,7 @@ WRITE: 0xC0000344 0x100000AA
+ WRITE: 0xC0000310 0x00200000
+ WRITE: 0xC0000304 0x00000000
+ WRITE: 0xC0000308 0x00000000
+-WRITE: 0xC0000200 0x000e0001
++WRITE: 0xC0000200 0x000D0001
+ WRITE: 0xC0000204 0x00000000
+ WRITE: 0xC0000220 0x13020532
+ WRITE: 0xC0000044 0x00030200
+@@ -93,6 +93,7 @@ WRITE: 0xC00003c4 0x00000000
+ WRITE: 0xC00003dc 0x00081239
+ WRITE: 0xC00002c8 0x00000000
+ WRITE: 0xC0000064 0x00000006
++WRITE: 0xC0000044 0x00030200
+ ; DDR PHY init
+ WRITE: 0xC0001004 0x10077779
+ WRITE: 0xC0001008 0x1FF00770
+-- 
+1.9.1
+

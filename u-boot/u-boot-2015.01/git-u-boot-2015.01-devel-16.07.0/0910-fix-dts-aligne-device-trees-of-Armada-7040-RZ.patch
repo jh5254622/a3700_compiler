@@ -1,0 +1,558 @@
+From 87f67ca0984f6fa9100b2b5940466a226f5796b0 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 1 Mar 2016 15:29:40 +0200
+Subject: [PATCH 0910/1240] fix: dts: aligne device trees of Armada-7040-RZ
+
+- Fix all configurations of Armada-7040-RZ and aligne them to router changes
+
+Change-Id: I00b4e5e585f2b1c3d58604be5d001bfb0ad693a7
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27962
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/armada-7040-rz-db_all_pci.dts    | 58 ++++++++++++++++++--------
+ arch/arm/dts/armada-7040-rz-db_kr.dts         | 58 +++++++++++++++++---------
+ arch/arm/dts/armada-7040-rz-db_nand.dts       | 59 ++++++++++++++++-----------
+ arch/arm/dts/armada-7040-rz-db_rgmii_only.dts | 58 ++++++++++++++++----------
+ arch/arm/dts/armada-7040-rz-db_router.dts     |  9 ++++
+ arch/arm/dts/armada-7040-rz-db_rxaui.dts      | 36 ++++++++++++----
+ arch/arm/dts/armada-7040-rz-db_rxaui_pci.dts  | 33 ++++++++++++---
+ 7 files changed, 217 insertions(+), 94 deletions(-)
+
+diff --git a/arch/arm/dts/armada-7040-rz-db_all_pci.dts b/arch/arm/dts/armada-7040-rz-db_all_pci.dts
+index e20f843..c8865ae 100644
+--- a/arch/arm/dts/armada-7040-rz-db_all_pci.dts
++++ b/arch/arm/dts/armada-7040-rz-db_all_pci.dts
+@@ -34,7 +34,7 @@
+ 	ap-806 {
+ 		internal-regs {
+ 			spi0: spi@510600 {
+-				status = "okay";
++				status = "disabled";
+ 			};
+ 			i2c0: i2c@511000 {
+ 				status = "okay";
+@@ -43,35 +43,61 @@
+ 
+ 		pcie-controller {
+ 			pcie@1,0 {
+-				status = "okay";
++				status = "disabled";
+ 			};
+ 		};
+ 	};
+ 	cp110-master {
+ 		internal-regs {
+-			spi@700600 {
++			spi0@700600 {
++				status = "disabled";
++			};
++			spi1@700680 {
+ 				status = "okay";
+ 			};
+ 			i2c@701000 {
+-				status = "okay";
++				status = "disabled";
++			};
++			usb3@500000 {
++				status = "disabled";
++			};
++			usb3@510000 {
++				status = "disabled";
++			};
++			sata@540000 {
++				status = "disabled";
+ 			};
+ 			mmc@780000 {
+-				status = "okay";
++				status = "disabled";
++			};
++			pcie-controller {
++				pcie@0,0 {
++					status = "okay";
++				};
++				pcie@1,0 {
++					status = "okay";
++				};
++				pcie@2,0 {
++					status = "okay";
++				};
++			};
++			nand@720000 {
++				status = "disabled";
+ 			};
+ 
+ 			pinctl@440000 {
+ 					/* MPP Bus:
+-					   RGMII0 [0-12]
+-					   SPI    [13-16]
+-					   SATA1  [28]
+-					   UART0  [29-30]
+-					   SMI	  [32,34]
+-					   SATA0  [36]
+-					   I2C	  [37-38]
+-					   UART1  [40-41]
+-					   XSMI	  [42-43]
+-					   RGMII1 [44-55]
+-					   SD	  [56-62]
++					   RGMII0[0-11]
++					   SPI   [13-16]
++					   SATA1 [28]
++					   UART0 [29-30]
++					   SMI	 [32,34]
++					   SATA0 [36]
++					   I2C	 [37-38]
++					   UART1 [40-41]
++					   XSMI	 [42-43]
++					   RGMII1[44-55]
++					   SD	 [56-62]
+ 					*/
+ 					/*   0   1   2   3   4   5   6   7   8   9 */
+ 				pin-func = < 3   3   3   3   3   3   3   3   3   3
+diff --git a/arch/arm/dts/armada-7040-rz-db_kr.dts b/arch/arm/dts/armada-7040-rz-db_kr.dts
+index 7f71b3e..8e5a5f7 100644
+--- a/arch/arm/dts/armada-7040-rz-db_kr.dts
++++ b/arch/arm/dts/armada-7040-rz-db_kr.dts
+@@ -34,7 +34,7 @@
+ 	ap-806 {
+ 		internal-regs {
+ 			spi0: spi@510600 {
+-				status = "okay";
++				status = "disabled";
+ 			};
+ 			i2c0: i2c@511000 {
+ 				status = "okay";
+@@ -43,41 +43,61 @@
+ 
+ 		pcie-controller {
+ 			pcie@1,0 {
+-				status = "okay";
++				status = "disabled";
+ 			};
+ 		};
+ 	};
+ 	cp110-master {
+ 		internal-regs {
+-			spi@700600 {
++			spi0@700600 {
++				status = "disabled";
++			};
++			spi1@700680 {
+ 				status = "okay";
+ 			};
+ 			i2c@701000 {
+-				status = "okay";
++				status = "disabled";
+ 			};
+-			sata@540000 {
+-				status = "okay";
++			usb3@500000 {
++				status = "disabled";
++			};
++			usb3@510000 {
++				status = "disabled";
+ 			};
+-			sata@550000 {
++			sata@540000 {
+ 				status = "okay";
+ 			};
+ 			mmc@780000 {
+-				status = "okay";
++				status = "disabled";
++			};
++			pcie-controller {
++				pcie@0,0 {
++					status = "okay";
++				};
++				pcie@1,0 {
++					status = "okay";
++				};
++				pcie@2,0 {
++					status = "okay";
++				};
++			};
++			nand@720000 {
++				status = "disabled";
+ 			};
+ 
+ 			pinctl@440000 {
+ 					/* MPP Bus:
+-					   RGMII0 [0-12]
+-					   SPI    [13-16]
+-					   SATA1  [28]
+-					   UART0  [29-30]
+-					   SMI	  [32,34]
+-					   SATA0  [36]
+-					   I2C	  [37-38]
+-					   UART1  [40-41]
+-					   XSMI	  [42-43]
+-					   RGMII1 [44-55]
+-					   SD	  [56-62]
++					   RGMII0[0-11]
++					   SPI   [13-16]
++					   SATA1 [28]
++					   UART0 [29-30]
++					   SMI	 [32,34]
++					   SATA0 [36]
++					   I2C	 [37-38]
++					   UART1 [40-41]
++					   XSMI	 [42-43]
++					   RGMII1[44-55]
++					   SD	 [56-62]
+ 					*/
+ 					/*   0   1   2   3   4   5   6   7   8   9 */
+ 				pin-func = < 3   3   3   3   3   3   3   3   3   3
+diff --git a/arch/arm/dts/armada-7040-rz-db_nand.dts b/arch/arm/dts/armada-7040-rz-db_nand.dts
+index 213a2ec..18bbdc7 100644
+--- a/arch/arm/dts/armada-7040-rz-db_nand.dts
++++ b/arch/arm/dts/armada-7040-rz-db_nand.dts
+@@ -34,7 +34,7 @@
+ 	ap-806 {
+ 		internal-regs {
+ 			spi0: spi@510600 {
+-				status = "okay";
++				status = "disabled";
+ 			};
+ 			i2c0: i2c@511000 {
+ 				status = "okay";
+@@ -42,24 +42,21 @@
+ 		};
+ 
+ 		pcie-controller {
+-			pcie@0,0 {
+-				status = "okay";
+-			};
+-			pcie@2,0 {
+-				status = "okay";
++			pcie@1,0 {
++				status = "disabled";
+ 			};
+ 		};
+ 	};
+ 	cp110-master {
+ 		internal-regs {
+-			spi@700600 {
+-				status = "okay";
++			spi0@700600 {
++				status = "disabled";
+ 			};
+-			i2c@701000 {
+-				status = "okay";
++			spi1@700680 {
++				status = "disabled";
+ 			};
+-			sata@550000 {
+-				status = "okay";
++			i2c@701000 {
++				status = "disabled";
+ 			};
+ 			usb3@500000 {
+ 				status = "okay";
+@@ -67,26 +64,40 @@
+ 			usb3@510000 {
+ 				status = "okay";
+ 			};
+-			mmc@780000 {
++			sata@540000 {
+ 				status = "okay";
+ 			};
++			mmc@780000 {
++				status = "disabled";
++			};
++			pcie-controller {
++				pcie@0,0 {
++					status = "okay";
++				};
++				pcie@1,0 {
++					status = "disabled";
++				};
++				pcie@2,0 {
++					status = "okay";
++				};
++			};
+ 			nand@720000 {
+ 				status = "okay";
+ 			};
+ 
+ 			pinctl@440000 {
+ 					/* MPP Bus:
+-					   RGMII0 [0-12]
+-					   NAND   [13,16-27]
+-					   SATA1  [28]
+-					   UART0  [29-30]
+-					   SMI	  [32,34]
+-					   SATA0  [36]
+-					   I2C	  [37-38]
+-					   UART1  [40-41]
+-					   XSMI	  [42-43]
+-					   RGMII1 [44-55]
+-					   SD	  [56-62]
++					   RGMII0[0-11]
++					   NAND  [13,16-27]
++					   SATA1 [28]
++					   UART0 [29-30]
++					   SMI	 [32,34]
++					   SATA0 [36]
++					   I2C	 [37-38]
++					   UART1 [40-41]
++					   XSMI	 [42-43]
++					   RGMII1[44-55]
++					   SD	 [56-62]
+ 					*/
+ 					/*   0   1   2   3   4   5   6   7   8   9 */
+ 				pin-func = < 3   3   3   3   3   3   3   3   3   3
+diff --git a/arch/arm/dts/armada-7040-rz-db_rgmii_only.dts b/arch/arm/dts/armada-7040-rz-db_rgmii_only.dts
+index d8a9133..20537eb 100644
+--- a/arch/arm/dts/armada-7040-rz-db_rgmii_only.dts
++++ b/arch/arm/dts/armada-7040-rz-db_rgmii_only.dts
+@@ -34,7 +34,7 @@
+ 	ap-806 {
+ 		internal-regs {
+ 			spi0: spi@510600 {
+-				status = "okay";
++				status = "disabled";
+ 			};
+ 			i2c0: i2c@511000 {
+ 				status = "okay";
+@@ -43,23 +43,20 @@
+ 
+ 		pcie-controller {
+ 			pcie@1,0 {
+-				status = "okay";
++				status = "disabled";
+ 			};
+ 		};
+ 	};
+ 	cp110-master {
+ 		internal-regs {
+-			spi@700600 {
+-				status = "okay";
++			spi0@700600 {
++				status = "disabled";
+ 			};
+-			i2c@701000 {
++			spi1@700680 {
+ 				status = "okay";
+ 			};
+-			sata@540000 {
+-				status = "okay";
+-			};
+-			sata@550000 {
+-				status = "okay";
++			i2c@701000 {
++				status = "disabled";
+ 			};
+ 			usb3@500000 {
+ 				status = "okay";
+@@ -67,23 +64,40 @@
+ 			usb3@510000 {
+ 				status = "okay";
+ 			};
+-			mmc@780000 {
++			sata@540000 {
+ 				status = "okay";
+ 			};
++			mmc@780000 {
++				status = "disabled";
++			};
++			pcie-controller {
++				pcie@0,0 {
++					status = "okay";
++				};
++				pcie@1,0 {
++					status = "disabled";
++				};
++				pcie@2,0 {
++					status = "okay";
++				};
++			};
++			nand@720000 {
++				status = "disabled";
++			};
+ 
+ 			pinctl@440000 {
+ 					/* MPP Bus:
+-					   RGMII0 [0-12]
+-					   SPI    [13-16]
+-					   SATA1  [28]
+-					   UART0  [29-30]
+-					   SMI	  [32,34]
+-					   SATA0  [36]
+-					   I2C	  [37-38]
+-					   UART1  [40-41]
+-					   XSMI	  [42-43]
+-					   RGMII1 [44-55]
+-					   SD	  [56-62]
++					   RGMII0[0-11]
++					   SPI   [13-16]
++					   SATA1 [28]
++					   UART0 [29-30]
++					   SMI	 [32,34]
++					   SATA0 [36]
++					   I2C	 [37-38]
++					   UART1 [40-41]
++					   XSMI	 [42-43]
++					   RGMII1[44-55]
++					   SD	 [56-62]
+ 					*/
+ 					/*   0   1   2   3   4   5   6   7   8   9 */
+ 				pin-func = < 3   3   3   3   3   3   3   3   3   3
+diff --git a/arch/arm/dts/armada-7040-rz-db_router.dts b/arch/arm/dts/armada-7040-rz-db_router.dts
+index 0046dbf..575cffe 100644
+--- a/arch/arm/dts/armada-7040-rz-db_router.dts
++++ b/arch/arm/dts/armada-7040-rz-db_router.dts
+@@ -71,10 +71,19 @@
+ 				status = "disabled";
+ 			};
+ 			pcie-controller {
++				pcie@0,0 {
++					status = "disabled";
++				};
++				pcie@1,0 {
++					status = "disabled";
++				};
+ 				pcie@2,0 {
+ 					status = "okay";
+ 				};
+ 			};
++			nand@720000 {
++				status = "disabled";
++			};
+ 
+ 			pinctl@440000 {
+ 					/* MPP Bus:
+diff --git a/arch/arm/dts/armada-7040-rz-db_rxaui.dts b/arch/arm/dts/armada-7040-rz-db_rxaui.dts
+index 656c082..e43a0e1 100644
+--- a/arch/arm/dts/armada-7040-rz-db_rxaui.dts
++++ b/arch/arm/dts/armada-7040-rz-db_rxaui.dts
+@@ -34,7 +34,7 @@
+ 	ap-806 {
+ 		internal-regs {
+ 			spi0: spi@510600 {
+-				status = "okay";
++				status = "disabled";
+ 			};
+ 			i2c0: i2c@511000 {
+ 				status = "okay";
+@@ -43,26 +43,46 @@
+ 
+ 		pcie-controller {
+ 			pcie@1,0 {
+-				status = "okay";
++				status = "disabled";
+ 			};
+ 		};
+ 	};
+ 	cp110-master {
+ 		internal-regs {
+-			spi@700600 {
++			spi0@700600 {
++				status = "disabled";
++			};
++			spi1@700680 {
+ 				status = "okay";
+ 			};
+ 			i2c@701000 {
+-				status = "okay";
++				status = "disabled";
+ 			};
+-			sata@540000 {
+-				status = "okay";
++			usb3@500000 {
++				status = "disabled";
++			};
++			usb3@510000 {
++				status = "disabled";
+ 			};
+-			sata@550000 {
++			sata@540000 {
+ 				status = "okay";
+ 			};
+ 			mmc@780000 {
+-				status = "okay";
++				status = "disabled";
++			};
++			pcie-controller {
++				pcie@0,0 {
++					status = "disabled";
++				};
++				pcie@1,0 {
++					status = "disabled";
++				};
++				pcie@2,0 {
++					status = "disabled";
++				};
++			};
++			nand@720000 {
++				status = "disabled";
+ 			};
+ 
+ 			pinctl@440000 {
+diff --git a/arch/arm/dts/armada-7040-rz-db_rxaui_pci.dts b/arch/arm/dts/armada-7040-rz-db_rxaui_pci.dts
+index fd0758b..e5ef10e 100644
+--- a/arch/arm/dts/armada-7040-rz-db_rxaui_pci.dts
++++ b/arch/arm/dts/armada-7040-rz-db_rxaui_pci.dts
+@@ -34,7 +34,7 @@
+ 	ap-806 {
+ 		internal-regs {
+ 			spi0: spi@510600 {
+-				status = "okay";
++				status = "disabled";
+ 			};
+ 			i2c0: i2c@511000 {
+ 				status = "okay";
+@@ -43,23 +43,46 @@
+ 
+ 		pcie-controller {
+ 			pcie@1,0 {
+-				status = "okay";
++				status = "disabled";
+ 			};
+ 		};
+ 	};
+ 	cp110-master {
+ 		internal-regs {
+-			spi@700600 {
++			spi0@700600 {
++				status = "disabled";
++			};
++			spi1@700680 {
+ 				status = "okay";
+ 			};
+ 			i2c@701000 {
+-				status = "okay";
++				status = "disabled";
++			};
++			usb3@500000 {
++				status = "disabled";
++			};
++			usb3@510000 {
++				status = "disabled";
+ 			};
+ 			sata@540000 {
+ 				status = "okay";
+ 			};
+ 			mmc@780000 {
+-				status = "okay";
++				status = "disabled";
++			};
++			pcie-controller {
++				pcie@0,0 {
++					status = "okay";
++				};
++				pcie@1,0 {
++					status = "disabled";
++				};
++				pcie@2,0 {
++					status = "disabled";
++				};
++			};
++			nand@720000 {
++				status = "disabled";
+ 			};
+ 
+ 			pinctl@440000 {
+-- 
+1.9.1
+

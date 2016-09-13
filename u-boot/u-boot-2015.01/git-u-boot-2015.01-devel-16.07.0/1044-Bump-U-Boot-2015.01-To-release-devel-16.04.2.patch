@@ -1,0 +1,29 @@
+From 5f524b50496e79ccb55046e97addea76115216d2 Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Thu, 14 Apr 2016 12:54:02 +0300
+Subject: [PATCH 1044/1240] Bump U-Boot 2015.01 To release devel-16.04.2
+
+Change-Id: I85b13f097efc631b27e32057d868b2c93fc4bd94
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29040
+Tested-by: Star_Automation <star@marvell.com>
+---
+ include/configs/mvebu-common.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 4ef232c..9fdbd71 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -22,7 +22,7 @@
+ #include <asm/arch/regs-base.h>
+ 
+ /* Version */
+-#define CONFIG_IDENT_STRING             "  Marvell version: devel-16.04.1"
++#define CONFIG_IDENT_STRING             "  Marvell version: devel-16.04.2"
+ 
+ /* Temp */
+ #define CONFIG_ADEC
+-- 
+1.9.1
+

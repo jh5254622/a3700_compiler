@@ -1,0 +1,63 @@
+From 051b5f28c72be27fc042a22f84252c84737b3752 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Wed, 13 Jan 2016 23:57:38 +0800
+Subject: [PATCH 0684/1240] fix: scsi: fixed 2nd SCSI detection issue
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+issue: the scsi will not be initialized again if it failed for
+      the first time.
+fix: if the scsi failed to initialize for the first time, to
+      initialize it again when use following command, "scsi_reset",
+      "scsi_scan".
+      The "scsi_init" will always be called when use "scsi reset",
+      or "scsi scan".
+      This patch fixes the issue that 2nd scsi reset does not
+      work.
+JIRA:SYSTEMSW-2131 SATA Hot-swap is not supported –
+      only 1st detection succeeds
+    SYSTEMSW-2078 scsi reset - The command not working
+
+Signed-off-by: Victor Gu <xigu@marvell.com>
+
+Change-Id: Ie4c0444421638b6766834924df24255b180fab90
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26753
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ common/cmd_scsi.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/common/cmd_scsi.c b/common/cmd_scsi.c
+index 9f6fabb..76560f3 100644
+--- a/common/cmd_scsi.c
++++ b/common/cmd_scsi.c
+@@ -253,6 +253,11 @@ int do_scsi (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+ 			if (strncmp(argv[1],"res",3) == 0) {
+ 				printf("\nReset SCSI\n");
+ 				scsi_bus_reset();
++				/* always call scsi_init here to support the following case:
++				 * scsi scan is finished successfully, then replace the HDD/SDD,
++				 * the "scsi reset" will be used for detect again.
++				 */
++				scsi_init();
+ 				scsi_scan(1);
+ 				return 0;
+ 			}
+@@ -276,6 +281,11 @@ int do_scsi (cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+ 				return 0;
+ 			}
+ 			if (strncmp(argv[1],"scan",4) == 0) {
++				/* always call scsi_init here to support the following case:
++				 * scsi scan is finished successfully, then replace the HDD/SDD,
++				 * the "scsi scan" will be used for detect again.
++				 */
++				scsi_init();
+ 				scsi_scan(1);
+ 				return 0;
+ 			}
+-- 
+1.9.1
+

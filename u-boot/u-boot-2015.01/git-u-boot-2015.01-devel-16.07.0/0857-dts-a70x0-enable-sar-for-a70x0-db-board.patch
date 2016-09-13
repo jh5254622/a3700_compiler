@@ -1,0 +1,51 @@
+From cd09c1d05885b135e68660b6780ed9bc5e295ab3 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Wed, 10 Feb 2016 09:23:03 +0200
+Subject: [PATCH 0857/1240] dts: a70x0: enable sar for a70x0 db board
+
+- Enable the dts sar section
+- Enable the MPP8 sar - with only 1 valid value,
+  MPP8 nust be set to 1
+
+Change-Id: Ie33f248e0961b731f783df2ced7eb5050d816974
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27375
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/armada-70x0-dev-info.dtsi | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/dts/armada-70x0-dev-info.dtsi b/arch/arm/dts/armada-70x0-dev-info.dtsi
+index 4e971ee..26fd333 100644
+--- a/arch/arm/dts/armada-70x0-dev-info.dtsi
++++ b/arch/arm/dts/armada-70x0-dev-info.dtsi
+@@ -40,7 +40,6 @@
+ 		};
+ 	};
+ 
+-/*
+ 	sar {
+ 		compatible = "marvell,sample-at-reset";
+ 		#address-cells = <1>;
+@@ -94,7 +93,7 @@
+ 			option-cnt = <1>;
+ 			options = "0x1", "MPP8";
+ 			default = <0x1>;
+-			status = "disable";
++			status = "okay";
+ 		};
+ 		boot_mode {
+ 			key = "boot_mode";
+@@ -108,7 +107,7 @@
+ 			status = "okay";
+ 		};
+ 	};
+-*/
++
+ 	mpp-buses {
+ 		cp-mpp-bus0 {
+ 			compatible = "marvell,mvebu-mpp-bus";
+-- 
+1.9.1
+

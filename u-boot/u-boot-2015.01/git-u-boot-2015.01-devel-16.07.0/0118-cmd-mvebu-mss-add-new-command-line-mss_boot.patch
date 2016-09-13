@@ -1,0 +1,174 @@
+From ba0731012f3866e53b28f7ed69f19fe219064c2e Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Tue, 27 Jan 2015 10:34:04 +0200
+Subject: [PATCH 0118/1240] cmd: mvebu: mss: add new command line mss_boot
+
+The mss_boot command line use to load MSS code into CM3 ID RAM and release the CM3 from reset
+Signed-off-by: Neta Zur <neta@marvell.com>
+
+Change-Id: Icde9e2d9e9affd51cf99a598a7b56a0cfebd317b
+Reviewed-on: http://vgitil04.il.marvell.com:8080/16339
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/include/asm/arch-armada8k/regs-base.h |   2 +
+ common/mvebu/Kconfig                           |   6 ++
+ common/mvebu/Makefile                          |   1 +
+ common/mvebu/cmd_mss.c                         | 108 +++++++++++++++++++++++++
+ 4 files changed, 117 insertions(+)
+ create mode 100644 common/mvebu/cmd_mss.c
+
+diff --git a/arch/arm/include/asm/arch-armada8k/regs-base.h b/arch/arm/include/asm/arch-armada8k/regs-base.h
+index c7a3c49..81ce747 100644
+--- a/arch/arm/include/asm/arch-armada8k/regs-base.h
++++ b/arch/arm/include/asm/arch-armada8k/regs-base.h
+@@ -42,5 +42,7 @@
+ #define MVEBU_GICC_BASE		(MVEBU_REGS_BASE + 0x220000)
+ 
+ #define MVEBU_GENERIC_TIMER_BASE	(MVEBU_REGS_BASE + 0x581000)
++#define MVEBU_MSS_BASE	            (MVEBU_REGS_BASE + 0x580000)
++
+ 
+ #endif	/* _REGS_BASE_H_ */
+diff --git a/common/mvebu/Kconfig b/common/mvebu/Kconfig
+index a089c53..52cdf76 100644
+--- a/common/mvebu/Kconfig
++++ b/common/mvebu/Kconfig
+@@ -34,4 +34,10 @@ config CMD_MVEBU_BUBT
+ 	help
+ 	  bubt - Burn a u-boot image to flash
+ 
++config CMD_MVEBU_MSS_BOOT
++	bool "mss_boot"
++	depends on TARGET_ARMADA_8K
++	default y
++	help
++	  mss_boot - Loads MSS code into CM3 ID RAM and release from reset
+ endmenu
+diff --git a/common/mvebu/Makefile b/common/mvebu/Makefile
+index cc4ea2e..b453ffb 100644
+--- a/common/mvebu/Makefile
++++ b/common/mvebu/Makefile
+@@ -22,3 +22,4 @@ obj-$(CONFIG_CMD_MVEBU_SAR) += cmd_sar.o
+ obj-$(CONFIG_CMD_MVEBU_CONFIG) += cmd_config.o
+ obj-$(CONFIG_CMD_MVEBU_MPP) += cmd_mpp.o
+ obj-$(CONFIG_CMD_MVEBU_BUBT) += cmd_bubt.o
++obj-$(CONFIG_CMD_MVEBU_MSS_BOOT) += cmd_mss.o
+diff --git a/common/mvebu/cmd_mss.c b/common/mvebu/cmd_mss.c
+new file mode 100644
+index 0000000..d30e2bd
+--- /dev/null
++++ b/common/mvebu/cmd_mss.c
+@@ -0,0 +1,108 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <asm/io.h>
++#include <command.h>
++
++#define MSS_DMA_SRCBR (MVEBU_MSS_BASE + 0xC0)
++#define MSS_DMA_DSTBR (MVEBU_MSS_BASE + 0xC4)
++#define MSS_DMA_CTRLR (MVEBU_MSS_BASE + 0xC8)
++#define MSS_M3_RSTCR  (MVEBU_MSS_BASE + 0xFC)
++
++#define MSS_DMA_CTRLR_SIZE_OFFSET		(0)
++#define MSS_DMA_CTRLR_SIZE_MASK		    (0xFF)
++#define MSS_DMA_CTRLR_REQ_OFFSET		(15)
++#define MSS_DMA_CTRLR_REQ_SET		    (1)
++#define MSS_DMA_CTRLR_ACK_OFFSET		(12)
++#define MSS_DMA_CTRLR_ACK_MASK		    (0x1)
++#define MSS_DMA_CTRLR_ACK_BUSY		    (0)
++#define MSS_DMA_CTRLR_ACK_READY		    (1)
++#define MSS_M3_RSTCR_RST_OFFSET     (0)
++#define MSS_M3_RSTCR_RST_ON         (0)
++#define MSS_M3_RSTCR_RST_OFF        (1)
++
++#define MSS_DMA_TIMEOUT             1000
++
++int mss_boot(u32 size, u32 srcAddr)
++{
++	u32 i, loop_num, timeout;
++
++	printf("Loading MSS image from address 0x%08X size 0x%x...", (u32)srcAddr, size);
++
++	/* load image to MSS RAM using DMA */
++	loop_num = (size / 128) + (((size & 127) == 0) ? 0 : 1);
++
++	for (i = 0; i < loop_num; i++) {
++		/* write destination and source addresses */
++		writel((srcAddr + (i * 128)), MSS_DMA_SRCBR);
++		writel((i * 128), MSS_DMA_DSTBR);
++
++		/* set the DMA control register */
++		writel(((MSS_DMA_CTRLR_REQ_SET << MSS_DMA_CTRLR_REQ_OFFSET) |
++				(128 << MSS_DMA_CTRLR_SIZE_OFFSET)), MSS_DMA_CTRLR);
++
++		/* Poll DMA_ACK at MSS_DMACTLR until it is ready */
++		timeout = MSS_DMA_TIMEOUT;
++		while (timeout) {
++			if ((readl(MSS_DMA_CTRLR) >> MSS_DMA_CTRLR_ACK_OFFSET & MSS_DMA_CTRLR_ACK_MASK)
++				== MSS_DMA_CTRLR_ACK_READY) {
++				break;
++			}
++			udelay(1);
++			timeout--;
++		}
++		if (timeout == 0) {
++			printf("\nDMA failed to load MSS image\n");
++			return 1;
++		}
++	}
++
++	/* Release M3 from reset */
++	writel((MSS_M3_RSTCR_RST_OFF << MSS_M3_RSTCR_RST_OFFSET), MSS_M3_RSTCR);
++
++	return 0;
++}
++
++
++int do_mss_boot(cmd_tbl_t *cmdtp, int flag, int argc,
++						char *const argv[])
++{
++	u32 srcAddr, size;
++
++	if (argc != 3) {
++		printf("Usage:\n%s\n", cmdtp->usage);
++		return 1;
++	}
++
++	/* Get source address*/
++	srcAddr = simple_strtoul(argv[1], NULL, 16);
++
++	/* Get image size */
++	size = simple_strtoul(argv[2], NULL, 16);
++
++	return mss_boot(size, srcAddr);
++}
++
++U_BOOT_CMD(
++	mss_boot,     3,      1,       do_mss_boot,
++	"mss_boot - Loads MSS code into CM3 ID RAM and release from reset\n",
++	"<image src address> <image size>\n"
++	"	- Loads MSS code into CM3 ID RAM and release CM3 from reset\n"
++);
++
+-- 
+1.9.1
+

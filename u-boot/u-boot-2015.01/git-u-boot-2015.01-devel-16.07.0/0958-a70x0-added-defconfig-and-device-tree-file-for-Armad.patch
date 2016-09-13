@@ -1,0 +1,250 @@
+From 922fadfc1d865ebed0e78448f44e2bf37174ab21 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 16 Mar 2016 18:30:08 +0200
+Subject: [PATCH 0958/1240] a70x0: added defconfig and device tree file for
+ Armada-70x0-A0
+
+- Added defconfig file aligned to Armada-70x0-A0 configuration
+- Added device tree with updated MPPs for CP-110 and AP-806-A0
+
+Change-Id: Ibee5d9d3105ca4b5ec7428efe44407365dbfd623
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28308
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/Makefile                  |   9 +-
+ arch/arm/dts/apn-806-a0.dtsi           |   1 -
+ arch/arm/dts/armada-70x0-db_router.dts | 145 +++++++++++++++++++++++++++++++++
+ arch/arm/dts/armada-70x0.dtsi          |   4 +-
+ configs/mvebu_armada70x0_defconfig     |   3 +-
+ 5 files changed, 156 insertions(+), 6 deletions(-)
+ create mode 100644 arch/arm/dts/armada-70x0-db_router.dts
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index 912beb6..310517c 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -70,14 +70,19 @@ dtb-$(CONFIG_PALLADIUM) += apn-806-pd.dtb \
+ dtb-$(CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT) += apn-806-db-dop.dtb \
+ 						armada-7040-rz-db_dop.dtb
+ dtb-$(CONFIG_DEVEL_BOARD) += apn-806-db.dtb \
+-			     armada-80x0-db.dtb \
+-			     armada-7040-rz-db_nand.dtb \
++			     armada-80x0-db.dtb
++
++ifdef CONFIG_AP806_Z_SUPPORT
++dtb-$(CONFIG_DEVEL_BOARD) += armada-7040-rz-db_nand.dtb \
+ 			     armada-7040-rz-db_router.dtb \
+ 			     armada-7040-rz-db_all_pci.dtb \
+ 			     armada-7040-rz-db_rgmii_only.dtb \
+ 			     armada-7040-rz-db_kr.dtb \
+ 			     armada-7040-rz-db_rxaui_pci.dtb \
+ 			     armada-7040-rz-db_rxaui.dtb
++else
++dtb-$(CONFIG_DEVEL_BOARD) += armada-70x0-db_router.dtb
++endif
+ endif #CONFIG_TARGET_ARMADA_8K
+ 
+ targets += $(dtb-y)
+diff --git a/arch/arm/dts/apn-806-a0.dtsi b/arch/arm/dts/apn-806-a0.dtsi
+index a10f2b7..adcf866 100644
+--- a/arch/arm/dts/apn-806-a0.dtsi
++++ b/arch/arm/dts/apn-806-a0.dtsi
+@@ -90,7 +90,6 @@
+ 				compatible = "marvell,mvebu-ccu";
+ 				reg = <0x4000 0x50>;
+ 				max-win = <8>;
+-				windows = <0x0 0xf2000000 0x0 0xe000000 0x00 /* IO window */>;
+ 			};
+ 
+ 			thermal: thermal@6f8084 {
+diff --git a/arch/arm/dts/armada-70x0-db_router.dts b/arch/arm/dts/armada-70x0-db_router.dts
+new file mode 100644
+index 0000000..009edce
+--- /dev/null
++++ b/arch/arm/dts/armada-70x0-db_router.dts
+@@ -0,0 +1,145 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/dts-v1/;
++
++#include "armada-70x0.dtsi" /* include SoC device tree */
++
++/ {
++	model = "DB-ARMADA-70x0 (ROUTER)";
++	compatible = "marvell,armada-70x0-db", "marvell,armada-70x0";
++	fdt_config_id = <1>;
++	board_id = <0x11>;
++
++	ap-806 {
++		internal-regs {
++			spi0: spi@510600 {
++				status = "disabled";
++			};
++			i2c0: i2c@511000 {
++				status = "okay";
++			};
++			ddr-mac {
++				cs_count = <1>;
++				bus_width = <DDR_BUS_WIDTH_32>;
++				cs0 { /* 4GiB */
++					size = <0x00000001 0x00000000>;
++				};
++			};
++			pinctl@6F008C {
++					/* MPP Bus:
++						SPI0 [0-3]
++						I2C0 [4-5]
++						UART0 [11,19]
++					*/
++					  /* 0 1 2 3 4 5 6 7 8 9 */
++				pin-func = < 3 3 3 3 3 3 0 0 0 0
++					     0 3 0 0 0 0 0 0 0 3>;
++			};
++		};
++	};
++	cp110-master {
++		internal-regs {
++			spi0@700600 {
++				status = "disabled";
++			};
++			spi1@700680 {
++				status = "okay";
++			};
++			i2c@701000 {
++				status = "disabled";
++			};
++			usb3@500000 {
++				status = "okay";
++			};
++			usb3@510000 {
++				status = "okay";
++			};
++			sata@540000 {
++				status = "okay";
++			};
++			mmc@780000 {
++				status = "disabled";
++			};
++			pcie-controller {
++				pcie@0,0 {
++					status = "disabled";
++				};
++				pcie@1,0 {
++					status = "disabled";
++				};
++				pcie@2,0 {
++					status = "okay";
++				};
++			};
++			nand@720000 {
++				status = "disabled";
++			};
++
++			pinctl@440000 {
++					/* MPP Bus:
++					   RGMII0[0-11]
++					   SPI   [13-16]
++					   SATA1 [28]
++					   UART0 [29-30]
++					   SMI	 [32,34]
++					   XSMI  [35-36]
++					   I2C	 [37-38]
++					   UART1 [40-41]
++					   RGMII1[44-55]
++					   SD	 [56-62]
++					*/
++					/*   0   1   2   3   4   5   6   7   8   9 */
++				pin-func = < 3   3   3   3   3   3   3   3   3   3
++					     3   3   0   3   3   3   3   0   0   0
++					     0   0   0   0   0   0   0   0   9   0xA
++					     0xA 0   7   0   7   7   7   2   2   0
++					     0   0   0   0   1   1   1   1   1   1
++					     1   1   1   1   1   1   0xE 0xE 0xE 0xE
++					     0xE 0xE 0xE>;
++			};
++
++			comphy {
++				phy0 {
++					phy-type = <PHY_TYPE_SGMII2>;
++					phy-speed = <PHY_SPEED_1_25G>;
++				};
++				phy1 {
++					phy-type = <PHY_TYPE_USB3_HOST0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy2 {
++					phy-type = <PHY_TYPE_SGMII0>;
++					phy-speed = <PHY_SPEED_1_25G>;
++				};
++				phy3 {
++					phy-type = <PHY_TYPE_SATA1>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy4 {
++					phy-type = <PHY_TYPE_USB3_HOST1>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy5 {
++					phy-type = <PHY_TYPE_PEX2>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++			};
++		};
++	};
++};
+diff --git a/arch/arm/dts/armada-70x0.dtsi b/arch/arm/dts/armada-70x0.dtsi
+index 87cfab5..41ff83f 100644
+--- a/arch/arm/dts/armada-70x0.dtsi
++++ b/arch/arm/dts/armada-70x0.dtsi
+@@ -16,7 +16,9 @@
+  * ***************************************************************************
+  */
+ 
+-#include "apn-806-z1.dtsi"
++#include <dt-bindings/ddr/ddr_data.h>
++#include <dt-bindings/comphy/comphy_data.h>
++#include "apn-806-a0.dtsi"
+ #include "cp110-master.dtsi"
+ 
+ / {
+diff --git a/configs/mvebu_armada70x0_defconfig b/configs/mvebu_armada70x0_defconfig
+index 3b16269..1d63ad4 100644
+--- a/configs/mvebu_armada70x0_defconfig
++++ b/configs/mvebu_armada70x0_defconfig
+@@ -23,7 +23,7 @@ CONFIG_CMD_MVEBU_BUBT=y
+ CONFIG_CMD_MVEBU_TSEN=y
+ CONFIG_OF_CONTROL=y
+ CONFIG_OF_EMBED=y
+-CONFIG_DEFAULT_DEVICE_TREE="armada-7040-rz-db_router"
++CONFIG_DEFAULT_DEVICE_TREE="armada-70x0-db_router"
+ CONFIG_MVEBU_DW_PCIE=y
+ CONFIG_NAND_PXA3XX=y
+ CONFIG_SCSI_AHCI_PLAT=y
+@@ -48,6 +48,5 @@ CONFIG_MVEBU_THERMAL_SENSOR_28NM_V2=y
+ CONFIG_DEVEL_BOARD=y
+ # CONFIG_MULTI_DT_FILE is not set
+ # CONFIG_MVEBU_LLC_ENABLE is not set
+-CONFIG_AP806_Z_SUPPORT=y
+ CONFIG_ENV_IS_IN_BOOTDEV=y
+ CONFIG_MVEBU_ROM_SILENCE_FLAG_SUPPORT=y
+-- 
+1.9.1
+

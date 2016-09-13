@@ -1,0 +1,341 @@
+From 2223aa3191415638b367887f86419d37ce36069d Mon Sep 17 00:00:00 2001
+From: Jing Hua <jinghua@marvell.com>
+Date: Tue, 28 Apr 2015 17:45:43 +0800
+Subject: [PATCH 0183/1240] uart: arlp: added support for UART driver for
+ armadaLP
+
+	1. Added support for UART driver for armadaLP under drivers/serial.
+	2. Added UART node in armadaLP Device tree file.
+	3. UART driver got the base address from the device tree.
+	4. This driver tested in Palladium.
+
+Signed-off-by: Jing Hua <jinghua@marvell.com>
+
+Change-Id: Ie91e5be4c51256791b3f4e48a6dc510b46647d05
+Reviewed-on: http://vgitil04.il.marvell.com:8080/18668
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Kconfig              |  10 +-
+ arch/arm/dts/armada-lp.dts                     |  21 +++-
+ arch/arm/include/asm/arch-armadalp/regs-base.h |   1 -
+ configs/mvebu_armadalp_defconfig               |   2 +-
+ drivers/serial/Makefile                        |   2 +-
+ drivers/serial/serial.c                        |   2 +
+ drivers/serial/serial_mvebu.c                  | 160 +++++++++++++++++++++++++
+ include/common.h                               |   0
+ include/fdtdec.h                               |   1 +
+ lib/fdtdec.c                                   |   1 +
+ 10 files changed, 191 insertions(+), 9 deletions(-)
+ create mode 100644 drivers/serial/serial_mvebu.c
+ mode change 100755 => 100644 include/common.h
+
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index ba9e4e4..a9a00f1 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -51,14 +51,14 @@ config MVEBU_MPP
+ 	  MPP driver, for example, ArmadaLP.
+ 	  base address is configured under MVEBU_MPP_BASE
+ 
+-config MVEBU_UART
+-	bool "UART support"
++config MVEBU_UART_ARLP
++	bool "UART support for ArmadaLP"
+ 	default n
+ 	help
+ 	  Choose this option to add support
+-	  for UART driver, using COM1 NS16550
+-	  driver.
+-	  base address is configured under MVEBU_UART_BASE
++	  for UART driver on ArmadaLP, which
++	  is not using COM1 NS16550 driver.
++	  And base address is configured in FDT file.
+ 
+ config MVEBU_I2C
+ 	bool "I2C support"
+diff --git a/arch/arm/dts/armada-lp.dts b/arch/arm/dts/armada-lp.dts
+index b31e450..925397c 100644
+--- a/arch/arm/dts/armada-lp.dts
++++ b/arch/arm/dts/armada-lp.dts
+@@ -6,5 +6,24 @@
+ 	compatible = "marvell,armada-lp-db", "marvell,armada-lp";
+ 
+ 	#address-cells = <2>;
+-	#size-cells = <1>;
++	#size-cells = <2>;
++
++	soc {
++	compatible = "marvell,armadalp-mbus";
++	#address-cells = <1>;
++	#size-cells = <0>;
++
++		internal-regs {
++			compatible = "marvell,internal-regs";
++			#address-cells = <1>;
++			#size-cells = <1>;
++			reg = <0xf1000000 0x4>;
++
++			serial: serial@12000 {
++				compatible = "marvell,armadalp-uart";
++				reg = <0x12000 0x20>;
++				status = "okay";
++			};
++		};
++	};
+ };
+diff --git a/arch/arm/include/asm/arch-armadalp/regs-base.h b/arch/arm/include/asm/arch-armadalp/regs-base.h
+index ad40360..fdf34c1 100644
+--- a/arch/arm/include/asm/arch-armadalp/regs-base.h
++++ b/arch/arm/include/asm/arch-armadalp/regs-base.h
+@@ -24,7 +24,6 @@
+ #define MPP_REGS_BASE		(MVEBU_REGS_BASE + 0x18000)
+ #define MVEBU_ADEC_BASE		(MVEBU_REGS_BASE + 0x20000)
+ 
+-#define MVEBU_UART_BASE(x)	(MVEBU_REGS_BASE + 0x12000 + (0x100 * x))
+ #define MVEBU_GLOBAL_TIMER_BASE	(MVEBU_REGS_BASE + 0x20300)
+ #define MVEBU_PCIE_BASE(x)	((x == 0) ? (MVEBU_REGS_BASE + 0x80000) : \
+ 				(MVEBU_REGS_BASE + 0x40000 + (0x4000 * (x - 1))))
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index 48d5cdb..78497c3 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -1,7 +1,7 @@
+ CONFIG_SPL=y
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_ARMADA_LP=y
+-+S:CONFIG_SYS_NS16550=y
+++S:CONFIG_MVEBU_UART_ARLP=y
+ CONFIG_CMD_BDI=y
+ CONFIG_CMD_BOOTD=y
+ CONFIG_CMD_RUN=y
+diff --git a/drivers/serial/Makefile b/drivers/serial/Makefile
+index 4cc00cd..666e691 100644
+--- a/drivers/serial/Makefile
++++ b/drivers/serial/Makefile
+@@ -44,7 +44,7 @@ obj-$(CONFIG_TEGRA_SERIAL) += serial_tegra.o
+ obj-$(CONFIG_UNIPHIER_SERIAL) += serial_uniphier.o
+ obj-$(CONFIG_OMAP_SERIAL) += serial_omap.o
+ obj-$(CONFIG_X86_SERIAL) += serial_x86.o
+-
++obj-$(CONFIG_MVEBU_UART_ARLP) += serial_mvebu.o
+ ifndef CONFIG_SPL_BUILD
+ obj-$(CONFIG_USB_TTY) += usbtty.o
+ endif
+diff --git a/drivers/serial/serial.c b/drivers/serial/serial.c
+index 95c992a..15ddd4e 100644
+--- a/drivers/serial/serial.c
++++ b/drivers/serial/serial.c
+@@ -157,6 +157,7 @@ serial_initfunc(sconsole_serial_initialize);
+ serial_initfunc(sh_serial_initialize);
+ serial_initfunc(uartlite_serial_initialize);
+ serial_initfunc(zynq_serial_initialize);
++serial_initfunc(mvebu_serial_initialize);
+ 
+ /**
+  * serial_register() - Register serial driver with serial driver core
+@@ -250,6 +251,7 @@ void serial_initialize(void)
+ 	sh_serial_initialize();
+ 	uartlite_serial_initialize();
+ 	zynq_serial_initialize();
++	mvebu_serial_initialize();
+ 
+ 	serial_assign(default_serial_console()->name);
+ }
+diff --git a/drivers/serial/serial_mvebu.c b/drivers/serial/serial_mvebu.c
+new file mode 100644
+index 0000000..e004164
+--- /dev/null
++++ b/drivers/serial/serial_mvebu.c
+@@ -0,0 +1,160 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <asm/io.h>
++#include <serial.h>
++#include <linux/compiler.h>
++#include <fdtdec.h>
++#include <asm/arch-mvebu/fdt.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++/* to use global variables before u-boot relocation, initialize it to something !=0 */
++unsigned int mvebu_uart_reg_base = 100;
++
++#define MVEBU_UART_BASE(x)	mvebu_uart_reg_base
++
++/* max uart port num */
++#define CONFIG_MAX_UART_NUM	2
++
++#define UART_DRIVER_NAME	"serial"
++
++/*
++ * Register Offset
++ */
++#define UART_RX_REG		0x00
++#define UART_TX_REG		0x04
++#define UART_CTRL_REG		0x08
++#define UART_STATUS_REG		0x0c
++#define UART_BAUD_REG		0x10
++#define UART_POSSR_REG		0x14
++
++
++#define UART_STATUS_RX_RDY	0x10
++#define UART_STATUS_TXFIFO_FULL			0x800
++
++#define UART_CTRL_RXFIFO_RESET		0x4000
++#define UART_CTRL_TXFIFO_RESET		0x8000
++
++/* Read from APB register into buffer in memory */
++#define UART_REG_READ(_reg)			readl(MVEBU_UART_BASE(0) + _reg)
++
++/* Write from buffer in memory into APB register */
++#define UART_REG_WRITE(_reg, pdata)		writel(pdata, MVEBU_UART_BASE(0) + _reg)
++
++static void mvebu_serial_setbrg(void)
++{
++	/* No Operation */;
++#ifdef CONFIG_PALLADIUM
++	/* following are all temporary settings for Palladium, will be removed later */
++	/* for palladium, we use 300 brg */
++	UART_REG_WRITE(UART_BAUD_REG, 0x1);
++	UART_REG_WRITE(UART_POSSR_REG, 0x0);
++
++#endif
++}
++
++/*
++ * Read a single byte from the serial port.
++ */
++static int mvebu_serial_getc(void)
++{
++	while (!(UART_REG_READ(UART_STATUS_REG) & UART_STATUS_RX_RDY))
++		/* No Operation */;
++
++	return UART_REG_READ(UART_RX_REG) & 0xFF;
++}
++
++/*
++ * Output a single byte to the serial port.
++ */
++static void mvebu_serial_putc(const char c)
++{
++	if (c == '\n')
++		serial_putc('\r');
++
++	while (UART_REG_READ(UART_STATUS_REG) & UART_STATUS_TXFIFO_FULL)
++		/* NOP */;
++
++	UART_REG_WRITE(UART_TX_REG, (unsigned short)c);
++}
++
++/*
++ * Test whether a character is in the RX buffer
++ */
++static int mvebu_serial_tstc(void)
++{
++	if (UART_REG_READ(UART_STATUS_REG) & UART_STATUS_RX_RDY)
++		return 1;
++
++	return 0;
++}
++
++static int mvebu_serial_init(void)
++{
++	int node_list[CONFIG_MAX_UART_NUM], node;
++	u32 i, count;
++
++	count = fdtdec_find_aliases_for_id(gd->fdt_blob, "serial",
++			COMPAT_MVEBU_UART, node_list, 2);
++
++	/* in FDT file, there should be only one "serial" node that are enabled,
++	 * which has the 'reg' attribute for register base of UART unit */
++	for (i = 0; i < count ; i++) {
++		node = node_list[i];
++
++		if (node <= 0)
++			continue;
++
++		mvebu_uart_reg_base = (unsigned int)fdt_get_regs_offs(gd->fdt_blob, node, "reg");
++	}
++
++	/* 115200KBps fixed Baud rate  */
++	mvebu_serial_setbrg();
++
++	/* reset FIFOs */
++	UART_REG_WRITE(UART_CTRL_REG, UART_CTRL_RXFIFO_RESET | UART_CTRL_TXFIFO_RESET);
++
++	udelay(1);
++
++	/* No Parity, 1 Stop */
++	UART_REG_WRITE(UART_CTRL_REG, 0);
++	return 0;
++}
++
++static struct serial_device mvebu_serial_drv = {
++	.name	= UART_DRIVER_NAME,
++	.start	= mvebu_serial_init,
++	.stop	= NULL,
++	.setbrg	= mvebu_serial_setbrg,
++	.putc	= mvebu_serial_putc,
++	.puts	= default_serial_puts,
++	.getc	= mvebu_serial_getc,
++	.tstc	= mvebu_serial_tstc,
++};
++
++void mvebu_serial_initialize(void)
++{
++	serial_register(&mvebu_serial_drv);
++}
++
++__weak struct serial_device *default_serial_console(void)
++{
++	return &mvebu_serial_drv;
++}
+diff --git a/include/common.h b/include/common.h
+old mode 100755
+new mode 100644
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 943cb39..0288c9b 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -122,6 +122,7 @@ enum fdt_compat_id {
+ 	COMPAT_INTEL_GMA,		/* Intel Graphics Media Accelerator */
+ 	COMPAT_AMS_AS3722,		/* AMS AS3722 PMIC */
+ 	COMPAT_MVEBU_SPI,
++	COMPAT_MVEBU_UART,
+ 	COMPAT_MVEBU_TCLOCK,
+ 
+ 	COMPAT_COUNT,
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index ee6536a..960bdfe 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -84,6 +84,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(INTEL_GMA, "intel,gma"),
+ 	COMPAT(AMS_AS3722, "ams,as3722"),
+ 	COMPAT(MVEBU_SPI, "marvell,orion-spi"),
++	COMPAT(MVEBU_UART, "marvell,armadalp-uart"),
+ 	COMPAT(MVEBU_TCLOCK, "marvell,tclk"),
+ };
+ 
+-- 
+1.9.1
+

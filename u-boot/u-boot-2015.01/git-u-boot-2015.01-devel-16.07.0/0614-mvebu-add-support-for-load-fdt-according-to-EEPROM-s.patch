@@ -1,0 +1,741 @@
+From 38c177ab0c3ef9b28a5f6d3b9fca6d1c91e3126a Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Wed, 23 Dec 2015 09:11:19 +0200
+Subject: [PATCH 0614/1240] mvebu: add support for load fdt according to EEPROM
+ struct
+
+	- add a structure to EEPROM for manage Device Tree loaded.
+	- add 2 properties (boardid & fdt_config_id) to Device Tree.
+	- add initial function for the EEPROM.
+
+Change-Id: I184367424a0b4abffe49f9ed23988d2d8d2ed9fb
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26255
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/spl.c                 |  26 ++--
+ arch/arm/dts/Makefile                           |   2 +-
+ arch/arm/dts/apn-806-a0-pd.dts                  |  46 ------
+ arch/arm/dts/apn-806-db-dop.dts                 |   2 +
+ arch/arm/dts/apn-806-db.dts                     |   2 +
+ arch/arm/dts/apn-806-pd-a0.dts                  |  48 +++++++
+ arch/arm/dts/apn-806-pd.dts                     |   2 +
+ arch/arm/dts/armada-70x0-db.dts                 |   2 +
+ arch/arm/dts/armada-80x0-db.dts                 |   2 +
+ arch/arm/include/asm/arch-armada8k/board-info.h |  33 +++++
+ board/mvebu/common/Makefile                     |   1 +
+ board/mvebu/common/fdt_eeprom.c                 | 184 ++++++++++++++++++++++++
+ board/mvebu/common/fdt_eeprom.h                 | 120 ++++++++++++++++
+ board/mvebu/common/init.c                       |  15 ++
+ common/board_f.c                                |   8 --
+ configs/mvebu_apn806_defconfig                  |   2 +-
+ scripts/Makefile.spl                            |   1 +
+ 17 files changed, 432 insertions(+), 64 deletions(-)
+ delete mode 100644 arch/arm/dts/apn-806-a0-pd.dts
+ create mode 100644 arch/arm/dts/apn-806-pd-a0.dts
+ create mode 100644 arch/arm/include/asm/arch-armada8k/board-info.h
+ create mode 100644 board/mvebu/common/fdt_eeprom.c
+ create mode 100644 board/mvebu/common/fdt_eeprom.h
+
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index 3e0929f..6f42c61 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -19,8 +19,12 @@
+ #include <common.h>
+ #include <spl.h>
+ #include <fdtdec.h>
++#include <i2c.h>
+ #include <asm/arch-mvebu/fdt.h>
+ #include <asm/arch-mvebu/spl.h>
++#ifdef CONFIG_MULTI_DT_FILE
++#include "../../../../board/mvebu/common/fdt_eeprom.h"
++#endif
+ 
+ #ifdef CONFIG_MVEBU_SPL_SAR_DUMP
+ extern void mvebu_sar_dump_reg(void);
+@@ -31,14 +35,7 @@ static int setup_fdt(void)
+ #ifdef CONFIG_OF_CONTROL
+ #ifdef CONFIG_OF_EMBED
+ 	/* Get a pointer to the FDT */
+-#ifdef CONFIG_MULTI_DT_FILE
+-	/* This change is temporary. We are using hardcoded value because
+-	   for now the desired FDT is "apn-806-db" and it's in the second index of the dtb list.
+-	   After adding "FDT from EEPROM" patch. this change will be removed */
+-	gd->fdt_blob = __dtb_dt_begin + (2*MVEBU_FDT_SIZE);
+-#else
+ 	gd->fdt_blob = __dtb_dt_begin;
+-#endif
+ #else
+ 	#error "Support only embedded FDT mode in SPL"
+ #endif
+@@ -46,6 +43,15 @@ static int setup_fdt(void)
+ 	return 0;
+ }
+ 
++#ifdef CONFIG_MULTI_DT_FILE
++static int mvebu_setup_fdt(void)
++{
++	gd->fdt_blob = mvebu_fdt_config_init();
++	return 0;
++}
++#endif
++
++
+ void board_init_f(ulong silent)
+ {
+ 	gd = &gdata;
+@@ -55,8 +61,12 @@ void board_init_f(ulong silent)
+ 		gd->flags |= GD_FLG_SILENT;
+ #endif
+ 
+-	/* Update the pointer to the FDT */
++	/* Update the pointer to the default FDT, this is necessary only to config i2c*/
+ 	setup_fdt();
++#ifdef CONFIG_MULTI_DT_FILE
++	/* Update the pointer to the FDT */
++	mvebu_setup_fdt();
++#endif
+ 
+ 	/* UART1 and UART2 clocks are sourced from XTAL by default
+ 	* (see RD0012010 register for the details). Additionally the GPIO
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index c078939..efb9627 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -57,7 +57,7 @@ dtb-$(CONFIG_TARGET_ARMADA_LP) += armada-lp-db.dtb \
+ 				  armada-lp-customer0.dtb
+ dtb-$(CONFIG_TARGET_ARMADA_8K) += apn-806-db.dtb \
+ 		       apn-806-pd.dtb \
+-		       apn-806-a0-pd.dtb \
++		       apn-806-pd-a0.dtb \
+ 		       apn-806-db-dop.dtb \
+ 		       armada-80x0-db.dtb \
+ 		       armada-70x0-db.dtb
+diff --git a/arch/arm/dts/apn-806-a0-pd.dts b/arch/arm/dts/apn-806-a0-pd.dts
+deleted file mode 100644
+index 4d7f2cd..0000000
+--- a/arch/arm/dts/apn-806-a0-pd.dts
++++ /dev/null
+@@ -1,46 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-/dts-v1/;
+-
+-#include "apn-806-a0.dtsi"
+-
+-/ {
+-	model = "Marvell APN-806A0 Palladuim";
+-	compatible = "marvell,apn-806-pd", "marvell,apn-806";
+-
+-	ap-806 {
+-
+-		internal-regs {
+-
+-			tclk: tclk {
+-				clock-frequency = <125000>;
+-			};
+-
+-			spi0: spi@510600 {
+-				spi-max-frequency = <51200>;
+-			};
+-		};
+-	};
+-};
+-
+-&pinctl {
+-		  /* 0 1 2 3 4 5 6 7 8 9 */
+-	pin-func = < 3 3 3 3 3 3 0 0 0 0
+-		     0 3 0 0 0 0 0 0 0 3 >;
+-};
+diff --git a/arch/arm/dts/apn-806-db-dop.dts b/arch/arm/dts/apn-806-db-dop.dts
+index 8fbd38c..f157f78 100644
+--- a/arch/arm/dts/apn-806-db-dop.dts
++++ b/arch/arm/dts/apn-806-db-dop.dts
+@@ -24,6 +24,8 @@
+ / {
+ 	model = "DB-88FA806-DDR4-MODULAR-DOP";
+ 	compatible = "marvell,apn-806-db", "marvell,apn-806";
++	fdt_config_id = <5>;
++	board_id = <0x10>;
+ 
+ 	memory {
+ 		device_type = "memory";
+diff --git a/arch/arm/dts/apn-806-db.dts b/arch/arm/dts/apn-806-db.dts
+index 0ecc59d..ee7543c 100644
+--- a/arch/arm/dts/apn-806-db.dts
++++ b/arch/arm/dts/apn-806-db.dts
+@@ -23,6 +23,8 @@
+ / {
+ 	model = "DB-88FA806-DDR4-MODULAR";
+ 	compatible = "marvell,apn-806-db", "marvell,apn-806";
++	fdt_config_id = <4>;
++	board_id = <0x10>;
+ 
+ 	memory {
+ 		device_type = "memory";
+diff --git a/arch/arm/dts/apn-806-pd-a0.dts b/arch/arm/dts/apn-806-pd-a0.dts
+new file mode 100644
+index 0000000..aa41a8f
+--- /dev/null
++++ b/arch/arm/dts/apn-806-pd-a0.dts
+@@ -0,0 +1,48 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/dts-v1/;
++
++#include "apn-806-a0.dtsi"
++
++/ {
++	model = "Marvell APN-806A0 Palladuim";
++	compatible = "marvell,apn-806-pd", "marvell,apn-806";
++	fdt_config_id = <2>;
++	board_id = <0x10>;
++
++	ap-806 {
++
++		internal-regs {
++
++			tclk: tclk {
++				clock-frequency = <125000>;
++			};
++
++			spi0: spi@510600 {
++				spi-max-frequency = <51200>;
++			};
++		};
++	};
++};
++
++&pinctl {
++		  /* 0 1 2 3 4 5 6 7 8 9 */
++	pin-func = < 3 3 3 3 3 3 0 0 0 0
++		     0 3 0 0 0 0 0 0 0 3 >;
++};
+diff --git a/arch/arm/dts/apn-806-pd.dts b/arch/arm/dts/apn-806-pd.dts
+index 85b2108..d0d21cc 100644
+--- a/arch/arm/dts/apn-806-pd.dts
++++ b/arch/arm/dts/apn-806-pd.dts
+@@ -23,6 +23,8 @@
+ / {
+ 	model = "Marvell APN-806 Palladuim";
+ 	compatible = "marvell,apn-806-pd", "marvell,apn-806";
++	fdt_config_id = <1>;
++	board_id = <0x10>;
+ 
+ 	ap-806 {
+ 
+diff --git a/arch/arm/dts/armada-70x0-db.dts b/arch/arm/dts/armada-70x0-db.dts
+index 723e56c..5a47d7b 100644
+--- a/arch/arm/dts/armada-70x0-db.dts
++++ b/arch/arm/dts/armada-70x0-db.dts
+@@ -23,6 +23,8 @@
+ / {
+ 	model = "DB-ARMADA-70x0";
+ 	compatible = "marvell,armada-70x0-db", "marvell,armada-70x0";
++	fdt_config_id = <6>;
++	board_id = <0x10>;
+ 
+ 	memory {
+ 		device_type = "memory";
+diff --git a/arch/arm/dts/armada-80x0-db.dts b/arch/arm/dts/armada-80x0-db.dts
+index 06d9d70..98a6fb0 100644
+--- a/arch/arm/dts/armada-80x0-db.dts
++++ b/arch/arm/dts/armada-80x0-db.dts
+@@ -23,6 +23,8 @@
+ / {
+ 	model = "DB-ARMADA-80x0";
+ 	compatible = "marvell,armada-80x0-db", "marvell,armada-80x0";
++	fdt_config_id = <3>;
++	board_id = <0x10>;
+ 
+ 	memory {
+ 		device_type = "memory";
+diff --git a/arch/arm/include/asm/arch-armada8k/board-info.h b/arch/arm/include/asm/arch-armada8k/board-info.h
+new file mode 100644
+index 0000000..063dc35
+--- /dev/null
++++ b/arch/arm/include/asm/arch-armada8k/board-info.h
+@@ -0,0 +1,33 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/* APN-806 Marvell boards */
++#define APN_806_MARVELL_BOARD_ID_BASE	 0x10
++#define APN_806_DB			(APN_806_MARVELL_BOARD_ID_BASE + 0)
++#define APN_806_MARVELL_MAX_BOARD_ID	(APN_806_MARVELL_BOARD_ID_BASE + 1)
++#define APN_806_MARVELL_BOARD_NUM	(APN_806_MARVELL_MAX_BOARD_ID - APN_806_MARVELL_BOARD_ID_BASE)
++
++#define MARVELL_BOARD_ID_BASE		APN_806_MARVELL_BOARD_ID_BASE
++#define MV_MAX_MARVELL_BOARD_ID		APN_806_MARVELL_MAX_BOARD_ID
++#define MV_MARVELL_BOARD_NUM		APN_806_MARVELL_BOARD_NUM
++#define MV_DEFAULT_BOARD_ID		APN_806_DB
++
++#define BOARD_DEV_TWSI_INIT_EEPROM 0x57
++#define DEFAULT_FDT_PER_BOARD { \
++				0x04,	/* default fdt configuration for apn-806-db board */		  \
++}
+diff --git a/board/mvebu/common/Makefile b/board/mvebu/common/Makefile
+index 157dfcc..6effaf6 100644
+--- a/board/mvebu/common/Makefile
++++ b/board/mvebu/common/Makefile
+@@ -22,3 +22,4 @@ obj-$(CONFIG_MVEBU_NAND)	+= nand_init.o
+ obj-$(CONFIG_CMD_NET)		+= eth_init.o
+ obj-$(CONFIG_MVEBU_SAR)		+= sar.o
+ obj-$(CONFIG_DEVEL_BOARD)	+= devel-board.o
++obj-$(CONFIG_MULTI_DT_FILE)	+= fdt_eeprom.o
+diff --git a/board/mvebu/common/fdt_eeprom.c b/board/mvebu/common/fdt_eeprom.c
+new file mode 100644
+index 0000000..0ab7b20
+--- /dev/null
++++ b/board/mvebu/common/fdt_eeprom.c
+@@ -0,0 +1,184 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <fdtdec.h>
++#include <libfdt.h>
++#include "fdt_eeprom.h"
++
++u8 mapping_default_fdt[] = DEFAULT_FDT_PER_BOARD;
++struct eeprom_struct fdt_config_val = FDT_DEFAULT_VALUE;
++struct board_config_struct_info *board_cfg = &(fdt_config_val.board_config);
++struct fdt_config_types_info fdt_config_types_info[] = MV_EEPROM_CONFIG_INFO;
++
++#if defined(CONFIG_HARD_I2C) || defined(CONFIG_SYS_I2C)
++static int init_func_i2c(void)
++{
++#ifdef CONFIG_SYS_I2C
++	i2c_init_all();
++#else
++	i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
++#endif
++	return 0;
++}
++#endif
++
++uint32_t mvebu_checksum8(uint8_t *start, uint32_t len)
++{
++	uint32_t sum = 0;
++	uint8_t *startp = start;
++	do {
++		sum += *startp;
++		startp++;
++		len--;
++	} while (len > 0);
++	return sum;
++}
++/* fdt_config_is_enable - checking if need to load FDT from EEPROM at boot-time */
++bool fdt_config_is_enable(void)
++{
++	if (board_cfg->fdt_cfg_en == 1)
++		return true;
++	return false;
++}
++
++/* config_type_get - config_info input pointer receive the mapping of the required field in the local struct */
++bool config_type_get(enum mv_config_type_id config_class, struct fdt_config_types_info *config_info)
++{
++	int i;
++
++	/* verify existence of requested config type, pull its data */
++	for (i = 0; i < MV_CONFIG_TYPE_MAX_OPTION ; i++)
++		if (fdt_config_types_info[i].config_id == config_class) {
++			*config_info = fdt_config_types_info[i];
++			return true;
++		}
++	error("requested MV_CONFIG_TYPE_ID was not found (%d)\n", config_class);
++
++	return false;
++}
++
++/* upload_fdt_from_flash - write the required FDT to local struct, if found fdt config id in flash, else return false*/
++bool upload_fdt_from_flash(u8 fdt_config_id)
++{
++	int i;
++	void *fdt_blob_temp = __dtb_dt_begin;
++
++	debug("FDT config id = %x\n", fdt_config_id);
++	for (i = 0; fdt_check_header(fdt_blob_temp) == 0; i++) {
++		if ((u8)fdtdec_get_int(fdt_blob_temp, 0, "fdt_config_id", -1) == fdt_config_id) {
++			memcpy((void *)fdt_config_val.fdt_blob, fdt_blob_temp, MVEBU_FDT_SIZE);
++			return true;
++		}
++		fdt_blob_temp += MVEBU_FDT_SIZE;
++	}
++	return false;
++}
++
++/* upload_fdt_from_eeprom - write FDT from EEPROM to local struct */
++bool upload_fdt_from_eeprom(void)
++{
++	struct fdt_config_types_info config_info;
++
++	/* read fdt from EEPROM */
++	if (!config_type_get(MV_CONFIG_FDT_FILE, &config_info))
++		debug("ERROR: Could not find MV_CONFIG_FDT_FILE\n");
++
++	i2c_read(BOARD_DEV_TWSI_INIT_EEPROM, config_info.byte_num, 1,
++		 (uint8_t *)&fdt_config_val.fdt_blob, config_info.byte_cnt);
++	return true;
++}
++
++/* write_fdt_struct_to_eeprom - write FDT from local struct to EEPROM */
++void write_fdt_struct_to_eeprom(void)
++{
++	int reserve_length, size_of_loop, i;
++
++	size_of_loop = fdt_config_val.length / I2C_PAGE_WRITE_SIZE;
++	reserve_length = fdt_config_val.length % I2C_PAGE_WRITE_SIZE;
++
++	/* i2c support on page write with size 32-byets */
++	for (i = 0; i < size_of_loop; i++)
++		i2c_write(BOARD_DEV_TWSI_INIT_EEPROM, i*I2C_PAGE_WRITE_SIZE, 1,
++			  (uint8_t *)&(fdt_config_val) + i*I2C_PAGE_WRITE_SIZE, I2C_PAGE_WRITE_SIZE);
++
++	i2c_write(BOARD_DEV_TWSI_INIT_EEPROM, i*I2C_PAGE_WRITE_SIZE, 1,
++		  (uint8_t *)&(fdt_config_val) + i*I2C_PAGE_WRITE_SIZE, reserve_length);
++}
++
++/* mvebu_fdt_config_init - initialize FDT configuration struct,
++   and return the selected FTD that should be loaded at boot time */
++u8 *mvebu_fdt_config_init(void)
++{
++	struct eeprom_struct eeprom_buffer;
++	struct fdt_config_types_info config_info;
++	uint32_t calculate_checksum;
++
++	init_func_i2c();
++	/* read pattern from EEPROM */
++	if (!config_type_get(MV_CONFIG_VERIFICATION_PATTERN, &config_info))
++		error("Could not find MV_CONFIG_VERIFICATION_PATTERN\n");
++
++	i2c_read(BOARD_DEV_TWSI_INIT_EEPROM, config_info.byte_num, 1,
++		 (uint8_t *)&eeprom_buffer.pattern, config_info.byte_cnt);
++
++	/* check if pattern in EEPROM is valid */
++	if (eeprom_buffer.pattern != fdt_config_val.pattern) {
++		debug("Could not find pattern. Loading default FDT\n");
++		upload_fdt_from_flash(get_default_fdt_config_id(MV_DEFAULT_BOARD_ID));
++		return fdt_config_val.fdt_blob;
++	}
++
++	/* read length from EEPROM */
++	if (!config_type_get(MV_CONFIG_LENGTH, &config_info))
++		error("Could not find MV_CONFIG_LENGTH\n");
++
++	i2c_read(BOARD_DEV_TWSI_INIT_EEPROM, config_info.byte_num, 1,
++		 (uint8_t *)&eeprom_buffer.length, config_info.byte_cnt);
++
++	/* read all the struct from EEPROM according to length field */
++	i2c_read(BOARD_DEV_TWSI_INIT_EEPROM, 0, 1, (uint8_t *)&eeprom_buffer, eeprom_buffer.length);
++	/* calculate checksum and compare with the checksum that we read */
++	calculate_checksum = mvebu_checksum8((uint8_t *)&eeprom_buffer.pattern, (uint32_t) eeprom_buffer.length - 4);
++
++	/* if checksum is valid */
++	if (calculate_checksum == eeprom_buffer.checksum) {
++		/* update fdt_config_val struct with the read values from EEPROM */
++		fdt_config_val = eeprom_buffer;
++		/* if fdt_config is enabled, return - FDT already read in the struct from EEPROM */
++		if (fdt_config_is_enable()) {
++			debug("read FDT from EEPROM\n");
++			return fdt_config_val.fdt_blob;
++		}
++		/* read FDT from flash according to select active fdt */
++		if (upload_fdt_from_flash(board_cfg->active_fdt_selection)) {
++			debug("read selected FDT by USER\n");
++			return fdt_config_val.fdt_blob;
++		}
++	}
++	/* if checksum is invalid or if select active fdt is invalid */
++	/* need to load default FDT */
++	if (boardid_is_valid(eeprom_buffer.man_info.boardid)) {
++		upload_fdt_from_flash(get_default_fdt_config_id(eeprom_buffer.man_info.boardid));
++		debug("read board defualt FDT\n");
++	} else {
++		upload_fdt_from_flash(get_default_fdt_config_id(MV_DEFAULT_BOARD_ID));
++		debug("read SoC defualt FDT\n");
++	}
++
++	return fdt_config_val.fdt_blob;
++}
+diff --git a/board/mvebu/common/fdt_eeprom.h b/board/mvebu/common/fdt_eeprom.h
+new file mode 100644
+index 0000000..0343fe1
+--- /dev/null
++++ b/board/mvebu/common/fdt_eeprom.h
+@@ -0,0 +1,120 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _FDT_EEPROM_H_
++#define _FDT_EEPROM_H_
++#include <common.h>
++#include <i2c.h>
++#include <errno.h>
++#include <asm/io.h>
++#include <asm/arch/board-info.h>
++#include <asm/arch-mvebu/mvebu.h>
++
++enum mv_config_type_id {
++	MV_CONFIG_VERIFICATION_PATTERN,
++	MV_CONFIG_LENGTH,
++	MV_CONFIG_BOARDID,
++	MV_CONFIG_FDTCFG_EN,
++	MV_CONFIG_ACTIVE_FDT_SELECTION,
++	MV_CONFIG_FDT_FILE,
++	MV_CONFIG_FDTCFG_VALID,
++	MV_CONFIG_TYPE_MAX_OPTION,  /* limit for user read/write routines */
++};
++
++/* #pragma pack(1) */
++struct manufacturing_information_struct_info {
++	u8 boardid;
++	u8 reserve_manufacturing_information[23];
++};
++
++/* #pragma pack(1) */
++struct board_config_struct_info {
++	u8 fdt_cfg_en;
++	u8 active_fdt_selection;
++	u8 validation_counter;
++	u8 reserve_board_cgf[7];
++};
++
++/* #pragma pack(1) */
++struct eeprom_struct {
++	u32 checksum;
++	u32 pattern;
++	u16 length;
++	struct manufacturing_information_struct_info man_info;
++	struct board_config_struct_info board_config;
++	u8 fdt_blob[MVEBU_FDT_SIZE];
++};
++
++struct  fdt_config_types_info {
++	enum mv_config_type_id config_id;
++	char name[30];
++	u8 byte_num;
++	u32 byte_cnt;
++};
++
++#define BOARD_ID_INDEX_MASK		0x10
++#define I2C_PAGE_WRITE_SIZE		32
++
++#define offset_in_eeprom(a)		((u8)(offsetof(struct eeprom_struct, a)))
++#define get_default_fdt_config_id(boardid)	mapping_default_fdt[boardid & (BOARD_ID_INDEX_MASK - 1)]
++#define boardid_is_valid(boardid)      (((boardid) >= MARVELL_BOARD_ID_BASE) && ((boardid) < MV_MAX_MARVELL_BOARD_ID))\
++					   ? true : false
++
++/* {{MV_CONFIG_TYPE_ID configId,	name,			byte_num,				byte_cnt}} */
++#define MV_EEPROM_CONFIG_INFO { \
++{ MV_CONFIG_VERIFICATION_PATTERN,	"EEPROM Pattern",	offset_in_eeprom(pattern),			  \
++									sizeof(fdt_config_val.pattern)},	  \
++{ MV_CONFIG_LENGTH,			"Data length",		offset_in_eeprom(length),			  \
++									sizeof(fdt_config_val.length)},		  \
++{ MV_CONFIG_BOARDID,			"Board ID",		offset_in_eeprom(man_info.boardid),		  \
++									sizeof(fdt_config_val.man_info.boardid)}, \
++{ MV_CONFIG_FDTCFG_EN,			"EEPROM enable",	offset_in_eeprom(board_config.fdt_cfg_en),	  \
++									sizeof(board_cfg->fdt_cfg_en)},		  \
++{ MV_CONFIG_ACTIVE_FDT_SELECTION,	"Active FDT selection", offset_in_eeprom(board_config.active_fdt_selection),\
++								sizeof(board_cfg->active_fdt_selection)},	  \
++{ MV_CONFIG_FDTCFG_VALID,		"Validation counter",	offset_in_eeprom(board_config.validation_counter),\
++								sizeof(board_cfg->validation_counter)},		  \
++{ MV_CONFIG_FDT_FILE,			"FDT file",		offset_in_eeprom(fdt_blob),			  \
++								sizeof(fdt_config_val.fdt_blob)}		  \
++}
++
++#define FDT_DEFAULT_VALUE  {											  \
++				0x00000000,				     /* checksum */			  \
++				0xfecadefa,				     /* EEPROM pattern */		  \
++				0x002c,					     /* length = 44 bytes */		  \
++				{0x10,					     /* board ID */			  \
++				{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,					  \
++				 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,				  \
++				 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },/* reserve_man_information */  \
++				{0x00,					     /* fdt config disable */		  \
++				 0x03,					     /* active fdt selection = default */ \
++				 0x00,					     /* validation counter = 0 */	  \
++				{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },/* reserve_board_cgf */		  \
++				{ [0 ... 7167] = 1 }			     /* fdt file */			  \
++}
++
++	#define MV_MAX_FDT_CONFIGURATION	MV_MARVELL_BOARD_NUM * 8
++	extern struct eeprom_struct fdt_config_val;
++	uint32_t mvebu_checksum8(uint8_t *start, uint32_t len);
++	bool fdt_config_is_enable(void);
++	bool upload_fdt_from_flash(u8 fdt_config_id);
++	bool upload_fdt_from_eeprom(void);
++	void write_fdt_struct_to_eeprom(void);
++	u8 *mvebu_fdt_config_init(void);
++
++#endif
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index 1351119..a3beff4 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -32,9 +32,21 @@
+ #ifdef CONFIG_DEVEL_BOARD
+ #include "devel-board.h"
+ #endif
++#ifdef CONFIG_MULTI_DT_FILE
++#include "fdt_eeprom.h"
++#endif
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
++#ifdef CONFIG_MULTI_DT_FILE
++static int mvebu_setup_fdt(void)
++{
++	/* Get a pointer to the FDT */
++	gd->fdt_blob = mvebu_fdt_config_init();
++	return 0;
++}
++#endif
++
+ #ifdef CONFIG_BOARD_LATE_INIT
+ int board_late_init(void)
+ {
+@@ -53,6 +65,9 @@ int soc_early_init_f(void)
+ /* Do very basic stuff like board and soc detection */
+ int board_early_init_f(void)
+ {
++#ifdef CONFIG_MULTI_DT_FILE
++	mvebu_setup_fdt();
++#endif
+ 	soc_early_init_f();
+ #ifdef CONFIG_MVEBU_SYS_INFO
+ /* Call this function to transfer data from address 0x4000000
+diff --git a/common/board_f.c b/common/board_f.c
+index 2a0b7e4..40e9d0a 100644
+--- a/common/board_f.c
++++ b/common/board_f.c
+@@ -56,7 +56,6 @@
+ #endif
+ #include <dm/root.h>
+ #include <linux/compiler.h>
+-
+ /*
+  * Pointer to initial global data area
+  *
+@@ -340,14 +339,7 @@ static int setup_fdt(void)
+ #ifdef CONFIG_OF_CONTROL
+ # ifdef CONFIG_OF_EMBED
+ 	/* Get a pointer to the FDT */
+-#ifdef CONFIG_MULTI_DT_FILE
+-	/* This change is temporary. We are using hardcoded value because
+-	   for now the desired FDT is "apn-806-db" and it's in the second index of the dtb list.
+-	   After adding "FDT from EEPROM" patch. this change will be removed */
+-	gd->fdt_blob = __dtb_dt_begin + (2*MVEBU_FDT_SIZE);
+-#else
+ 	gd->fdt_blob = __dtb_dt_begin;
+-#endif
+ # elif defined CONFIG_OF_SEPARATE
+ 	/* FDT is at end of image */
+ 	gd->fdt_blob = (ulong *)&_end;
+diff --git a/configs/mvebu_apn806_defconfig b/configs/mvebu_apn806_defconfig
+index bed0809..f4ee117 100644
+--- a/configs/mvebu_apn806_defconfig
++++ b/configs/mvebu_apn806_defconfig
+@@ -30,7 +30,7 @@ CONFIG_MVEBU_CCU=y
+ CONFIG_MVEBU_RFU=y
+ CONFIG_ENC28J60=y
+ +S:CONFIG_SYS_NS16550=y
+-CONFIG_MVEBU_I2C=y
+++S:CONFIG_MVEBU_I2C=y
+ CONFIG_MVEBU_SPI=y
+ CONFIG_MVEBU_PINCTL=y
+ +S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+diff --git a/scripts/Makefile.spl b/scripts/Makefile.spl
+index 2b3f1c9..e7b32e3 100644
+--- a/scripts/Makefile.spl
++++ b/scripts/Makefile.spl
+@@ -84,6 +84,7 @@ libs-$(CONFIG_MVEBU_COMPHY_SUPPORT) += drivers/phy/
+ libs-$(CONFIG_OF_EMBED) += dts/
+ libs-$(CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT) += drivers/pci/
+ libs-y += drivers/misc/
++libs-$(CONFIG_MVEBU_I2C) += drivers/i2c/
+ 
+ head-y		:= $(addprefix $(obj)/,$(head-y))
+ libs-y		:= $(addprefix $(obj)/,$(libs-y))
+-- 
+1.9.1
+

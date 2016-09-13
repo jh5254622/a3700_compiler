@@ -1,0 +1,43 @@
+From 488f02a3bc508e35aca6bd41029426d1e8829d33 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 19 Jan 2016 10:11:33 +0200
+Subject: [PATCH 0714/1240] fix: makefile: remove duplicate of include misc
+ folder in SPL
+
+Change-Id: I2bc5a0598ce7690c716ecc51fe22fded94bc6ad2
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26868
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ include/configs/mvebu-common.h | 1 +
+ scripts/Makefile.spl           | 1 -
+ 2 files changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index b6dd143..147f4cb 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -80,6 +80,7 @@
+ #define CONFIG_SPL_LIBCOMMON_SUPPORT
+ #define CONFIG_SPL_LIBGENERIC_SUPPORT
+ #define CONFIG_SPL_SERIAL_SUPPORT
++#define CONFIG_SPL_DRIVERS_MISC_SUPPORT
+ 
+ /* Cache */
+ #define CONFIG_SYS_DCACHE_OFF
+diff --git a/scripts/Makefile.spl b/scripts/Makefile.spl
+index e7b32e3..5a39b85 100644
+--- a/scripts/Makefile.spl
++++ b/scripts/Makefile.spl
+@@ -83,7 +83,6 @@ libs-$(CONFIG_MVEBU_SPL_DDR_SUPPORT) += drivers/ddr/
+ libs-$(CONFIG_MVEBU_COMPHY_SUPPORT) += drivers/phy/
+ libs-$(CONFIG_OF_EMBED) += dts/
+ libs-$(CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT) += drivers/pci/
+-libs-y += drivers/misc/
+ libs-$(CONFIG_MVEBU_I2C) += drivers/i2c/
+ 
+ head-y		:= $(addprefix $(obj)/,$(head-y))
+-- 
+1.9.1
+

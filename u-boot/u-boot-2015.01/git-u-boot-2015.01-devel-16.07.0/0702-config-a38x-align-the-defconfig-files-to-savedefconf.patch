@@ -1,0 +1,39 @@
+From bd472ab8cd62c3f189bcf4e20d0ca91c53f6ce3f Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Mon, 18 Jan 2016 17:40:59 +0200
+Subject: [PATCH 0702/1240] config: a38x: align the defconfig files to
+ savedefconfig
+
+    Update the defconfig files according to the output of the
+    'make savedefconfig' command
+Signed-off-by: Neta Zur <neta@marvell.com>
+
+Change-Id: Ib4cd19e3e6c55c980001f024e97a761c11387e42
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26859
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ configs/mvebu_armada38x_defconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/configs/mvebu_armada38x_defconfig b/configs/mvebu_armada38x_defconfig
+index 5045c62..17c8928 100644
+--- a/configs/mvebu_armada38x_defconfig
++++ b/configs/mvebu_armada38x_defconfig
+@@ -4,6 +4,7 @@ CONFIG_SPL=y
+ +S:CONFIG_MVEBU_SPL_DIFFRENT_BASE_ADDR=y
+ CONFIG_MVEBU_MPP_BUS=y
+ +S:CONFIG_DEVEL_BOARD=y
+++S:# CONFIG_MULTI_DT_FILE is not set
+ CONFIG_CMD_BDI=y
+ CONFIG_CMD_BOOTD=y
+ CONFIG_CMD_RUN=y
+@@ -38,4 +39,3 @@ CONFIG_MVEBU_SPI=y
+ CONFIG_MVEBU_PINCTL=y
+ +S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+ CONFIG_MVEBU_THERMAL_SENSOR=y
+-+S:# CONFIG_MULTI_DT_FILE is not set
+-- 
+1.9.1
+

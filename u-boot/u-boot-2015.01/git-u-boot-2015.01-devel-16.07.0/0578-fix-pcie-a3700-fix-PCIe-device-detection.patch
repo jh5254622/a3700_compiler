@@ -1,0 +1,233 @@
+From ef106fa7f9cd7f344d78b1e794c514d27185f1ff Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Tue, 24 Nov 2015 10:22:49 +0800
+Subject: [PATCH 0578/1240] fix: pcie: a3700: fix PCIe device detection
+
+issue: the PCIe can not detect PCIe device such as
+      e1000 NIC
+fix: 1.according to PCIe specification, need to reset
+      PCIe device before set up link. This is included
+      in another patch which this patch relies on.
+     2.according to PCIe link init sequence, need to
+     disable L0s entry after get link
+improvement:
+     1.separate PCIe link training to a routine and remove
+     unnecessary SERDES init code which has been done by
+     common phy module.
+     2.remove or reduce unnecessary delay, add delay in routine
+     advk_pcie_pio_write_config.
+     3. only register PCIe device when there is PCIe link,
+     otherwise there will be error printing in case no
+     PCIe device is inserted.
+     4.recover the code to disable strick ordering during link init
+
+Change-Id: Ie7d108a9dcae4e35952d2fda1ea18ae8ee41da71
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25201
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25302
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/include/asm/arch-armadalp/pcie-core.h | 15 ++---
+ drivers/pci/pci_advk.c                         | 93 ++++++++++++++------------
+ 2 files changed, 56 insertions(+), 52 deletions(-)
+
+diff --git a/arch/arm/include/asm/arch-armadalp/pcie-core.h b/arch/arm/include/asm/arch-armadalp/pcie-core.h
+index 1453d11..f0f5f39 100644
+--- a/arch/arm/include/asm/arch-armadalp/pcie-core.h
++++ b/arch/arm/include/asm/arch-armadalp/pcie-core.h
+@@ -66,11 +66,14 @@
+  * Used in PIO read/write
+  * Should choose this value more carefully
+  */
+-#define PCIE_CORE_PIO_TIMEOUT_NUM	100
++#define PCIE_CORE_PIO_TIMEOUT_NUM	1000
+ #define PCIE_CORE_PIO_ADDR_MASK	0xfffffffc
+ /* This defines the size of VPD RAM */
+ #define PCIE_CORE_VPD_RAM_SIZE	0x400 /*1K*/
+ 
++/* Time out number to get PCIe link up */
++#define PCIE_LINK_TIMEOUT_NUM	1000
++
+ /* Transaction types */
+ #define PCIE_MEM_RD		0x0
+ #define PCIE_MEM_WR		0x2
+@@ -290,6 +293,7 @@
+ #define PHY_ERR_REPORT		BIT6
+ #define LTSSM_STATE_SHIFT	24
+ #define LTSSM_STATE_MASK	0x3f000000
++#define LTSSM_STATE_L0		0x10
+ #define PHY_CONF_REG1		0x4
+ #define DLL_TIMER_CONF		0x8
+ #define REPLAY_TIMEOUT_MASK	0xffff
+@@ -397,17 +401,8 @@
+ /* Get the LMI register address of a PCIE device, 0x6000 is the offset of control register block */
+ #define PCIE_CORE_LMI_REG_ADDR(baseaddr, offset) ((u64)baseaddr + LMI_BASE_ADDR + offset)
+ 
+-/* Get the PHY register address of a PCIE device, 0x7000 is the offset of control register block */
+-#define PCIE_CORE_PHY_REG_ADDR(baseaddr, offset) ((u64)baseaddr + PHY_BASE_ADDR + offset)
+-
+ /* Get PCIe controller core configuration addresses of a PCIe device, 0x180000 is the offset of controller core block */
+ #define PCIE_CTRL_CORE_REG_ADDR(baseaddr, offset) ((u64)baseaddr + PCIE_CTRL_CORE_BASE_ADDR + offset)
+ 
+-/*
+- * Get PCIe controller interrupt configuration addresses of a PCIe device,
+- * 0x1B0000 is the offset of controller interrupt block
+- */
+-#define PCIE_CTRL_INT_REG_ADDR(baseaddr, offset) ((u64)baseaddr + PCIE_CTRL_INT_BASE_ADDR + offset)
+-
+ #endif /* _PCIE_CORE_H_ */
+ 
+diff --git a/drivers/pci/pci_advk.c b/drivers/pci/pci_advk.c
+index 63a32d9..f1a5275 100644
+--- a/drivers/pci/pci_advk.c
++++ b/drivers/pci/pci_advk.c
+@@ -219,7 +219,8 @@ int advk_pcie_pio_read_config(struct pci_controller *hose, pci_dev_t bdf, int wh
+ 		is_done = readl(PCIE_CORE_PIO_REG_ADDR(hose->cfg_addr, PCIE_CORE_PIO_ISR));
+ 		if ((!reg32) && is_done)
+ 			break;
+-		udelay(1000);
++		/* do not check the PIO state too frequently, 100us delay is appropriate */
++		udelay(100);
+ 	}
+ 
+ 	if (i == PCIE_CORE_PIO_TIMEOUT_NUM) {
+@@ -292,6 +293,8 @@ int advk_pcie_pio_write_config(struct pci_controller *hose, pci_dev_t bdf, int w
+ 		reg32 = readl(PCIE_CORE_PIO_REG_ADDR(hose->cfg_addr, PCIE_CORE_PIO_START));
+ 		if (!reg32)
+ 			break;
++		/* do not check the PIO state too frequently, 100us delay is appropriate */
++		udelay(100);
+ 	}
+ 	if (i == PCIE_CORE_PIO_TIMEOUT_NUM) {
+ 		printf("%s(%d): wait for PIO time out\n", __func__, __LINE__);
+@@ -312,42 +315,10 @@ int advk_pcie_pio_write_config(struct pci_controller *hose, pci_dev_t bdf, int w
+ 	return ret;
+ }
+ 
+-static int advk_pcie_init(int host_id, void __iomem *reg_base, struct pcie_win *win, int first_busno)
++static int advk_pcie_link_init(void __iomem *reg_base)
+ {
++	int i;
+ 	u32 state;
+-	u32 speed;
+-	u32 width;
+-	u32 region_id = 0;
+-
+-	struct pci_controller *hose = &pci_hose[host_id];
+-
+-	debug_enter();
+-
+-	memset(hose, 0, sizeof(hose));
+-
+-	/* reset PCIe device in RC mode */
+-	mvebu_a3700_reset_pcie_dev();
+-
+-	/* Enable PU */
+-	state = readl(PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_PHY_REF_CLK_REG));
+-	state |= PCIE_CORE_EN_PU;
+-	writel(state, PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_PHY_REF_CLK_REG));
+-
+-	/* Select AMP */
+-	state = readl(PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_PHY_REF_CLK_REG));
+-	state &= ~(PCIE_CORE_SEL_AMP_MASK << PCIE_CORE_SEL_AMP_SHIFT);
+-	state |= (0x3 << PCIE_CORE_SEL_AMP_SHIFT);
+-	writel(state, PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_PHY_REF_CLK_REG));
+-
+-	/* Disable RX */
+-	state = readl(PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_PHY_REF_CLK_REG));
+-	state &= ~PCIE_CORE_EN_RX;
+-	writel(state, PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_PHY_REF_CLK_REG));
+-
+-	/* Enable TX */
+-	state = readl(PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_PHY_REF_CLK_REG));
+-	state |= PCIE_CORE_EN_TX;
+-	writel(state, PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_PHY_REF_CLK_REG));
+ 
+ 	/* Set Advanced Error Capabilities and Control PF0 register
+ 	 * ECRC_CHCK_RCV (RD0070118h [8]) = 1h
+@@ -397,10 +368,51 @@ static int advk_pcie_init(int host_id, void __iomem *reg_base, struct pcie_win *
+ 	state |= (1 << PCIE_CORE_LINK_TRAINING_SHIFT);
+ 	writel(state, PCIE_CORE_CONFIG_REG_ADDR(reg_base, PCIE_CORE_LINK_CTRL_STAT_REG));
+ 
++	/* Poll the link state */
++	for (i = 0; i < PCIE_LINK_TIMEOUT_NUM; i++) {
++		state = readl(PCIE_CORE_LMI_REG_ADDR(reg_base, PHY_CONF_REG0));
++		if (((state & LTSSM_STATE_MASK) >> LTSSM_STATE_SHIFT) == LTSSM_STATE_L0)
++			break;
++		udelay(100);
++	}
++	if (i == PCIE_LINK_TIMEOUT_NUM) {
++		debug("%s(%d): time out to get PCIe link\n", __func__, __LINE__);
++		return 1;
++	}
++
+ 	/* Set PCIe Control 2 register
+-	 * bit[1:0] ASPM Control, set to 1 to enable L0S entry
++	 * bit[1:0] ASPM Control, set to 0 to disable L0S entry
+ 	 */
+-	writel(0x00100001, PCIE_CORE_CONFIG_REG_ADDR(reg_base, PCIE_CORE_LINK_CTRL_STAT_REG));
++	state = readl(PCIE_CORE_CONFIG_REG_ADDR(reg_base, PCIE_CORE_LINK_CTRL_STAT_REG));
++	state &= ~0x3;
++	writel(state, PCIE_CORE_CONFIG_REG_ADDR(reg_base, PCIE_CORE_LINK_CTRL_STAT_REG));
++
++	return 0;
++}
++
++static int advk_pcie_init(int host_id, void __iomem *reg_base, struct pcie_win *win, int first_busno)
++{
++	int ret = 0;
++	u32 state;
++	u32 speed;
++	u32 width;
++	u32 region_id = 0;
++
++	struct pci_controller *hose = &pci_hose[host_id];
++
++	debug_enter();
++
++	memset(hose, 0, sizeof(hose));
++
++	/* reset PCIe device in RC mode */
++	mvebu_a3700_reset_pcie_dev();
++
++	/* start link training */
++	ret = advk_pcie_link_init(reg_base);
++	if (ret) {
++		debug("%s(%d): ignore PCIe register since there is no link\n", __func__, __LINE__);
++		return hose->last_busno;
++	}
+ 
+ 	/* Enable BUS, IO, Memory space assess
+ 	 * bit2: Memory IO Request
+@@ -411,9 +423,6 @@ static int advk_pcie_init(int host_id, void __iomem *reg_base, struct pcie_win *
+ 	state |= 0x7;
+ 	writel(state, PCIE_CORE_CONFIG_REG_ADDR(reg_base, 4));
+ 
+-	/* Don't know why to delay 1 ms. Just leave it as legacy code. */
+-	mdelay(1);
+-
+ 	/* Set config address */
+ 	hose->cfg_addr = (unsigned int *)reg_base;
+ 
+@@ -468,13 +477,13 @@ static void advk_pcie_set_core_mode(int host_id, void __iomem *reg_base, int mod
+ {
+ 	u32 config;
+ 
+-	/* Set PCI global control register to RC mode */
++	/* Set PCI global control register to RC or EP mode */
+ 	config = readl(PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_CTRL0_REG));
+ 	config &= ~(PCIE_CTRL_MODE_MASK << IS_RC_SHIFT);
+ 	config |= ((mode & PCIE_CTRL_MODE_MASK) << IS_RC_SHIFT);
+ 	writel(config, PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_CTRL0_REG));
+ 
+-	/* Set PCI core control register to RC mode */
++	/* Set PCI core control register to RC or EP mode */
+ 	config = readl(PCIE_CTRL_CORE_REG_ADDR(reg_base, PCIE_CTRL_CONFIG_REG));
+ 	config &= ~(PCIE_CTRL_MODE_MASK << PCIE_CTRL_MODE_SHIFT);
+ 	config |= ((mode & PCIE_CTRL_MODE_MASK) << PCIE_CTRL_MODE_SHIFT);
+-- 
+1.9.1
+

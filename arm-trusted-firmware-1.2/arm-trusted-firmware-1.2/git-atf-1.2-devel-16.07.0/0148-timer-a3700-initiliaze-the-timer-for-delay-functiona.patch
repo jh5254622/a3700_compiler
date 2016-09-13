@@ -1,0 +1,55 @@
+From 6a7609373c1ab45710fb663035788ebcaa65a5cd Mon Sep 17 00:00:00 2001
+From: Ken Ma <make@marvell.com>
+Date: Wed, 20 Apr 2016 17:05:16 +0800
+Subject: [PATCH 148/239] timer: a3700: initiliaze the timer for delay
+ functionality
+
+Initiliaze the timer for delay functionality which later i2c will use.
+
+Change-Id: I515d0971061e95c6ecb991a050012e45754af962
+Signed-off-by: Ken Ma <make@marvell.com>
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29219
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ plat/marvell/a3700/a3700_z/plat_bl31_setup.c | 4 ++++
+ plat/marvell/a3700/a3700_z/platform.mk       | 2 ++
+ 2 files changed, 6 insertions(+)
+
+diff --git a/plat/marvell/a3700/a3700_z/plat_bl31_setup.c b/plat/marvell/a3700/a3700_z/plat_bl31_setup.c
+index 254011e..71b8311 100644
+--- a/plat/marvell/a3700/a3700_z/plat_bl31_setup.c
++++ b/plat/marvell/a3700/a3700_z/plat_bl31_setup.c
+@@ -32,6 +32,7 @@
+ ***************************************************************************
+ */
+ #include <plat_marvell.h>
++#include <plat_private.h>
+ #include <sys_info.h>
+ #include <mmio.h>
+ 
+@@ -67,4 +68,7 @@ void bl31_plat_arch_setup(void)
+ 
+ 	/* MPP init */
+ 	marvell_bl31_mpp_init();
++
++	/* initiliaze the timer for delay functionality */
++	plat_delay_timer_init();
+ }
+diff --git a/plat/marvell/a3700/a3700_z/platform.mk b/plat/marvell/a3700/a3700_z/platform.mk
+index 5cdd21d..889c8da 100644
+--- a/plat/marvell/a3700/a3700_z/platform.mk
++++ b/plat/marvell/a3700/a3700_z/platform.mk
+@@ -74,6 +74,8 @@ BL31_SOURCES		+=	lib/cpus/aarch64/cortex_a53.S		\
+ 				$(PLAT_SRC_BASE)/plat_bl31_setup.c	\
+ 				plat/marvell/common/sys_info.c		\
+ 				plat/marvell/common/marvell_gicv3.c	\
++				plat/marvell/common/plat_delay_timer.c	\
++				drivers/delay_timer/delay_timer.c	\
+ 				${MARVELL_GIC_SOURCES}
+ 
+ # Disable the PSCI platform compatibility layer (allows porting from Old Platform APIs
+-- 
+1.9.1
+

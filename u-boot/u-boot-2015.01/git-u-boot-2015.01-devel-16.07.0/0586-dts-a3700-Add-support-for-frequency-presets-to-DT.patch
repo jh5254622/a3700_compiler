@@ -1,0 +1,255 @@
+From 789ec8407b1aa03871efb09f094e46d3dc54649c Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Tue, 8 Dec 2015 14:19:42 +0200
+Subject: [PATCH 0586/1240] dts: a3700: Add support for frequency presets to DT
+
+- Add CPU/DDR frequency presets to DTB (freq)
+- Switch clock configuration in SPL from hard coded values
+  to presets obtained from DT
+
+Change-Id: I34ae71ca7e1b43d2a1ef92735978d80a22b5cf11
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25702
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armadalp/mvebu_clock.c      | 33 ++++++++++++++++++++------
+ arch/arm/dts/armada-lp-customer0.dts           |  4 ++++
+ arch/arm/dts/armada-lp-db.dts                  |  4 ++++
+ arch/arm/dts/armada-lp.dtsi                    |  6 +++++
+ doc/device-tree-bindings/clock/mvebu-clock.txt | 27 ++++++++++++++++++++-
+ include/dt-bindings/clock/freq_data.h          | 26 ++++++++++++++++++++
+ include/fdtdec.h                               |  1 +
+ lib/fdtdec.c                                   |  1 +
+ 8 files changed, 94 insertions(+), 8 deletions(-)
+ create mode 100644 include/dt-bindings/clock/freq_data.h
+
+diff --git a/arch/arm/cpu/armv8/armadalp/mvebu_clock.c b/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
+index 01800a7..592d63f 100644
+--- a/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
++++ b/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
+@@ -24,6 +24,7 @@
+ #include <asm/arch-armadalp/clock.h>
+ #include <asm/io.h>
+ 
++DECLARE_GLOBAL_DATA_PTR;
+ static struct a3700_clock_cfg a3700_clock_configs[] = MVEBU_A3700_CLOCK_CFGS;
+ 
+ /* TODO: Move to dedicated DDR driver */
+@@ -468,13 +469,14 @@ u32 set_a3700_clocks(u32 cpu_clk_mhz, u32 ddr_clk_mhz, u32 tbg_a_kvco_mhz, u32 t
+ 		    ((tbg_a_kvco_mhz == 0) || (a3700_clock_configs[cfg].tbg_a.kvco_mhz == tbg_a_kvco_mhz)) &&
+ 		    ((tbg_b_kvco_mhz == 0) || (a3700_clock_configs[cfg].tbg_b.kvco_mhz == tbg_b_kvco_mhz))) {
+ 			clk_cfg = &a3700_clock_configs[cfg];
+-			debug("Found requested clock configuration in DB[%d])\n", cfg);
++			debug("Found valid FREQ preset(#%d): CPU=%dMHz, DDR=%dMHz\n", cfg,
++			      a3700_clock_configs[cfg].cpu_freq_mhz, a3700_clock_configs[cfg].ddr_freq_mhz);
+ 			break;
+ 		}
+ 	}
+ 
+ 	if (clk_cfg == 0) {
+-		error("Unable to find clock configuration for CPU=%dMHz, DDR=%dMHz, TBG-A=%dMHz, TBG-B=%dMHz\n",
++		error("Unable to find valid FREQ preset for CPU=%dMHz, DDR=%dMHz, TBG-A=%dMHz, TBG-B=%dMHz\n",
+ 		      cpu_clk_mhz, ddr_clk_mhz, tbg_a_kvco_mhz, tbg_b_kvco_mhz);
+ 		return 1;
+ 	}
+@@ -484,7 +486,6 @@ u32 set_a3700_clocks(u32 cpu_clk_mhz, u32 ddr_clk_mhz, u32 tbg_a_kvco_mhz, u32 t
+ 	writel(0x00000000, MVEBU_NORTH_CLOCK_SELECT_REG);
+ 	writel(0x00000000, MVEBU_SOUTH_CLOCK_SELECT_REG);
+ 
+-	debug("Setting TBG-A\n");
+ 	rval = set_a3700_tbg_clock(clk_cfg->tbg_a.kvco_mhz,
+ 				   clk_cfg->tbg_a.se_vcodiv,
+ 				   clk_cfg->tbg_a.diff_vcodiv,
+@@ -494,7 +495,6 @@ u32 set_a3700_clocks(u32 cpu_clk_mhz, u32 ddr_clk_mhz, u32 tbg_a_kvco_mhz, u32 t
+ 		return rval;
+ 	}
+ 
+-	debug("Setting TBG-B\n");
+ 	rval = set_a3700_tbg_clock(clk_cfg->tbg_b.kvco_mhz,
+ 				   clk_cfg->tbg_b.se_vcodiv,
+ 				   clk_cfg->tbg_b.diff_vcodiv,
+@@ -637,12 +637,31 @@ u32 set_a3700_clocks(u32 cpu_clk_mhz, u32 ddr_clk_mhz, u32 tbg_a_kvco_mhz, u32 t
+ 
+ int init_a3700_clock(void)
+ {
+-	int ret = 0;
++	int node, count, idx, ret;
++	const void *blob = gd->fdt_blob;
++	int tbl_sz = sizeof(a3700_clock_configs)/sizeof(a3700_clock_configs[0]);
+ 
+ 	debug_enter();
+ 
+-	/* TODO: Move clock selection to DT */
+-	ret = set_a3700_clocks(400, 600, 2400, 1600);
++	count = fdtdec_find_aliases_for_id(blob, "freq", COMPAT_MVEBU_A3700_FREQ, &node, 1);
++	if (count == 0) {
++		error("The frequency preset is not defined in DT, using default\n");
++		idx = MVEBU_A3700_DEF_CLOCK_PRESET_IDX;
++	} else {
++		idx = fdtdec_get_int(blob, node, "preset", MVEBU_A3700_DEF_CLOCK_PRESET_IDX);
++		if ((idx >= tbl_sz) || (idx < 0)) {
++			error("Unsupported frequency preset in DT (%d), using default\n", idx);
++			idx = MVEBU_A3700_DEF_CLOCK_PRESET_IDX;
++		}
++	}
++
++	printf("Setting clocks to CPU=%dMHz and DDR=%dMHz\n",
++		a3700_clock_configs[idx].cpu_freq_mhz, a3700_clock_configs[idx].ddr_freq_mhz);
++
++	ret =  set_a3700_clocks(a3700_clock_configs[idx].cpu_freq_mhz,
++				a3700_clock_configs[idx].ddr_freq_mhz,
++				a3700_clock_configs[idx].tbg_a.kvco_mhz,
++				a3700_clock_configs[idx].tbg_b.kvco_mhz);
+ 	if (ret)
+ 		error("Failed to configure system clocks\n");
+ 
+diff --git a/arch/arm/dts/armada-lp-customer0.dts b/arch/arm/dts/armada-lp-customer0.dts
+index 51ff932..0b84ff8 100644
+--- a/arch/arm/dts/armada-lp-customer0.dts
++++ b/arch/arm/dts/armada-lp-customer0.dts
+@@ -8,6 +8,10 @@
+ 	compatible = "marvell,armada-lp-db0", "marvell,armada-lp";
+ 
+ 	soc {
++		freq {
++			preset = <PRESET_CPU_400_DDR_600>;
++		};
++
+ 		internal-regs {
+ 			serial: serial@12000 {
+ 				status = "okay";
+diff --git a/arch/arm/dts/armada-lp-db.dts b/arch/arm/dts/armada-lp-db.dts
+index 6605fe0..c08ab34 100644
+--- a/arch/arm/dts/armada-lp-db.dts
++++ b/arch/arm/dts/armada-lp-db.dts
+@@ -8,6 +8,10 @@
+ 	compatible = "marvell,armada-lp-db0", "marvell,armada-lp";
+ 
+ 	soc {
++		freq {
++			preset = <PRESET_CPU_400_DDR_600>;
++		};
++
+ 		internal-regs {
+ 			serial: serial@12000 {
+ 				status = "okay";
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index a6544d8..016b369 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -2,6 +2,7 @@
+ #define IO_ATTR(max_win, max_remap, remap_size, win_offset) (((max_win) << 24) | ((max_remap) << 16) | ((remap_size) << 8) | (win_offset))
+ 
+ #include <dt-bindings/comphy/comphy_data.h>
++#include <dt-bindings/clock/freq_data.h>
+ / {
+ 	model = "Marvell Armada_LP Development Board";
+ 	compatible = "marvell,armada-lp";
+@@ -14,6 +15,11 @@
+ 	#address-cells = <1>;
+ 	#size-cells = <0>;
+ 
++		freq {
++			compatible = "marvell,a3700-freq";
++			preset = <PRESET_CPU_400_DDR_600>;
++		};
++
+ 		internal-regs {
+ 			compatible = "marvell,internal-regs";
+ 			#address-cells = <1>;
+diff --git a/doc/device-tree-bindings/clock/mvebu-clock.txt b/doc/device-tree-bindings/clock/mvebu-clock.txt
+index e4b9601..3dda6cf 100644
+--- a/doc/device-tree-bindings/clock/mvebu-clock.txt
++++ b/doc/device-tree-bindings/clock/mvebu-clock.txt
+@@ -6,4 +6,29 @@ The Clock nodes is under internal-regs node.
+ tclk: define the T-Clock address in the SoC
+ 	- compatible = "marvell,tclk";
+ 	- reg = <0x18600 0x4>;
+-		base address of sample at reset register.
+\ No newline at end of file
++		base address of sample at reset register.
++
++In case of Armada 3700 platform, the DT allows to select one of
++CPU/DDR frequency presets under "soc" node.
++
++freq: define the clock preset for CPU/DDR
++	compatible = "marvell,a3700-freq";
++	preset = <freq_preset>;
++		Supported presets:
++		PRESET_CPU_600_DDR_600  - CPU 600MHz,  DDR 600MHz
++		PRESET_CPU_400_DDR_600  - CPU 400MHz,  DDR 600MHz
++		PRESET_CPU_1000_DDR_800 - CPU 1000MHz, DDR 800MHz
++
++Armada 3700 example:
++soc {
++	freq {
++		compatible = "marvell,a3700-freq";
++		preset = <PRESET_CPU_400_DDR_600>;
++	};
++	....
++	....
++	internal-regs {
++		....
++		....
++	};
++};
+diff --git a/include/dt-bindings/clock/freq_data.h b/include/dt-bindings/clock/freq_data.h
+new file mode 100644
+index 0000000..329bcfa
+--- /dev/null
++++ b/include/dt-bindings/clock/freq_data.h
+@@ -0,0 +1,26 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _FREQ_DATA_H_
++#define _FREQ_DATA_H_
++
++#define PRESET_CPU_600_DDR_600		0
++#define PRESET_CPU_400_DDR_600		1
++#define PRESET_CPU_1000_DDR_800		2
++
++#endif /* _FREQ_DATA_H_ */
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index a83d7a1..42821ab 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -153,6 +153,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_DDR_PHY,
+ 	COMPAT_MVEBU_ADVK_PCIE,
+ 	COMPAT_MVEBU_XENON_MMC,
++	COMPAT_MVEBU_A3700_FREQ,
+ 
+ 	COMPAT_COUNT,
+ };
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index ea29e90..51158d5 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -115,6 +115,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_DDR_PHY, "marvell,mvebu-ddr-phy"),
+ 	COMPAT(MVEBU_ADVK_PCIE, "marvell,advk-pcie"),
+ 	COMPAT(MVEBU_XENON_MMC, "marvell,xenon-sdhci"),
++	COMPAT(COMPAT_MVEBU_A3700_FREQ, "marvell,a3700-freq"),
+ 
+ };
+ 
+-- 
+1.9.1
+

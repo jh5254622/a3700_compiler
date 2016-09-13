@@ -1,0 +1,39 @@
+From e6971c74c3fb617cb3faf918ba1322f89bbde435 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Mon, 23 Feb 2015 17:40:54 +0200
+Subject: [PATCH 0125/1240] fix: a38x: remove invalid relocation of internal
+ register base
+
+	relocation of internal register base is done in platform.S.
+	- removed the invalid relocation of the internal register base
+	  which was done in soc-init.c.
+	  the write was duplicated and invalid:
+	  - offset of MBUS base was missing
+	  - invalid write into the new base 0xF1.. instead of 0xD0..
+
+Change-Id: Icf779fc27e4301bd11e15a18e483f5eb4a9b34f3
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/16940
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv7/armada38x/soc-init.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/arch/arm/cpu/armv7/armada38x/soc-init.c b/arch/arm/cpu/armv7/armada38x/soc-init.c
+index 85aaa73..13c3acc 100644
+--- a/arch/arm/cpu/armv7/armada38x/soc-init.c
++++ b/arch/arm/cpu/armv7/armada38x/soc-init.c
+@@ -27,8 +27,6 @@
+ 
+ int soc_early_init_f(void)
+ {
+-	/* write base address for the window of the internal register */
+-	writel(MVEBU_REGS_BASE, MVEBU_REGS_BASE + MBUS_WIN_INTEREG_REG);
+ 	return 0;
+ }
+ 
+-- 
+1.9.1
+

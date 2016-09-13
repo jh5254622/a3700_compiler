@@ -1,0 +1,42 @@
+From caabbaf8d29e9e6541595dd3b2448f1d087e190d Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Wed, 17 Feb 2016 19:31:14 +0200
+Subject: [PATCH 0898/1240] armv8: Bypass GIC setup when running at EL1 or EL2
+
+- Allow to bypass GIC configuration in lowlevel_init (start.S)
+  if the CPU is running in EL2 or EL1
+- The change is required for running u-boot from ATF, since
+  the ATF already done with GIC configuration and trying to
+  do so again will generate exception.
+- U-boot is running in EL3 as standalone application,
+  but ATF activates it at lower EL.
+
+Change-Id: Ib9c4f58dd32730e9efdcb0528315db043ec910c0
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27606
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/cpu/armv8/start.S | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/arch/arm/cpu/armv8/start.S b/arch/arm/cpu/armv8/start.S
+index 18d5155..c36b6f6 100644
+--- a/arch/arm/cpu/armv8/start.S
++++ b/arch/arm/cpu/armv8/start.S
+@@ -170,6 +170,11 @@ ENDPROC(apply_core_errata)
+ WEAK(lowlevel_init)
+ 	mov	x29, lr			/* Save LR */
+ 
++	mrs     x0, CurrentEL		/* U-boot is running in EL3 as standalone application,
++					    but ATF activates it at lower EL. */
++	cmp     x0, 0x3 << 2            /* Only run when not started from ATF (EL3) */
++	b.ne    2f                      /* since ATF has done all low level tasks already */
++
+ #if defined(CONFIG_GICV2) || defined(CONFIG_GICV3)
+ 	branch_if_slave x0, 1f
+ 	ldr	x0, =GICD_BASE
+-- 
+1.9.1
+

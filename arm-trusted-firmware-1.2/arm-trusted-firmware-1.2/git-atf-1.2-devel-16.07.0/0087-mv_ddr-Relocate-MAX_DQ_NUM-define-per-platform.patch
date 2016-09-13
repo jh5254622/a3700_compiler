@@ -1,0 +1,62 @@
+From c980e84ae25117f9ad70c73707d941b8d1468754 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Tue, 29 Mar 2016 17:03:21 +0300
+Subject: [PATCH 087/239] mv_ddr: Relocate MAX_DQ_NUM define per platform
+
+This patch relocates MAX_DQ_NUM definition to be per platform.
+This value is calculated as follows:
+- a38x: 5 subphys (4 data + 1 ecc) * 8 dqs per subphy = 40
+- apn806: 9 subphys (8 data + 1 ecc) * 8 dqs per subphy = 72
+
+Change-Id: Ia3fa2f94458ad19464e2f4e9e6cc5197c593b0b8
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28638
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28794
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/marvell/mv_ddr/a38x/mv_ddr_a38x.h     | 2 ++
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h | 2 ++
+ drivers/marvell/mv_ddr/ddr3_training_ip.h     | 1 -
+ 3 files changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/marvell/mv_ddr/a38x/mv_ddr_a38x.h b/drivers/marvell/mv_ddr/a38x/mv_ddr_a38x.h
+index ddab544..21d03a8 100644
+--- a/drivers/marvell/mv_ddr/a38x/mv_ddr_a38x.h
++++ b/drivers/marvell/mv_ddr/a38x/mv_ddr_a38x.h
+@@ -180,6 +180,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ #define MV_BOARD_REFCLK				MV_BOARD_REFCLK_25MHZ
+ 
++#define MAX_DQ_NUM				40
++
+ /* Matrix enables DRAM modes (bus width/ECC) per boardId */
+ #define TOPOLOGY_UPDATE_32BIT			0
+ #define TOPOLOGY_UPDATE_32BIT_ECC		1
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
+index 3978591..8145b80 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
+@@ -214,6 +214,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ #define MARVELL_BOARD				MARVELL_BOARD_ID_BASE
+ 
++#define MAX_DQ_NUM				72
++
+ /* Matrix enables DRAM modes (bus width/ECC) per boardId */
+ #define TOPOLOGY_UPDATE_32BIT			0
+ #define TOPOLOGY_UPDATE_32BIT_ECC		1
+diff --git a/drivers/marvell/mv_ddr/ddr3_training_ip.h b/drivers/marvell/mv_ddr/ddr3_training_ip.h
+index f9e4625..f8e7aad 100644
+--- a/drivers/marvell/mv_ddr/ddr3_training_ip.h
++++ b/drivers/marvell/mv_ddr/ddr3_training_ip.h
+@@ -106,7 +106,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ #define MAX_CS_NUM		4
+ #define MAX_TOTAL_BUS_NUM	(MAX_INTERFACE_NUM * MAX_BUS_NUM)
+-#define MAX_DQ_NUM		40
+ 
+ #define GET_MIN(arg1, arg2)	((arg1) < (arg2)) ? (arg1) : (arg2)
+ #define GET_MAX(arg1, arg2)	((arg1) < (arg2)) ? (arg2) : (arg1)
+-- 
+1.9.1
+

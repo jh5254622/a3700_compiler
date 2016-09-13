@@ -1,0 +1,134 @@
+From 0b452e480141474e6f6f5245546bd72ca7a08366 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 28 Jan 2015 17:22:57 +0200
+Subject: [PATCH 0114/1240] fdt: mvebu: add utility function to return register
+ base address
+
+Change-Id: I7e82d3c59b8022e87c9be56d67a91c96188f426e
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/16380
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Makefile    |  1 +
+ arch/arm/cpu/mvebu-common/fdt.c       | 47 +++++++++++++++++++++++++++++++++++
+ arch/arm/include/asm/arch-mvebu/fdt.h | 27 ++++++++++++++++++++
+ arch/arm/include/asm/global_data.h    |  1 +
+ 4 files changed, 76 insertions(+)
+ create mode 100644 arch/arm/cpu/mvebu-common/fdt.c
+ create mode 100644 arch/arm/include/asm/arch-mvebu/fdt.h
+
+diff --git a/arch/arm/cpu/mvebu-common/Makefile b/arch/arm/cpu/mvebu-common/Makefile
+index 1f1f266..b23132a 100644
+--- a/arch/arm/cpu/mvebu-common/Makefile
++++ b/arch/arm/cpu/mvebu-common/Makefile
+@@ -21,6 +21,7 @@ obj-y += unit-info.o
+ obj-y += soc-init.o
+ obj-y += misc.o
+ obj-y += mpp.o
++obj-y += fdt.o
+ obj-$(CONFIG_AURORA_TIMER) += timer_aurora.o
+ obj-$(CONFIG_GENERIC_TIMER) += generic_timer.o
+ obj-$(CONFIG_MVEBU_CA9) += platform.o
+diff --git a/arch/arm/cpu/mvebu-common/fdt.c b/arch/arm/cpu/mvebu-common/fdt.c
+new file mode 100644
+index 0000000..d4fc83a
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/fdt.c
+@@ -0,0 +1,47 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., on the worldwide web at
++ * http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <asm/arch-mvebu/fdt.h>
++#include <fdtdec.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++void *fdt_get_regs_offs(const void *blob, int node, const char *prop_name)
++{
++	void *base;
++	u32 reg;
++
++	base = fdt_get_regs_base();
++	reg = fdtdec_get_addr(blob, node, prop_name);
++
++	return base + reg;
++}
++
++void *fdt_get_regs_base(void)
++{
++	int node;
++
++	if (gd->arch.reg_base)
++		return gd->arch.reg_base;
++
++	node = fdt_node_offset_by_compatible(gd->fdt_blob, -1, "marvell,internal-regs");
++	gd->arch.reg_base = (void *)fdtdec_get_addr(gd->fdt_blob, node, "reg");
++	return gd->arch.reg_base;
++}
+diff --git a/arch/arm/include/asm/arch-mvebu/fdt.h b/arch/arm/include/asm/arch-mvebu/fdt.h
+new file mode 100644
+index 0000000..67aa1d5
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/fdt.h
+@@ -0,0 +1,27 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., on the worldwide web at
++ * http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#ifndef _MVEBU_FDT_H_
++#define _MVEBU_FDT_H_
++
++void *fdt_get_regs_offs(const void *blob, int node, const char *prop_name);
++void *fdt_get_regs_base(void);
++
++#endif /* _MVEBU_FDT_H_ */
++
+diff --git a/arch/arm/include/asm/global_data.h b/arch/arm/include/asm/global_data.h
+index 2bd9dc0..feb228a 100644
+--- a/arch/arm/include/asm/global_data.h
++++ b/arch/arm/include/asm/global_data.h
+@@ -51,6 +51,7 @@ struct arch_global_data {
+ #ifdef CONFIG_MVEBU
+ 	void *soc_family;
+ 	void *board_family;
++	void *reg_base;
+ #endif
+ 
+ };
+-- 
+1.9.1
+

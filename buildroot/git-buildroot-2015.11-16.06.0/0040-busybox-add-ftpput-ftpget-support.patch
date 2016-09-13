@@ -1,0 +1,43 @@
+From 019d64258b92297b868e2626a56b4e17d6d5f17e Mon Sep 17 00:00:00 2001
+From: Ofer Heifetz <oferh@marvell.com>
+Date: Tue, 2 Feb 2016 17:40:07 +0200
+Subject: [PATCH 40/66] busybox: add ftpput ftpget support
+
+Change-Id: I5351567144d37a0dc145557021be21492a2ad108
+Signed-off-by: Ofer Heifetz <oferh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27148
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Lior Amsalem <alior@marvell.com>
+---
+ package/busybox/busybox.config | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/package/busybox/busybox.config b/package/busybox/busybox.config
+index 33fb491..7e8ec5b 100644
+--- a/package/busybox/busybox.config
++++ b/package/busybox/busybox.config
+@@ -1,7 +1,7 @@
+ #
+ # Automatically generated make config: don't edit
+ # Busybox version: 1.24.1
+-# Thu Dec 31 14:49:32 2015
++# Tue Feb  2 17:38:14 2016
+ #
+ CONFIG_HAVE_DOT_CONFIG=y
+ 
+@@ -798,9 +798,9 @@ CONFIG_ETHER_WAKE=y
+ # CONFIG_FEATURE_FTP_WRITE is not set
+ # CONFIG_FEATURE_FTPD_ACCEPT_BROKEN_LIST is not set
+ # CONFIG_FEATURE_FTP_AUTHENTICATION is not set
+-# CONFIG_FTPGET is not set
+-# CONFIG_FTPPUT is not set
+-# CONFIG_FEATURE_FTPGETPUT_LONG_OPTIONS is not set
++CONFIG_FTPGET=y
++CONFIG_FTPPUT=y
++CONFIG_FEATURE_FTPGETPUT_LONG_OPTIONS=y
+ CONFIG_HOSTNAME=y
+ # CONFIG_HTTPD is not set
+ # CONFIG_FEATURE_HTTPD_RANGES is not set
+-- 
+1.9.1
+

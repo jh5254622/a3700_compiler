@@ -1,0 +1,48 @@
+From 61c6909d4c2f0b5184911b3615585505fee65154 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Wed, 6 Jan 2016 09:50:46 +0800
+Subject: [PATCH 0676/1240] fix: a3700: add support of u-boot reset command for
+ Armada3700
+
+    write magic number of 0x1d1e to North Bridge Warm Reset
+    register triggers warm reset.
+
+Change-Id: I1d4ac2165400ae2d2535125b2bafcbe3f6814113
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26557
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armadalp/soc-init.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/arch/arm/cpu/armv8/armadalp/soc-init.c b/arch/arm/cpu/armv8/armadalp/soc-init.c
+index 37ac81f..3f7dc86 100644
+--- a/arch/arm/cpu/armv8/armadalp/soc-init.c
++++ b/arch/arm/cpu/armv8/armadalp/soc-init.c
+@@ -25,6 +25,10 @@
+ #include <asm/arch/mbus_reg.h>
+ #include <asm/arch-mvebu/mbus.h>
+ 
++/* NB warm reset */
++#define MVEBU_NB_WARM_RST_REG	(MVEBU_GPIO_NB_REG_BASE + 0x40)
++/* NB warm reset magic number, write it to MVEBU_GPIO_NB_RST_REG triggers warm reset */
++#define MVEBU_NB_WARM_RST_MAGIC_NUM	(0x1d1e)
+ 
+ int soc_early_init_f(void)
+ {
+@@ -143,3 +147,10 @@ int dram_init(void)
+ 
+ 	return 0;
+ }
++
++void reset_cpu(ulong ignored)
++{
++	/* write magic number of 0x1d1e to North Bridge Warm Reset register
++	   to trigger warm reset */
++	writel(MVEBU_NB_WARM_RST_MAGIC_NUM, MVEBU_NB_WARM_RST_REG);
++}
+-- 
+1.9.1
+

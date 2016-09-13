@@ -1,0 +1,56 @@
+From 32f8a89b4a5e175b29011506917ea2eaa55c09f3 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 13 Jan 2015 18:02:15 +0200
+Subject: [PATCH 0097/1240] fix: compilation warnings after rebase to 2015.01
+
+Change-Id: Ie84ce6ed37bf601fa8bbf2c8f35da71327b5a8bf
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/15979
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ common/mvebu/cmd_bubt.c | 1 +
+ common/mvebu/cmd_mpp.c  | 4 ++--
+ scripts/bin2phex.pl     | 0
+ 3 files changed, 3 insertions(+), 2 deletions(-)
+ mode change 100644 => 100755 scripts/bin2phex.pl
+
+diff --git a/common/mvebu/cmd_bubt.c b/common/mvebu/cmd_bubt.c
+index 95d464f..177eb97 100644
+--- a/common/mvebu/cmd_bubt.c
++++ b/common/mvebu/cmd_bubt.c
+@@ -26,6 +26,7 @@
+ #include <asm/arch-mvebu/unit-info.h>
+ 
+ #include <spi_flash.h>
++#include <spi.h>
+ 
+ #include <nand.h>
+ 
+diff --git a/common/mvebu/cmd_mpp.c b/common/mvebu/cmd_mpp.c
+index 23738a9..f65465c 100644
+--- a/common/mvebu/cmd_mpp.c
++++ b/common/mvebu/cmd_mpp.c
+@@ -90,7 +90,7 @@ static int cmd_mpp_read(char **mpp_desc, int start, int end)
+ 	printf("--------------------------\n");
+ 
+ 	for (pin = start; pin <= end; pin++) {
+-		value = min(mpp_get_pin(pin), MAX_MPP_OPTS);
++		value = min(mpp_get_pin(pin), (u8)MAX_MPP_OPTS);
+ 		mpp_opt = *(mpp_desc + (pin * MAX_MPP_OPTS) + value);
+ 
+ 		printf("%02d  0x%x   %s\n", pin, value, mpp_opt);
+@@ -111,7 +111,7 @@ static int cmd_mpp_write(char **mpp_desc, int pin, int value)
+ 	mpp_set_pin(pin, value);
+ 
+ 	/* Readback to verify */
+-	value = min(mpp_get_pin(pin), MAX_MPP_OPTS);
++	value = min(mpp_get_pin(pin), (u8)MAX_MPP_OPTS);
+ 	mpp_opt = *(mpp_desc + (pin * MAX_MPP_OPTS) + value);
+ 	printf("%02d  0x%x   %s\n", pin, value, mpp_opt);
+ 
+diff --git a/scripts/bin2phex.pl b/scripts/bin2phex.pl
+old mode 100644
+new mode 100755
+-- 
+1.9.1
+

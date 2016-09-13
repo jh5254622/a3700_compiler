@@ -1,0 +1,106 @@
+From 95d842e04871bb854e06e5383609c7a40caaba17 Mon Sep 17 00:00:00 2001
+From: zachary <zhangzg@marvell.com>
+Date: Fri, 24 Jun 2016 22:48:23 +0800
+Subject: [PATCH 1228/1240] fix: mvebu: correct return value for bubt functions
+
+- we need to distinguish between status return (error or not)
+  and value return (i.e. size that was read and such).
+- this patch fixes the usb/mmc for usb/mmc return value of read functions
+  and status return of mmc burn function.
+- Fix JIRA bug SYSTEMSW-2250
+
+Change-Id: Ib240b33f81efcb5630654fad2698c72436db6f4c
+Signed-off-by: zachary <zhangzg@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30689
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ common/mvebu/cmd_bubt.c | 26 ++++++++++++++++++--------
+ 1 file changed, 18 insertions(+), 8 deletions(-)
+
+diff --git a/common/mvebu/cmd_bubt.c b/common/mvebu/cmd_bubt.c
+index b1a515a..4a94f28 100644
+--- a/common/mvebu/cmd_bubt.c
++++ b/common/mvebu/cmd_bubt.c
+@@ -146,7 +146,7 @@ static int mmc_burn_image(size_t image_size)
+ 						start_lba, blk_count, (void *)get_load_addr());
+ 	if (blk_written != blk_count) {
+ 		printf("Error - written %#lx blocks\n", blk_written);
+-		return 0;
++		return 1;
+ 	} else {
+ 		printf("Done!\n");
+ 	}
+@@ -161,7 +161,8 @@ static int mmc_burn_image(size_t image_size)
+ 
+ static size_t mmc_read_file(const char *file_name)
+ {
+-	loff_t		act_read;
++	loff_t act_read = 0;
++	int rc;
+ 	struct mmc	*mmc;
+ #ifdef CONFIG_SYS_MMC_ENV_DEV
+ 	const u8	mmc_dev_num = CONFIG_SYS_MMC_ENV_DEV;
+@@ -172,12 +173,12 @@ static size_t mmc_read_file(const char *file_name)
+ 	mmc = find_mmc_device(mmc_dev_num);
+ 	if (!mmc) {
+ 		printf("No SD/MMC/eMMC card found\n");
+-		return 1;
++		return 0;
+ 	}
+ 
+ 	if (mmc_init(mmc)) {
+ 		printf("%s(%d) init failed\n", IS_SD(mmc) ? "SD" : "MMC", mmc_dev_num);
+-		return 1;
++		return 0;
+ 	}
+ 
+ 	/* Load from data partition (0) */
+@@ -187,7 +188,11 @@ static size_t mmc_read_file(const char *file_name)
+ 	}
+ 
+ 	/* Perfrom file read */
+-	return fs_read(file_name, get_load_addr(), 0, 0, &act_read);
++	rc = fs_read(file_name, get_load_addr(), 0, 0, &act_read);
++	if (rc)
++		return 0;
++
++	return act_read;
+ }
+ 
+ int is_mmc_active(void)
+@@ -320,7 +325,8 @@ int is_nor_active(void)
+ #ifdef CONFIG_USB_STORAGE
+ static size_t usb_read_file(const char *file_name)
+ {
+-	loff_t act_read;
++	loff_t act_read = 0;
++	int rc;
+ 
+ 	usb_stop();
+ 
+@@ -342,7 +348,11 @@ static size_t usb_read_file(const char *file_name)
+ 	}
+ 
+ 	/* Perfrom file read */
+-	return fs_read(file_name, get_load_addr(), 0, 0, &act_read);
++	rc = fs_read(file_name, get_load_addr(), 0, 0, &act_read);
++	if (rc)
++		return 0;
++
++	return act_read;
+ }
+ 
+ int is_usb_active(void)
+@@ -529,7 +539,7 @@ static int bubt_read_file(struct bubt_dev *src)
+ 
+ 	if (!src->read) {
+ 		printf("Error: Read not supported on device \"%s\"\n", src->name);
+-		return 1;
++		return 0;
+ 	}
+ 
+ 	image_size = src->read(BootFile);
+-- 
+1.9.1
+

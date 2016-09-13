@@ -1,0 +1,31 @@
+From 0d00a4d1b08b5afff7fa651229aa8eb20ba71060 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 24 Jun 2015 13:00:58 +0300
+Subject: [PATCH 0213/1240] dt: add print of dt blob address
+
+Change-Id: I9013efaa934e97773111b95961af8e415c9048ac
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20451
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ common/board_r.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/common/board_r.c b/common/board_r.c
+index 6391c8d..7a1b4d30 100644
+--- a/common/board_r.c
++++ b/common/board_r.c
+@@ -291,6 +291,9 @@ __weak int power_init_board(void)
+ static int initr_announce(void)
+ {
+ 	printf("Now running in RAM - U-Boot at: %08lx\n", gd->relocaddr);
++#ifdef CONFIG_OF_CONTROL
++	printf("U-Boot DT blob at : %p\n", gd->fdt_blob);
++#endif
+ 	return 0;
+ }
+ 
+-- 
+1.9.1
+

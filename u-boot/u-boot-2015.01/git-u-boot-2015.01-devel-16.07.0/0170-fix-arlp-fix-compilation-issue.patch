@@ -1,0 +1,82 @@
+From d721a2ee302445e0f1aa12bc28652149ad27844c Mon Sep 17 00:00:00 2001
+From: Jing Hua <jinghua@marvell.com>
+Date: Thu, 2 Apr 2015 16:41:07 +0800
+Subject: [PATCH 0170/1240] fix: arlp: fix compilation issue
+
+	Fix compilation issue of SPL support for ArmadaLP
+
+Change-Id: I5eba6db0b437aa2474e8ba05c58c25d677462aec
+Signed-off-by: Jing Hua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/18048
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ Makefile                         |  2 +-
+ arch/arm/Kconfig                 |  1 +
+ configs/mvebu_armadalp_defconfig | 25 ++++---------------------
+ 3 files changed, 6 insertions(+), 22 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 2345b02..c17e1b5 100644
+--- a/Makefile
++++ b/Makefile
+@@ -839,7 +839,7 @@ u-boot.ldr.hex u-boot.ldr.srec: u-boot.ldr FORCE
+ 
+ ifdef CONFIG_MVEBU
+ SPLIMAGE	:= $(srctree)/spl/u-boot-spl.bin
+-ifdef CONFIG_TARGET_ARMADA_8K
++ifneq ($(CONFIG_TARGET_ARMADA_8K), $(CONFIG_TARGET_ARMADA_LP))
+ DOIMAGE		:=  $(srctree)/tools/doimage
+ BIN2PHEX	:= $(srctree)/scripts/bin2phex.pl
+ DOIMAGE_FLAGS	:= -b $(SPLIMAGE)
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index 4626c8c..f6b760b 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -112,6 +112,7 @@ config TARGET_ARMADA_38X
+ 
+ config TARGET_ARMADA_LP
+ 	bool "Support Armada LP"
++	select SUPPORT_SPL
+ 
+ config TARGET_SMDK2410
+ 	bool "Support smdk2410"
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index 431bb7d..980f17c 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -1,27 +1,10 @@
+-CONFIG_ARM=y
+-CONFIG_TARGET_ARMADA_LP=y
+-CONFIG_MVEBU_UART=y
++CONFIG_SPL=y
+++S:CONFIG_ARM=y
+++S:CONFIG_TARGET_ARMADA_LP=y
+++S:CONFIG_MVEBU_UART=y
+ CONFIG_CMD_BDI=y
+ CONFIG_CMD_BOOTD=y
+ CONFIG_CMD_RUN=y
+ CONFIG_CMD_EDITENV=y
+ CONFIG_CMD_SAVEENV=y
+ CONFIG_CMD_MEMORY=y
+-CONFIG_CMD_LOADB=y
+-CONFIG_CMD_LOADS=y
+-CONFIG_CMD_FLASH=y
+-CONFIG_CMD_NAND=y
+-CONFIG_CMD_SPI=y
+-CONFIG_CMD_SF=y
+-CONFIG_CMD_PCI=y
+-CONFIG_CMD_I2C=y
+-CONFIG_CMD_ECHO=y
+-CONFIG_CMD_NET=y
+-CONFIG_CMD_DHCP=y
+-CONFIG_CMD_NFS=y
+-CONFIG_CMD_PING=y
+-CONFIG_CMD_TIME=y
+-CONFIG_CMD_MISC=y
+-CONFIG_CMD_TIMER=y
+-CONFIG_CMD_MVEBU_MPP=y
+-CONFIG_CMD_MVEBU_BUBT=y
+-- 
+1.9.1
+

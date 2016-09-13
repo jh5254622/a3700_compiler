@@ -1,0 +1,71 @@
+From 851a03891d2246f6c23a28889a70816dc6f67309 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Tue, 29 Mar 2016 19:13:29 +0300
+Subject: [PATCH 091/239] mv_ddr: Relocate some ODPG regs defs per platform
+
+This patch relocates some of ODPG registers defintions to be per
+platform. (These registers are different between the platforms.)
+
+Change-Id: I0b9d1eadf78077d56f43ba0c4adf99582bd10e9f
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28644
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28847
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/marvell/mv_ddr/a38x/mv_ddr_a38x.h      | 5 +++++
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h  | 5 +++++
+ drivers/marvell/mv_ddr/ddr3_training_ip_flow.h | 4 ----
+ 3 files changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/marvell/mv_ddr/a38x/mv_ddr_a38x.h b/drivers/marvell/mv_ddr/a38x/mv_ddr_a38x.h
+index c32270b..396a6d5 100644
+--- a/drivers/marvell/mv_ddr/a38x/mv_ddr_a38x.h
++++ b/drivers/marvell/mv_ddr/a38x/mv_ddr_a38x.h
+@@ -235,6 +235,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define RESULT_CONTROL_PUP_4_BIT_6_REG		0x1acc
+ #define RESULT_CONTROL_PUP_4_BIT_7_REG		0x1af0
+ 
++#define ODPG_TRAINING_STATUS_REG		0x18488
++#define ODPG_ENABLE_REG				0x186d4
++#define ODPG_ENABLE_OFFS			0
++#define ODPG_DISABLE_OFFS			8
++
+ /* Matrix enables DRAM modes (bus width/ECC) per boardId */
+ #define TOPOLOGY_UPDATE_32BIT			0
+ #define TOPOLOGY_UPDATE_32BIT_ECC		1
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
+index d0f07bb..2310b9c 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
+@@ -310,6 +310,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define RESULT_CONTROL_PUP_8_BIT_6_REG	0x1CFC
+ #define RESULT_CONTROL_PUP_8_BIT_7_REG	0x1D30
+ 
++#define ODPG_TRAINING_STATUS_REG	0x1030
++#define ODPG_ENABLE_REG			0x1630
++#define ODPG_ENABLE_OFFS		31
++#define ODPG_DISABLE_OFFS		30
++
+ /* Matrix enables DRAM modes (bus width/ECC) per boardId */
+ #define TOPOLOGY_UPDATE_32BIT			0
+ #define TOPOLOGY_UPDATE_32BIT_ECC		1
+diff --git a/drivers/marvell/mv_ddr/ddr3_training_ip_flow.h b/drivers/marvell/mv_ddr/ddr3_training_ip_flow.h
+index 3040596..5629430 100644
+--- a/drivers/marvell/mv_ddr/ddr3_training_ip_flow.h
++++ b/drivers/marvell/mv_ddr/ddr3_training_ip_flow.h
+@@ -195,12 +195,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define  DISABLE_DDR_TUNING_DATA		0x02294285
+ #define  ENABLE_DDR_TUNING_DATA			0x12294285
+ 
+-#define ODPG_TRAINING_STATUS_REG		0x18488
+ #define ODPG_TRAINING_TRIGGER_REG		0x1030
+ #define ODPG_STATUS_DONE_REG			0x16fc
+-#define ODPG_ENABLE_REG				0x186d4
+-#define ODPG_ENABLE_OFFS			0
+-#define ODPG_DISABLE_OFFS			8
+ 
+ #define ODPG_TRAINING_CONTROL_REG		0x1034
+ #define ODPG_OBJ1_OPCODE_REG			0x103c
+-- 
+1.9.1
+

@@ -1,0 +1,41 @@
+From 3c437f01a7ef22ee3833ab9d504c97ed13a4f460 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 18 May 2016 13:37:30 +0300
+Subject: [PATCH 1142/1240] gpio: a70x0: enable GPIO driver & driver module for
+ Armada70x0
+
+Enable GPIO driver and driver module for Armada-70x0
+GPIO driver use driver module
+
+Change-Id: I8244823fcd18bd75292e8a230e7671403d3b3312
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29792
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ configs/mvebu_armada70x0_defconfig | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/configs/mvebu_armada70x0_defconfig b/configs/mvebu_armada70x0_defconfig
+index c51ed8f..413b49c 100644
+--- a/configs/mvebu_armada70x0_defconfig
++++ b/configs/mvebu_armada70x0_defconfig
+@@ -26,6 +26,7 @@ CONFIG_CMD_MVEBU_HW_INFO=y
+ CONFIG_OF_CONTROL=y
+ CONFIG_OF_EMBED=y
+ CONFIG_DEFAULT_DEVICE_TREE="armada-70x0-db_router"
++CONFIG_DM=y
+ CONFIG_MVEBU_DW_PCIE=y
+ CONFIG_NAND_PXA3XX=y
+ CONFIG_SCSI_AHCI_PLAT=y
+@@ -41,6 +42,7 @@ CONFIG_SYS_NS16550=y
+ CONFIG_MVEBU_I2C=y
+ CONFIG_MVEBU_SPI=y
+ CONFIG_MVEBU_PINCTL=y
++CONFIG_MVEBU_GPIO=y
+ CONFIG_MVEBU_MPP_BUS=y
+ CONFIG_USB=y
+ CONFIG_USB_XHCI_HCD=y
+-- 
+1.9.1
+

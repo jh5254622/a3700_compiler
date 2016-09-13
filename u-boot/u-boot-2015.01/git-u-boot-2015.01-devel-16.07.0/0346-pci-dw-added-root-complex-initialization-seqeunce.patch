@@ -1,0 +1,211 @@
+From 254b8fd27f631999a16f2d8c39a15e0b5c611d21 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 20 Aug 2015 16:57:42 +0300
+Subject: [PATCH 0346/1240] pci: dw: added root complex initialization seqeunce
+
+Change-Id: I265dd39fab33bfb0b9deaa8eaf34a10f98a43d55
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22999
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/pci/pcie_dw.c       | 30 +++++++++++++++++++--
+ drivers/pci/pcie_dw.h       |  1 +
+ drivers/pci/pcie_mvebu_dw.c | 64 ++++++++++++++++++++++++++++++++++++---------
+ 3 files changed, 81 insertions(+), 14 deletions(-)
+
+diff --git a/drivers/pci/pcie_dw.c b/drivers/pci/pcie_dw.c
+index c8d71f1..ccc248e 100644
+--- a/drivers/pci/pcie_dw.c
++++ b/drivers/pci/pcie_dw.c
+@@ -58,6 +58,14 @@ DECLARE_GLOBAL_DATA_PTR;
+ #define PCIE_ATU_FUNC(x)		(((x) & 0x7) << 16)
+ #define PCIE_ATU_UPPER_TARGET		0x91C
+ 
++#define PCIE_LINK_CTL_2			0xA0
++#define TARGET_LINK_SPEED_MASK		0xF
++#define LINK_SPEED_GEN_1		0x1
++
++#define PCIE_GEN3_RELATED		0x890
++#define GEN3_EQU_DISABLE		(1 << 16)
++#define GEN3_ZRXDC_NON_COMP		(1 << 0)
++
+ /*
+  * iATU region setup
+  */
+@@ -134,7 +142,7 @@ static int dw_pcie_read_config(struct pci_controller *hose, pci_dev_t bdf,
+ 	debug("PCIE CFG read:  (b,d,f)=(%2ld,%2ld,%2ld) ", PCI_BUS(bdf), PCI_DEV(bdf), PCI_FUNC(bdf));
+ 
+ 	if (!dw_pcie_addr_valid(bdf, hose->first_busno)) {
+-		debug("address out of range\n");
++		debug("- out of range\n");
+ 		*val = 0xffffffff;
+ 		return 1;
+ 	}
+@@ -159,7 +167,7 @@ static int dw_pcie_write_config(struct pci_controller *hose, pci_dev_t bdf,
+ 	debug("(addr,val)=(0x%04x, 0x%08x)\n", where, val);
+ 
+ 	if (!dw_pcie_addr_valid(bdf, hose->first_busno)) {
+-		debug("address out of range\n");
++		debug("- out of range\n");
+ 		return 1;
+ 	}
+ 
+@@ -170,6 +178,24 @@ static int dw_pcie_write_config(struct pci_controller *hose, pci_dev_t bdf,
+ 	return 0;
+ }
+ 
++void dw_pcie_configure(uintptr_t regs_base)
++{
++#ifdef CONFIG_PALLADIUM
++	u32 reg;
++
++	/*  Set link to GEN 1 */;
++	reg  = readl(regs_base + PCIE_LINK_CTL_2);
++	reg &= ~TARGET_LINK_SPEED_MASK;
++	reg |= LINK_SPEED_GEN_1;
++	writel(reg, regs_base + PCIE_LINK_CTL_2);
++
++	reg  = readl(regs_base + PCIE_GEN3_RELATED);
++	reg |= GEN3_EQU_DISABLE;
++	reg |= GEN3_ZRXDC_NON_COMP;
++	writel(reg, regs_base + PCIE_GEN3_RELATED);
++#endif
++}
++
+ /*
+  * We dont use a host bridge so don't let the
+  * stack skip CFG cycle for dev = 0 func = 0
+diff --git a/drivers/pci/pcie_dw.h b/drivers/pci/pcie_dw.h
+index 76f6e5a..517e5e8 100644
+--- a/drivers/pci/pcie_dw.h
++++ b/drivers/pci/pcie_dw.h
+@@ -37,6 +37,7 @@ int dw_pcie_link_up(uintptr_t regs_base);
+ int dw_pcie_init(int host_id, uintptr_t regs_base, struct pcie_win *mem_win,
+ 		struct pcie_win *cfg_win, int first_busno);
+ int dw_pcie_set_endpoint(u32 hid, u32 regs_base);
++void dw_pcie_configure(uintptr_t regs_base);
+ 
+ /* Must be implemented by SoC wrapper layer. */
+ int soc_pcie_link_up(uintptr_t regs_base);
+diff --git a/drivers/pci/pcie_mvebu_dw.c b/drivers/pci/pcie_mvebu_dw.c
+index 1180fb1..b036841 100644
+--- a/drivers/pci/pcie_mvebu_dw.c
++++ b/drivers/pci/pcie_mvebu_dw.c
+@@ -32,30 +32,71 @@
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+-#define PCIE_LINK_UP_TIMEOUT_US		(1000000)
++#define PCIE_LINK_UP_TIMEOUT_US		(1000)
++
++#define PCIE_GLOBAL_CONTROL		0x8000
++#define PCIE_APP_LTSSM_EN		(1 << 2)
++#define PCIE_DEVICE_TYPE_OFFSET		(4)
++#define PCIE_DEVICE_TYPE_MASK		(0xF)
++#define PCIE_DEVICE_TYPE_EP		(0x0) /* Endpoint */
++#define PCIE_DEVICE_TYPE_LEP		(0x1) /* Legacy endpoint */
++#define PCIE_DEVICE_TYPE_RC		(0x2) /* Root complex */
+ 
+ #define PCIE_GLOBAL_STATUS		0x8008
+ #define PCIE_GLB_STS_RDLH_LINK_UP	(1 << 1)
+ #define PCIE_GLB_STS_PHY_LINK_UP	(1 << 9)
+ 
++#define PCIE_ARCACHE_TRC		0x8050
++#define PCIE_AWCACHE_TRC		0x8054
++#define ARCACHE_SHAREABLE_CACHEABLE	0x3511
++#define AWCACHE_SHAREABLE_CACHEABLE	0x5311
++
++
+ static int mvebu_pcie_link_up(uintptr_t regs_base)
+ {
+-	u32 reg, mask;
++	u32 reg;
+ 	int timeout = PCIE_LINK_UP_TIMEOUT_US;
++	u32 mask = PCIE_GLB_STS_RDLH_LINK_UP | PCIE_GLB_STS_PHY_LINK_UP;
+ 
+ 	while (timeout > 0) {
+-		/* Check for link. */
+ 		reg = readl(regs_base + PCIE_GLOBAL_STATUS);
+-		mask = PCIE_GLB_STS_RDLH_LINK_UP | PCIE_GLB_STS_PHY_LINK_UP;
+ 		if ((reg & mask) == mask)
+ 			return 1;
+-		udelay(10);
++
++		udelay(1);
+ 		timeout--;
+ 	}
+ 
+ 	return 0;
+ }
+ 
++int dw_pcie_link_up(uintptr_t regs_base)
++{
++	u32 reg;
++
++	/* Disable LTSSM state machine to enable configuration
++	 * ans set the device to root complex mode */
++	reg = readl(regs_base + PCIE_GLOBAL_CONTROL);
++	reg &= ~(PCIE_APP_LTSSM_EN);
++	reg &= ~(PCIE_DEVICE_TYPE_MASK << PCIE_DEVICE_TYPE_OFFSET);
++	reg |= PCIE_DEVICE_TYPE_RC << PCIE_DEVICE_TYPE_OFFSET;
++	writel(reg, regs_base + PCIE_GLOBAL_CONTROL);
++
++	/* Set the PCIe master AXI attributes */
++	writel(ARCACHE_SHAREABLE_CACHEABLE, regs_base + PCIE_ARCACHE_TRC);
++	writel(AWCACHE_SHAREABLE_CACHEABLE, regs_base + PCIE_AWCACHE_TRC);
++
++	/* DW pre link configurations */
++	dw_pcie_configure(regs_base);
++
++	/* Configuration done. Start LTSSM */
++	reg = readl(regs_base + PCIE_GLOBAL_CONTROL);
++	reg |= PCIE_APP_LTSSM_EN;
++	writel(reg, regs_base + PCIE_GLOBAL_CONTROL);
++
++	return mvebu_pcie_link_up(regs_base);
++}
++
+ void pci_init_board(void)
+ {
+ 	int host_id = -1;
+@@ -64,7 +105,7 @@ void pci_init_board(void)
+ 	const void *blob = gd->fdt_blob;
+ 	struct pcie_win mem_win, cfg_win;
+ 	uintptr_t regs_base;
+-	int err, link;
++	int err;
+ 
+ 	count = fdtdec_find_aliases_for_id(blob, "pcie-controller",
+ 			COMPAT_MVEBU_DW_PCIE, &bus_node, 1);
+@@ -90,8 +131,11 @@ void pci_init_board(void)
+ 		}
+ 
+ 		/* Don't register host if link is down */
+-		if (!dw_pcie_link_up(regs_base))
++		if (!dw_pcie_link_up(regs_base)) {
++			printf("PCIE-%d: Link down\n", host_id);
+ 			continue;
++		}
++		printf("PCIE-%d: Link up (Bus %d)\n", host_id, first_busno);
+ 
+ 		err = fdtdec_get_int_array(blob, port_node, "mem", (u32 *)&mem_win, 2);
+ 		if (err) {
+@@ -108,13 +152,9 @@ void pci_init_board(void)
+ 		/* If all is well register the host */
+ 		first_busno = dw_pcie_init(host_id, regs_base, &mem_win, &cfg_win, first_busno);
+ 		if (first_busno < 0)
+-			/* Print error message, and try to initialize other
+-			** hosts. */
++			/* Print error message, and try to initialize other hosts */
+ 			printf("Failed to initialize PCIe host %d.\n", host_id);
+ 
+-		/* Check the link status - for info only */
+-		link = mvebu_pcie_link_up(regs_base);
+-		printf("PCIE-%d: Link %s (Bus %d)\n", host_id, (link ? "Up" : "Down"), first_busno);
+ 	}
+ }
+ 
+-- 
+1.9.1
+

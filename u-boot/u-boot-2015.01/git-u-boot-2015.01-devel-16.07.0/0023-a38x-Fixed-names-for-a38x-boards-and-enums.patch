@@ -1,0 +1,120 @@
+From 3bea792152c97888cf7929c550d8bff3e6d75fd6 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 30 Mar 2014 12:44:51 +0300
+Subject: [PATCH 0023/1240] a38x: Fixed names for a38x boards and enums
+
+Change-Id: I9aae753becd5088cfd2ec27754a9d786af4770b4
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ board/mvebu/armada38x/armada38x.c       |  9 ++++-----
+ board/mvebu/armada38x/board-info.c      | 14 +++++---------
+ board/mvebu/armada38x/board-info.h      |  6 ++----
+ board/mvebu/armada38x/db-88f6820-info.c |  4 ++--
+ board/mvebu/armada38x/rd-88f6820-info.c |  4 ++--
+ 5 files changed, 15 insertions(+), 22 deletions(-)
+
+diff --git a/board/mvebu/armada38x/armada38x.c b/board/mvebu/armada38x/armada38x.c
+index cda08fb..4bc9459 100644
+--- a/board/mvebu/armada38x/armada38x.c
++++ b/board/mvebu/armada38x/armada38x.c
+@@ -29,10 +29,9 @@
+ #include "board-info.h"
+ 
+ 
+-/*
+- * Board specific ethernet initialization routine.
+- */
+-int board_eth_init(bd_t *bis)
++struct mvebu_board_family *board_init_family(void)
+ {
+-	return 0;
++	/* Board family specific init goes here */
++
++	return &a38x_board_family;
+ }
+diff --git a/board/mvebu/armada38x/board-info.c b/board/mvebu/armada38x/board-info.c
+index 771be68..2897b6f 100644
+--- a/board/mvebu/armada38x/board-info.c
++++ b/board/mvebu/armada38x/board-info.c
+@@ -55,10 +55,8 @@ struct sar_data a38x_sar = {
+ /* Assuming their location is equal on all boards */
+ struct cfg_var a38x_cfg_lookup[MAX_CFG] = {
+ 	[BOARD_ID_CFG] = {0, 0, 3, 4, 0,
+-		{{ARMADA_8021_DB_ID, "DB-8021", VAR_IS_DEFUALT},
+-		 {ARMADA_8021_RD_ID, "RD-8021", 0},
+-		 {ARMADA_8022_DB_ID, "DB-8022", 0},
+-		 {ARMADA_8022_RD_ID, "RD-8022", 0} },
++		{{ARMADA_38X_DB_ID, "DB-88F6820-BP", VAR_IS_DEFUALT},
++		 {ARMADA_38X_RD_ID, "DB-88F6820-RD", 0} }
+ 	},
+ 	[SERDES_0_CFG] = {1, 0, 3, 2, 0,
+ 		{{0x0, "pcie 0", VAR_IS_DEFUALT},
+@@ -77,15 +75,13 @@ struct cfg_data a38x_cfg = {
+ 	.cfg_lookup   = a38x_cfg_lookup
+ };
+ 
+-
+-
+ struct mvebu_board_info *a38x_board_lookup[MAX_BOARD_ID] = {
+-	[ARMADA_8021_DB_ID] = &a38x_db_info,
+-	[ARMADA_8021_RD_ID] = &a38x_rd_info
++	[ARMADA_38X_DB_ID] = &a38x_db_info,
++	[ARMADA_38X_RD_ID] = &a38x_rd_info
+ };
+ 
+ struct mvebu_board_family a38x_board_family = {
+-	.default_id = ARMADA_8021_DB_ID,
++	.default_id = ARMADA_38X_DB_ID,
+ 	.board_cnt = MAX_BOARD_ID,
+ 	.boards_info = a38x_board_lookup,
+ 	.sar = &a38x_sar,
+diff --git a/board/mvebu/armada38x/board-info.h b/board/mvebu/armada38x/board-info.h
+index e011814..aff5614 100644
+--- a/board/mvebu/armada38x/board-info.h
++++ b/board/mvebu/armada38x/board-info.h
+@@ -24,10 +24,8 @@
+ #include "../common/sar.h"
+ 
+ enum a38x_board_types {
+-	ARMADA_8021_DB_ID = 0,
+-	ARMADA_8021_RD_ID,
+-	ARMADA_8022_DB_ID,
+-	ARMADA_8022_RD_ID,
++	ARMADA_38X_DB_ID = 0,
++	ARMADA_38X_RD_ID,
+ 	MAX_BOARD_ID
+ };
+ 
+diff --git a/board/mvebu/armada38x/db-88f6820-info.c b/board/mvebu/armada38x/db-88f6820-info.c
+index f94ace9..d7d5560 100644
+--- a/board/mvebu/armada38x/db-88f6820-info.c
++++ b/board/mvebu/armada38x/db-88f6820-info.c
+@@ -30,8 +30,8 @@ struct mvebu_board_config db_a38x_config = {
+ };
+ 
+ struct mvebu_board_info a38x_db_info = {
+-	.name = "DB-MV8021",
+-	.id = ARMADA_8021_DB_ID,
++	.name = "DB-88F6820-BP",
++	.id = ARMADA_38X_DB_ID,
+ 	.configurable = 1,
+ 	.config_data = &db_a38x_config,
+ };
+diff --git a/board/mvebu/armada38x/rd-88f6820-info.c b/board/mvebu/armada38x/rd-88f6820-info.c
+index 262b3fc..35ab11c 100644
+--- a/board/mvebu/armada38x/rd-88f6820-info.c
++++ b/board/mvebu/armada38x/rd-88f6820-info.c
+@@ -36,8 +36,8 @@ u16 a38x_rd_unit_disable[MAX_UNIT_ID] = {
+ };
+ 
+ struct mvebu_board_info a38x_rd_info = {
+-	.name = "RD-MV8021",
+-	.id = ARMADA_8021_RD_ID,
++	.name = "RD-88F6820-GP",
++	.id = ARMADA_38X_RD_ID,
+ 	.unit_mask = a38x_rd_unit_disable,
+ 	.unit_update_mode = UNIT_INFO_DISABLE,
+ 	.configurable = 1,
+-- 
+1.9.1
+

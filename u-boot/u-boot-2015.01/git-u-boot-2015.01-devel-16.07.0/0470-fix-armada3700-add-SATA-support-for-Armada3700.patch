@@ -1,0 +1,208 @@
+From af1318f15f183d07874dcff59856e1b5ca859055 Mon Sep 17 00:00:00 2001
+From: Jing Hua <jinghua@marvell.com>
+Date: Thu, 13 Aug 2015 14:36:28 +0800
+Subject: [PATCH 0470/1240] fix: armada3700: add SATA support for Armada3700
+
+	1. Added support for SATA support for Armada3700.
+	2. This driver has been tested on Palladium.
+
+Change-Id: Ib24f154c66c9be30feefbd05e2b3ac06057a8ec6
+Signed-off-by: Jing Hua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22803
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/soc-init.c       | 13 +++++++++++++
+ arch/arm/dts/armada-lp-db.dts              |  3 +++
+ arch/arm/dts/armada-lp-palladium.dts       |  3 +++
+ arch/arm/dts/armada-lp.dtsi                |  5 +++++
+ common/cmd_scsi.c                          | 13 ++++++++++++-
+ configs/mvebu_armadalp_defconfig           |  2 ++
+ configs/mvebu_armadalp_palladium_defconfig |  2 ++
+ doc/device-tree-bindings/README.mvebu      |  2 ++
+ drivers/block/Kconfig                      | 20 ++++++++++++++++++++
+ include/configs/mvebu-common.h             |  5 +++--
+ 10 files changed, 65 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index d19ab31..6ebdc4d 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -25,6 +25,8 @@
+ #include <asm/arch-mvebu/soc.h>
+ #include <asm/arch-mvebu/tables.h>
+ #include <asm/arch-mvebu/thermal.h>
++#include <ahci.h>
++#include <scsi.h>
+ 
+ #ifdef CONFIG_MVEBU_CCU
+ #include <asm/arch-mvebu/ccu.h>
+@@ -39,6 +41,17 @@
+ #include <asm/arch-mvebu/mbus.h>
+ #endif
+ 
++#ifdef CONFIG_SCSI_AHCI_PLAT
++void scsi_init(void)
++{
++	ahci_init();
++	/* use mode 1 for scsi_scan, so scsi device info will
++	  * be reported (print out) after scan the scsi bus.
++	 */
++	scsi_scan(1);
++}
++#endif
++
+ /* Weak function for SoC who need specific thermal sensor */
+ u32 __mvebu_thermal_sensor_probe(void)
+ {
+diff --git a/arch/arm/dts/armada-lp-db.dts b/arch/arm/dts/armada-lp-db.dts
+index c9c5e27..3c2a282 100644
+--- a/arch/arm/dts/armada-lp-db.dts
++++ b/arch/arm/dts/armada-lp-db.dts
+@@ -29,6 +29,9 @@
+ 					status = "okay";
+ 				};
+ 			};
++			sata: sata@e0000 {
++				status = "okay";
++			};
+ 		};
+ 	};
+ };
+diff --git a/arch/arm/dts/armada-lp-palladium.dts b/arch/arm/dts/armada-lp-palladium.dts
+index a9c52c5..b4fe9fd 100644
+--- a/arch/arm/dts/armada-lp-palladium.dts
++++ b/arch/arm/dts/armada-lp-palladium.dts
+@@ -31,6 +31,9 @@
+ 					status = "okay";
+ 				};
+ 			};
++			sata: sata@e0000 {
++				status = "okay";
++			};
+ 		};
+ 	};
+ };
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index 5b7158d..85e6aed 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -94,6 +94,11 @@
+ 					status = "disabled";
+ 				};
+ 			};
++			sata: sata@e0000 {
++				compatible = "marvell,mvebu-sata";
++				reg = <0xe0000 0x200>;
++				status = "disabled";
++			};
+ 		};
+ 	};
+ };
+diff --git a/common/cmd_scsi.c b/common/cmd_scsi.c
+index cbc107e..277a323 100644
+--- a/common/cmd_scsi.c
++++ b/common/cmd_scsi.c
+@@ -179,7 +179,18 @@ int scsi_get_disk_count(void)
+ 	return scsi_max_devs;
+ }
+ 
+-#ifdef CONFIG_PCI
++#if defined(CONFIG_PCI) && (!defined(CONFIG_SCSI_AHCI_PLAT))
++/* This routine applies for SATA over PCI only, since it scans SATA device
++  * with routine pci_find_device, and use scsi_device_list as input which
++  * has PCI device ID in it.
++  * So when SATA is over SATA controller, another scsi_init routine is needed.
++  * which will be invoked by routine board_init_r.
++  * But when a SoC has both SATA over controller and PCI (for other device),
++  * there will be two routines scsi_init compiled, and that is a link error.
++  *
++  * That is the reason of not compiled this routine when SATA is on controller but
++  * not over PCI.
++*/
+ void scsi_init(void)
+ {
+ 	int busdevfunc;
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index 050509b..5fa824d 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -4,6 +4,8 @@ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_TARGET_ARMADA_LP=y
+ CONFIG_MVEBU_SPI=y
+ CONFIG_MVNETA=y
++CONFIG_MV_INCLUDE_SATA=y
++CONFIG_SCSI_AHCI_PLAT=y
+ CONFIG_MVEBU_NETA_BYPASS_DEC_WIN=y
+ CONFIG_I2C_MV=y
+ CONFIG_I2C_MV_PAD_REG=n
+diff --git a/configs/mvebu_armadalp_palladium_defconfig b/configs/mvebu_armadalp_palladium_defconfig
+index d356c25..3343b78 100644
+--- a/configs/mvebu_armadalp_palladium_defconfig
++++ b/configs/mvebu_armadalp_palladium_defconfig
+@@ -4,6 +4,8 @@ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_TARGET_ARMADA_LP=y
+ CONFIG_MVEBU_SPI=y
+ CONFIG_MVNETA=y
++CONFIG_MV_INCLUDE_SATA=y
++CONFIG_SCSI_AHCI_PLAT=y
+ CONFIG_MVEBU_NETA_BYPASS_DEC_WIN=y
+ CONFIG_I2C_MV=y
+ CONFIG_I2C_MV_PAD_REG=n
+diff --git a/doc/device-tree-bindings/README.mvebu b/doc/device-tree-bindings/README.mvebu
+index d48e2e9..b3b0c28 100644
+--- a/doc/device-tree-bindings/README.mvebu
++++ b/doc/device-tree-bindings/README.mvebu
+@@ -57,6 +57,8 @@ Group Ltd.
+ 				Specify the GBE interface for armadaLP, check doc/device-tree-bindings/net/mvebu-gbe.txt
+ 			2.1.8 /soc/internal-regs/pcie/ node;
+ 				Specify the PCIe interface for armadaLP, check doc/device-tree-bindings/pci/mvebu-pci.txt
++			2.1.9 /soc/internal-regs/sata/ node;
++				Specify the SATA interface for mvebu, check doc/device-tree-bindings/sata/mvebu-sata.txt
+ 
+ 3) /sar/ node:
+ 	Specify the sample at reset database, check
+diff --git a/drivers/block/Kconfig b/drivers/block/Kconfig
+index e69de29..8249059 100644
+--- a/drivers/block/Kconfig
++++ b/drivers/block/Kconfig
+@@ -0,0 +1,20 @@
++menu "block device drivers"
++config MV_INCLUDE_SATA
++	bool "Include driver for mvebu SATA device"
++	default n
++	help
++	  Choose this option to enable
++	  driver for mvebu SATA device,
++	  which is standard ahci.c and
++	  could be based on PCIe or SATA
++	  controller.
++
++config SCSI_AHCI_PLAT
++	bool "SATA device based on controller"
++	default n
++	help
++	  Choose this option to enable
++	  the SATA device driver that
++	  based on directly on SATA
++	  controller.
++endmenu
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 4f36b92..92f3ee2 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -330,8 +330,9 @@
+ 	#define ENV_ETH_PRIME           "e1000#0"
+ #endif /* CONFIG_CMD_NET */
+ 
+-/* SATA AHCI over PCIe */
+-#if defined(CONFIG_DEVEL_BOARD) && (defined(CONFIG_MVEBU_PCI) || defined(CONFIG_MVEBU_DW_PCIE))
++/* SATA AHCI via controller or over PCIe */
++#if defined(CONFIG_DEVEL_BOARD) && \
++	(defined(CONFIG_MVEBU_PCI) || defined(CONFIG_MVEBU_DW_PCIE_) || defined(CONFIG_MV_INCLUDE_SATA))
+ 
+ 	#define CONFIG_CMD_SCSI
+ 	#define CONFIG_CMD_EXT2
+-- 
+1.9.1
+

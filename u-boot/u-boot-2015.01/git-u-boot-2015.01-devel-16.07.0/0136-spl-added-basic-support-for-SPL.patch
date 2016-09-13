@@ -1,0 +1,247 @@
+From 155ec7d6ca0191dafea39fb55e6d3a7f137abd5d Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 8 Mar 2015 19:12:53 +0200
+Subject: [PATCH 0136/1240] spl: added basic support for SPL
+
+	- Added basic support for SPL:
+	  Linker script for arm64, and arm32
+	  board_init_f function that init the DDR controller and console
+	  Disable doimage when compiling U-Boot with SPL
+	  Enable compilation for DDR controller code in SPL
+
+Change-Id: Ie60846d0b052ad94241f4a79370e4cb5c380ac94
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17309
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ Makefile                                       |  2 +
+ arch/arm/cpu/mvebu-common/Makefile             |  1 +
+ arch/arm/cpu/mvebu-common/spl.c                | 33 +++++++++++++
+ arch/arm/cpu/mvebu-common/u-boot-armv7-spl.lds | 64 ++++++++++++++++++++++++++
+ arch/arm/cpu/mvebu-common/u-boot-armv8-spl.lds | 64 ++++++++++++++++++++++++++
+ scripts/Makefile.spl                           |  1 +
+ 6 files changed, 165 insertions(+)
+ create mode 100644 arch/arm/cpu/mvebu-common/spl.c
+ create mode 100644 arch/arm/cpu/mvebu-common/u-boot-armv7-spl.lds
+ create mode 100644 arch/arm/cpu/mvebu-common/u-boot-armv8-spl.lds
+
+diff --git a/Makefile b/Makefile
+index fb4cce4..dcdeb32 100644
+--- a/Makefile
++++ b/Makefile
+@@ -732,7 +732,9 @@ ALL-$(CONFIG_REMAKE_ELF) += u-boot.elf
+ # We can't do this yet due to the need for binary blobs
+ # ALL-$(CONFIG_X86_RESET_VECTOR) += u-boot.rom
+ 
++ifneq ($(CONFIG_SPL), y)
+ ALL-$(CONFIG_MVEBU_DOIMAGE) += doimage
++endif
+ ALL-$(CONFIG_PALLADIUM) += bin2phex
+ 
+ # enable combined SPL/u-boot/dtb rules for tegra
+diff --git a/arch/arm/cpu/mvebu-common/Makefile b/arch/arm/cpu/mvebu-common/Makefile
+index 7a510f1..b742b06 100644
+--- a/arch/arm/cpu/mvebu-common/Makefile
++++ b/arch/arm/cpu/mvebu-common/Makefile
+@@ -26,6 +26,7 @@ obj-y += clock.o
+ obj-$(CONFIG_MVEBU_TIMER) += timer_mvebu.o
+ obj-$(CONFIG_GENERIC_TIMER) += generic_timer.o
+ obj-$(CONFIG_MVEBU_CA9) += platform.o
++obj-$(CONFIG_SPL_BUILD) += spl.o
+ ifeq "$(CONFIG_MVEBU_CA9)"  "y"
+ obj-$(CONFIG_ADEC) += adec_mbus.o
+ else
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+new file mode 100644
+index 0000000..0634c16
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -0,0 +1,33 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2015 Marvell International Ltd.
++* ***************************************************************************
++* This program is free software: you can redistribute it and/or modify it
++* under the terms of the GNU General Public License as published by the Free
++* Software Foundation, either version 2 of the License, or any later version.
++*
++* This program is distributed in the hope that it will be useful,
++* but WITHOUT ANY WARRANTY; without even the implied warranty of
++* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++* GNU General Public License for more details.
++*
++* You should have received a copy of the GNU General Public License
++* along with this program.  If not, see <http://www.gnu.org/licenses/>.
++* ***************************************************************************
++*/
++
++#include <common.h>
++#include <spl.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++extern void static_dram_init(void);
++
++void board_init_f(ulong bootflag)
++{
++	gd = &gdata;
++	gd->baudrate = CONFIG_BAUDRATE;
++
++	static_dram_init();
++	preloader_console_init();
++}
+diff --git a/arch/arm/cpu/mvebu-common/u-boot-armv7-spl.lds b/arch/arm/cpu/mvebu-common/u-boot-armv7-spl.lds
+new file mode 100644
+index 0000000..4ab0178
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/u-boot-armv7-spl.lds
+@@ -0,0 +1,64 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2015 Marvell International Ltd.
++* ***************************************************************************
++* This program is free software: you can redistribute it and/or modify it
++* under the terms of the GNU General Public License as published by the Free
++* Software Foundation, either version 2 of the License, or any later version.
++*
++* This program is distributed in the hope that it will be useful,
++* but WITHOUT ANY WARRANTY; without even the implied warranty of
++* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++* GNU General Public License for more details.
++*
++* You should have received a copy of the GNU General Public License
++* along with this program.  If not, see <http://www.gnu.org/licenses/>.
++* ***************************************************************************
++*/
++
++MEMORY { .sram : ORIGIN = CONFIG_SPL_TEXT_BASE, \
++		LENGTH = CONFIG_SPL_MAX_SIZE }
++MEMORY { .sdram : ORIGIN = CONFIG_SPL_BSS_START_ADDR, \
++		LENGTH = CONFIG_SPL_BSS_MAX_SIZE }
++
++OUTPUT_FORMAT("elf32-littlearm", "elf32-littlearm", "elf32-littlearm")
++OUTPUT_ARCH(arm)
++ENTRY(_start)
++SECTIONS
++{
++	. = CONFIG_SPL_TEXT_BASE;
++	.text      :
++	{
++		__start = .;
++		*(.vectors)
++		arch/arm/cpu/armv7/start.o	(.text)
++		*(.text*)
++	} >.sram
++
++	. = ALIGN(4);
++	.rodata : { *(SORT_BY_ALIGNMENT(.rodata*)) } >.sram
++
++	. = ALIGN(4);
++	.data : { *(SORT_BY_ALIGNMENT(.data*)) } >.sram
++
++	.u_boot_list : {
++		KEEP(*(SORT(.u_boot_list*)));
++	} >.sram
++
++	. = ALIGN(4);
++	__image_copy_end = .;
++
++	.end :
++	{
++		*(.__end)
++	} >.sram
++
++	.bss :
++	{
++		. = ALIGN(4);
++		__bss_start = .;
++		*(.bss*)
++		. = ALIGN(4);
++		__bss_end = .;
++	} >.sdram
++}
+diff --git a/arch/arm/cpu/mvebu-common/u-boot-armv8-spl.lds b/arch/arm/cpu/mvebu-common/u-boot-armv8-spl.lds
+new file mode 100644
+index 0000000..21862ac
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/u-boot-armv8-spl.lds
+@@ -0,0 +1,64 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2015 Marvell International Ltd.
++* ***************************************************************************
++* This program is free software: you can redistribute it and/or modify it
++* under the terms of the GNU General Public License as published by the Free
++* Software Foundation, either version 2 of the License, or any later version.
++*
++* This program is distributed in the hope that it will be useful,
++* but WITHOUT ANY WARRANTY; without even the implied warranty of
++* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++* GNU General Public License for more details.
++*
++* You should have received a copy of the GNU General Public License
++* along with this program.  If not, see <http://www.gnu.org/licenses/>.
++* ***************************************************************************
++*/
++
++MEMORY { .sram : ORIGIN = CONFIG_SPL_TEXT_BASE, \
++		LENGTH = CONFIG_SPL_MAX_SIZE }
++MEMORY { .sdram : ORIGIN = CONFIG_SPL_BSS_START_ADDR, \
++		LENGTH = CONFIG_SPL_BSS_MAX_SIZE }
++
++OUTPUT_FORMAT("elf64-littleaarch64", "elf64-littleaarch64", "elf64-littleaarch64")
++OUTPUT_ARCH(aarch64)
++ENTRY(_start)
++SECTIONS
++{
++	. = CONFIG_SPL_TEXT_BASE;
++	.text      :
++	{
++		__start = .;
++		*(.vectors)
++		arch/arm/cpu/armv8/start.o	(.text)
++		*(.text*)
++	} >.sram
++
++	. = ALIGN(4);
++	.rodata : { *(SORT_BY_ALIGNMENT(.rodata*)) } >.sram
++
++	. = ALIGN(4);
++	.data : { *(SORT_BY_ALIGNMENT(.data*)) } >.sram
++
++	.u_boot_list : {
++		KEEP(*(SORT(.u_boot_list*)));
++	} >.sram
++
++	. = ALIGN(4);
++	__image_copy_end = .;
++
++	.end :
++	{
++		*(.__end)
++	} >.sram
++
++	.bss :
++	{
++		. = ALIGN(4);
++		__bss_start = .;
++		*(.bss*)
++		. = ALIGN(4);
++		__bss_end = .;
++	} >.sdram
++}
+diff --git a/scripts/Makefile.spl b/scripts/Makefile.spl
+index ecf3037..4c5bc7f 100644
+--- a/scripts/Makefile.spl
++++ b/scripts/Makefile.spl
+@@ -79,6 +79,7 @@ libs-$(CONFIG_SPL_WATCHDOG_SUPPORT) += drivers/watchdog/
+ libs-$(CONFIG_SPL_USB_HOST_SUPPORT) += drivers/usb/host/
+ libs-$(CONFIG_OMAP_USB_PHY) += drivers/usb/phy/
+ libs-$(CONFIG_SPL_SATA_SUPPORT) += drivers/block/
++libs-y += drivers/ddr/
+ 
+ head-y		:= $(addprefix $(obj)/,$(head-y))
+ libs-y		:= $(addprefix $(obj)/,$(libs-y))
+-- 
+1.9.1
+

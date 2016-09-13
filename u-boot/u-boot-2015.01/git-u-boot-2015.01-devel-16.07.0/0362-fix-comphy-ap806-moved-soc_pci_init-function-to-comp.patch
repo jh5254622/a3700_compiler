@@ -1,0 +1,200 @@
+From e7816c5555d8cf8c80e598af59dbf8902c993b03 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 26 Aug 2015 23:29:50 +0300
+Subject: [PATCH 0362/1240] fix: comphy: ap806: moved soc_pci_init function to
+ comphy code
+
+- update soc_init and dram over pci.
+
+Change-Id: Id90af1325889678818990d796bfe7193273c33af
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23233
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Neta Zur Hershkovits <neta@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/soc-init.c         | 27 ------------------
+ arch/arm/cpu/mvebu-common/dram_over_pci.c      | 28 ++----------------
+ arch/arm/dts/apn-806.dtsi                      |  2 +-
+ arch/arm/include/asm/arch-armada8k/regs-base.h |  3 --
+ drivers/phy/comphy_ap806_z1.c                  | 39 +++++++++++++++++++++++++-
+ 5 files changed, 41 insertions(+), 58 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/soc-init.c b/arch/arm/cpu/armv8/armada8k/soc-init.c
+index a0a11cc..967053f 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc-init.c
++++ b/arch/arm/cpu/armv8/armada8k/soc-init.c
+@@ -50,35 +50,8 @@ int soc_get_id(void)
+ 	return CONFIG_ARMADA_8K_SOC_ID;
+ }
+ 
+-#ifdef CONFIG_MVEBU_PCIE
+-static void soc_pcie_init(void)
+-{
+-	u32 reg;
+-
+-	reg = readl(MVEBU_PCIE_MAC_CTL);
+-
+-	/* Set PCIe transactions towards A2 as:
+-	 * - read allocate
+-	 * - write non alocate
+-	 * - outer sharable */
+-	reg &= ~(0xF << 8);
+-	reg |= (0x7 << 8);
+-
+-	/* Set the Port x4 */
+-	reg |= (1 << 14);
+-
+-	/* Enable PCIe unit */
+-	reg |= 1;
+-
+-	writel(reg, MVEBU_PCIE_MAC_CTL);
+-}
+-#endif
+-
+ void soc_init(void)
+ {
+-#ifdef CONFIG_MVEBU_PCIE
+-	soc_pcie_init();
+-#endif
+ 	return;
+ }
+ 
+diff --git a/arch/arm/cpu/mvebu-common/dram_over_pci.c b/arch/arm/cpu/mvebu-common/dram_over_pci.c
+index b0a080e..95e527e 100644
+--- a/arch/arm/cpu/mvebu-common/dram_over_pci.c
++++ b/arch/arm/cpu/mvebu-common/dram_over_pci.c
+@@ -115,41 +115,17 @@ void dram_over_pci_window_config(void)
+ }
+ #endif
+ 
+-static void soc_pcie_init(void)
+-{
+-	u32 reg;
+-
+-	reg = readl(MVEBU_PCIE_MAC_CTL);
+-
+-	/* Set PCIe transactions towards A2 as:
+-	 * - read allocate
+-	 * - write non alocate
+-	 * - outer sharable */
+-	reg &= ~(0xF << 8);
+-	reg |= (0x7 << 8);
+-
+-	/* Set the Port x4 */
+-	reg |= (1 << 14);
+-
+-	/* Enable PCIe unit */
+-	reg |= 1;
+-
+-	writel(reg, MVEBU_PCIE_MAC_CTL);
+-}
+-
+ void dram_over_pci_init(const void *fdt_blob)
+ {
+ 	struct pci_controller *hose;
+ 
+-	soc_pcie_init();
++	dram_over_pci_window_config();
+ 
+-	/* wait until the PCIE card finises */
++	/* wait until the PCIE card finish */
+ 	udelay(PCI_DEVICE_INIT_DELAY);
+ 	comphy_init(fdt_blob);
+ 	udelay(PCI_DEVICE_INIT_DELAY);
+ 
+-	dram_over_pci_window_config();
+-
+ 	pci_init();
+ 
+ 	/* set PCIE bars,
+diff --git a/arch/arm/dts/apn-806.dtsi b/arch/arm/dts/apn-806.dtsi
+index 51e69da..6a8add1 100644
+--- a/arch/arm/dts/apn-806.dtsi
++++ b/arch/arm/dts/apn-806.dtsi
+@@ -100,7 +100,7 @@
+ 				compatible = "marvell,mvebu-comphy", "marvell,comphy-ap806";
+ 				mux-bitcount = <1>;
+ 				max-lanes = <1>;
+-				reg-comphy = <0x6F0120 0x8>;
++				reg-comphy = <0x6F0000 0x8>;
+ 				reg-hpipe3 = <0x70000 0x8>;
+ 				phy0 {
+ 					phy-type = <PHY_TYPE_PEX0>;
+diff --git a/arch/arm/include/asm/arch-armada8k/regs-base.h b/arch/arm/include/asm/arch-armada8k/regs-base.h
+index b345735..2e1f87b 100644
+--- a/arch/arm/include/asm/arch-armada8k/regs-base.h
++++ b/arch/arm/include/asm/arch-armada8k/regs-base.h
+@@ -44,7 +44,4 @@
+ 
+ #define MVEBU_LLC_BASE		(MVEBU_REGS_BASE + 0x8000)
+ 
+-#define MVEBU_RFU_BASE		(MVEBU_REGS_BASE + 0x6F0000)
+-#define MVEBU_PCIE_MAC_CTL	(MVEBU_RFU_BASE + 0x200)
+-
+ #endif	/* _REGS_BASE_H_ */
+diff --git a/drivers/phy/comphy_ap806_z1.c b/drivers/phy/comphy_ap806_z1.c
+index 6966c54..c3e29e1 100644
+--- a/drivers/phy/comphy_ap806_z1.c
++++ b/drivers/phy/comphy_ap806_z1.c
+@@ -23,13 +23,23 @@
+ #include <asm/arch-mvebu/comphy_hpipe.h>
+ #include <asm/arch-mvebu/mvebu.h>
+ 
+-#define COMPHY_RESET_REG		0x0
++#define COMPHY_RESET_REG		0x120
+ 
+ #define COMPHY_RESET_SW_OFFSET		14
+ #define COMPHY_RESET_SW_MASK		(1 << COMPHY_RESET_SW_OFFSET)
+ #define COMPHY_RESET_CORE_OFFSET	13
+ #define COMPHY_RESET_CORE_MASK		(1 << COMPHY_RESET_CORE_OFFSET)
+ 
++#define COMPHY_PCI_MAC_CTRL		0x200
++
++#define COMPHY_PCI_EN_OFFSET		0
++#define COMPHY_PCI_EN_MASK		(0x1 << COMPHY_PCI_EN_OFFSET)
++#define COMPHY_PCI_AXI_CACHE_OFFSET	8
++#define COMPHY_PCI_AXI_CACHE_MASK	(0xF << COMPHY_PCI_AXI_CACHE_OFFSET)
++#define COMPHY_PCI_COHERENT		0x7
++#define COMPHY_PCI_X1_EN_OFFSET		14
++#define COMPHY_PCI_X1_EN_MASK		(0x1 << COMPHY_PCI_X1_EN_OFFSET)
++
+ static void comphy_pcie_release_soft_reset(void __iomem *hpipe_addr)
+ {
+ 	/* DFE reset sequence */
+@@ -181,6 +191,33 @@ int comphy_ap806_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy
+ 		}
+ 	}
+ 
++#ifdef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
++	u32 reg;
++	if (!pcie_by4) {
++		/* This change force the mac to work by 1 */
++		reg = readl(0x5000006c);
++		reg &= ~(0x3F << 4);
++		reg |= (1 << 4);
++		writel(reg, 0x5000006c);
++	}
++#endif
++
++	/* Set PCIe transactions towards A2 as:
++	 * - read allocate
++	 * - write non alocate
++	 * - outer sharable */
++	reg_set(comphy_base_addr + COMPHY_PCI_MAC_CTRL, COMPHY_PCI_COHERENT << COMPHY_PCI_AXI_CACHE_OFFSET,
++			COMPHY_PCI_AXI_CACHE_MASK);
++
++	/* Set the Port x1 */
++	if (pcie_by4)
++		reg_set(comphy_base_addr + COMPHY_PCI_MAC_CTRL, 0 << COMPHY_PCI_X1_EN_OFFSET, COMPHY_PCI_X1_EN_MASK);
++	else
++		reg_set(comphy_base_addr + COMPHY_PCI_MAC_CTRL, 1 << COMPHY_PCI_X1_EN_OFFSET, COMPHY_PCI_X1_EN_MASK);
++
++	/* Enable PCIe unit */
++	reg_set(comphy_base_addr + COMPHY_PCI_MAC_CTRL, 1 << COMPHY_PCI_EN_OFFSET, COMPHY_PCI_EN_MASK);
++
+ 	debug_exit();
+ 	return 0;
+ }
+-- 
+1.9.1
+

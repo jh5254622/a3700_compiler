@@ -1,0 +1,177 @@
+From 7335eb78b8ccb66a35100a1f3608c373581a3d1f Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 28 Jan 2015 17:51:39 +0200
+Subject: [PATCH 0115/1240] fdt: clock: add utility to read clock/clock
+ proporties from FDT
+
+Change-Id: I9233443479b07896bf8a76adf93204ce180a1086
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/16384
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv7/armada38x/clock.c    | 28 +++++++++++++++++++++-
+ arch/arm/cpu/mvebu-common/Makefile      |  1 +
+ arch/arm/cpu/mvebu-common/clock.c       | 42 +++++++++++++++++++++++++++++++++
+ arch/arm/include/asm/arch-mvebu/clock.h |  7 ++++++
+ include/fdtdec.h                        |  1 +
+ lib/fdtdec.c                            |  1 +
+ 6 files changed, 79 insertions(+), 1 deletion(-)
+ create mode 100644 arch/arm/cpu/mvebu-common/clock.c
+
+diff --git a/arch/arm/cpu/armv7/armada38x/clock.c b/arch/arm/cpu/armv7/armada38x/clock.c
+index fc83ed6..fb66145 100644
+--- a/arch/arm/cpu/armv7/armada38x/clock.c
++++ b/arch/arm/cpu/armv7/armada38x/clock.c
+@@ -18,11 +18,14 @@
+  */
+ 
+ #include <common.h>
++#include <fdtdec.h>
++#include <asm/io.h>
+ #include <asm/arch-mvebu/clock.h>
++#include <asm/arch-mvebu/fdt.h>
+ 
+ u32 soc_tclk_get(void)
+ {
+-	return 200000000;
++	return MHZ * 200;
+ }
+ 
+ u32 soc_cpu_clk_get(void)
+@@ -44,3 +47,26 @@ u32 soc_timer_clk_get(void)
+ {
+ 	return 800000000;
+ }
++
++u32 get_fdt_tclk(const void *blob, int node)
++{
++	u32 tclk;
++	void *reg;
++
++	if (node == -1)
++		node = fdt_node_offset_by_compatible(blob, -1, "marvell,t-clock");
++
++	reg = fdt_get_regs_offs(blob, node, "reg");
++
++	tclk = readl(reg);
++	tclk = ((tclk & 0x8000) >> 15);
++
++	switch (tclk) {
++	case 0:
++		return MHZ * 250;
++	case 1:
++		return MHZ * 200;
++	default:
++		return MHZ * 250;
++	}
++}
+diff --git a/arch/arm/cpu/mvebu-common/Makefile b/arch/arm/cpu/mvebu-common/Makefile
+index b23132a..240a3a9 100644
+--- a/arch/arm/cpu/mvebu-common/Makefile
++++ b/arch/arm/cpu/mvebu-common/Makefile
+@@ -22,6 +22,7 @@ obj-y += soc-init.o
+ obj-y += misc.o
+ obj-y += mpp.o
+ obj-y += fdt.o
++obj-y += clock.o
+ obj-$(CONFIG_AURORA_TIMER) += timer_aurora.o
+ obj-$(CONFIG_GENERIC_TIMER) += generic_timer.o
+ obj-$(CONFIG_MVEBU_CA9) += platform.o
+diff --git a/arch/arm/cpu/mvebu-common/clock.c b/arch/arm/cpu/mvebu-common/clock.c
+new file mode 100644
+index 0000000..20a82c5
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/clock.c
+@@ -0,0 +1,42 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., on the worldwide web at
++ * http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <fdtdec.h>
++#include <asm/arch-mvebu/clock.h>
++
++__weak u32 get_fdt_tclk(const void *blob, int node)
++{
++	if (node == -1)
++		node = fdt_node_offset_by_compatible(blob, -1, "marvell,t-clock");
++	return fdtdec_get_int(blob, node, "clock-frequency", -1);
++}
++
++u32 soc_clock_get(const void *blob, int node)
++{
++	int ptr_node, id;
++
++	ptr_node = fdtdec_lookup_phandle(blob, node, "clock");
++	id = fdtdec_lookup(blob, ptr_node);
++	switch (id) {
++	case COMPAT_MVEBU_TCLOCK:
++		return get_fdt_tclk(blob, ptr_node);
++	}
++	return -1;
++}
+diff --git a/arch/arm/include/asm/arch-mvebu/clock.h b/arch/arm/include/asm/arch-mvebu/clock.h
+index 652965a..fd46637 100644
+--- a/arch/arm/include/asm/arch-mvebu/clock.h
++++ b/arch/arm/include/asm/arch-mvebu/clock.h
+@@ -20,10 +20,17 @@
+ #ifndef _MVEBU_CLOCK_H_
+ #define _MVEBU_CLOCK_H_
+ 
++#define KHZ			1000
++#define MHZ			1000000
++#define GHZ			1000000000
++
+ u32 soc_tclk_get(void);
+ u32 soc_l2_clk_get(void);
+ u32 soc_cpu_clk_get(void);
+ u32 soc_ddr_clk_get(void);
+ u32 soc_timer_clk_get(void);
+ 
++u32 soc_clock_get(const void *blob, int node);
++u32 get_fdt_tclk(const void *blob, int node);
++
+ #endif /* _MVEBU_CLOCK_H_ */
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 5effa24..3d8684f 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -129,6 +129,7 @@ enum fdt_compat_id {
+ 	COMPAT_INTEL_MODEL_206AX,	/* Intel Model 206AX CPU */
+ 	COMPAT_INTEL_GMA,		/* Intel Graphics Media Accelerator */
+ 	COMPAT_AMS_AS3722,		/* AMS AS3722 PMIC */
++	COMPAT_MVEBU_TCLOCK,
+ 
+ 	COMPAT_COUNT,
+ };
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 745b390..2aba3fb 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -83,6 +83,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(INTEL_MODEL_206AX, "intel,model-206ax"),
+ 	COMPAT(INTEL_GMA, "intel,gma"),
+ 	COMPAT(AMS_AS3722, "ams,as3722"),
++	COMPAT(MVEBU_TCLOCK, "marvell,tclk"),
+ };
+ 
+ const char *fdtdec_get_compatible(enum fdt_compat_id id)
+-- 
+1.9.1
+

@@ -1,0 +1,31 @@
+From 492187e3219ee53b79b905bb207cf16f74abd66e Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 18 Mar 2015 18:11:57 +0200
+Subject: [PATCH 0154/1240] fdt: a8k: enable FDT for armada-8k SoC
+
+Change-Id: I14db21fc4979fdf44a8a0996803f1c4078134658
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17631
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ configs/mvebu_armada8k_defconfig | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/configs/mvebu_armada8k_defconfig b/configs/mvebu_armada8k_defconfig
+index 8024c3a..a0d21b9 100644
+--- a/configs/mvebu_armada8k_defconfig
++++ b/configs/mvebu_armada8k_defconfig
+@@ -4,6 +4,9 @@ CONFIG_SPL=y
+ +S:CONFIG_TARGET_ARMADA_8K=y
+ +S:CONFIG_MVEBU_UART=y
+ +S:CONFIG_MVEBU_MK6_SUPPORT=y
++CONFIG_OF_CONTROL=y
++CONFIG_OF_EMBED=y
++CONFIG_DEFAULT_DEVICE_TREE="armada-8k"
+ CONFIG_ARMV8_PSCI=y
+ CONFIG_CMD_BDI
+ CONFIG_CMD_BOOTD
+-- 
+1.9.1
+

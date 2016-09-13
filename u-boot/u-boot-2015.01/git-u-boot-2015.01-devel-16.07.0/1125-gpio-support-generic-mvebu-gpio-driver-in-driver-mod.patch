@@ -1,0 +1,903 @@
+From 2732fca39599b41afd17d2e441b8479d43b35dd5 Mon Sep 17 00:00:00 2001
+From: Ken Ma <make@marvell.com>
+Date: Thu, 21 Jan 2016 01:08:30 +0800
+Subject: [PATCH 1125/1240] gpio: support generic mvebu gpio driver in driver
+ model
+
+- Implement generic mvebu gpio driver in driver model in the file
+  "drivers/gpio/mvebu_gpio.c"
+- Implement armada3700 soc specific gpio APIs in the new file
+  "arch/arm/cpu/armv8/armada3700/gpio.c", and these APIs are declared in
+  a new file "arch/arm/include/asm/arch-mvebu/mvebu_gpio.h" for the
+  generic mvebu gpio driver
+- a new file "arch/arm/include/asm/arch-mvebu/gpio.h" is added for
+  polarity APIs declaration since now only mvebu support polarity APIs
+- Add mvebu gpio DT bindings doc
+  "doc/device-tree-bindings/gpio/mvebu-gpio.txt"
+  and add a head file
+  "arch/arm/dts/include/dt-bindings/gpio/armada-3700-gpio.h"
+  to provide armada3700 GPIO banks gpio layout and the marco of getting
+  global gpio number by gpio bank and local offset for the gpio banks nodes
+  in the dts file
+
+Change-Id: I71926c1c8b15de0515066f438c1dcfc5497b4e3d
+Signed-off-by: Ken Ma <make@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26981
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ arch/arm/cpu/armv8/armada3700/Makefile       |   1 +
+ arch/arm/cpu/armv8/armada3700/gpio.c         | 259 +++++++++++++++++++++++++++
+ arch/arm/include/asm/arch-armada3700/gpio.h  |   5 +
+ arch/arm/include/asm/arch-mvebu/gpio.h       |  50 ++++++
+ arch/arm/include/asm/arch-mvebu/mvebu_gpio.h | 114 ++++++++++++
+ doc/device-tree-bindings/gpio/mvebu-gpio.txt |  39 ++++
+ drivers/gpio/Kconfig                         |  10 ++
+ drivers/gpio/Makefile                        |   1 +
+ drivers/gpio/mvebu_gpio.c                    | 236 ++++++++++++++++++++++++
+ include/dt-bindings/gpio/armada-3700-gpio.h  |  28 +++
+ include/fdtdec.h                             |   1 +
+ lib/fdtdec.c                                 |   1 +
+ 12 files changed, 745 insertions(+)
+ create mode 100644 arch/arm/cpu/armv8/armada3700/gpio.c
+ create mode 100644 arch/arm/include/asm/arch-mvebu/gpio.h
+ create mode 100644 arch/arm/include/asm/arch-mvebu/mvebu_gpio.h
+ create mode 100644 doc/device-tree-bindings/gpio/mvebu-gpio.txt
+ create mode 100644 drivers/gpio/mvebu_gpio.c
+ create mode 100644 include/dt-bindings/gpio/armada-3700-gpio.h
+
+diff --git a/arch/arm/cpu/armv8/armada3700/Makefile b/arch/arm/cpu/armv8/armada3700/Makefile
+index d268ee1..650b93d 100644
+--- a/arch/arm/cpu/armv8/armada3700/Makefile
++++ b/arch/arm/cpu/armv8/armada3700/Makefile
+@@ -22,6 +22,7 @@ obj-y += clock.o
+ obj-$(CONFIG_ARMV8_PSCI)	+= psci.o
+ obj-$(CONFIG_MVEBU_A3700_IO_ADDR_DEC) += mvebu_io_addr_dec.o
+ obj-$(CONFIG_MVEBU_SPL_A3700_GPIO) += mvebu_gpio.o
++obj-$(CONFIG_MVEBU_GPIO) += gpio.o
+ obj-$(CONFIG_MVEBU_A3700_MISC_INIT) += mvebu_misc_init.o
+ obj-$(CONFIG_MVEBU_A3700_CLOCK) += mvebu_clock.o
+ obj-$(CONFIG_MVEBU_BOOTMODE_SWITCH_SUPPORT) += mvebu_bootmode.o
+diff --git a/arch/arm/cpu/armv8/armada3700/gpio.c b/arch/arm/cpu/armv8/armada3700/gpio.c
+new file mode 100644
+index 0000000..7e84aff
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armada3700/gpio.c
+@@ -0,0 +1,259 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <asm/errno.h>
++#include <asm/io.h>
++#include <asm/gpio.h>
++#include <asm/arch-mvebu/fdt.h>
++#include <malloc.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++/* GPIO Controller registers for a single bank */
++struct mvebu_gpio_regs {
++	u32 gpdr[MVEBU_GPIO_MAX_PORTS];		/* Pin Direction Registers of GPIO ports */
++	u32 reserved0[2];
++	u32 gpir[MVEBU_GPIO_MAX_PORTS];		/* Pin input Level Registers of GPIO ports */
++	u32 gpor[MVEBU_GPIO_MAX_PORTS];		/* Pin output Level Registers of GPIO ports */
++};
++
++struct mvebu_gpio_bank {
++	struct gpio_dev_priv *dev;
++	struct mvebu_gpio_regs *regs_base;
++};
++
++static struct mvebu_gpio_bank mvebu_gpio_banks[MVEBU_GPIO_BANKS];
++
++/**
++ * mvebu_soc_gpio_to_bank_port_offset - get gpio bank number , pin offset in th bank by gpio number
++ * input
++ * @gpio: global gpio id
++ * output
++ * @bank: bank id
++ * @port: port id in the bank.
++ * @offset: gpio pin offset in the port.
++ *
++ * Returns 0 on success, others on failure
++ *
++ **/
++static int mvebu_soc_gpio_to_bank_port_offset(unsigned gpio,
++						unsigned *bank,
++						unsigned *port,
++						unsigned *offset)
++{
++	unsigned int i;
++	unsigned int gpio_start, gpio_end;
++	struct mvebu_gpio_bank *gpio_bank;
++
++	/* Search the gpio bank with the global GPIO ID. */
++	/* Each gpio bank has some gpios with continuous global GPIO IDs. */
++	/* A bank's gpio IDs start from gpio_bank->dev->gpio_base. */
++	/* A bank's gpio IDs' count is gpio_bank->dev->gpio_count. */
++	for (i = 0; i < MVEBU_GPIO_BANKS; i++) {
++		gpio_bank = mvebu_gpio_banks + i;
++		if (!gpio_bank->dev)
++			continue;
++		gpio_start = gpio_bank->dev->gpio_base;
++		gpio_end = gpio_bank->dev->gpio_base + gpio_bank->dev->gpio_count;
++		if ((gpio >= gpio_start) && (gpio < gpio_end))
++			break;
++	}
++
++	if (MVEBU_GPIO_BANKS == i) {
++		printf("ERROR: gpio %d is not found in any banks!\n", gpio);
++		return -EPERM;
++	}
++
++	*bank = i;
++	/* For a3700, a gpio bank may has 1 gpio port or 2 gpio ports. */
++	/* If the bank has only 1 port, then the port's gpios' local offset numbers are from 0 to gpio_count -1; */
++	/* otherwise, the first port's gpios' local offset numbers are from 0 to MVEBU_GPIOS_PER_PORT -1 */
++	/* and the second port's gpios' local offset numbers are from MVEBU_GPIOS_PER_PORT to gpio_count -1 */
++	*port = (gpio - gpio_bank->dev->gpio_base) / MVEBU_GPIOS_PER_PORT;
++	*offset = (gpio - gpio_bank->dev->gpio_base) % MVEBU_GPIOS_PER_PORT;
++
++	return 0;
++}
++
++/**
++ * mvebu_soc_gpio_request: request a GPIO. This should be called before any of the other functions
++ * are used on this GPIO.
++ *
++ *
++ * @gpio: gpio global id
++ * @param: label	User label for this GPIO
++ * @return 0 if ok, others on failure
++ */
++int mvebu_soc_gpio_request(unsigned gpio, const char *label)
++{
++	/* Now the pin-ctrl driver should guarantee the pin mode is set to gpio statically in fdt file. */
++	/* If the pin is not set to gpio and used as gpio mode, we cannot predict the system behavior. */
++
++	return 0;
++}
++
++/**
++ * mvebu_soc_gpio_free - Stop using the GPIO.  This function should not alter pin configuration.
++ *
++ * @gpio: gpio global id
++ * @return 0 if ok, others on failure
++ */
++int mvebu_soc_gpio_free(unsigned gpio)
++{
++	return 0;
++}
++
++/**
++ * mvebu_soc_gpio_set_direction - Set GPIO's direction
++ *
++ * @param gpio: gpio global id
++ * @param direction: GPIO direction, 0(GPIOF_INPUT), 1(GPIOF_OUTPUT)
++ * @return 0 if ok, others on failure
++ */
++int mvebu_soc_gpio_set_direction(unsigned gpio, int direction)
++{
++	u32 val;
++	unsigned bank, port, offset;
++
++	if (0 != mvebu_soc_gpio_to_bank_port_offset(gpio, &bank, &port, &offset) || !mvebu_gpio_banks[bank].regs_base)
++		return -EPERM;
++
++	val = (u32)readl(&mvebu_gpio_banks[bank].regs_base->gpdr[port]);
++
++	if (direction == GPIOF_OUTPUT)
++		val |= (1 << offset);
++	else
++		val &= ~(1 << offset);
++
++	writel(val, &mvebu_gpio_banks[bank].regs_base->gpdr[port]);
++
++	return 0;
++}
++
++/**
++ * mvebu_soc_gpio_get_direction - get GPIO's direction
++ *
++ * @param gpio: gpio global id
++ * @return gpio direction 0(GPIOF_INPUT), 1(GPIOF_OUTPUT), others failure
++ */
++int mvebu_soc_gpio_get_direction(unsigned gpio)
++{
++	u32 val;
++	unsigned bank, port, offset;
++
++	if (0 != mvebu_soc_gpio_to_bank_port_offset(gpio, &bank, &port, &offset) || !mvebu_gpio_banks[bank].regs_base)
++		return -EPERM;
++
++	val = readl(&mvebu_gpio_banks[bank].regs_base->gpdr[port]);
++	if (val & (1 << offset))
++		return GPIOF_OUTPUT;
++	else
++		return GPIOF_INPUT;
++}
++
++/**
++ * mvebu_soc_gpio_set_value - Set an output GPIO's value. The GPIO must already be an output or
++ * this function may have no effect.
++ *
++ * @param gpio	gpio global id
++ * @param value	GPIO value (0 for low or 1 for high)
++ * @return 0 if ok, others on failure
++ */
++int mvebu_soc_gpio_set_value(unsigned gpio, int value)
++{
++	u32 val;
++	unsigned bank, port, offset;
++
++	if (0 != mvebu_soc_gpio_to_bank_port_offset(gpio, &bank, &port, &offset) || !mvebu_gpio_banks[bank].regs_base)
++		return -EPERM;
++
++	val = readl(&mvebu_gpio_banks[bank].regs_base->gpor[port]);
++	if (value)
++		val |= (1 << offset);
++	else
++		val &= ~(1 << offset);
++	writel(val, &mvebu_gpio_banks[bank].regs_base->gpor[port]);
++
++	return 0;
++}
++
++/**
++ * mvebu_soc_gpio_get_value - Get a GPIO's value. This will work whether the GPIO is an input
++ * or an output.
++ *
++ * @param gpio	gpio global id
++ * @return 0 if low, 1 if high, -1 on error
++ */
++int mvebu_soc_gpio_get_value(unsigned gpio)
++{
++	u32 val;
++	unsigned bank, port, offset;
++	int direction;
++	u32 *gplr;
++
++	if (0 != mvebu_soc_gpio_to_bank_port_offset(gpio, &bank, &port, &offset) || !mvebu_gpio_banks[bank].regs_base)
++		return -EPERM;
++
++	direction = mvebu_soc_gpio_get_direction(gpio);
++	if (direction == GPIOF_INPUT)
++		gplr = &mvebu_gpio_banks[bank].regs_base->gpir[port];
++	else
++		gplr = &mvebu_gpio_banks[bank].regs_base->gpor[port];
++
++	val = readl(gplr);
++	val &= (1 << offset);
++
++	return (val >> offset) & 0x01;
++}
++
++/**
++ * mvebu_soc_gpio_init - GPIO bank initialization
++ * @dev: gpio bank device including bank name, gpio count and gpio base
++ * @regs_base: gpio registers base address
++ * @node_offset: gpio bank fdt node offset, soc driver can get its private
++ *                      information from it althrough here armada3700 does not use it
++ *
++ * Returns valid bank id on success negative error values on failure
++ *
++ **/
++int mvebu_soc_gpio_init(struct gpio_dev_priv *dev, void *regs_base, int node_offset)
++{
++	unsigned int bank;
++
++	/* find an empty bank */
++	for (bank = 0; bank < MVEBU_GPIO_BANKS; bank++)
++		if (NULL == mvebu_gpio_banks[bank].dev)
++			break;
++
++	if (bank >= MVEBU_GPIO_BANKS)
++		return -EPERM;
++
++	mvebu_gpio_banks[bank].dev = dev;
++
++	/* renumber gpio bank's gpio_base */
++	if (bank == 0)
++		mvebu_gpio_banks[bank].dev->gpio_base = 0;
++	else
++		mvebu_gpio_banks[bank].dev->gpio_base = mvebu_gpio_banks[bank - 1].dev->gpio_base
++							+ mvebu_gpio_banks[bank - 1].dev->gpio_count;
++	mvebu_gpio_banks[bank].regs_base = (struct mvebu_gpio_regs *)regs_base;
++
++	return bank;
++}
++
+diff --git a/arch/arm/include/asm/arch-armada3700/gpio.h b/arch/arm/include/asm/arch-armada3700/gpio.h
+index c4e69d1..e31f88d 100644
+--- a/arch/arm/include/asm/arch-armada3700/gpio.h
++++ b/arch/arm/include/asm/arch-armada3700/gpio.h
+@@ -18,6 +18,7 @@
+ 
+ #ifndef _MVEBU_GPIO_H_
+ #define _MVEBU_GPIO_H_
++#include <asm/arch-mvebu/gpio.h>
+ 
+ #define MVEBU_GPIO_NB_OUTPUT_EN_REG		(MVEBU_GPIO_NB_REG_BASE)
+ #define MVEBU_GPIO_NB_OUTPUT_EN_HIGH_REG	(MVEBU_GPIO_NB_REG_BASE + 0x4)
+@@ -38,6 +39,10 @@
+ #define MVEBU_GPIO_RGMII_GPIO_EN_OFF		(3)
+ #define MVEBU_GPIO_PCIE_EN_OFF			(4)
+ 
++#define MVEBU_GPIO_MAX_PORTS	2	/* max number of ports per bank */
++#define MVEBU_GPIO_BANKS	2	/* number of banks */
++#define MVEBU_GPIOS_PER_PORT	32	/* number of gpios per port */
++
+ void mvebu_set_sdio(int voltage);
+ void mvebu_reset_pcie_dev(void);
+ void mvebu_init_gpio(void);
+diff --git a/arch/arm/include/asm/arch-mvebu/gpio.h b/arch/arm/include/asm/arch-mvebu/gpio.h
+new file mode 100644
+index 0000000..a3fe72f
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/gpio.h
+@@ -0,0 +1,50 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef __ARCH_MVEBU_GPIO_H__
++#define __ARCH_MVEBU_GPIO_H__
++
++#define GPIO_ACTIVE_HIGH	0
++#define GPIO_ACTIVE_LOW		1
++
++/**
++ * gpio_set_polarity - set gpio pin polarity
++ * input
++ * @gpio: gpio global id
++ * @polarity: pin polarity
++ * ouput
++ * none
++ *
++ * Returns 0 on success, others on failure
++ *
++ **/
++int gpio_set_polarity(unsigned gpio, unsigned polarity);
++
++/**
++ * gpio_get_polarity - get gpio pin polarity
++ * input
++ * @gpio: gpio global id
++ * ouput
++ * none
++ *
++ * Returns gpio pin polarity on success, -EPERM on failure
++ *
++ **/
++int gpio_get_polarity(unsigned gpio);
++
++#endif /* __ARCH_MVEBU_GPIO_H__ */
+diff --git a/arch/arm/include/asm/arch-mvebu/mvebu_gpio.h b/arch/arm/include/asm/arch-mvebu/mvebu_gpio.h
+new file mode 100644
+index 0000000..9bb5677
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/mvebu_gpio.h
+@@ -0,0 +1,114 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef __MVEBU_GPIO_H__
++#define __MVEBU_GPIO_H__
++
++/**
++ * mvebu_soc_gpio_request: request a GPIO. This should be called before any of the other functions
++ * are used on this GPIO.
++ *
++ *
++ * @gpio: gpio global id
++ * @param label	User label for this GPIO
++ * @return 0 if ok, others on failure
++ */
++int mvebu_soc_gpio_request(unsigned gpio, const char *label);
++
++/**
++ * mvebu_soc_gpio_free - Stop using the GPIO.  This function should not alter pin configuration.
++ *
++ * @gpio: gpio global id
++ * @return 0 if ok, others on failure
++ */
++int mvebu_soc_gpio_free(unsigned gpio);
++
++/**
++ * mvebu_soc_gpio_set_direction - Set GPIO's direction
++ *
++ * @param gpio: gpio global id
++ * @param direction: GPIO direction, 0(GPIOF_INPUT), 1(GPIOF_OUTPUT)
++ * @return 0 if ok, others on failure
++ */
++int mvebu_soc_gpio_set_direction(unsigned gpio, int direction);
++
++/**
++ * mvebu_soc_gpio_get_direction - get GPIO's direction
++ *
++ * @param gpio: gpio global id
++ * @return gpio direction 0(GPIOF_INPUT), 1(GPIOF_OUTPUT), others failure
++ */
++int mvebu_soc_gpio_get_direction(unsigned gpio);
++
++/**
++ * mvebu_soc_gpio_set_value - Set an output GPIO's value. The GPIO must already be an output or
++ * this function may have no effect.
++ *
++ * @param gpio	gpio global id
++ * @param value	GPIO value (0 for low or 1 for high)
++ * @return 0 if ok, others on failure
++ */
++int mvebu_soc_gpio_set_value(unsigned gpio, int value);
++
++/**
++ * mvebu_soc_gpio_get_value - Get a GPIO's value. This will work whether the GPIO is an input
++ * or an output.
++ *
++ * @param gpio	gpio global id
++ * @return 0 if low, 1 if high, -1 on error
++ */
++int mvebu_soc_gpio_get_value(unsigned gpio);
++
++/**
++ * mvebu_soc_gpio_set_polarity - set GPIO pin polarity
++ * input
++ * @gpio: gpio global id
++ * @polarity: pin polarity
++ * ouput
++ * none
++ *
++ * Returns 0 on success, others on failure
++ *
++ **/
++int mvebu_soc_gpio_set_polarity(unsigned gpio, int polarity);
++
++/**
++ * mvebu_soc_gpio_get_polarity - get gpio pin polarity
++ * input
++ * @gpio: gpio global id
++ * ouput
++ * none
++ *
++ * Returns gpio pin polarity on success, -EPERM on failure
++ *
++ **/
++int mvebu_soc_gpio_get_polarity(unsigned gpio);
++
++/**
++ * mvebu_soc_gpio_init - GPIO bank initialization
++ * @dev: gpio bank device including bank name, gpio count and gpio base
++ * @regs_base: gpio registers base address
++ * @node_offset: gpio bank fdt node offset, soc driver can get its private
++ *                      information from it althrough here armada3700 does not use it
++ *
++ * Returns valid bank id on success negative error values on failure
++ *
++ **/
++int mvebu_soc_gpio_init(struct gpio_dev_priv *dev, void *regs_base, int node_offset);
++
++#endif /* __MVEBU_GPIO_H__ */
+diff --git a/doc/device-tree-bindings/gpio/mvebu-gpio.txt b/doc/device-tree-bindings/gpio/mvebu-gpio.txt
+new file mode 100644
+index 0000000..5cb861f
+--- /dev/null
++++ b/doc/device-tree-bindings/gpio/mvebu-gpio.txt
+@@ -0,0 +1,39 @@
++MVEBU GPIO DT bindings
++-----------------------
++Required properties:
++- compatible:           Should be "marvell,mvebu-gpio"
++- reg:                  The register base for the GPIO bank controller
++- bank-name:            The gpio bank name
++- ngpios:               gpio count in bank
++
++Optional properties:
++None
++
++
++Examples:
++Let's take Armada3700 as an example.
++Armada3700 has two GPIO banks, one is north bridge GPIO bank and aother is south bridge GPIO bank.
++
++	gpio0: gpio@13800 {
++		compatible = "marvell,mvebu-gpio";
++		reg = <0x13800 0x800>;
++		bank-name = "armada-3700-north-bridge";
++		status = "disabled";
++		ngpios = <64>;
++	};
++	gpio1: gpio@18800 {
++		compatible = "marvell,mvebu-gpio";
++		reg = <0x18800 0x800>;
++		bank-name = "armada-3700-south-bridge";
++		status = "disabled";
++		ngpios = <32>;
++	};
++
++When other nodes want to use a GPIO pin, they can call the marco ARMADA_3700_GPIO
++which is defined in <dt-bindings/gpio/armada-3700-gpio.h>
++For example, mmc1 can use the gpio1's 22nd pin for SDIO VCC setting as below.
++
++mmc1: mmc@D0000 {
++	sdio-vcc-gpio = <&gpio1 ARMADA_3700_GPIO(BANK_1, 22) GPIO_ACTIVE_HIGH>;
++	status = "okay";
++};
+\ No newline at end of file
+diff --git a/drivers/gpio/Kconfig b/drivers/gpio/Kconfig
+index 2e3a273..ade18aa 100644
+--- a/drivers/gpio/Kconfig
++++ b/drivers/gpio/Kconfig
+@@ -16,6 +16,16 @@ config MVEBU_PINCTL
+ 	  the lowlevel control that allows changing
+ 	  the function of a multi purpose pin
+ 
++config MVEBU_GPIO
++	bool "MVEBU GPIO support"
++	select DM_GPIO
++	default n
++	help
++	  Choose this option to add
++	  support for mvebu GPIO.
++	  This drive implements the
++	  high level interfaces of GPIO.
++
+ config MVEBU_MPP_BUS
+ 	bool "MPP bus support"
+ 	depends on (DEVEL_BOARD && MVEBU_PINCTL)
+diff --git a/drivers/gpio/Makefile b/drivers/gpio/Makefile
+index 2579b4c..dea05b0 100644
+--- a/drivers/gpio/Makefile
++++ b/drivers/gpio/Makefile
+@@ -38,3 +38,4 @@ obj-$(CONFIG_TCA642X)		+= tca642x.o
+ oby-$(CONFIG_SX151X)		+= sx151x.o
+ obj-$(CONFIG_SUNXI_GPIO)	+= sunxi_gpio.o
+ obj-$(CONFIG_MVEBU_PINCTL)	+= mvebu_pinctl.o
++obj-$(CONFIG_MVEBU_GPIO)	+= mvebu_gpio.o
+diff --git a/drivers/gpio/mvebu_gpio.c b/drivers/gpio/mvebu_gpio.c
+new file mode 100644
+index 0000000..c5afab3
+--- /dev/null
++++ b/drivers/gpio/mvebu_gpio.c
+@@ -0,0 +1,236 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++#include <common.h>
++#include <asm/io.h>
++#include <asm/errno.h>
++#include <asm/gpio.h>
++#include <asm/arch-mvebu/mvebu_gpio.h>
++#include <fdtdec.h>
++#include <malloc.h>
++#include <asm/arch-mvebu/fdt.h>
++#include <dm.h>
++
++
++DECLARE_GLOBAL_DATA_PTR;
++
++struct mvebu_gpio_platdata {
++	const char *bank_name;
++	unsigned gpio_count;
++	void *bank_regs_base;	/* gpio bank registers base address*/
++};
++
++static unsigned mvebu_gpio_max_num;
++
++/*
++ * GPIO polarity implementation.
++ */
++
++__attribute__((weak))
++int mvebu_soc_gpio_set_polarity(unsigned gpio, int polarity)
++{
++	if (gpio >= mvebu_gpio_max_num)
++		return -EPERM;
++
++	/* ACTIVE_HIGH is the default value for gpio polarity. */
++	/* Even polarity is not supported by SoC, it's the default status. */
++	/* Here, we have this weak implementation for most SoCs which doesn't support polarity setting */
++	if (GPIO_ACTIVE_HIGH == polarity) {
++		return 0;
++	} else {
++		printf("ERROR: polarity reverting is not supported\n");
++		return -EPERM;
++	}
++}
++
++/**
++ * gpio_set_polarity - set gpio pin polarity
++ * input
++ * @gpio: gpio global id
++ * @polarity: pin polarity
++ * ouput
++ * none
++ *
++ * Returns 0 on success, others on failure
++ *
++ **/
++int gpio_set_polarity(unsigned gpio, unsigned polarity)
++{
++	return mvebu_soc_gpio_set_polarity(gpio, polarity);
++}
++
++__attribute__((weak))
++int mvebu_soc_gpio_get_polarity(unsigned gpio)
++{
++	if (gpio >= mvebu_gpio_max_num)
++		return -EPERM;
++
++	/* ACTIVE_HIGH is the default value for gpio polarity. */
++	/* Even polarity is not supported by SoC, it's the default status. */
++	/* Here, we have this weak implementation for most SoCs which doesn't support polarity setting */
++	/* By default, if no polarity support, it is always ACTIVE_HIGH. */
++	return GPIO_ACTIVE_HIGH;
++}
++
++/**
++ * gpio_get_polarity - get gpio pin polarity
++ * input
++ * @gpio: gpio global id
++ * ouput
++ * none
++ *
++ * Returns gpio pin polarity on success, -EPERM on failure
++ *
++ **/
++int gpio_get_polarity(unsigned gpio)
++{
++	return mvebu_soc_gpio_get_polarity(gpio);
++}
++
++/*
++ * Generic GPIO primitives.
++ */
++
++static int mvebu_gpio_request(struct udevice *dev, unsigned offset,
++			      const char *label)
++{
++	struct gpio_dev_priv *uc_priv = (struct gpio_dev_priv *)dev->uclass_priv;
++
++	return mvebu_soc_gpio_request(uc_priv->gpio_base + offset, label);
++}
++
++static int mvebu_gpio_free(struct udevice *dev, unsigned offset)
++{
++	struct gpio_dev_priv *uc_priv = (struct gpio_dev_priv *)dev->uclass_priv;
++
++	return mvebu_soc_gpio_free(uc_priv->gpio_base + offset);
++}
++
++/* set GPIO pin 'gpio' as an input */
++static int mvebu_gpio_direction_input(struct udevice *dev, unsigned offset)
++{
++	struct gpio_dev_priv *uc_priv = (struct gpio_dev_priv *)dev->uclass_priv;
++
++	return mvebu_soc_gpio_set_direction(uc_priv->gpio_base + offset, GPIOF_INPUT);
++}
++
++/* set GPIO pin 'gpio' in output mode with output 'value' */
++static int mvebu_gpio_direction_output(struct udevice *dev, unsigned offset,
++				       int value)
++{
++	int ret;
++	struct gpio_dev_priv *uc_priv = (struct gpio_dev_priv *)dev->uclass_priv;
++
++	ret = mvebu_soc_gpio_set_value(uc_priv->gpio_base + offset, value);
++	if (ret < 0)
++		return ret;
++
++	return mvebu_soc_gpio_set_direction(uc_priv->gpio_base + offset, GPIOF_OUTPUT);
++}
++
++/* read GPIO IN value of pin 'gpio' */
++static int mvebu_gpio_get_value(struct udevice *dev, unsigned offset)
++{
++	struct gpio_dev_priv *uc_priv = (struct gpio_dev_priv *)dev->uclass_priv;
++
++	return mvebu_soc_gpio_get_value(uc_priv->gpio_base + offset);
++}
++
++
++/* write GPIO OUT value to pin 'gpio' */
++static int mvebu_gpio_set_value(struct udevice *dev, unsigned offset, int value)
++{
++	struct gpio_dev_priv *uc_priv = (struct gpio_dev_priv *)dev->uclass_priv;
++
++	return mvebu_soc_gpio_set_value(uc_priv->gpio_base + offset, value);
++}
++
++/* read GPIO direction */
++static int mvebu_gpio_get_function(struct udevice *dev, unsigned offset)
++{
++	struct gpio_dev_priv *uc_priv = (struct gpio_dev_priv *)dev->uclass_priv;
++
++	return mvebu_soc_gpio_get_direction(uc_priv->gpio_base + offset);
++}
++
++static const struct dm_gpio_ops mvebu_gpio_ops = {
++	.request		= mvebu_gpio_request,
++	.free			= mvebu_gpio_free,
++	.direction_input	= mvebu_gpio_direction_input,
++	.direction_output	= mvebu_gpio_direction_output,
++	.get_value		= mvebu_gpio_get_value,
++	.set_value		= mvebu_gpio_set_value,
++	.get_function		= mvebu_gpio_get_function,
++};
++
++static const struct udevice_id mvebu_gpio_ids[] = {
++	{ .compatible = "marvell,mvebu-gpio" },
++	{ }
++};
++
++static int mvebu_gpio_ofdata_to_platdata(struct udevice *bank)
++{
++	struct mvebu_gpio_platdata *plat = bank->platdata;
++	const void *blob = gd->fdt_blob;
++	int node = bank->of_offset;
++
++	fdt_get_string(blob, node, "bank-name", &plat->bank_name);
++	plat->gpio_count = fdtdec_get_int(blob, node, "ngpios", 0);
++	plat->bank_regs_base = fdt_get_regs_offs(blob, node, "reg");
++	if (plat->bank_regs_base == NULL) {
++		error("Missing registers in %s gpio node\n", plat->bank_name);
++		return -FDT_ERR_NOTFOUND;
++	}
++
++	return 0;
++}
++
++static int mvebu_gpio_probe(struct udevice *bank)
++{
++	struct mvebu_gpio_platdata *plat = (struct mvebu_gpio_platdata *)dev_get_platdata(bank);
++	struct gpio_dev_priv *uc_priv = (struct gpio_dev_priv *)bank->uclass_priv;
++	int node = bank->of_offset;
++	unsigned int bank_id;
++
++	uc_priv->gpio_count = plat->gpio_count;
++	uc_priv->bank_name = plat->bank_name;
++
++	/* do the soc gpio bank specific initialization such as the preparation work
++	 * for mapping the gpio global id into its gpio bank and the pin offset of the bank
++	 */
++	bank_id = mvebu_soc_gpio_init(uc_priv, plat->bank_regs_base, node);
++	if (bank_id < 0) {
++		error("bank %s initialization failed!\n", uc_priv->bank_name);
++		return -EPERM;
++	}
++
++	mvebu_gpio_max_num += uc_priv->gpio_count;
++
++	return 0;
++}
++
++U_BOOT_DRIVER(mvebu_gpio) = {
++	.name	= "mvebu_gpio",
++	.id	= UCLASS_GPIO,
++	.of_match = mvebu_gpio_ids,
++	.ops	= &mvebu_gpio_ops,
++	.ofdata_to_platdata = mvebu_gpio_ofdata_to_platdata,
++	.platdata_auto_alloc_size = sizeof(struct mvebu_gpio_platdata),
++	.probe = mvebu_gpio_probe,
++};
++
++
+diff --git a/include/dt-bindings/gpio/armada-3700-gpio.h b/include/dt-bindings/gpio/armada-3700-gpio.h
+new file mode 100644
+index 0000000..c0a43d7
+--- /dev/null
++++ b/include/dt-bindings/gpio/armada-3700-gpio.h
+@@ -0,0 +1,28 @@
++/*
++ * This header provides constants for binding marvell,armada-3700-gpio.
++ *
++ * The first cell in armada-3700's GPIO specifier is the GPIO bank reference.
++ *
++ * The second cell in armada-3700's GPIO specifier is the global GPIO ID. The macros below
++ * provide names for this.
++ *
++ * The third cell contains standard flag values specified in gpio.h.
++ */
++
++#ifndef _DT_BINDINGS_GPIO_ARMADA_3700_GPIO_H
++#define _DT_BINDINGS_GPIO_ARMADA_3700_GPIO_H
++
++#include <dt-bindings/gpio/gpio.h>
++
++/* armada3700 has 2 gpio banks */
++/* bank0 is north bridge gpio, it has 61 gpio pins, its global gpio base number is 0 */
++/* bank0 is south bridge gpio, it has 30 gpio pins, its global gpio base number is 61 */
++#define ARMADA_3700_BANK_0_GPIO_BASE 0
++#define ARMADA_3700_BANK_0_GPIO_COUNT 61
++#define ARMADA_3700_BANK_1_GPIO_BASE (ARMADA_3700_BANK_0_GPIO_BASE + ARMADA_3700_BANK_0_GPIO_COUNT)
++#define ARMADA_3700_BANK_1_GPIO_COUNT 30
++
++#define ARMADA_3700_GPIO(bank, offset) \
++	(ARMADA_3700_##bank##_GPIO_BASE + offset)
++
++#endif
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index ef217cd..5757fa7 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -164,6 +164,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_SAR_REG_AP806,
+ 	COMPAT_MVEBU_SAR_REG_CP110,
+ 	COMPAT_MVEBU_RTC_REG,
++	COMPAT_MVEBU_GPIO,
+ 
+ 	COMPAT_COUNT,
+ };
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index cf6acfd..b1e484e 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -126,6 +126,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_SAR_REG_AP806, "marvell,sample-at-reset-ap806"),
+ 	COMPAT(MVEBU_SAR_REG_CP110, "marvell,sample-at-reset-cp110"),
+ 	COMPAT(MVEBU_RTC_REG, "marvell,real-time-clock"),
++	COMPAT(MVEBU_GPIO, "marvell,mvebu-gpio"),
+ 
+ };
+ 
+-- 
+1.9.1
+

@@ -1,0 +1,51 @@
+From 6c771fc8cdae28fe9aa9a23990fa045d5cc39d49 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Thu, 26 May 2016 22:45:07 +0800
+Subject: [PATCH 219/239] fix: boot: a3700: keep boot mode in sys_info in uart
+ boot mode
+
+- for Armada3700 recovery hack, in ATF, original boot mode is kept in sys_info,
+  then board changes to uart boot; in last stage of u-boot, original boot mode
+  would be taken out from sys_info, and set to eeprom again.
+- currently if original boot mode is uart, then boot mode would not be saved
+  in sys_info, which is not correct since at the end of u-boot, there is no
+  valid boot mode value in sys_info, and boot mode will be changed to AUTO.
+- To fix this, original boot mode has to be set in sys_info, no matter which
+  boot mode the board is in.
+
+Change-Id: I3e577dfa6a8c3caedefedb1d12f4def5a4233b07
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30012
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ plat/marvell/a3700/a3700_z/plat_bl31_setup.c | 10 +++-------
+ 1 file changed, 3 insertions(+), 7 deletions(-)
+
+diff --git a/plat/marvell/a3700/a3700_z/plat_bl31_setup.c b/plat/marvell/a3700/a3700_z/plat_bl31_setup.c
+index 5d8537c..16408cc 100644
+--- a/plat/marvell/a3700/a3700_z/plat_bl31_setup.c
++++ b/plat/marvell/a3700/a3700_z/plat_bl31_setup.c
+@@ -106,16 +106,12 @@ static void marvell_boot_mode_switch(void)
+ 	/* get boot mode */
+ 	marvell_boot_mode_get(&boot_mode);
+ 
+-	/* in case boot mode is set to uart mode by spl already */
+-	/* atf needn't to save boot mode again*/
+-	if (BOOT_MODE_UART == boot_mode)
+-		return;
+-
+ 	/* Pass BOOT_MODE from atf to u-boot */
+ 	set_info(BOOT_MODE, boot_mode);
+ 
+-	/* switch to uart boot mode */
+-	marvell_boot_mode_set(BOOT_MODE_UART);
++	/* switch to uart mode in modes other than uart */
++	if (BOOT_MODE_UART != boot_mode)
++		marvell_boot_mode_set(BOOT_MODE_UART);
+ }
+ 
+ /* This function overruns the same function in marvell_bl31_setup.c */
+-- 
+1.9.1
+

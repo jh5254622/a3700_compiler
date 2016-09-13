@@ -1,0 +1,30 @@
+From 04129ba63ab794302e8602ef07eddb0dc5e4c992 Mon Sep 17 00:00:00 2001
+From: Victor Axelrod <victora@marvell.com>
+Date: Mon, 11 Apr 2016 15:09:53 +0300
+Subject: [PATCH 103/239] mv_ddr: atf: Define MV_DDR4 flag as a default
+
+Change-Id: I985489e365dff4dad4d445764378742073c0c23a
+Signed-off-by: Victor Axelrod <victora@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28923
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/Makefile | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/marvell/mv_ddr/Makefile b/drivers/marvell/mv_ddr/Makefile
+index 8b8d170..bdc5f6d 100644
+--- a/drivers/marvell/mv_ddr/Makefile
++++ b/drivers/marvell/mv_ddr/Makefile
+@@ -205,6 +205,8 @@ ECHO     = @echo
+ 
+ OBJ_DIR ?= . # set to $(CUR_DIR)/$(BUILD_PLAT)/ble in ble/ble.mk
+ SRCDIRS = . ./apn806
++MV_DDR4 = y
++
+ ifeq ($(MV_DDR4),y)
+ SRCDIR4 = ../mv_ddr4
+ endif
+-- 
+1.9.1
+

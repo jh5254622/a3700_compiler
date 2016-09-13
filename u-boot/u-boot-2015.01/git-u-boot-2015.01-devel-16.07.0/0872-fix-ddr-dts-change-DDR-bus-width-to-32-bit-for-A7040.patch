@@ -1,0 +1,31 @@
+From 203208a418aee1fe43eb9f07359dbc43b8586e41 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 18 Feb 2016 13:12:28 +0200
+Subject: [PATCH 0872/1240] fix: ddr: dts: change DDR bus-width to 32 bit for
+ A7040Rz
+
+Change-Id: Id926d4fc997f8108e0e15ec17589f832deed1a19
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27638
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Neta Zur Hershkovits <neta@marvell.com>
+---
+ arch/arm/dts/armada-70x0-dev-info.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/armada-70x0-dev-info.dtsi b/arch/arm/dts/armada-70x0-dev-info.dtsi
+index 26fd333..cf4ed67 100644
+--- a/arch/arm/dts/armada-70x0-dev-info.dtsi
++++ b/arch/arm/dts/armada-70x0-dev-info.dtsi
+@@ -27,7 +27,7 @@
+ 
+ 			ddr-mac {
+ 				cs_count = <1>;
+-				bus_width = <DDR_BUS_WIDTH_64>;
++				bus_width = <DDR_BUS_WIDTH_32>;
+ 				cs0 {
+ 					size = <0x00000002 0x00000000>;
+ 				};
+-- 
+1.9.1
+

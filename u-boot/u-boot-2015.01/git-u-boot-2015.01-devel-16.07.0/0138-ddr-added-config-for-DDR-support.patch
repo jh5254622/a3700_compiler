@@ -1,0 +1,72 @@
+From 31076ee7ceb166a978c7a10022f6f40141d7ac93 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 8 Mar 2015 21:26:43 +0200
+Subject: [PATCH 0138/1240] ddr: added config for DDR support
+
+	- Added config for DDR support
+	- Added configs for DUNIT, and MK6 controllers
+
+Change-Id: Id5a3c7c5924828cd7f3dfa1d105f1aba29fb65a7
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17328
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Kconfig | 31 +++++++++++++++++++++++++++++++
+ drivers/ddr/Makefile              |  4 ++--
+ 2 files changed, 33 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index a277e7e..c897a50 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -61,6 +61,37 @@ config MVEBU_I2C
+ 	  driver.
+ 	  base address is configured under MVEBU_I2C_BASE
+ 
++menu "DDR support"
++
++config MVEBU_SPL_DDR_SUPPORT
++	bool "DDR SPL support"
++	depends on SPL
++	default y
++	help
++	  Choose this option to add support
++	  for DDR controllers driver. need to
++	  choose one of the controllers in the
++	  list below.
++
++choice
++	prompt "Controller select"
++
++config MVEBU_DUNIT_SUPPORT
++	bool "DUNIT controller support"
++	depends on MVEBU_SPL_DDR_SUPPORT
++	help
++	  Choose this option to add support
++	  for DUNIT controller.
++
++config MVEBU_MK6_SUPPORT
++	bool "MK6 controller support"
++	depends on MVEBU_SPL_DDR_SUPPORT
++	help
++	  Choose this option to add support
++	  for MK6 controller.
++
++endchoice
++endmenu
+ endmenu
+ 
+ 
+diff --git a/drivers/ddr/Makefile b/drivers/ddr/Makefile
+index 126f194..17370d0 100644
+--- a/drivers/ddr/Makefile
++++ b/drivers/ddr/Makefile
+@@ -1,2 +1,2 @@
+-obj-$(CONFIG_TARGET_ARMADA_38X) += ddr_dunit.o
+-obj-$(CONFIG_TARGET_ARMADA_8K) += ddr_mckinley6.o
+\ No newline at end of file
++obj-$(CONFIG_MVEBU_DUNIT_SUPPORT) += ddr_dunit.o
++obj-$(CONFIG_MVEBU_MK6_SUPPORT) += ddr_mckinley6.o
+-- 
+1.9.1
+

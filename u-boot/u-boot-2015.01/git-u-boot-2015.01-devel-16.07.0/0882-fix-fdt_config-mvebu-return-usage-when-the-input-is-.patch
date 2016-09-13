@@ -1,0 +1,63 @@
+From 944fd3db2bd2876f0f211644064747817a468624 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Thu, 18 Feb 2016 17:00:10 +0200
+Subject: [PATCH 0882/1240] fix: fdt_config: mvebu: return usage when the input
+ is invalid
+
+Change-Id: I61fc91d1e7f946c57e04df36640440b93b66d642
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27659
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ common/mvebu/cmd_fdt_config.c | 20 +++++---------------
+ 1 file changed, 5 insertions(+), 15 deletions(-)
+
+diff --git a/common/mvebu/cmd_fdt_config.c b/common/mvebu/cmd_fdt_config.c
+index c088848..ff99039 100644
+--- a/common/mvebu/cmd_fdt_config.c
++++ b/common/mvebu/cmd_fdt_config.c
+@@ -31,15 +31,8 @@ int do_fdt_config_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+ 	const char *fdt_option = NULL;
+ 	const char *fdt_model = NULL;
+ 
+-	if ((strcmp(cmd, "read") == 0) && (argc < 3)) {
+-		error("Please specify FDT source (eeprom/flash)\n");
+-		return 1;
+-	}
+-
+-	if ((strcmp(cmd, "select") == 0) && (argc < 3)) {
+-		error("Please specify FDT index option\n");
+-		return 1;
+-	}
++	if ((strcmp(cmd, "select") == 0) && (argc < 3))
++		return CMD_RET_USAGE;
+ 
+ 	if (argc > 2)
+ 		fdt_option = argv[2];
+@@ -53,10 +46,8 @@ int do_fdt_config_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+ 		} else if (argc > 3 && (strcmp(fdt_option, "flash") == 0)) {
+ 			if (fdt_cfg_read_flash(fdt_model))
+ 				return 1;
+-		} else {
+-			error("bad parameters for command \"read\"\n");
+-			return 1;
+-		}
++		} else
++			return CMD_RET_USAGE;
+ 	} else if (strcmp(cmd, "save") == 0) {
+ 		cfg_eeprom_save();
+ 	} else if (strcmp(cmd, "on") == 0) {
+@@ -72,8 +63,7 @@ int do_fdt_config_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+ 		if (fdt_select_list())
+ 			return 1;
+ 	} else {
+-		printf("ERROR: unknown command to config: \"%s\"\n", cmd);
+-		return 1;
++		return CMD_RET_USAGE;
+ 	}
+ 
+ 	return 0;
+-- 
+1.9.1
+

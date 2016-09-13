@@ -1,0 +1,51 @@
+From 9f5b177e30ed826f57743161a7ff36f8e25a8ad2 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Thu, 10 Dec 2015 15:57:24 +0200
+Subject: [PATCH 0588/1240] fix: usb: a3700: Fix the USB REF clock and work
+ mode
+
+- Fix the USB2 PLL configuration to use real REF clock
+  value instead of default 40 MHz
+- Fix USB3 startup work mode from device to host
+
+Change-Id: I58bdf7beeb8fff17fe36200bf49c41ee8c35a01d
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25792
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/phy/comphy_a3700.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/drivers/phy/comphy_a3700.c b/drivers/phy/comphy_a3700.c
+index 8dcc24b..969be41 100644
+--- a/drivers/phy/comphy_a3700.c
++++ b/drivers/phy/comphy_a3700.c
+@@ -365,6 +365,9 @@ static int comphy_usb3_power_up(enum phy_speed speed)
+ 	if (ret == 0)
+ 		error("Failed to lock USB3 PLL\n");
+ 
++	/* Switch from device to host mode */
++	reg_set((void __iomem *)USB32_CTRL_BASE, 0x1, 0x3);
++
+ 	debug_exit();
+ 
+ 	return ret;
+@@ -386,6 +389,14 @@ static int comphy_usb2_power_up(u8 usb32)
+ 		return 1;
+ 
+ 	/*
++	 * 0. Setup PLL. 40MHz clock uses defaults.
++	 *    See "PLL Settings for Typical REFCLK" table
++	 */
++	if (get_ref_clk() == 25)
++		reg_set((void __iomem *)USB2PHY_BASE,
++			5 | (96 << 16), 0x3F | (0xFF << 16) | (0x3 << 28));
++
++	/*
+ 	 * 1. PHY pull up and disable USB2 suspend
+ 	 */
+ 	reg_set((void __iomem *)USB2_OTG_PHY_CTRL_ADDR,
+-- 
+1.9.1
+

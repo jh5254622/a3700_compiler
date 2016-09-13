@@ -1,0 +1,69 @@
+From 0311d633492fcbc2c50277afce14273ef53193c3 Mon Sep 17 00:00:00 2001
+From: Stefan Roese <sr@denx.de>
+Date: Mon, 29 Jun 2015 14:58:08 +0200
+Subject: [PATCH 0810/1240] mmc: sdhci: Use timer based timeout detection in
+ sdhci_send_command()
+
+The loop counter based timeout detection does not work on the Armada
+38x based board (DB-88F6820-GP). At least with dcache enabled a
+timeout is detected. Without dcache enabled, the timeout does not
+occur. Increasing the loop counter solves this issue. But a better
+solution is to use a timer based timeout detection instead. This
+patch now implements this timer based detection.
+
+********************************************************************
+** basselsa@marvell.com:
+** Fixed JIRA:SYSTEMSW-1938
+
+Change-Id: I534ab6490a67a2a9700f6cd5552c9e83a0d6bcb4
+Signed-off-by: Stefan Roese <sr@denx.de>
+Cc: Pantelis Antoniou <panto@antoniou-consulting.com>
+Cc: Luka Perkov <luka.perkov@sartura.hr>
+Signed-off-by: Bassel Saba <basselsa@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23457
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23543
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23583
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27186
+---
+ drivers/mmc/sdhci.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/mmc/sdhci.c b/drivers/mmc/sdhci.c
+index 1af78f1..beb95ff 100644
+--- a/drivers/mmc/sdhci.c
++++ b/drivers/mmc/sdhci.c
+@@ -133,8 +133,8 @@ static int sdhci_send_command(struct mmc *mmc, struct mmc_cmd *cmd,
+ 	int trans_bytes = 0, is_aligned = 1;
+ 	u32 mask, flags, mode;
+ 	unsigned int time = 0, start_addr = 0;
+-	unsigned int retry = 10000;
+ 	int mmc_dev = mmc->block_dev.dev;
++	unsigned start = get_timer(0);
+ 
+ 	/* Timeout unit - ms */
+ 	static unsigned int cmd_timeout = CONFIG_SDHCI_CMD_DEFAULT_TIMEOUT;
+@@ -220,15 +220,15 @@ static int sdhci_send_command(struct mmc *mmc, struct mmc_cmd *cmd,
+ 	flush_cache(start_addr, trans_bytes);
+ #endif
+ 	sdhci_writew(host, SDHCI_MAKE_CMD(cmd->cmdidx, flags), SDHCI_COMMAND);
++	start = get_timer(0);
+ 	do {
+ 		stat = sdhci_readl(host, SDHCI_INT_STATUS);
+ 		if (stat & SDHCI_INT_ERROR)
+ 			break;
+-		if (--retry == 0)
+-			break;
+-	} while ((stat & mask) != mask);
++	} while (((stat & mask) != mask) &&
++		(get_timer(start) < CONFIG_SDHCI_CMD_DEFAULT_TIMEOUT));
+ 
+-	if (retry == 0) {
++	if (get_timer(start) >= CONFIG_SDHCI_CMD_DEFAULT_TIMEOUT) {
+ 		if (host->quirks & SDHCI_QUIRK_BROKEN_R1B)
+ 			return 0;
+ 		else {
+-- 
+1.9.1
+

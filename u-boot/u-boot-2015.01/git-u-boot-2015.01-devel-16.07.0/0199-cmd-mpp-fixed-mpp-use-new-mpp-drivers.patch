@@ -1,0 +1,751 @@
+From 0d260bd8ffda087e4c2125faff1cc96cae4b077e Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 17 Jun 2015 13:16:01 +0300
+Subject: [PATCH 0199/1240] cmd: mpp: fixed mpp use new mpp drivers
+
+Removed the per pin description. its too much
+information to keep inside u-boot
+All other functionality works the same
+
+Change-Id: Id74703bcff1ab8ccb358a27a854353a241fd9802
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20247
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv7/armada38x/tables.c |  67 -----------
+ arch/arm/cpu/armv7/armadalp/tables.c  |  12 --
+ arch/arm/cpu/armv8/armada8k/tables.c  |  11 --
+ arch/arm/cpu/mvebu-common/mpp-bus.c   |  63 +++++++----
+ arch/arm/include/asm/arch-mvebu/mpp.h |  63 +++++------
+ arch/arm/include/asm/arch-mvebu/soc.h |   3 -
+ common/mvebu/cmd_mpp.c                | 204 ++++++++++++++++------------------
+ configs/mvebu_armada38x_defconfig     |   2 +-
+ 8 files changed, 168 insertions(+), 257 deletions(-)
+
+diff --git a/arch/arm/cpu/armv7/armada38x/tables.c b/arch/arm/cpu/armv7/armada38x/tables.c
+index 5d6f395..a460e2c 100644
+--- a/arch/arm/cpu/armv7/armada38x/tables.c
++++ b/arch/arm/cpu/armv7/armada38x/tables.c
+@@ -23,7 +23,6 @@
+ #include <asm/arch-mvebu/adec.h>
+ #include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/soc.h>
+-#include <asm/arch-mvebu/mpp.h>
+ 
+ struct adec_win memory_map[] = {
+ 	{PEX_0_TARGET_ID,	MVEBU_PCIE_MEM_BASE(0),	MVEBU_PCIE_MEM_SIZE(0), PCI_0_MEM_ATTR, 1, 1},
+@@ -59,71 +58,6 @@ u16 armada6285_unit_disable[MAX_UNIT_ID] = {
+ 	[USB3_UNIT_ID]		= id_to_mask(1)
+ };
+ 
+-/* MPP description table. Informative only */
+-char *a38x_mpp_desc[MAX_MPP_ID + 1][MAX_MPP_OPTS] = {
+-/*	0x0        0x1         0x2              0x3             0x4             0x5             0x6 */
+-/* 0 */ { "GPIO[0]", "UA0_RXD", "NA", "NA", "NA", "NA", "NA"},
+-/* 1 */ { "GPIO[1]", "UA0_TXD", "NA", "NA", "NA", "NA", "NA"},
+-/* 2 */ { "GPIO[2]", "I2C0_SCK", "NA", "NA", "NA", "NA", "NA"},
+-/* 3 */ { "GPIO[3]", "I2C0_SDA", "NA", "NA", "NA", "NA", "NA"},
+-/* 4 */ { "GPIO[4]", "GE_MDC", "UA1_TXD", "UA0_RTS", "NA", "NA", "NA"},
+-/* 5 */ { "GPIO[5]", "GE_MDIO", "UA1_RXD", "UA0_CTS", "NA", "NA", "NA"},
+-/* 6 */ { "GPIO[6]", "GE0_TXCLKOUT", "GE0_CRS", "NA", "NA", "DEV_CSn[3]", "NA"},
+-/* 7 */ { "GPIO[7]", "GE0_TXD[0]", "NA", "NA", "NA", "DEV_AD[9]", "NA"},
+-/* 8 */ { "GPIO[8]", "GE0_TXD[1]", "NA", "NA", "NA", "DEV_AD[10]", "NA"},
+-/* 9 */ { "GPIO[9]", "GE0_TXD[2]", "NA", "NA", "NA", "DEV_AD[11]", "NA"},
+-/* 10 */ { "GPIO[10]", "GE0_TXD[3]", "NA", "NA", "NA", "DEV_AD[12]", "NA"},
+-/* 11 */ { "GPIO[11]", "GE0_TXCTL", "NA", "NA", "NA", "DEV_AD[13]", "NA"},
+-/* 12 */ { "GPIO[12]", "GE0_RXD[0]", "PCIe0_RSTOUTn", "PCIe1_RSTOUTn", "SPI0_CSn[1]", "DEV_AD[14]", "PCIe3_CLKREQ"},
+-/* 13 */ { "GPIO[13]", "GE0_RXD[1]", "PCIe0_CLKREQ", "PCIe1_CLKREQ", "SPI0_CSn[2]", "DEV_AD[15]", "PCIe2_CLKREQ"},
+-/* 14 */ { "GPIO[14]", "GE0_RXD[2]", "PTP_CLK", "M_VTT_CTRL", "SPI0_CSn[3]", "DEV_WEn[1]", "PCIe3_CLKREQ"},
+-/* 15 */ { "GPIO[15]", "GE0_RXD[3]", "GE_MDC Slave", "PCIe0_RSTOUTn", "SPI0_MOSI", "PCIe1_RSTOUTn", "PCIe2_RSTOUTn"},
+-/* 16 */ { "GPIO[16]", "GE0_RXCTL", "GE_MDIO Slave", "M_DECC_ERR", "SPI0_MISO", "PCIe0_CLKREQ", "PCIe1_CLKREQ"},
+-/* 17 */ { "GPIO[17]", "GE0_RXCLK", "PTP_CLK", "UA1_RXD", "SPI0_SCK", "SATA1_PRESENT_ACTIVEn", "SATA0_PRESENT_ACTIVEn"},
+-/* 18 */ { "GPIO[18]", "GE0_RXERR", "PTP_TRIG_GEN", "UA1_TXD", "SPI0_CSn[0]", "PCIe1_RSTOUTn", "PCIe2_RSTOUTn"},
+-/* 19 */ { "GPIO[19]", "GE0_COL", "PTP_EVENT_REQ", "PCIe0_CLKREQ", "SATA1_PRESENT_ACTIVEn", "UA0_CTS", "UA1_RXD"},
+-/* 20 */ { "GPIO[20]", "GE0_TXCLK", "PTP_CLK", "PCIe1_RSTOUTn", "SATA0_PRESENT_ACTIVEn", "UA0_RTS", "UA1_TXD"},
+-/* 21 */ { "GPIO[21]", "SPI0_CSn[1]", "GE1_RXD[0]", "SATA0_PRESENT_ACTIVEn", "SD0_CMD", "DEV_BOOTCSn", "SATA1_PRESENT_ACTIVEn"},
+-/* 22 */ { "GPIO[22]", "SPI0_MOSI", "NA", "NA", "NA", "DEV_AD[0]", "NA"},
+-/* 23 */ { "GPIO[23]", "SPI0_SCK", "NA", "NA", "NA", "DEV_AD[2]", "NA"},
+-/* 24 */ { "GPIO[24]", "SPI0_MISO", "UA0_CTS", "UA1_RXD", "SD0_D[4]", "DEV_READYn", "NA"},
+-/* 25 */ { "GPIO[25]", "SPI0_CSn[0]", "UA0_RTS", "UA1_TXD", "SD0_D[5]", "DEV_CSn[0]", "NA"},
+-/* 26 */ { "GPIO[26]", "SPI0_CSn[2]", "NA", "I2C1_SCK", "SD0_D[6]", "DEV_CSn[1]", "NA"},
+-/* 27 */ { "GPIO[27]", "SPI0_CSn[3]", "GE1_TXCLKOUT", "I2C1_SDA", "SD0_D[7]", "DEV_CSn[2]", "NA"},
+-/* 28 */ { "GPIO[28]", "NA", "GE1_TXD[0]", "NA", "SD0_CLK", "DEV_AD[5]", "NA"},
+-/* 29 */ { "GPIO[29]", "NA", "GE1_TXD[1]", "NA", "NA", "DEV_ALE[0]", "NA"},
+-/* 30 */ { "GPIO[30]", "NA", "GE1_TXD[2]", "NA", "NA", "DEV_OEn", "NA"},
+-/* 31 */ { "GPIO[31]", "NA", "GE1_TXD[3]", "NA", "NA", "DEV_ALE[1]", "NA"},
+-/* 32 */ { "GPIO[32]", "NA", "GE1_TXCTL", "NA", "NA", "DEV_WEn[0]", "NA"},
+-/* 33 */ { "GPIO[33]", "M_DECC_ERR", "NA", "NA", "NA", "DEV_AD[3]", "NA"},
+-/* 34 */ { "GPIO[34]", "NA", "NA", "NA", "NA", "DEV_AD[1]", "NA"},
+-/* 35 */ { "GPIO[35]", "REF_CLK_OUT[1]", "NA", "NA", "NA", "DEV_A[1]", "NA"},
+-/* 36 */ { "GPIO[36]", "PTP_TRIG_GEN", "NA", "NA", "NA", "DEV_A[0]", "NA"},
+-/* 37 */ { "GPIO[37]", "PTP_CLK", "GE1_RXCLK", "NA", "SD0_D[3]", "DEV_AD[8]", "NA"},
+-/* 38 */ { "GPIO[38]", "PTP_EVENT_REQ", "GE1_RXD[1]", "REF_CLK_OUT[0]", "SD0_D[0]", "DEV_AD[4]", "NA"},
+-/* 39 */ { "GPIO[39]", "I2C1_SCK", "GE1_RXD[2]", "UA0_CTS", "SD0_D[1]", "DEV_A[2]", "NA"},
+-/* 40 */ { "GPIO[40]", "I2C1_SDA", "GE1_RXD[3]", "UA0_RTS", "SD0_D[2]", "DEV_AD[6]", "NA"},
+-/* 41 */ { "GPIO[41]", "UA1_RXD", "GE1_RXCTL", "UA0_CTS", "SPI1_CSn[3]", "DEV_BURSTnLASTn", "ND_RBn[0]"},
+-/* 42 */ { "GPIO[42]", "UA1_TXD", "NA", "UA0_RTS", "NA", "DEV_AD[7]", "NA"},
+-/* 43 */ { "GPIO[43]", "PCIe0_CLKREQ", "M_VTT_CTRL", "M_DECC_ERR", "PCIe0_RSTOUTn", "DEV_CLKOUT", "ND_RBn[1]"},
+-/* 44 */ { "GPIO[44]", "SATA0_PRESENT_ACTIVEn", "SATA1_PRESENT_ACTIVEn", "NA", "NA", "PCIe0_RSTOUTn", "PCIe1_RSTOUTn"},
+-/* 45 */ { "GPIO[45]", "REF_CLK_OUT[0]", "PCIe0_RSTOUTn", "PCIe1_RSTOUTn", "PCIe2_RSTOUTn", "PCIe3_RSTOUTn", "UA1_RXD"},
+-/* 46 */ { "GPIO[46]", "REF_CLK_OUT[1]", "PCIe0_RSTOUTn", "PCIe1_RSTOUTn", "PCIe2_RSTOUTn", "PCIe3_RSTOUTn", "UA1_TXD"},
+-/* 47 */ { "GPIO[47]", "SATA0_PRESENT_ACTIVEn", "SATA1_PRESENT_ACTIVEn", "NA", "SPI1_CSn[2]", "NA", "PCIe2_RSTOUTn"},
+-/* 48 */ { "GPIO[48]", "SATA0_PRESENT_ACTIVEn", "M_VTT_CTRL", "TDM2C_PCLK", "AU_I2SMCLKSPDIFRMCLK", "SD0_D[4]", "PCIe0_CLKREQ"},
+-/* 49 */ { "GPIO[49]", "NA", "NA", "TDM2C_FSYNC", "AU_I2SLRCLK", "SD0_D[5]", "PCIe1_CLKREQ"},
+-/* 50 */ { "GPIO[50]", "PCIe0_RSTOUTn", "PCIe1_RSTOUTn", "TDM2C_DRX", "AU_EXTCLK", "SD0_CMD", "PCIe2_RSTOUTn"},
+-/* 51 */ { "GPIO[51]", "NA", "NA", "TDM2C_DTX", "AU_I2SDOAU_SPDIFO", "M_DECC_ERR", "PTP_TRIG_GEN"},
+-/* 52 */ { "GPIO[52]", "PCIe0_RSTOUTn", "PCIe1_RSTOUTn", "TDM2C_INTn", "AU_I2SDI", "SD0_D[6]", "PTP_CLK"},
+-/* 53 */ { "GPIO[53]", "SATA1_PRESENT_ACTIVEn", "SATA0_PRESENT_ACTIVEn", "TDM2C_RSTn", "AU_I2SBCLK", "SD0_D[7]", "PTP_EVENT_REQ"},
+-/* 54 */ { "GPIO[54]", "SATA0_PRESENT_ACTIVEn", "SATA1_PRESENT_ACTIVEn", "PCIe0_RSTOUTn", "PCIe1_RSTOUTn", "SD0_D[3]", "PCIe2_RSTOUTn"},
+-/* 55 */ { "GPIO[55]", "UA1_CTS", "GE_MDIO", "PCIe1_CLKREQ", "SPI1_CSn[1]", "SD0_D[0]", "UA1_RXD"},
+-/* 56 */ { "GPIO[56]", "UA1_RTS", "GE_MDC", "M_DECC_ERR", "SPI1_MOSI", "NA", "UA1_TXD"},
+-/* 57 */ { "GPIO[57]", "NA", "NA", "NA", "SPI1_SCK", "SD0_CLK", "UA1_TXD"},
+-/* 58 */ { "GPIO[58]", "PCIe1_CLKREQ", "I2C1_SCK", "PCIe2_CLKREQ", "SPI1_MISO", "SD0_D[1]", "UA1_RXD"},
+-/* 59 */ { "GPIO[59]", "PCIe0_RSTOUTn", "I2C1_SDA", "PCIe1_RSTOUTn", "SPI1_CSn[0]", "SD0_D[2]", "PCIe2_RSTOUTn"},
+-};
+-
+ struct mvebu_soc_info a38x_soc_info[] = {
+ 	/* Armda 380 */
+ 	{
+@@ -156,5 +90,4 @@ struct mvebu_soc_family a38x_family_info = {
+ 	.rev_name = {"Z1", "A0"},
+ 	.base_unit_info = base_unit_mask_table,
+ 	.soc_table = a38x_soc_info,
+-	.mpp_desc  = (char **)a38x_mpp_desc,
+ };
+diff --git a/arch/arm/cpu/armv7/armadalp/tables.c b/arch/arm/cpu/armv7/armadalp/tables.c
+index ebd9746..bdef3bf 100644
+--- a/arch/arm/cpu/armv7/armadalp/tables.c
++++ b/arch/arm/cpu/armv7/armadalp/tables.c
+@@ -22,7 +22,6 @@
+ #include <asm/arch-mvebu/adec.h>
+ #include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/soc.h>
+-#include <asm/arch-mvebu/mpp.h>
+ 
+ struct adec_win memory_map[] = {
+ #ifndef CONFIG_PALLADIUM
+@@ -57,16 +56,6 @@ u16 armadalp_B_unit_disable[MAX_UNIT_ID] = {
+ 	[USB3_UNIT_ID]		= id_to_mask(1)
+ };
+ 
+-/* MPP description table. Informative only */
+-char *armadalp_mpp_desc[MAX_MPP_ID + 1][MAX_MPP_OPTS] = {
+-/*	0x0        0x1         0x2              0x3             0x4             0x5             0x6 */
+-	/* the following entries are temporary examples only -  referenced from A38x */
+-/* 0 */	{"GPIO_0", "NF_IO_2", "SPI_0_CSn",	"SPI_1_CSn",	"NA",           "ND_IO_2", "NA"},	/* 0  */
+-/* 1 */	{"GPIO_1", "NF_IO_3", "SPI_0_MOSI",	"SPI_1_MOSI",	"NA",	        "ND_IO_3", "NA"},	 /* 1  */
+-/* 2 */	{"GPIO_2", "NF_IO_4", "PTP_EVENT_REQ",  "C0_LED",	"AU_I2S_DI",	"ND_IO_4", "SPI_1_MOSI"}, /* 2  */
+-/* 3 */	{"GPIO_3", "NF_IO_5", "PTP_TRIG_GEN",	"P3_LED",	"AU_I2S_MCLK",	"ND_IO_5", "SPI_1_MISO"}, /* 1  */
+-};
+-
+ struct mvebu_soc_info armadalp_soc_info[] = {
+ 	/* Armada LP A */
+ 	{
+@@ -92,5 +81,4 @@ struct mvebu_soc_family armadalp_family_info = {
+ 	.rev_name = {"Z1", "A0"},
+ 	.base_unit_info = base_unit_mask_table,
+ 	.soc_table = armadalp_soc_info,
+-	.mpp_desc  = (char **)armadalp_mpp_desc,
+ };
+diff --git a/arch/arm/cpu/armv8/armada8k/tables.c b/arch/arm/cpu/armv8/armada8k/tables.c
+index 3e42d12..8e20bc7 100644
+--- a/arch/arm/cpu/armv8/armada8k/tables.c
++++ b/arch/arm/cpu/armv8/armada8k/tables.c
+@@ -22,7 +22,6 @@
+ #include <asm/arch-mvebu/adec.h>
+ #include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/soc.h>
+-#include <asm/arch-mvebu/mpp.h>
+ 
+ struct adec_win memory_map[] = {
+ #ifndef CONFIG_PALLADIUM
+@@ -62,15 +61,6 @@ u16 armada8022_unit_disable[MAX_UNIT_ID] = {
+ 	[USB3_UNIT_ID]		= id_to_mask(1)
+ };
+ 
+-/* MPP description table. Informative only */
+-char *a8k_mpp_desc[MAX_MPP_ID + 1][MAX_MPP_OPTS] = {
+-	{"GPIO_0", "NF_IO_2", "SPI_0_CSn",	"SPI_1_CSn",	"NA",           "ND_IO_2", "NA"},	/* 0  */
+-	{"GPIO_1", "NF_IO_3", "SPI_0_MOSI",	"SPI_1_MOSI",	"NA",	        "ND_IO_3", "NA"},	 /* 1  */
+-	{"GPIO_2", "NF_IO_4", "PTP_EVENT_REQ",  "C0_LED",	"AU_I2S_DI",	"ND_IO_4", "SPI_1_MOSI"}, /* 2  */
+-	{"GPIO_3", "NF_IO_5", "PTP_TRIG_GEN",	"P3_LED",	"AU_I2S_MCLK",	"ND_IO_5", "SPI_1_MISO"}, /* 1  */
+-};
+-
+-
+ struct mvebu_soc_info a8k_soc_info[] = {
+ 	/* Armda 8021 */
+ 	{
+@@ -95,5 +85,4 @@ struct mvebu_soc_family a8k_family_info = {
+ 	.id   = 8000,
+ 	.base_unit_info = base_unit_mask_table,
+ 	.soc_table = a8k_soc_info,
+-	.mpp_desc  = (char **)a8k_mpp_desc,
+ };
+diff --git a/arch/arm/cpu/mvebu-common/mpp-bus.c b/arch/arm/cpu/mvebu-common/mpp-bus.c
+index bd12b9a..5b1881a 100644
+--- a/arch/arm/cpu/mvebu-common/mpp-bus.c
++++ b/arch/arm/cpu/mvebu-common/mpp-bus.c
+@@ -28,24 +28,10 @@
+ #include <asm/arch-mvebu/soc.h>
+ #include <asm/arch-mvebu/pinctl.h>
+ 
+-#define MAX_MPP_BUSES	10
+-
+-struct mpp_pin {
+-	u32 id;
+-	u32 func;
+-};
+-
+-struct mpp_bus {
+-	const char *name;
+-	int pin_cnt;
+-	int bank_id;
+-	struct mpp_pin *pins;
+-};
+-
+ struct mpp_bus buses[MAX_MPP_BUSES];
+ 
+ #define DEBUG
+-int mpp_get_bus_id(char *name)
++int mpp_get_bus_id(const char *name)
+ {
+ 	int id = -1, i;
+ 	for (i = 0; i < MAX_MPP_BUSES; i++) {
+@@ -54,10 +40,42 @@ int mpp_get_bus_id(char *name)
+ 			break;
+ 		}
+ 	}
++
++	if (buses[id].valid == 0)
++		return -1;
++
+ 	return id;
+ }
+ 
+-int mpp_is_bus_enabled(char *name)
++struct mpp_bus *mpp_get_bus(int id)
++{
++	if (buses[id].valid == 0)
++		return NULL;
++
++	return &buses[id];
++}
++
++u32 mpp_get_pin_func(int bank_id, u32 pin_id)
++{
++	return pinctl_get_pin_func(bank_id, pin_id);
++}
++
++int mpp_set_pin_func(int bank_id, u32 pin_id, u32 func)
++{
++	return pinctl_set_pin_func(bank_id, pin_id, func);
++}
++
++const char *mpp_get_bank_name(int bank_id)
++{
++	return pinctl_get_name(bank_id);
++}
++
++int mpp_get_bank_pins(int bank_id)
++{
++	return pinctl_get_pin_cnt(bank_id);
++}
++
++int mpp_is_bus_enabled(const char *name)
+ {
+ 	int id;
+ 	int pin_id;
+@@ -83,9 +101,9 @@ int mpp_is_bus_enabled(char *name)
+ 	return bus_active;
+ }
+ 
+-int mpp_enable_bus(char *name)
++int mpp_enable_bus(const char *name)
+ {
+-	int i, id;
++	int i, id, ret;
+ 	struct mpp_pin *pin;
+ 	struct mpp_bus *bus;
+ 
+@@ -98,13 +116,11 @@ int mpp_enable_bus(char *name)
+ 	}
+ 	bus = &buses[id];
+ 
+-	printf("Enabling MPP bus %s\n", name);
+-	/* Check if someone already modified one of the pins */
+ 	for (i = 0; i < bus->pin_cnt; i++) {
+ 		pin = &bus->pins[i];
+-
+-		printf("Setting (bank, pin, func) = (%d, %d, %d)\n", bus->bank_id, pin->id, pin->func);
+-		pinctl_set_pin_func(bus->bank_id, pin->id, pin->func);
++		ret = pinctl_set_pin_func(bus->bank_id, pin->id, pin->func);
++		if (ret)
++			printf("Warning: pin %d not set for bus %s\n", pin->id, bus->name);
+ 	}
+ 
+ 	return 0;
+@@ -166,6 +182,7 @@ int mpp_bus_probe(void)
+ 			error("Failed getting bank id for bus %s\n", bus->name);
+ 			continue;
+ 		}
++		bus->valid = 1;
+ 	}
+ 
+ 	return 0;
+diff --git a/arch/arm/include/asm/arch-mvebu/mpp.h b/arch/arm/include/asm/arch-mvebu/mpp.h
+index 02285f4..a1551fc 100644
+--- a/arch/arm/include/asm/arch-mvebu/mpp.h
++++ b/arch/arm/include/asm/arch-mvebu/mpp.h
+@@ -17,37 +17,32 @@
+  * ***************************************************************************
+  */
+ 
+-#ifndef _MPP_H_
+-#define _MPP_H_
+-
+-#include  <asm/arch/soc-info.h>
+-
+-#define		MAX_MPP_NAME		32
+-#define		MAX_BUS_NAME		32
+-#define		MAX_PINS_PER_BUS	14
+-#define		MAX_BUS_OPTS		2
+-
+-char **mpp_get_desc_table(void);
+-
+-#ifndef CONFIG_MVEBU_MPP
+-
+-#define mpp_set_pin(mpp_id)
+-#define mpp_get_pin(mpp_id)
+-#define mpp_set_and_update(mpp_reg)
+-#define mpp_is_bus_enabled(bus)
+-#define mpp_is_bus_valid(bus)
+-#define mpp_enable_bus(mpp_reg, bus_id, bus_alt)
+-
+-
+-#else
+-int mpp_bus_probe(void);
+-
+-u8   mpp_get_pin(int mpp_id);
+-void mpp_set_pin(int mpp_id, int value);
+-int mpp_enable_bus(char *name);
+-int  mpp_is_bus_valid(char *name);
+-int  mpp_is_bus_enabled(char *name);
+-
+-#endif /* CONFIG_MVEBU_MPP */
+-
+-#endif /* _MPP_H_ */
++#ifndef _MPP_BUS_H_
++#define _MPP_BUS_H_
++
++#define MAX_MPP_BUSES	10
++
++struct mpp_pin {
++	u32 id;
++	u32 func;
++};
++
++struct mpp_bus {
++	const char *name;
++	int pin_cnt;
++	int bank_id;
++	struct mpp_pin *pins;
++	int valid;
++};
++
++int  mpp_bus_probe(void);
++int  mpp_enable_bus(const char *name);
++int  mpp_is_bus_enabled(const char *name);
++struct mpp_bus *mpp_get_bus(int id);
++
++u32 mpp_get_pin_func(int bank_id, u32 pin_id);
++int mpp_set_pin_func(int bank_id, u32 pin_id, u32 func);
++int mpp_get_bank_pins(int bank_id);
++const char *mpp_get_bank_name(int bank_id);
++
++#endif /* _MPP_BUS_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/soc.h b/arch/arm/include/asm/arch-mvebu/soc.h
+index 8470ff0..da7dbe7 100644
+--- a/arch/arm/include/asm/arch-mvebu/soc.h
++++ b/arch/arm/include/asm/arch-mvebu/soc.h
+@@ -22,7 +22,6 @@
+ 
+ #include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/adec.h>
+-#include <asm/arch-mvebu/mpp.h>
+ #include <asm/arch/soc-info.h>
+ 
+ #define MAX_SOC_NAME	32
+@@ -41,11 +40,9 @@ struct mvebu_soc_family {
+ 	char	name[MAX_SOC_NAME];
+ 	char	rev_name[MAX_SOC_REVS][MAX_REV_NAME];
+ 	u16	*base_unit_info;
+-	char	**mpp_desc;
+ 	struct	mvebu_soc_info *soc_table;
+ 	struct	mvebu_soc_info *curr_soc;
+ 
+-	struct mpp_bus *mpp_buses;
+ 	u32 mpp_protect[MAX_MPP_REGS];
+ 	u32 mpp_update[MAX_MPP_REGS];
+ 	u32 mpp_mask[MAX_MPP_REGS];
+diff --git a/common/mvebu/cmd_mpp.c b/common/mvebu/cmd_mpp.c
+index f65465c..acea2fc 100644
+--- a/common/mvebu/cmd_mpp.c
++++ b/common/mvebu/cmd_mpp.c
+@@ -23,21 +23,20 @@
+ #include <vsprintf.h>
+ #include <errno.h>
+ #include "asm/arch-mvebu/mpp.h"
+-#include "asm/arch/soc-info.h"
+ 
+-static int set_range(int *start, int *end)
++static int set_range(int *start, int *end, int max_pin)
+ {
+ 	/* Print full range */
+ 	if (*start < 0) {
+ 		*start = 0;
+-		*end = MAX_MPP_ID;
++		*end = max_pin;
+ 	}
+ 	/* Print single MPP */
+ 	if ((*start >= 0) && (*end < 0))
+ 		*end = *start;
+ 
+ 	/* clip end to MAX_MPP_ID */
+-	*end = min(*end, MAX_MPP_ID);
++	*end = min(*end, max_pin);
+ 
+ 	/* Error checking on range */
+ 	if (*start > *end) {
+@@ -48,109 +47,117 @@ static int set_range(int *start, int *end)
+ 	return 0;
+ }
+ 
+-static int cmd_mpp_list(char **mpp_desc, int start, int end)
++static int cmd_mpp_list(void)
+ {
+-	int i, pin, ret;
+-	char *mpp_opt;
++	int id, pins;
++	const char *name;
+ 
+-	ret = set_range(&start, &end);
+-	if (ret)
+-		return ret;
++	printf("\n id  name           pins\n");
++	printf("------------------------\n");
+ 
+-	/* Print table head */
+-	printf("No  ");
+-	for (i = 0; i < MAX_MPP_OPTS; i++)
+-		printf("0x%-12x", i);
+-	printf("\n-----------------------------------------------------------------------------\n");
+-
+-	for (pin = start; pin <= end; pin++) {
+-		printf("%02d  ", pin);
+-		for (i = 0; i < MAX_MPP_OPTS; i++) {
+-			mpp_opt = *(mpp_desc + (pin * MAX_MPP_OPTS) + i);
+-			printf("%-14s", mpp_opt);
+-		}
+-		printf("\n");
++	for (id = 0; id <= 10; id++) {
++		name = mpp_get_bank_name(id);
++		if (name == NULL)
++			continue;
++
++		pins = mpp_get_bank_pins(id);
++		printf(" %d   %-15s %d\n", id, name, pins);
+ 	}
+ 
+ 	printf("\n");
+ 	return 0;
+ }
+ 
+-static int cmd_mpp_read(char **mpp_desc, int start, int end)
++static int cmd_mpp_read(int bank_id, int start, int end)
+ {
+-	u8 value;
+ 	int pin, ret;
+-	char *mpp_opt;
+ 
+-	ret = set_range(&start, &end);
++	ret = set_range(&start, &end, mpp_get_bank_pins(bank_id) - 1);
+ 	if (ret)
+ 		return ret;
+ 
+-	printf("No  Value  Name\n");
+-	printf("--------------------------\n");
++	printf("\n mpp bank: %s\n", mpp_get_bank_name(bank_id));
+ 
+-	for (pin = start; pin <= end; pin++) {
+-		value = min(mpp_get_pin(pin), (u8)MAX_MPP_OPTS);
+-		mpp_opt = *(mpp_desc + (pin * MAX_MPP_OPTS) + value);
++	printf("\n id  function\n");
++	printf("--------------\n");
+ 
+-		printf("%02d  0x%x   %s\n", pin, value, mpp_opt);
+-	}
++	for (pin = start; pin <= end; pin++)
++		printf("  %-2d     %-2d\n", pin, mpp_get_pin_func(bank_id, pin));
+ 
+ 	return 0;
+ }
+ 
+-static int cmd_mpp_write(char **mpp_desc, int pin, int value)
++static int cmd_mpp_write(int bank_id, int pin, int func)
+ {
+-	char *mpp_opt;
++	int ret;
++	int max_pin_id;
++
++	max_pin_id = mpp_get_bank_pins(bank_id);
++	if (max_pin_id <= 0) {
++		printf("Error: bad bank id %d\n", bank_id);
++		return -EINVAL;
++	}
+ 
+-	if ((pin < 0) || (pin > MAX_MPP_ID)) {
+-		printf("Error: Pin No %d out of range [%d, %d]\n", pin, 0, MAX_MPP_ID);
++	if ((pin < 0) || (pin > max_pin_id)) {
++		printf("Error: pin %d out of range [%d, %d]\n", pin, 0, max_pin_id);
+ 		return -EINVAL;
+ 	}
+ 
+-	mpp_set_pin(pin, value);
++	ret = mpp_set_pin_func(bank_id, pin, func);
++	if (ret)
++		return ret;
+ 
+ 	/* Readback to verify */
+-	value = min(mpp_get_pin(pin), (u8)MAX_MPP_OPTS);
+-	mpp_opt = *(mpp_desc + (pin * MAX_MPP_OPTS) + value);
+-	printf("%02d  0x%x   %s\n", pin, value, mpp_opt);
++	printf("Readback: %02d  0x%x\n", pin, mpp_get_pin_func(bank_id, pin));
+ 
+ 	return 0;
+ }
+ 
+ 
+-int do_mpp_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+-			char * const argv[])
++int do_mpp_cmd(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+ {
+ 	const char *cmd = argv[1];
+-	char  **mpp_desc;
+-	int value = 0;
++	int func = 0;
+ 	int start_pin = -1;
+ 	int end_pin = -1;
++	int bank_id = -1;
++
++
++	if (argc < 2) {
++		printf("Error: Please specify command type list|read|write\n");
++		return 1;
++	}
+ 
+-	if ((strcmp(cmd, "write") == 0) && (argc < 4)) {
+-		printf("Error: Please specify MPP number and value\n");
++	if ((strcmp(cmd, "read") == 0) && (argc < 3)) {
++		printf("Error: read requires a bank id\n");
++		return 1;
++	}
++
++	if ((strcmp(cmd, "write") == 0) && (argc < 5)) {
++		printf("Error: Please specify bank, pin, and function\n");
+ 		return 1;
+ 	}
+ 
+-	mpp_desc = mpp_get_desc_table();
+ 
+ 	if (argc > 2)
+-		start_pin = (int)simple_strtoul(argv[2], NULL, 10);
++		bank_id = (int)simple_strtoul(argv[2], NULL, 10);
++
++	if (argc > 3)
++		start_pin = (int)simple_strtoul(argv[3], NULL, 10);
+ 
+-	if (argc > 3) {
+-		value = (int)simple_strtoul(argv[3], NULL, 16);
+-		end_pin = (int)simple_strtoul(argv[3], NULL, 10);
++	if (argc > 4) {
++		func = (int)simple_strtoul(argv[4], NULL, 16);
++		end_pin = (int)simple_strtoul(argv[4], NULL, 10);
+ 	}
+ 
+-	if ((strcmp(cmd, "list") == 0) || (argc < 2)) {
+-		if (cmd_mpp_list(mpp_desc, start_pin, end_pin))
++	if (strcmp(cmd, "list") == 0) {
++		if (cmd_mpp_list())
+ 			return -EINVAL;
+ 	} else if (strcmp(cmd, "read") == 0) {
+-		if (cmd_mpp_read(mpp_desc, start_pin, end_pin))
++		if (cmd_mpp_read(bank_id, start_pin, end_pin))
+ 			return -EINVAL;
+ 	} else if (strcmp(cmd, "write") == 0) {
+-		if (cmd_mpp_write(mpp_desc, start_pin, value))
++		if (cmd_mpp_write(bank_id, start_pin, func))
+ 			return -EINVAL;
+ 	} else {
+ 		printf("ERROR: unknown command to mpp: \"%s\"\n", cmd);
+@@ -165,73 +172,61 @@ U_BOOT_CMD(
+ 	"mpp - Display or modify MPP values\n",
+ 	"\n"
+ 	"Display or modify MPP values\n"
+-	"\tlist		- Display MPP pins and their options\n"
+-	"\tlist <x>	- Display available option of MPP x\n"
+-	"\tlist <x> <y>	- Display available option of MPP x to y\n"
+-	"\tread		- Read all MPP values\n"
+-	"\tread <x>	- Read MPP x value\n"
+-	"\tread <x> <y>	- Read MPP x to y values\n"
+-	"\twrite x y	- Write y to MPP x\n"
++	"\tlist			- List all MPP banks\n"
++	"\tread <bank>		- Read all MPP values on bank\n"
++	"\tread <bank> <pin>	- Read MPP function\n"
++	"\tread <bank> <x> <y>  - Read MPP values of pin x to y\n"
++	"\twrite <bank> <pin> <func> - Modify the function of an MPP\n"
+ );
+ 
+ 
+-
+-static int cmd_mppbus_enable(char **mpp_desc, int bus_id)
++static int cmd_mppbus_enable(int bus_id)
+ {
+-	struct mpp_bus *bus = soc_get_mpp_bus(bus_id);
+-	int pin;
+-	int bus_alt = 0;
++	struct mpp_bus *bus = mpp_get_bus(bus_id);
+ 
+-	if (bus_alt > (bus->bus_cnt - 1)) {
+-		error("Bus alternative %d not exist on bus %s", bus_alt, bus->name);
+-		return -EINVAL;
+-	}
++	printf("Enabling MPP bus %s\n", bus->name);
++	mpp_enable_bus(bus->name);
+ 
+-	printf("Enabling bus %s Alternative %d\n", bus->name, bus_alt);
+-	for (pin = 0; pin < bus->pin_cnt; pin++) {
+-		u8 id = bus->pin_data[bus_alt][pin].id;
+-		u8 val = bus->pin_data[bus_alt][pin].val;
+-		mpp_set_pin(id, val);
+-	}
+ 	return 0;
+ }
+ 
+-static int cmd_mppbus_list(char **mpp_desc, int bus_id)
++static int cmd_mppbus_list(int bus_id)
+ {
+-	int id, opt, start, end, pin;
++	int id, start, end, i;
+ 	struct mpp_bus *bus;
++	struct mpp_pin *pin;
++	u32 curr;
+ 
+ 	start = bus_id;
+ 	end = bus_id + 1;
+ 
+ 	if (bus_id < 0) {
+ 		start = 0;
+-		end = MAX_MPP_BUS;
++		end = MAX_MPP_BUSES;
+ 	}
+ 
+-	printf("Id  Name            Pins  Status\n");
++	printf("\nId  Name            Pins  Status\n");
+ 	printf("----------------------------------\n");
++
+ 	for (id = start; id < end; id++) {
+-		bus = soc_get_mpp_bus(id);
+-		if (!mpp_is_bus_valid(bus))
++		bus = mpp_get_bus(id);
++		if (bus == NULL)
+ 			continue;
+-		if (mpp_is_bus_enabled(bus))
+-			printf("%02d  %-15s %d     %s\n", id, bus->name, bus->pin_cnt, "Enabled");
+-		else
+-			printf("%02d  %-15s %d     %s\n", id, bus->name, bus->pin_cnt, "Disabled");
++
++		printf("%02d  %-15s %-2d     %s\n", id, bus->name, bus->pin_cnt,
++		       mpp_is_bus_enabled(bus->name) ? "Enabled" : "Disabled");
+ 	}
+ 
++	/* For single bus call, list the bus pins */
+ 	if (bus_id >= 0) {
+-		bus = soc_get_mpp_bus(bus_id);
+-		for (opt = 0; opt < bus->bus_cnt; opt++) {
+-			printf("\nAlternative %d\n", opt);
+-			for (pin = 0; pin < bus->pin_cnt; pin++) {
+-				u8 id = bus->pin_data[opt][pin].id;
+-				u8 val = bus->pin_data[opt][pin].val;
+-				char *pin_name = *(mpp_desc + (id * MAX_MPP_OPTS) + val);
+-
+-				printf("MPP %d  0x%x %s\n", id, val, pin_name);
+-			}
++		printf("\npin  func  curr  status\n");
++		printf("-----------------------\n");
++		bus = mpp_get_bus(bus_id);
++		for (i = 0; i < bus->pin_cnt; i++) {
++			pin = &bus->pins[i];
++			curr = mpp_get_pin_func(bus->bank_id, pin->id);
++			printf(" %d    %d    %d     %s\n", pin->id, pin->func, curr,
++				pin->func == curr ? "set" : "unset");
+ 		}
+ 	}
+ 	return 0;
+@@ -241,7 +236,6 @@ int do_mppbus_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+ 			char * const argv[])
+ {
+ 	const char *cmd = argv[1];
+-	char  **mpp_desc;
+ 	int bus_id = -1;
+ 
+ 	if ((strcmp(cmd, "enable") == 0) && (argc < 3)) {
+@@ -249,21 +243,19 @@ int do_mppbus_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+ 		return 1;
+ 	}
+ 
+-	mpp_desc = mpp_get_desc_table();
+-
+ 	if (argc > 2)
+ 		bus_id = (int)simple_strtoul(argv[2], NULL, 10);
+ 
+-	if (bus_id > MAX_MPP_BUS) {
+-		error("MPP bus id exceeds maximum of %d\n", MAX_MPP_BUS);
++	if (bus_id > MAX_MPP_BUSES) {
++		error("MPP bus id exceeds maximum of %d\n", MAX_MPP_BUSES);
+ 		return -EINVAL;
+ 	}
+ 
+ 	if ((strcmp(cmd, "list") == 0) || (argc < 2)) {
+-		if (cmd_mppbus_list(mpp_desc, bus_id))
++		if (cmd_mppbus_list(bus_id))
+ 			return -EINVAL;
+ 	} else if (strcmp(cmd, "enable") == 0) {
+-		if (cmd_mppbus_enable(mpp_desc, bus_id))
++		if (cmd_mppbus_enable(bus_id))
+ 			return -EINVAL;
+ 	} else {
+ 		error("unknown command to mppbus: \"%s\"\n", cmd);
+diff --git a/configs/mvebu_armada38x_defconfig b/configs/mvebu_armada38x_defconfig
+index 4332dce..2dd3755 100644
+--- a/configs/mvebu_armada38x_defconfig
++++ b/configs/mvebu_armada38x_defconfig
+@@ -4,7 +4,6 @@ CONFIG_SPL=y
+ CONFIG_MVEBU_NAND=y
+ CONFIG_MVEBU_SPI=y
+ CONFIG_MVEBU_PCI=y
+-CONFIG_MVEBU_MPP=y
+ CONFIG_MVEBU_MPP_BUS=y
+ +S:CONFIG_MVEBU_I2C=y
+ CONFIG_CMD_BDI=y
+@@ -25,6 +24,7 @@ CONFIG_CMD_PING=y
+ CONFIG_CMD_TIME=y
+ CONFIG_CMD_MISC=y
+ CONFIG_CMD_TIMER=y
++CONFIG_CMD_MVEBU_MPP=y
+ CONFIG_CMD_MVEBU_BUBT=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+-- 
+1.9.1
+

@@ -1,0 +1,38 @@
+From 226d8690adcd65f9fdae5dd81634f18c3839da0c Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 13 Jan 2016 12:51:37 +0200
+Subject: [PATCH 0678/1240] bubt: remove the u-boot size restriction from bubt
+ cmd
+
+Since u-boot may be used to burn other boot images such as
+ATF + U-BOOT and EDK2 the size restriction may limit such
+use cases
+
+Change-Id: Id69c1df2e2d78ef3d502331321dc3e6ad00959d7
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26759
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ common/mvebu/cmd_bubt.c | 5 -----
+ 1 file changed, 5 deletions(-)
+
+diff --git a/common/mvebu/cmd_bubt.c b/common/mvebu/cmd_bubt.c
+index 4667f90..f0ebe20 100644
+--- a/common/mvebu/cmd_bubt.c
++++ b/common/mvebu/cmd_bubt.c
+@@ -381,11 +381,6 @@ static int check_image_header(void)
+ 
+ static int bubt_verify(int image_size)
+ {
+-	/* Check that image doesn't overflow allocated space */
+-	if (image_size > CONFIG_UBOOT_SIZE) {
+-		printf("Error: Image size %d larget than limit %d\n", image_size, CONFIG_UBOOT_SIZE);
+-		return -EFBIG;
+-	}
+ 
+ 	/* Check a correct image header exists */
+ 	if (check_image_header()) {
+-- 
+1.9.1
+

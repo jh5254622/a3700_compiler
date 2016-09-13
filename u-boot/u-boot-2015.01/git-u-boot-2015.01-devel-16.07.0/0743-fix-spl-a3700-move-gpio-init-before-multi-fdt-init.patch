@@ -1,0 +1,75 @@
+From 1cf04e2a1698886a18837464434c2d78afc2126f Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Tue, 26 Jan 2016 23:56:36 +0800
+Subject: [PATCH 0743/1240] fix: spl: a3700: move gpio init before multi-fdt
+ init
+
+	multi FDT feature reads eeprom, which requires I2C support
+	but for Armada3700, I2C feature depends on GPIO configuration,
+	so mvebu_setup_fdt need to be invoked after it.
+
+	but GPIO driver also need to read FDT file, for reg base and
+	other configurations. For reg base it is OK, since all the fdt
+	files for all the boards should have the same value.
+
+	For I2C related GPIO settings, we will demand from HW that
+	all Marvell boards will use the same set of I2C pins setup.
+
+	GPIO need to be split into two stages: static shared (for I2C),
+	and then dynamic-fdt-based. the first step will be done before
+	mvebu_setup_fdt(), and the second one will be after it.
+
+Change-Id: Ifd3f7751f0b10ab6a170c99860ac004b71f5002d
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27035
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ arch/arm/cpu/armv8/armadalp/spl.c | 24 +++++++++++++++++++-----
+ 1 file changed, 19 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armadalp/spl.c b/arch/arm/cpu/armv8/armadalp/spl.c
+index 84e0497..5d6bc83 100644
+--- a/arch/arm/cpu/armv8/armadalp/spl.c
++++ b/arch/arm/cpu/armv8/armadalp/spl.c
+@@ -45,6 +45,25 @@ void board_init_f(ulong silent)
+ 	     tree for the SoC, required for i2c initialization to read EEPROM data */
+ 	setup_fdt();
+ 
++/* multi FDT feature reads eeprom, which requires I2C support
++ * but for Armada3700, I2C feature depends on GPIO configuration,
++ * so mvebu_setup_fdt need to be invoked after it.
++ *
++ * but GPIO driver also need to read FDT file, for reg base and
++ * other configurations. For reg base it is OK, since all the fdt
++ * files for all the boards should have the same value.
++ *
++ * as far as the I2C related GPIO settings, we will demand from HW that
++ * all Marvell boards will use the same set of I2C pins setup.
++ *
++ * GPIO need to be split into two stages: static shared (for I2C),
++ * and then dynamic-fdt-based. the first step will be done before
++ * mvebu_setup_fdt(), and the second one will be after it.
++ */
++#ifdef CONFIG_MVEBU_SPL_A3700_GPIO
++	mvebu_init_gpio();
++#endif
++
+ #ifdef CONFIG_MULTI_DT_FILE
+ 	/* Update gd->fdt_blob according to multi-fdt data in eeprom */
+ 	mvebu_setup_fdt();
+@@ -57,11 +76,6 @@ void board_init_f(ulong silent)
+ 	*/
+ 	preloader_console_init();
+ 
+-	/* Init all drivers requred at early stage (clocks, GPIO...) */
+-#ifdef CONFIG_MVEBU_SPL_A3700_GPIO
+-	mvebu_init_gpio();
+-#endif
+-
+ 	/* Clock should be enabeld before initialize the I/O units */
+ #ifdef CONFIG_MVEBU_A3700_CLOCK
+ 	init_clock();
+-- 
+1.9.1
+

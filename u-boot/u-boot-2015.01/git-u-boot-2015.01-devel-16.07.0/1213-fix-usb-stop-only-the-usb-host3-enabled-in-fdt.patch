@@ -1,0 +1,50 @@
+From a416a13aa263ef4d2c3c0b4e628103f90f9205eb Mon Sep 17 00:00:00 2001
+From: Wilson Ding <dingwei@marvell.com>
+Date: Mon, 13 Jun 2016 20:23:49 +0800
+Subject: [PATCH 1213/1240] fix: usb: stop only the usb host3 enabled in fdt
+
+- After obsoleting CONFIG_USB_MAX_CONTROLLER_COUNT in usb_init(),
+  usb_stop() is not updated accordingly. It caused the uboot crash
+  when executing the 'usb stop' or 'usb reset' command after usb
+  devices have started.
+- The fix is just to align usb_init() and usb_stop(). Both is to
+  use usb_device_tree_init() to get the USB host enabled in fdt.
+- JIRA BUG: SYSTEMSW-2624
+
+Change-Id: Ie0f73d0f963697055d9fbfd05bd59d4d596e42d4
+Signed-off-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30424
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hua Jing <jinghua@marvell.com>
+---
+ common/usb.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/common/usb.c b/common/usb.c
+index 406b2dd..9a696f0 100644
+--- a/common/usb.c
++++ b/common/usb.c
+@@ -137,14 +137,18 @@ int usb_init(void)
+  */
+ int usb_stop(void)
+ {
+-	int i;
++	int i, enable_port_count;
+ 
+ 	if (usb_started) {
+ 		asynch_allowed = 1;
+ 		usb_started = 0;
+ 		usb_hub_reset();
+ 
+-		for (i = 0; i < CONFIG_USB_MAX_CONTROLLER_COUNT; i++) {
++		/* if device tree is supported, stop only the ports enabled in fdt.
++		   if not, try to stop all the usb ports supported by the device. */
++		enable_port_count = board_usb_get_enabled_port_count();
++
++		for (i = 0; i < enable_port_count; i++) {
+ 			if (usb_lowlevel_stop(i))
+ 				printf("failed to stop USB controller %d\n", i);
+ 		}
+-- 
+1.9.1
+

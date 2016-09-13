@@ -1,0 +1,32 @@
+From 290ce63e74ead0d36482ad87f7cde9654c414313 Mon Sep 17 00:00:00 2001
+From: Victor Axelrod <victora@marvell.com>
+Date: Mon, 20 Jun 2016 15:03:54 +0300
+Subject: [PATCH 215/239] mv_ddr: a38x: Add 64-bit subphys mask
+
+This patch adds 64-bit subphys mask for a38x to prevent compilation errors
+from 64-bit detection macro in the generic part of the code.
+
+Change-Id: I2945c96fbbe9f11ac9441dbfad379516f694db3b
+Signed-off-by: Victor Axelrod <victora@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30587
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/a38x/mv_ddr_a38x_topology.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/marvell/mv_ddr/a38x/mv_ddr_a38x_topology.h b/drivers/marvell/mv_ddr/a38x/mv_ddr_a38x_topology.h
+index 0bc1056..68ea109 100644
+--- a/drivers/marvell/mv_ddr/a38x/mv_ddr_a38x_topology.h
++++ b/drivers/marvell/mv_ddr/a38x/mv_ddr_a38x_topology.h
+@@ -106,6 +106,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define BUS_MASK_16BIT			0x3
+ #define BUS_MASK_16BIT_ECC		0x13
+ #define BUS_MASK_16BIT_ECC_PUP3		0xb
++#define MV_DDR_64BIT_BUS_MASK		0xff
+ 
+ #define DYNAMIC_CS_SIZE_CONFIG
+ #define DISABLE_L2_FILTERING_DURING_DDR_TRAINING
+-- 
+1.9.1
+

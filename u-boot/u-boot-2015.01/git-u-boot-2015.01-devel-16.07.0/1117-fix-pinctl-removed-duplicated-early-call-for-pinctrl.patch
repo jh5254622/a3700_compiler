@@ -1,0 +1,48 @@
+From db0aaa1338d20216ebe353c161957ad85886507a Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Tue, 26 Apr 2016 16:53:40 +0300
+Subject: [PATCH 1117/1240] fix: pinctl: removed duplicated early call for
+ pinctrl init
+
+pinctrl was initialized twice:
+1. with default DTB file
+2. with actual selected DTB file, after EEPROM was initialized
+
+the 1st call is removed, since default DTB file is a7040-db dtb,
+which causes an issue with a8040-db, since it overides CP0 MPP[0-31].
+
+for A8040, those MPP's are dedicated for CP0-CP1 connectivity,
+and must remain untouched with their default values.
+
+The 1st pinctrl call was replaced by adding I2C MPP configuration
+in ATF, thus U-Boot can rely on ATF for that.
+
+Change-Id: I533e3e200f7c03ae0d222f8a5c72c510a6ae7427
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29392
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ board/mvebu/common/init.c | 6 ------
+ 1 file changed, 6 deletions(-)
+
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index beb1174..addb0bf 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -64,12 +64,6 @@ int board_early_init_f(void)
+ 	 ** - Marvell multi FDT mode: set the first compiled relevant device
+ 	 **   tree for the SoC, required for i2c initialization to read EEPROM data */
+ 	setup_fdt();
+-#ifdef CONFIG_MVEBU_PINCTL
+-	/* Init the MPP in this stage - to initialize the MPPs of the I2C
+-	 ** The SOC initialization code will re-call this function with the
+-	 ** correct device tree to re-set the correct MPPs */
+-	mvebu_pinctl_probe();
+-#endif
+ 	cfg_eeprom_init();
+ #endif
+ 
+-- 
+1.9.1
+

@@ -1,0 +1,628 @@
+From 22cb5e5e496596496a29b27f558d415f6cfdd889 Mon Sep 17 00:00:00 2001
+From: Terry Zhou <bjzhou@marvell.com>
+Date: Mon, 27 Jun 2016 17:43:40 +0300
+Subject: [PATCH 1227/1240] config: a3700: update the name of db to ddr3-db
+
+Change-Id: Ic61821e681351440cae2d2b037eec9a8a2be5a14
+Signed-off-by: Terry Zhou <bjzhou@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30755
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hua Jing <jinghua@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Verified-Armada37x0: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/dts/Makefile                             |   6 +-
+ arch/arm/dts/armada-3700-db-sfp2_5g.dts           |  51 ---------
+ arch/arm/dts/armada-3700-db-sgmii1.dts            |  43 --------
+ arch/arm/dts/armada-3700-db.dts                   | 124 ----------------------
+ arch/arm/dts/armada-3700-ddr3-db-sfp2_5g.dts      |  51 +++++++++
+ arch/arm/dts/armada-3700-ddr3-db-sgmii1.dts       |  43 ++++++++
+ arch/arm/dts/armada-3700-ddr3-db.dts              | 124 ++++++++++++++++++++++
+ arch/arm/dts/armada-3700-ddr4-db.dts              |   2 +-
+ arch/arm/include/asm/arch-armada3700/board-info.h |  10 +-
+ configs/mvebu_armada3700_defconfig                |   2 +-
+ include/dt-bindings/multi-fdt/multi-fdt.h         |  14 ++-
+ 11 files changed, 234 insertions(+), 236 deletions(-)
+ delete mode 100644 arch/arm/dts/armada-3700-db-sfp2_5g.dts
+ delete mode 100644 arch/arm/dts/armada-3700-db-sgmii1.dts
+ delete mode 100644 arch/arm/dts/armada-3700-db.dts
+ create mode 100644 arch/arm/dts/armada-3700-ddr3-db-sfp2_5g.dts
+ create mode 100644 arch/arm/dts/armada-3700-ddr3-db-sgmii1.dts
+ create mode 100644 arch/arm/dts/armada-3700-ddr3-db.dts
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index 5e67c14..77b40e8 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -58,10 +58,10 @@ ifdef CONFIG_TARGET_ARMADA_3700
+ ifndef CONFIG_DEVEL_BOARD
+ dtb-y += armada-3700-customer0.dtb
+ endif #CONFIG_DEVEL_BOARD
+-dtb-$(CONFIG_DEVEL_BOARD) += armada-3700-db.dtb \
++dtb-$(CONFIG_DEVEL_BOARD) += armada-3700-ddr3-db.dtb \
+ 			     armada-3700-ddr4-db.dtb \
+-			     armada-3700-db-sgmii1.dtb \
+-			     armada-3700-db-sfp2_5g.dtb
++			     armada-3700-ddr3-db-sgmii1.dtb \
++			     armada-3700-ddr3-db-sfp2_5g.dtb
+ endif #CONFIG_TARGET_ARMADA_3700
+ 
+ ifdef CONFIG_TARGET_ARMADA_8K
+diff --git a/arch/arm/dts/armada-3700-db-sfp2_5g.dts b/arch/arm/dts/armada-3700-db-sfp2_5g.dts
+deleted file mode 100644
+index e276e06..0000000
+--- a/arch/arm/dts/armada-3700-db-sfp2_5g.dts
++++ /dev/null
+@@ -1,51 +0,0 @@
+-
+-#include "armada-3700-db.dts"
+-
+-/* detail board setup:
+- * Pcie Jumper slot	:	DB-88F3720-PCIe-mPCIe-Jumper
+- * SGMII module slot	:	DB-88F3720-SerDes-Jumper
+- * RGMII module slot	:	DB-88F3720-PHY module
+- * eMMC slot		:	DB-88F3720-eMMC_NAND module
+- * SDIO slot		:	DB-88F3720-SDcard module
+- *
+- * PHY0 (USB3/SGMII1)	:	SGMII1_Ethernet via SFP2.5G (1 Lane)
+- * PHY1 (PCIe/SGMII0)	:	PCIe (WiFi via mini_PCIe module)
+- * PHY2 (SATA)		:	SATA
+- * RGMII		:	Ethernet via PHY (1 Lane)
+- * USB2 Port 0		:	USB2 only
+- * USB2 Port 1		:	USB2 Host
+- * eMMC*		:	eMMC NAND
+- * SDIO*		:	SD card
+- * BOOT device*		:	SPI Flash
+-*/
+-
+-/ {
+-	model = "DB-88F3720-DDR3-Modular-SFP2.5G";
+-	compatible = "marvell,armada-3700-db0", "marvell,armada-3700";
+-	fdt_config_id = <A3700_DB_CONFIG_ID_SFP_2_5G>;
+-	board_id = <A3700_DB_ID>;
+-
+-	soc {
+-		internal-regs {
+-			neta1: neta@40000 {
+-				status = "okay";
+-				phy_mode = "sgmii";
+-				fixed-link {
+-					/* Here "speed" is set to 1000, GBE MAC is running in 1G mode,
+-					 * but the actuall PHY speed may be 1 Gbps or 2.5 Gbps,
+-					 * it's up to the corresponding SERDES speed in comphy node.
+-					 * If SERDES speed is set to 3.125G, it implies sgmii 2.5 Gbps;
+-					 * if SERDES speed is set to 1.25G, it implies sgmii 1 Gbps. */
+-					speed = <1000>;
+-					full-duplex;
+-				};
+-			};
+-			comphy {
+-				phy1 {
+-					phy-type = <PHY_TYPE_SGMII1>;
+-					phy-speed = <PHY_SPEED_3_125G>;
+-				};
+-			};
+-		};
+-	};
+-};
+diff --git a/arch/arm/dts/armada-3700-db-sgmii1.dts b/arch/arm/dts/armada-3700-db-sgmii1.dts
+deleted file mode 100644
+index 68e0473..0000000
+--- a/arch/arm/dts/armada-3700-db-sgmii1.dts
++++ /dev/null
+@@ -1,43 +0,0 @@
+-
+-#include "armada-3700-db.dts"
+-
+-/* detail board setup:
+- * Pcie Jumper slot	:	DB-88F3720-PCIe-mPCIe-Jumper
+- * SGMII module slot	:	DB-88F3720-SerDes-Jumper
+- * RGMII module slot	:	DB-88F3720-PHY module
+- * eMMC slot		:	DB-88F3720-eMMC_NAND module
+- * SDIO slot		:	DB-88F3720-SDcard module
+- *
+- * PHY0 (USB3/SGMII1)	:	SGMII1_Ethernet via PHY (1 Lane)
+- * PHY1 (PCIe/SGMII0)	:	PCIe (WiFi via mini_PCIe module)
+- * PHY2 (SATA)		:	SATA
+- * RGMII		:	Ethernet via PHY (1 Lane)
+- * USB2 Port 0		:	USB2 only
+- * USB2 Port 1		:	USB2 Host
+- * eMMC*		:	eMMC NAND
+- * SDIO*		:	SD card
+- * BOOT device*		:	SPI Flash
+-*/
+-
+-/ {
+-	model = "DB-88F3720-DDR3-Modular-SGMII1";
+-	compatible = "marvell,armada-3700-db0", "marvell,armada-3700";
+-	fdt_config_id = <A3700_DB_CONFIG_ID_SGMII1>;
+-	board_id = <A3700_DB_ID>;
+-
+-	soc {
+-		internal-regs {
+-			neta1: neta@40000 {
+-				status = "okay";
+-				phy_addr = <0x1>;
+-				phy_mode = "sgmii";
+-			};
+-			comphy {
+-				phy1 {
+-					phy-type = <PHY_TYPE_SGMII1>;
+-					phy-speed = <PHY_SPEED_1_25G>;
+-				};
+-			};
+-		};
+-	};
+-};
+diff --git a/arch/arm/dts/armada-3700-db.dts b/arch/arm/dts/armada-3700-db.dts
+deleted file mode 100644
+index 9d25829..0000000
+--- a/arch/arm/dts/armada-3700-db.dts
++++ /dev/null
+@@ -1,124 +0,0 @@
+-
+-/dts-v1/;
+-#include <dt-bindings/ddr/ddr_data.h>
+-#include "armada-3700.dtsi"
+-#include <dt-bindings/multi-fdt/multi-fdt.h>
+-
+-/* detail board setup:
+- * Pcie Jumper slot	:	DB-88F3720-PCIe-mPCIe-Jumper
+- * SGMII module slot	:	DB-88F3720-SerDes-Jumper
+- * RGMII module slot	:	DB-88F3720-PHY module
+- * eMMC slot		:	DB-88F3720-eMMC_NAND module
+- * SDIO slot		:	DB-88F3720-SDcard module
+- *
+- * PHY0 (USB3/SGMII1)	:	USB3
+- * PHY1 (PCIe/SGMII0)	:	PCIe (WiFi via mini_PCIe module)
+- * PHY2 (SATA)		:	SATA
+- * RGMII-0		:	Ethernet via PHY (1 Lane)
+- * USB2 Port 0		:	USB2 as part USB3
+- * USB2 Port 1		:	USB2 Host
+- * eMMC*		:	eMMC NAND
+- * SDIO*		:	SD card
+- * BOOT device*		:	SPI Flash
+-*/
+-
+-/ {
+-	model = "DB-88F3720-DDR3-Modular";
+-	compatible = "marvell,armada-3700-db0", "marvell,armada-3700";
+-	fdt_config_id = <A3700_DB_CONFIG_ID_DEFAULT>;
+-	board_id = <A3700_DB_ID>;
+-
+-	soc {
+-		internal-regs {
+-			serial: serial@12000 {
+-				status = "okay";
+-			};
+-			spi0: spi@10600 {
+-				output-enable-gpio = <&gpio0 ARMADA_3700_GPIO(BANK_0, 60) GPIO_ACTIVE_HIGH>;
+-				status = "okay";
+-			};
+-			pm@14000 {
+-				status = "okay";
+-			};
+-			neta0: neta@30000 {
+-				status = "okay";
+-				phy_addr = <0x0>;
+-				phy_mode = "rgmii";
+-			};
+-			i2c: i2c@11000 {
+-				status = "okay";
+-			};
+-			comphy {
+-				phy0 {
+-					phy-type = <PHY_TYPE_PEX0>;
+-					phy-speed = <PHY_SPEED_2_5G>;
+-				};
+-				phy1 {
+-					phy-type = <PHY_TYPE_USB3_HOST0>;
+-					phy-speed = <PHY_SPEED_5G>;
+-				};
+-			};
+-			pcie-controller {
+-				pcie@1,0 {
+-					reset-gpio = <&gpio1 ARMADA_3700_GPIO(BANK_1, 3) GPIO_ACTIVE_HIGH>;
+-					status = "okay";
+-				};
+-			};
+-			sata: sata@e0000 {
+-				status = "okay";
+-			};
+-			mmc0: mmc@D8000 {
+-				xenon,emmc;
+-				bus-width = <8>;
+-				status = "okay";
+-			};
+-			mmc1: mmc@D0000 {
+-				sdio-vcc-gpio = <&gpio1 ARMADA_3700_GPIO(BANK_1, 22) GPIO_ACTIVE_HIGH>;
+-				bus-width = <4>;
+-				status = "okay";
+-			};
+-			usb3: usb3@58000 {
+-				status = "okay";
+-			};
+-			usb: usb@5e000 {
+-				status = "okay";
+-			};
+-		};
+-	};
+-};
+-
+-&pinctl0 { /* north bridge */
+-		/* MPP Bus:
+-		   JTAG     0
+-		   SDIO     1
+-		   eMMC     2
+-		   PWM      [3-6]
+-		   PMIC     [7-8]
+-		   I2C      [9-10]
+-		   SPI      [15]
+-		   ONEWIRE  [16]
+-		   UART     [17]
+-		   SPI_QUAD [18]
+-		   UART2    [19]
+-		   LED      [20-23]
+-		*/
+-			/* 0 1 2 3 4 5 6 7 */
+-	pin-func = < 0 1 0 1 1 1 1 1
+-			   1 1 0 0 1 1 1 0
+-			   1 0 0 0 0 0 0 0 >;
+-};
+-
+-&pinctl1 { /* south bridge */
+-		/* MPP Bus:
+-		   USB32    0
+-		   USB2     1
+-		   SB-SDIO  2
+-		   RGMII    3
+-		   PCIE     4
+-		   PTP      [5-7]
+-		   MII      8
+-		*/
+-			/* 0 1 2 3 4 5 6 7 */
+-	pin-func = < 1 1 0 0 1 1 0 0
+-			   0 >;
+-};
+diff --git a/arch/arm/dts/armada-3700-ddr3-db-sfp2_5g.dts b/arch/arm/dts/armada-3700-ddr3-db-sfp2_5g.dts
+new file mode 100644
+index 0000000..55865b5
+--- /dev/null
++++ b/arch/arm/dts/armada-3700-ddr3-db-sfp2_5g.dts
+@@ -0,0 +1,51 @@
++
++#include "armada-3700-ddr3-db.dts"
++
++/* detail board setup:
++ * Pcie Jumper slot	:	DB-88F3720-PCIe-mPCIe-Jumper
++ * SGMII module slot	:	DB-88F3720-SerDes-Jumper
++ * RGMII module slot	:	DB-88F3720-PHY module
++ * eMMC slot		:	DB-88F3720-eMMC_NAND module
++ * SDIO slot		:	DB-88F3720-SDcard module
++ *
++ * PHY0 (USB3/SGMII1)	:	SGMII1_Ethernet via SFP2.5G (1 Lane)
++ * PHY1 (PCIe/SGMII0)	:	PCIe (WiFi via mini_PCIe module)
++ * PHY2 (SATA)		:	SATA
++ * RGMII		:	Ethernet via PHY (1 Lane)
++ * USB2 Port 0		:	USB2 only
++ * USB2 Port 1		:	USB2 Host
++ * eMMC*		:	eMMC NAND
++ * SDIO*		:	SD card
++ * BOOT device*		:	SPI Flash
++*/
++
++/ {
++	model = "DB-88F3720-DDR3-Modular-SFP2.5G";
++	compatible = "marvell,armada-3700-db0", "marvell,armada-3700";
++	fdt_config_id = <A3700_DDR3_DB_CONFIG_ID_SFP_2_5G>;
++	board_id = <A3700_DDR3_DB_ID>;
++
++	soc {
++		internal-regs {
++			neta1: neta@40000 {
++				status = "okay";
++				phy_mode = "sgmii";
++				fixed-link {
++					/* Here "speed" is set to 1000, GBE MAC is running in 1G mode,
++					 * but the actuall PHY speed may be 1 Gbps or 2.5 Gbps,
++					 * it's up to the corresponding SERDES speed in comphy node.
++					 * If SERDES speed is set to 3.125G, it implies sgmii 2.5 Gbps;
++					 * if SERDES speed is set to 1.25G, it implies sgmii 1 Gbps. */
++					speed = <1000>;
++					full-duplex;
++				};
++			};
++			comphy {
++				phy1 {
++					phy-type = <PHY_TYPE_SGMII1>;
++					phy-speed = <PHY_SPEED_3_125G>;
++				};
++			};
++		};
++	};
++};
+diff --git a/arch/arm/dts/armada-3700-ddr3-db-sgmii1.dts b/arch/arm/dts/armada-3700-ddr3-db-sgmii1.dts
+new file mode 100644
+index 0000000..32040e8
+--- /dev/null
++++ b/arch/arm/dts/armada-3700-ddr3-db-sgmii1.dts
+@@ -0,0 +1,43 @@
++
++#include "armada-3700-ddr3-db.dts"
++
++/* detail board setup:
++ * Pcie Jumper slot	:	DB-88F3720-PCIe-mPCIe-Jumper
++ * SGMII module slot	:	DB-88F3720-SerDes-Jumper
++ * RGMII module slot	:	DB-88F3720-PHY module
++ * eMMC slot		:	DB-88F3720-eMMC_NAND module
++ * SDIO slot		:	DB-88F3720-SDcard module
++ *
++ * PHY0 (USB3/SGMII1)	:	SGMII1_Ethernet via PHY (1 Lane)
++ * PHY1 (PCIe/SGMII0)	:	PCIe (WiFi via mini_PCIe module)
++ * PHY2 (SATA)		:	SATA
++ * RGMII		:	Ethernet via PHY (1 Lane)
++ * USB2 Port 0		:	USB2 only
++ * USB2 Port 1		:	USB2 Host
++ * eMMC*		:	eMMC NAND
++ * SDIO*		:	SD card
++ * BOOT device*		:	SPI Flash
++*/
++
++/ {
++	model = "DB-88F3720-DDR3-Modular-SGMII1";
++	compatible = "marvell,armada-3700-db0", "marvell,armada-3700";
++	fdt_config_id = <A3700_DDR3_DB_CONFIG_ID_SGMII1>;
++	board_id = <A3700_DDR3_DB_ID>;
++
++	soc {
++		internal-regs {
++			neta1: neta@40000 {
++				status = "okay";
++				phy_addr = <0x1>;
++				phy_mode = "sgmii";
++			};
++			comphy {
++				phy1 {
++					phy-type = <PHY_TYPE_SGMII1>;
++					phy-speed = <PHY_SPEED_1_25G>;
++				};
++			};
++		};
++	};
++};
+diff --git a/arch/arm/dts/armada-3700-ddr3-db.dts b/arch/arm/dts/armada-3700-ddr3-db.dts
+new file mode 100644
+index 0000000..7dfd50a
+--- /dev/null
++++ b/arch/arm/dts/armada-3700-ddr3-db.dts
+@@ -0,0 +1,124 @@
++
++/dts-v1/;
++#include <dt-bindings/ddr/ddr_data.h>
++#include "armada-3700.dtsi"
++#include <dt-bindings/multi-fdt/multi-fdt.h>
++
++/* detail board setup:
++ * Pcie Jumper slot	:	DB-88F3720-PCIe-mPCIe-Jumper
++ * SGMII module slot	:	DB-88F3720-SerDes-Jumper
++ * RGMII module slot	:	DB-88F3720-PHY module
++ * eMMC slot		:	DB-88F3720-eMMC_NAND module
++ * SDIO slot		:	DB-88F3720-SDcard module
++ *
++ * PHY0 (USB3/SGMII1)	:	USB3
++ * PHY1 (PCIe/SGMII0)	:	PCIe (WiFi via mini_PCIe module)
++ * PHY2 (SATA)		:	SATA
++ * RGMII-0		:	Ethernet via PHY (1 Lane)
++ * USB2 Port 0		:	USB2 as part USB3
++ * USB2 Port 1		:	USB2 Host
++ * eMMC*		:	eMMC NAND
++ * SDIO*		:	SD card
++ * BOOT device*		:	SPI Flash
++*/
++
++/ {
++	model = "DB-88F3720-DDR3-Modular";
++	compatible = "marvell,armada-3700-db0", "marvell,armada-3700";
++	fdt_config_id = <A3700_DDR3_DB_CONFIG_ID_DEFAULT>;
++	board_id = <A3700_DDR3_DB_ID>;
++
++	soc {
++		internal-regs {
++			serial: serial@12000 {
++				status = "okay";
++			};
++			spi0: spi@10600 {
++				output-enable-gpio = <&gpio0 ARMADA_3700_GPIO(BANK_0, 60) GPIO_ACTIVE_HIGH>;
++				status = "okay";
++			};
++			pm@14000 {
++				status = "okay";
++			};
++			neta0: neta@30000 {
++				status = "okay";
++				phy_addr = <0x0>;
++				phy_mode = "rgmii";
++			};
++			i2c: i2c@11000 {
++				status = "okay";
++			};
++			comphy {
++				phy0 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_2_5G>;
++				};
++				phy1 {
++					phy-type = <PHY_TYPE_USB3_HOST0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++			};
++			pcie-controller {
++				pcie@1,0 {
++					reset-gpio = <&gpio1 ARMADA_3700_GPIO(BANK_1, 3) GPIO_ACTIVE_HIGH>;
++					status = "okay";
++				};
++			};
++			sata: sata@e0000 {
++				status = "okay";
++			};
++			mmc0: mmc@D8000 {
++				xenon,emmc;
++				bus-width = <8>;
++				status = "okay";
++			};
++			mmc1: mmc@D0000 {
++				sdio-vcc-gpio = <&gpio1 ARMADA_3700_GPIO(BANK_1, 22) GPIO_ACTIVE_HIGH>;
++				bus-width = <4>;
++				status = "okay";
++			};
++			usb3: usb3@58000 {
++				status = "okay";
++			};
++			usb: usb@5e000 {
++				status = "okay";
++			};
++		};
++	};
++};
++
++&pinctl0 { /* north bridge */
++		/* MPP Bus:
++		   JTAG     0
++		   SDIO     1
++		   eMMC     2
++		   PWM      [3-6]
++		   PMIC     [7-8]
++		   I2C      [9-10]
++		   SPI      [15]
++		   ONEWIRE  [16]
++		   UART     [17]
++		   SPI_QUAD [18]
++		   UART2    [19]
++		   LED      [20-23]
++		*/
++			/* 0 1 2 3 4 5 6 7 */
++	pin-func = < 0 1 0 1 1 1 1 1
++			   1 1 0 0 1 1 1 0
++			   1 0 0 0 0 0 0 0 >;
++};
++
++&pinctl1 { /* south bridge */
++		/* MPP Bus:
++		   USB32    0
++		   USB2     1
++		   SB-SDIO  2
++		   RGMII    3
++		   PCIE     4
++		   PTP      [5-7]
++		   MII      8
++		*/
++			/* 0 1 2 3 4 5 6 7 */
++	pin-func = < 1 1 0 0 1 1 0 0
++			   0 >;
++};
+diff --git a/arch/arm/dts/armada-3700-ddr4-db.dts b/arch/arm/dts/armada-3700-ddr4-db.dts
+index 33e72d9..502cf89 100644
+--- a/arch/arm/dts/armada-3700-ddr4-db.dts
++++ b/arch/arm/dts/armada-3700-ddr4-db.dts
+@@ -1,5 +1,5 @@
+ 
+-#include "armada-3700-db.dts"
++#include "armada-3700-ddr3-db.dts"
+ 
+ /* detail board setup:
+  * Pcie Jumper slot	:	DB-88F3720-PCIe-mPCIe-Jumper
+diff --git a/arch/arm/include/asm/arch-armada3700/board-info.h b/arch/arm/include/asm/arch-armada3700/board-info.h
+index d29f64b..c4f842b 100644
+--- a/arch/arm/include/asm/arch-armada3700/board-info.h
++++ b/arch/arm/include/asm/arch-armada3700/board-info.h
+@@ -24,8 +24,8 @@
+ 	each Soc takes 0x10 boards, so, A3700 should take 0x20 to 0x2f.
+ 	And as A3700 DB, it is the first board, should take board_id as 0x20.
+ */
+-#define ARMAMA3700_MARVELL_BOARD_ID_BASE	 A3700_DB_ID
+-#define ARMAMA3700_DB			(ARMAMA3700_MARVELL_BOARD_ID_BASE + 0)
++#define ARMAMA3700_MARVELL_BOARD_ID_BASE	 A3700_DDR3_DB_ID
++#define ARMAMA3700_DDR3_DB		(ARMAMA3700_MARVELL_BOARD_ID_BASE + 0)
+ #define ARMAMA3700_DDR4_DB		(ARMAMA3700_MARVELL_BOARD_ID_BASE + 1)
+ #define ARMAMA3700_MARVELL_MAX_BOARD_ID	(ARMAMA3700_MARVELL_BOARD_ID_BASE + 2)
+ #define ARMAMA3700_MARVELL_BOARD_NUM	(ARMAMA3700_MARVELL_MAX_BOARD_ID - ARMAMA3700_MARVELL_BOARD_ID_BASE)
+@@ -33,15 +33,15 @@
+ #define MARVELL_BOARD_ID_BASE		ARMAMA3700_MARVELL_BOARD_ID_BASE
+ #define MV_MAX_MARVELL_BOARD_ID		ARMAMA3700_MARVELL_MAX_BOARD_ID
+ #define MV_MARVELL_BOARD_NUM		ARMAMA3700_MARVELL_BOARD_NUM
+-#define MV_DEFAULT_BOARD_ID		ARMAMA3700_DB
++#define MV_DEFAULT_BOARD_ID		ARMAMA3700_DDR3_DB
+ 
+ #define BOARD_DEV_TWSI_INIT_EEPROM 0x57
+ #define MULTI_FDT_EEPROM_ADDR_LEN 2
+ 
+-#define DEFAULT_FDT_CONFIG_ID	A3700_DB_CONFIG_ID_USB3
++#define DEFAULT_DDR3_FDT_CONFIG_ID	A3700_DDR3_DB_CONFIG_ID_USB3
+ #define DEFAULT_DDR4_FDT_CONFIG_ID	A3700_DDR4_DB_CONFIG_ID_USB3
+ 
+ #define DEFAULT_FDT_PER_BOARD { \
+-	DEFAULT_FDT_CONFIG_ID,	/* default fdt_config_id for armada-3700-db board */	\
++	DEFAULT_DDR3_FDT_CONFIG_ID,	/* default fdt_config_id for armada-3700-ddr3-db board */	\
+ 	DEFAULT_DDR4_FDT_CONFIG_ID,	/* default fdt_config_id for armada-3700-ddr4-db board */	\
+ }
+diff --git a/configs/mvebu_armada3700_defconfig b/configs/mvebu_armada3700_defconfig
+index 976f54a..305173f 100644
+--- a/configs/mvebu_armada3700_defconfig
++++ b/configs/mvebu_armada3700_defconfig
+@@ -25,7 +25,7 @@ CONFIG_CMD_MVEBU_BUBT=y
+ CONFIG_CMD_MVEBU_HW_INFO=y
+ CONFIG_OF_CONTROL=y
+ CONFIG_OF_EMBED=y
+-CONFIG_DEFAULT_DEVICE_TREE="armada-3700-db"
++CONFIG_DEFAULT_DEVICE_TREE="armada-3700-ddr3-db"
+ CONFIG_FDT_SIZE=0x1C00
+ CONFIG_DM=y
+ CONFIG_MVEBU_ADVK_PCIE=y
+diff --git a/include/dt-bindings/multi-fdt/multi-fdt.h b/include/dt-bindings/multi-fdt/multi-fdt.h
+index 41e63db..3ae9dce 100644
+--- a/include/dt-bindings/multi-fdt/multi-fdt.h
++++ b/include/dt-bindings/multi-fdt/multi-fdt.h
+@@ -19,12 +19,11 @@
+ #ifndef _MULTI_FDT_H_
+ #define _MULTI_FDT_H_
+ 
+-#define A3700_DB_ID			0x20
++#define A3700_DDR3_DB_ID		0x20
+ #define A3700_DDR4_DB_ID		0x21
+ /*
+- * There are three main presets for Armada3700 DB, between
++ * There are three main presets for Armada3700 DDR3 DB, between
+  * these three presets, most of the configurations are the same:
+-   - CPU 800MHz and DDR 800MHz
+    - SATA
+    - neta0 - RGMII
+    - PCIe(COMPHY-0)
+@@ -34,13 +33,12 @@
+  * preset 2. COMPHY-1 is working as SGMII-1 connected with PHY
+  * preset 3. COMPHY-1 is working as SGMII-1 connected with SFP2.5G
+  */
+-#define A3700_DB_CONFIG_ID_USB3		1
+-#define A3700_DB_CONFIG_ID_SGMII1	2
+-#define A3700_DB_CONFIG_ID_SFP_2_5G	3
++#define A3700_DDR3_DB_CONFIG_ID_USB3		1
++#define A3700_DDR3_DB_CONFIG_ID_SGMII1		2
++#define A3700_DDR3_DB_CONFIG_ID_SFP_2_5G	3
+ 
+ /*
+  * Add new preset for Armada3700 DDR4 DB
+-   - CPU 1000MHz and DDR4 800MHz
+    - SATA
+    - neta0 - RGMII
+    - PCIe(COMPHY-0)
+@@ -48,7 +46,7 @@
+  */
+ #define A3700_DDR4_DB_CONFIG_ID_USB3 4
+ 
+-#define A3700_DB_CONFIG_ID_DEFAULT	A3700_DB_CONFIG_ID_USB3
++#define A3700_DDR3_DB_CONFIG_ID_DEFAULT	A3700_DDR3_DB_CONFIG_ID_USB3
+ #define A3700_DDR4_DB_CONFIG_ID_DEFAULT	A3700_DDR4_DB_CONFIG_ID_USB3
+ 
+ #endif /* _MULTI_FDT_H_ */
+-- 
+1.9.1
+

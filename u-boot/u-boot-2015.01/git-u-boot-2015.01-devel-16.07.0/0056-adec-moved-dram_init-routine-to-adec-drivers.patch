@@ -1,0 +1,147 @@
+From f1de68e04ce9802a283096ca2b0c5815e39aa333 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 21 Aug 2014 17:18:08 +0300
+Subject: [PATCH 0056/1240] adec: moved dram_init routine to adec drivers
+
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Change-Id: I69cdd41c923defbf31fa35e110310bd4a88c5c7c
+Reviewed-on: http://vgitil04.il.marvell.com:8080/10743
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/adec_ccu.c        | 30 +++++++++++++++++++++++
+ arch/arm/cpu/mvebu-common/adec_mbus.c       | 37 +++++++++++++++++++++++++++++
+ arch/arm/include/asm/arch-mvebu/adec_mbus.h |  6 +++++
+ board/mvebu/common/init.c                   |  8 -------
+ 4 files changed, 73 insertions(+), 8 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/adec_ccu.c b/arch/arm/cpu/mvebu-common/adec_ccu.c
+index 93781d8..74ddc56 100644
+--- a/arch/arm/cpu/mvebu-common/adec_ccu.c
++++ b/arch/arm/cpu/mvebu-common/adec_ccu.c
+@@ -26,6 +26,8 @@
+ #include <asm/arch-mvebu/mvebu.h>
+ #include <asm/arch-mvebu/adec.h>
+ 
++DECLARE_GLOBAL_DATA_PTR;
++
+ static void adec_win_check(struct adec_win *win, u32 win_num)
+ {
+ 	/* check if address is aligned to the size */
+@@ -214,3 +216,31 @@ int adec_init(struct adec_win *windows)
+ 
+ 	return 0;
+ }
++
++int dram_init(void)
++{
++#ifdef CONFIG_PALLADIUM
++	gd->ram_size = 0x20000000;
++#else
++	u32 alr, ahr;
++	u32 target_id, ctrl;
++	u32 win;
++
++	for (win = 0; win < MAX_AP_WINDOWS; win++) {
++		ctrl = readl((unsigned long)AP_WIN_CR_OFFSET(win));
++		target_id = (ctrl >> AP_TARGET_ID_OFFSET) & AP_TARGET_ID_MASK;
++
++		if (target_id == DRAM_0_TID) {
++			alr = readl((unsigned long)AP_WIN_ALR_OFFSET(win)) << ADDRESS_SHIFT;
++			ahr = readl((unsigned long)AP_WIN_AHR_OFFSET(win)) << ADDRESS_SHIFT;
++			gd->ram_size = ahr - alr + 1;
++			gd->bd->bi_dram[0].size = gd->ram_size;
++			gd->bd->bi_dram[0].start = alr;
++
++			debug("DRAM base 0x%08x size 0x%x\n", alr, (uint)gd->ram_size);
++		}
++	}
++#endif
++
++	return 0;
++}
+diff --git a/arch/arm/cpu/mvebu-common/adec_mbus.c b/arch/arm/cpu/mvebu-common/adec_mbus.c
+index a45a76d..b7dc267 100644
+--- a/arch/arm/cpu/mvebu-common/adec_mbus.c
++++ b/arch/arm/cpu/mvebu-common/adec_mbus.c
+@@ -29,6 +29,8 @@
+ 
+ void __iomem *mbus_adec_base;
+ 
++DECLARE_GLOBAL_DATA_PTR;
++
+ static void adec_win_check(struct adec_win *win, u32 win_num)
+ {
+ 	/* check if address is aligned to the size */
+@@ -142,3 +144,38 @@ int adec_init(struct adec_win *windows)
+ 
+ 	return 0;
+ }
++
++
++int dram_init(void)
++{
++	int cs;
++	u32 ctrl, size, base;
++
++	gd->ram_size = 0;
++	/*
++	* We assume the DDR training code has configured
++	* The SDRAM adec windows so we pull our info from there
++	*/
++
++	for (cs = 0; cs < CONFIG_NR_DRAM_BANKS; cs++) {
++		ctrl = readl(MBUS_SDRAM_CTRL_REG(cs));
++		if (ctrl & MBUS_CR_WIN_ENABLE) {
++			base = readl(MBUS_SDRAM_BASE_REG(cs));
++			size = (ctrl & MBUS_SDRAM_SIZE_MASK) + MBUS_SDRAM_SIZE_ALIGN;
++			gd->bd->bi_dram[cs].start = base;
++			gd->bd->bi_dram[cs].size = size;
++
++			gd->ram_size += size;
++
++			debug("DRAM bank %d base 0x%08x size 0x%x\n", cs, base, size);
++		}
++	}
++
++	if (gd->ram_size == 0) {
++		error("No DRAM banks detected");
++		return 1;
++	}
++
++	return 0;
++}
++
+diff --git a/arch/arm/include/asm/arch-mvebu/adec_mbus.h b/arch/arm/include/asm/arch-mvebu/adec_mbus.h
+index a5579af..8402390 100644
+--- a/arch/arm/include/asm/arch-mvebu/adec_mbus.h
++++ b/arch/arm/include/asm/arch-mvebu/adec_mbus.h
+@@ -113,3 +113,9 @@ enum mbus_attribute {
+ #define MBUS_RHR_REMAP_HIGH_MASK		(0xffffffff << MBUS_RHR_REMAP_HIGH_OFFS)
+ 
+ #define MBUS_WIN_INTEREG_REG			(0x80)
++
++#define MBUS_SDRAM_BASE_REG(win)		(MVEBU_ADEC_BASE + 0x180 + (win * 0x8))
++#define MBUS_SDRAM_CTRL_REG(win)		(MVEBU_ADEC_BASE + 0x184 + (win * 0x8))
++#define MBUS_SDRAM_SIZE_MASK			(0xFF << 24)
++#define MBUS_SDRAM_SIZE_ALIGN			(1 << 24)
++
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index b19906f..b4466f3 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -164,11 +164,3 @@ int board_init(void)
+ 	return 0;
+ }
+ 
+-int dram_init(void)
+-{
+-
+-	gd->ram_size = 0x20000000;
+-	return 0;
+-}
+-
+-
+-- 
+1.9.1
+

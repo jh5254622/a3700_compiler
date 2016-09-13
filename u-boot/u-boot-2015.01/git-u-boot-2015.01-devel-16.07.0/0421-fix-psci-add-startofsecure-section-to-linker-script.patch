@@ -1,0 +1,47 @@
+From 587735da5d99ce9fd7280f4faf9352ac47b68f6f Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Wed, 16 Sep 2015 10:35:46 +0300
+Subject: [PATCH 0421/1240] fix: psci: add startofsecure section to linker
+ script
+
+Set arch/arm/cpu/armv8/psci.o at the start of the secure section.
+The cpu reset address must be aligned to 0x10000
+
+Change-Id: Ie9ab91a447a16a47da386fc1e48b13b298d8ca2e
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23553
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/psci.S     | 2 +-
+ arch/arm/cpu/armv8/u-boot.lds | 1 +
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/armv8/psci.S b/arch/arm/cpu/armv8/psci.S
+index a4ee987..2d22779 100644
+--- a/arch/arm/cpu/armv8/psci.S
++++ b/arch/arm/cpu/armv8/psci.S
+@@ -17,7 +17,7 @@
+         .quad __id; \
+         .quad __fn
+ 
+-.pushsection ._secure.text, "ax"
++.pushsection ._startofsecure.text, "ax"
+ 
+ #ifdef CONFIG_TARGET_ARMADA_8K
+ /* WA reset adderrs - CPU reset vector address - must be alined to 0x10000 */
+diff --git a/arch/arm/cpu/armv8/u-boot.lds b/arch/arm/cpu/armv8/u-boot.lds
+index 50b3291..59c2d43 100644
+--- a/arch/arm/cpu/armv8/u-boot.lds
++++ b/arch/arm/cpu/armv8/u-boot.lds
+@@ -39,6 +39,7 @@ SECTIONS
+ 	.secure_text CONFIG_ARMV8_SECURE_BASE :
+ 		AT(ADDR(.__secure_start) + SIZEOF(.__secure_start))
+ 	{
++		*(._startofsecure.text)
+ 		*(._secure.text)
+ 	}
+ 
+-- 
+1.9.1
+

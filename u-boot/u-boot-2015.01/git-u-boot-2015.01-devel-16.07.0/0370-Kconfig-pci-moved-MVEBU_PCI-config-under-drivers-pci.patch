@@ -1,0 +1,59 @@
+From c7f08b61d5a783d975183d9b0b202bfd823a2a73 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 23 Aug 2015 17:28:42 +0300
+Subject: [PATCH 0370/1240] Kconfig: pci: moved MVEBU_PCI config under
+ drivers/pci
+
+Change-Id: I7373b94eb941cec843a71c8e0fdd6e2b1d87dd9c
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23044
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Kconfig | 11 -----------
+ drivers/pci/Kconfig               |  8 ++++++++
+ 2 files changed, 8 insertions(+), 11 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index 3135dce..b1fe300 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -54,17 +54,6 @@ config MVEBU_SPI
+ 	  driver.
+ 	  base address is configured under MVEBU_SPI_BASE
+ 
+-
+-config MVEBU_PCI
+-	bool "PCIE support"
+-	default n
+-	select CMD_PCI
+-	help
+-	  Choose this option to add support
+-	  for PCI driver, using mvebu_pci
+-	  driver.
+-	  base address is configured under MVEBU_PCI_BASE
+-
+ config MVEBU_MPP_BUS
+ 	bool "MPP bus support"
+ 	depends on (DEVEL_BOARD && MVEBU_PINCTL)
+diff --git a/drivers/pci/Kconfig b/drivers/pci/Kconfig
+index 9f52644..d77f694 100644
+--- a/drivers/pci/Kconfig
++++ b/drivers/pci/Kconfig
+@@ -1,5 +1,13 @@
+ menu "PCI Bus Support"
+ 
++config MVEBU_PCI
++	bool "PCIE support"
++	default n
++	select CMD_PCI
++	help
++	  Choose this option to add
++	  support for MVEBU PCI driver
++
+ config DW_PCIE
+ 	bool "Enable DesignWare PCIe3 driver"
+ 	default n
+-- 
+1.9.1
+

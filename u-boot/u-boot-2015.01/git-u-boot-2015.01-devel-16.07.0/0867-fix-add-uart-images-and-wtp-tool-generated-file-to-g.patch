@@ -1,0 +1,47 @@
+From 04658ac203554b10ec5da22e3246f4d7895d9a34 Mon Sep 17 00:00:00 2001
+From: Wilson Ding <dingwei@marvell.com>
+Date: Tue, 16 Feb 2016 17:55:00 +0800
+Subject: [PATCH 0867/1240] fix: add uart-images and wtp tool generated file to
+ gitignore
+
+Change-Id: I6372be2e03d64fb9e8cacde8b1122525bac7f206
+Signed-off-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27551
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+---
+ .gitignore | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/.gitignore b/.gitignore
+index f8accc8..d86c5f8 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -21,6 +21,7 @@
+ *.patch
+ *.cfgtmp
+ *.hex
++*.dummy
+ 
+ # host programs on Cygwin
+ *.exe
+@@ -36,6 +37,7 @@
+ /System.map
+ /u-boot*
+ /boards.cfg
++/uart-images*
+ 
+ #
+ # git files that we don't want to ignore even it they are dot-files
+@@ -49,6 +51,7 @@
+ /LOG
+ /spl/
+ /tpl/
++/tools/wtp/u-boot-ntim.txt
+ 
+ #
+ # Generated include files
+-- 
+1.9.1
+

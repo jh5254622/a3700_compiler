@@ -1,0 +1,54 @@
+From a1cf2c058feb41871967f22e0f195ffba3ee2a30 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Thu, 23 Jun 2016 18:43:07 +0300
+Subject: [PATCH 231/239] fix: a8k: move i2c MPPs initialization after RFU
+ windows configuration
+
+- Move setup for i2c MPPs to the later stage - right after
+  RFU windows configuration.
+  Earlier init may not be possible if the memory window to
+  CP0 was not opened by BootROM, for instance when booting
+  in "BootROM disabled" and AP SPI boot disabled mode.
+  In such case the CP0 address space is invalid.
+
+Change-Id: Ia66f36b0097f4c3359ec38942c61fc590fe888d2
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30709
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ plat/marvell/a8k/a70x0/plat_bl31_setup.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/plat/marvell/a8k/a70x0/plat_bl31_setup.c b/plat/marvell/a8k/a70x0/plat_bl31_setup.c
+index ce972e0..1c5b1c4 100644
+--- a/plat/marvell/a8k/a70x0/plat_bl31_setup.c
++++ b/plat/marvell/a8k/a70x0/plat_bl31_setup.c
+@@ -36,6 +36,7 @@
+ #include <apn806_setup.h>
+ #include <cp110_setup.h>
+ #include <mmio.h>
++#include <debug.h>
+ 
+ void marvell_bl31_mpp_init(void)
+ {
+@@ -52,8 +53,6 @@ void bl31_plat_arch_setup(void)
+ {
+ 	marvell_bl31_plat_arch_setup();
+ 
+-	marvell_bl31_mpp_init();
+-
+ 	/* configure apn806 */
+ 	apn806_init();
+ 
+@@ -63,4 +62,7 @@ void bl31_plat_arch_setup(void)
+ 	/* test MCI0 (CP1) link properties, and initialize CP1 accordingly */
+ 	if (CP_COUNT == 2 && mci_test_link(0))
+ 		cp110_init(1);
++
++	/* Should be called only after setting IOB windows */
++	marvell_bl31_mpp_init();
+ }
+-- 
+1.9.1
+

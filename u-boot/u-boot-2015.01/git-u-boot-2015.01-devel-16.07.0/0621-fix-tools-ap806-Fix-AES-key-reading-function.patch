@@ -1,0 +1,44 @@
+From 920d7eaec08adbb5858ebbfd6ef5eb6b59eb5371 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Sun, 3 Jan 2016 08:49:50 +0200
+Subject: [PATCH 0621/1240] fix: tools: ap806: Fix AES key reading function
+
+- The AES key was taken into temporary buffer and not
+  copied to the appropriate configuration structure,
+  which caused the key to be all zeroes.
+- Replace the pointer to temporary buffer with pointer
+  to AES key in confiration structure.
+
+Change-Id: I3a8cda9931d0a512161f5879605c03572619285c
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26450
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ tools/doimage.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/tools/doimage.c b/tools/doimage.c
+index d7e4984..35bbcc7 100644
+--- a/tools/doimage.c
++++ b/tools/doimage.c
+@@ -842,7 +842,6 @@ int format_sec_ext(char *filename, FILE *out_fd)
+ 	/* AES encryption stuff */
+ 	if (strlen(opts.sec_opts->aes_key_file) != 0) {
+ 		FILE		*in_fd;
+-		uint8_t		key_buf[AES_KEY_BYTE_LEN];
+ 
+ 		in_fd = fopen(opts.sec_opts->aes_key_file, "rb");
+ 		if (in_fd == NULL) {
+@@ -852,7 +851,7 @@ int format_sec_ext(char *filename, FILE *out_fd)
+ 
+ 		/* Read the AES key in ASCII format byte by byte */
+ 		for (index = 0; index < AES_KEY_BYTE_LEN; index++) {
+-			if (fscanf(in_fd, "%02hhx", key_buf + index) != 1) {
++			if (fscanf(in_fd, "%02hhx", opts.sec_opts->aes_key + index) != 1) {
+ 				fprintf(stderr, "Failed to read AES key byte %d from file %s\n",
+ 					index, opts.sec_opts->aes_key_file);
+ 				fclose(in_fd);
+-- 
+1.9.1
+

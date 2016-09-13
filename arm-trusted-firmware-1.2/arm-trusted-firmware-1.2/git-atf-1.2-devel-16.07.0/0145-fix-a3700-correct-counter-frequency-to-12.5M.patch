@@ -1,0 +1,40 @@
+From 418934f2a83513a48b3caeebf64313c8a18986f8 Mon Sep 17 00:00:00 2001
+From: Ken Ma <make@marvell.com>
+Date: Fri, 13 May 2016 20:45:03 +0800
+Subject: [PATCH 145/239] fix: a3700: correct counter frequency to 12.5M
+
+- The counter on A3700 is always fed from reference 25M clock (XTAL).
+  However minimal CPU counter prescaler is 2, so the counter frequency
+  will be divided by 2, the number is 12.5M
+
+Change-Id: Ib4ee6e1f9712d4a679691037cc360dc557ec9d03
+Signed-off-by: Ken Ma <make@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29702
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ plat/marvell/a3700/a3700_z/plat_def.h | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/plat/marvell/a3700/a3700_z/plat_def.h b/plat/marvell/a3700/a3700_z/plat_def.h
+index cec773d..644844d 100644
+--- a/plat/marvell/a3700/a3700_z/plat_def.h
++++ b/plat/marvell/a3700/a3700_z/plat_def.h
+@@ -42,7 +42,12 @@
+ 
+ #define MVEBU_PRIMARY_CPU		0x0
+ 
+-#define COUNTER_FREQUENCY		25000000
++/*
++ * The counter on A3700 is always fed from reference 25M clock (XTAL).
++ * However minimal CPU counter prescaler is 2, so the counter
++ * frequency will be divided by 2, the number is 12.5M
++ */
++#define COUNTER_FREQUENCY		12500000
+ 
+ #define MVEBU_REGS_BASE			0xD0000000
+ 
+-- 
+1.9.1
+

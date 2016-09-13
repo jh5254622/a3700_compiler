@@ -1,0 +1,369 @@
+From cea3eaff79ff1a201036169aac660b34fe041251 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Tue, 28 Jun 2016 00:11:17 +0800
+Subject: [PATCH 1233/1240] spl: a3700: remove spl related code
+
+since for Armada3700, SPL stage has been completely
+removed from u-boot image, all code related should be
+removed:
+- arch/arm/cpu/armv8/armada3700/spl.c
+- build option MVEBU_MBUS_SPL_ONLY.
+- MVEBU_MBUS_SPL_ONLY related code in mvebu_mbus.c
+- spl related define in include/configs/armada3700.h
+
+Change-Id: I1a8a38761bbb99a0edb103444a5914ecdfe99819
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30742
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv8/armada3700/Makefile         |   1 -
+ arch/arm/cpu/armv8/armada3700/mvebu_bootmode.c |   2 +-
+ arch/arm/cpu/armv8/armada3700/soc-init.c       |   3 +-
+ arch/arm/cpu/armv8/armada3700/spl.c            | 115 -------------------------
+ drivers/misc/Kconfig                           |  10 ---
+ drivers/misc/mvebu_mbus.c                      |  46 +---------
+ include/configs/armada3700.h                   |  30 -------
+ 7 files changed, 4 insertions(+), 203 deletions(-)
+ delete mode 100644 arch/arm/cpu/armv8/armada3700/spl.c
+
+diff --git a/arch/arm/cpu/armv8/armada3700/Makefile b/arch/arm/cpu/armv8/armada3700/Makefile
+index f45b74f..828c879 100644
+--- a/arch/arm/cpu/armv8/armada3700/Makefile
++++ b/arch/arm/cpu/armv8/armada3700/Makefile
+@@ -17,7 +17,6 @@
+ #
+ 
+ obj-y += soc-init.o
+-obj-$(CONFIG_SPL_BUILD) += spl.o
+ obj-y += clock.o
+ obj-$(CONFIG_ARMV8_PSCI)	+= psci.o
+ obj-$(CONFIG_MVEBU_A3700_IO_ADDR_DEC) += mvebu_io_addr_dec.o
+diff --git a/arch/arm/cpu/armv8/armada3700/mvebu_bootmode.c b/arch/arm/cpu/armv8/armada3700/mvebu_bootmode.c
+index c8e0174..e810d56 100644
+--- a/arch/arm/cpu/armv8/armada3700/mvebu_bootmode.c
++++ b/arch/arm/cpu/armv8/armada3700/mvebu_bootmode.c
+@@ -23,7 +23,7 @@
+ 
+ /*
+  * switch to uart boot mode, this routine will be invoked
+- * 1. in early stage of SPL to switch boot mode to UART
++ * 1. in early stage of ATF to switch boot mode to UART
+  * 2. in the latest stage of u-boot switch back to original mode
+  */
+ void mvebu_boot_mode_set(uchar boot_mode)
+diff --git a/arch/arm/cpu/armv8/armada3700/soc-init.c b/arch/arm/cpu/armv8/armada3700/soc-init.c
+index 362d9ea..391fa7c 100644
+--- a/arch/arm/cpu/armv8/armada3700/soc-init.c
++++ b/arch/arm/cpu/armv8/armada3700/soc-init.c
+@@ -137,8 +137,7 @@ int dram_init(void)
+ {
+ 	gd->ram_size = 0;
+ 
+-	/* DDR size has been read from dts DDR node in SPL
+-	 * ddr driver and pass to u-boot. */
++	/* DDR size has been passed to u-boot from ATF. */
+ 	gd->ram_size = (get_info(DRAM_CS0_SIZE) << 20);
+ 
+ 	if (gd->ram_size == 0) {
+diff --git a/arch/arm/cpu/armv8/armada3700/spl.c b/arch/arm/cpu/armv8/armada3700/spl.c
+deleted file mode 100644
+index 45471e3..0000000
+--- a/arch/arm/cpu/armv8/armada3700/spl.c
++++ /dev/null
+@@ -1,115 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#include <common.h>
+-#include <asm/arch-mvebu/comphy.h>
+-#include <asm/arch-mvebu/io_addr_dec.h>
+-#include <asm/arch/clock.h>
+-#include <asm/arch-mvebu/mbus.h>
+-#include <asm/arch-mvebu/mvebu_misc.h>
+-#include <asm/arch/boot_mode.h>
+-#include <asm/arch-mvebu/ddr.h>
+-#include <asm/arch-mvebu/fdt.h>
+-#include <spl.h>
+-
+-DECLARE_GLOBAL_DATA_PTR;
+-
+-void (*ptr_oslo_start)(void);
+-
+-void board_init_f(ulong silent)
+-{
+-#ifdef CONFIG_MVEBU_BOOTMODE_SWITCH_SUPPORT
+-	uchar boot_mode_read;
+-#endif
+-
+-	gd = &gdata;
+-	gd->baudrate = CONFIG_BAUDRATE;
+-
+-	/* Silence flag is not supported by CM3 WTP BootROM */
+-	gd->flags &= ~GD_FLG_SILENT;
+-
+-	/* isetup_fdt set default FDT to work with:
+-	   - customer/regular mode: point to the defined
+-	     FDT by CONFIG_DEFAULT_DEVICE_TREE.
+-	   - Marvell multi FDT mode: set the first compiled relevant device
+-	     tree for the SoC, required for i2c initialization to read EEPROM data */
+-	setup_fdt();
+-
+-#ifdef CONFIG_BOARD_CONFIG_EEPROM
+-	cfg_eeprom_init();
+-#endif
+-
+-#ifdef CONFIG_MULTI_DT_FILE
+-	/* Update gd->fdt_blob according to multi-fdt data in eeprom */
+-	mvebu_setup_fdt();
+-#endif
+-
+-	/* UART1 and UART2 clocks are sourced from XTAL by default
+-	* (see RD0012010 register for the details). Additionally the GPIO
+-	* control (RD0013830) sets the GPIO1[26:25] as the UART1 pins by default.
+-	* Therefore it is safe to start using UART before call to early_spl_init()
+-	*/
+-	preloader_console_init();
+-
+-#ifdef CONFIG_MVEBU_BOOTMODE_SWITCH_SUPPORT
+-	/* Armada3700-Z chip doesn't support escape string to enter the uart mode.
+-	 * So that the u-boot cannot be recovered via uart on a boot failure. For Marvell
+-	 * board, it supports to switch the boot_src by modifying the sample at reset
+-	 * value in PCA9560.
+-	 *
+-	 * 1. in early stage of SPL, boot mode from SatR device will be read, kept
+-	 *    the original value, I2C mem will be written to boot from UART, so if
+-	 *    SPL/u-boot crashed, board stays in boot from UART mode.
+-	 * 2. in the last stage of u-boot, boot mode will be written back to
+-	 *    oringal value.
+-	 */
+-	mvebu_boot_mode_get(&boot_mode_read);
+-
+-	/* Pass BOOT_MODE from SPL to u-boot */
+-	set_info(BOOT_MODE, boot_mode_read);
+-
+-	/* switch to uart boot mode */
+-	mvebu_boot_mode_set(BOOT_MODE_UART);
+-#endif
+-
+-#ifdef CONFIG_MVEBU_A3700_MISC_INIT
+-	misc_init_cci400();
+-#endif
+-
+-	/* Init all relevant drivers (e.g. DDR, comphy...) */
+-#ifdef CONFIG_MVEBU_COMPHY_SUPPORT
+-	if (comphy_init(gd->fdt_blob))
+-		error("COMPHY initialization failed\n");
+-#endif
+-#ifdef CONFIG_MVEBU_SPL_DDR_SUPPORT
+-	mvebu_dram_init(gd->fdt_blob);
+-#endif
+-
+-#ifdef CONFIG_MVEBU_MBUS
+-	init_mbus();
+-#endif
+-
+-#ifdef CONFIG_MVEBU_A3700_IO_ADDR_DEC
+-	init_io_addr_dec();
+-#endif
+-
+-	debug("SPL processing done. Jumping to OSLO image\n\n");
+-	ptr_oslo_start = (void *)CONFIG_OSLO_START_ADDR;
+-	/* Jump from SPL to OSLO start address, which could be u-boot or ATF */
+-	ptr_oslo_start();
+-}
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index 166d5c4..7f7a80c 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -1,15 +1,5 @@
+ menu "Misc drivers"
+ 
+-config MVEBU_MBUS_SPL_ONLY
+-	bool "MBUS address decoding driver in SPL only"
+-	depends on MVEBU_MBUS
+-	default n
+-	help
+-	  Choose this option to do MBUS windows
+-	  modifications in SPL executable only
+-	  In regular u-boot image MBUS driver will
+-	  only read memory windows information from DT
+-
+ config MVEBU_MBUS_SKIP_DRAM_WIN
+ 	bool "skip DRAM window configuration in MBUS driver"
+ 	depends on MVEBU_MBUS
+diff --git a/drivers/misc/mvebu_mbus.c b/drivers/misc/mvebu_mbus.c
+index 36f8adc..5bbb22b 100644
+--- a/drivers/misc/mvebu_mbus.c
++++ b/drivers/misc/mvebu_mbus.c
+@@ -31,9 +31,6 @@ DECLARE_GLOBAL_DATA_PTR;
+ 
+ #define MBUS_REMAP_SIZE_64		64
+ #define MBUS_TARGET_DRAM_NUM		0
+-#ifdef CONFIG_MVEBU_MBUS_SPL_ONLY
+-#define MBUS_TARGET_RWTM_RAM_NUM	7
+-#endif
+ 
+ struct mbus_configuration {
+ 	void __iomem *mbus_base;
+@@ -51,20 +48,9 @@ struct mbus_fdt_info {
+ 	u32 flags;
+ };
+ 
+-
+ struct mbus_fdt_info __attribute__((section(".data")))fdt_inf_arr[MBUS_WIN_MAP_NUM_MAX];
+ struct mbus_win __attribute__((section(".data")))memory_map_arr[MBUS_WIN_MAP_NUM_MAX];
+ 
+-/* The MBUS driver can be called twice - from SPL and from u-boot itself
+-   In order to prevent double configuration of memory windows, do the following:
+-   1. If CONFIG_MVEBU_MBUS_SPL_ONLY is not defined, do the full memory configuration.
+-      This case intended to cover cases when SPL is not used.
+-   2. If CONFIG_MVEBU_MBUS_SPL_ONLY is defined, make sure that the memory windows
+-      only configured when called from inside the SPL (CONFIG_SPL_BUILD is defined)
+-      Otherwise only read the windows information from DT in u-boot content and
+-      assume that all windows parameters were already set by SPL
+-*/
+-#if (defined(CONFIG_MVEBU_MBUS_SPL_ONLY) && defined(CONFIG_SPL_BUILD)) || !defined(CONFIG_MVEBU_MBUS_SPL_ONLY)
+ static void mbus_win_check(struct mbus_win *win, u32 win_num)
+ {
+ 	/* check if address is aligned to the size */
+@@ -108,7 +94,6 @@ static void mbus_win_set(struct mbus_win *win, u32 win_num)
+ 	}
+ 	return;
+ }
+-#endif /* (defined(CONFIG_MVEBU_MBUS_SPL_ONLY) && defined(CONFIG_SPL_BUILD)) || !defined(CONFIG_MVEBU_MBUS_SPL_ONLY) */
+ 
+ /*
+  * mbus_win_get
+@@ -235,10 +220,7 @@ int remap_mbus(phys_addr_t input, phys_addr_t output)
+ 
+ int init_mbus(void)
+ {
+-/* Se detailed case description on next IF occurance */
+-#if (defined(CONFIG_MVEBU_MBUS_SPL_ONLY) && defined(CONFIG_SPL_BUILD)) || !defined(CONFIG_MVEBU_MBUS_SPL_ONLY)
+ 	u32	win_id, mbus_win, start_win_id = 0;
+-#endif
+ 	u32	node, count, index;
+ 	struct mbus_fdt_info *fdt_info = fdt_inf_arr;
+ 	struct mbus_win *memory_map = memory_map_arr, *win;
+@@ -298,16 +280,6 @@ int init_mbus(void)
+ 	}
+ 	win->enabled = -1;
+ 
+-/* The MBUS driver can be called twice - from SPL and from u-boot itself
+-   In order to prevent double configuration of memory windows, do the following:
+-   1. If CONFIG_MVEBU_MBUS_SPL_ONLY is not defined, do the full memory configuration.
+-      This case intended to cover cases when SPL is not used.
+-   2. If CONFIG_MVEBU_MBUS_SPL_ONLY is defined, make sure that the memory windows
+-      only configured when called from inside the SPL (CONFIG_SPL_BUILD is defined)
+-      Otherwise only read the windows information from DT in u-boot content and
+-      assume that all windows parameters were already set by SPL
+-*/
+-#if (defined(CONFIG_MVEBU_MBUS_SPL_ONLY) && defined(CONFIG_SPL_BUILD)) || !defined(CONFIG_MVEBU_MBUS_SPL_ONLY)
+ #ifdef CONFIG_MVEBU_MBUS_SKIP_DRAM_WIN
+ 	/* for some Soc, like Armada3700, DRAM window has to be at the beginning,
+ 	     and could not be configured by anyway (keep the default value),
+@@ -318,11 +290,6 @@ int init_mbus(void)
+ #endif
+ 	/* disable all windows */
+ 	for (win_id = start_win_id; win_id < mbus_info->max_win; win_id++) {
+-#ifdef CONFIG_MVEBU_MBUS_SPL_ONLY
+-		/* Skip rWTM RAM window in SPL since the SPL runs from rWTM RAM */
+-		if (MBUS_TARGET_RWTM_RAM_NUM == memory_map[win_id].target)
+-			continue;
+-#endif
+ 		mbus_win = readl(mbus_info->mbus_base + MBUS_WIN_CTRL_REG(win_id));
+ 		mbus_win &= ~MBUS_CR_WIN_ENABLE;
+ 		writel(mbus_win, mbus_info->mbus_base + MBUS_WIN_CTRL_REG(win_id));
+@@ -332,11 +299,7 @@ int init_mbus(void)
+ 	for (win_id = start_win_id, win = &memory_map[start_win_id]; win_id < mbus_info->max_win; win_id++, win++) {
+ 		if ((win->win_size == 0) || (win->enabled == 0) || (win->remapped == 0))
+ 			continue;
+-#ifdef CONFIG_MVEBU_MBUS_SPL_ONLY
+-		/* Skip rWTM RAM window in SPL since the SPL runs from rWTM RAM */
+-		if (MBUS_TARGET_RWTM_RAM_NUM == win->target)
+-			continue;
+-#endif
++
+ 		mbus_win_check(win, win_id);
+ 		debug("set window %d: target %d, base = 0x%lx, size = 0x%lx, attribute = 0x%x, remapped\n",
+ 			win_id, win->target, win->base_addr, win->win_size, win->attribute);
+@@ -348,18 +311,13 @@ int init_mbus(void)
+ 	for (win_id = start_win_id, win = memory_map; win_id < mbus_info->max_win; win_id++, win++) {
+ 		if ((win->win_size == 0) || (win->enabled == 0) || (win->remapped))
+ 			continue;
+-#ifdef CONFIG_MVEBU_MBUS_SPL_ONLY
+-		/* Skip rWTM RAM window in SPL since the SPL runs from rWTM RAM */
+-		if (MBUS_TARGET_RWTM_RAM_NUM == win->target)
+-			continue;
+-#endif
++
+ 		mbus_win_check(win, win_id);
+ 		debug("set window %d: target = %d, base = 0x%lx, size = 0x%lx, attribute = 0x%x\n",
+ 			win_id, win->target, win->base_addr, win->win_size, win->attribute);
+ 
+ 		mbus_win_set(win, win_id);
+ 	}
+-#endif /* (defined(CONFIG_MVEBU_MBUS_SPL_ONLY) && defined(CONFIG_SPL_BUILD)) || !defined(CONFIG_MVEBU_MBUS_SPL_ONLY) */
+ 
+ 	debug("Done MBUS address decoding initializing\n");
+ 	debug_exit();
+diff --git a/include/configs/armada3700.h b/include/configs/armada3700.h
+index 48d38f5..9a7d43c 100644
+--- a/include/configs/armada3700.h
++++ b/include/configs/armada3700.h
+@@ -59,36 +59,6 @@
+ #define MV_DRAM_AUTO_SIZE
+ #define CONFIG_SYS_DRAM_BANKS		1
+ 
+-#ifdef CONFIG_SPL_BUILD
+-/* SPL */
+-/* Defines for SPL */
+-/*#define CONFIG_SPL_TEXT_BASE	0xF0000000 - CM3 SRAM, 0x01000000 - DRAM */
+-/* SRAM is 128K in total:      0xF0000000 - 0xF001FFFF
+-   SPL code occupies addresses 0xF0000000 - 0xF000FFFF
+-   SPL data can use addresses  0xF0010000 - 0xF0014000
+-   WTMI starts at address      0xF00140F0
+-   CM3 BootROM uses adresses   0xF0016000 - 0xF001FFFF
+-   CM3 mapping for SRAM is     0x1FFF0000 - 0x20010000
+- */
+-#define CONFIG_SPL_TEXT_BASE		0x01000000
+-
+-#if (CONFIG_SPL_TEXT_BASE != 0xF0000000)
+-#define SPL_IS_IN_DRAM
+-#define CONFIG_SPL_MAX_SIZE		0x00020000	/* 128K */
+-#else
+-#undef SPL_IS_IN_DRAM
+-#define CONFIG_SPL_MAX_SIZE		0x00010000	/* 64K */
+-#endif
+-
+-
+-#ifndef __ASSEMBLY__
+-extern char __end_of_spl[];
+-#endif /* __ASSEMBLY__ */
+-#define CONFIG_SYS_SPL_MALLOC_START	((ulong)__end_of_spl)
+-#define CONFIG_SYS_SPL_MALLOC_SIZE	(0x4000)	/* 16K */
+-#endif /* CONFIG_SPL_BUILD */
+-#define CONFIG_SPL_LDSCRIPT		"arch/arm/cpu/mvebu-common/u-boot-armv8-spl.lds"
+-
+ /* SPI flash for Palladium */
+ #ifdef CONFIG_MVEBU_SPI
+ 
+-- 
+1.9.1
+

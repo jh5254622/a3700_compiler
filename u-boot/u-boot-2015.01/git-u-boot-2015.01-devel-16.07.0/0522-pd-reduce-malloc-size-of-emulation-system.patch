@@ -1,0 +1,33 @@
+From ce48d4cf5148bf350a9b8bda19d8b50005efbb72 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 23 Nov 2015 14:30:58 +0200
+Subject: [PATCH 0522/1240] pd: reduce malloc size of emulation system
+
+Change-Id: Ic6ce9b7b770e95bd471edaa732305846ebc9e0f9
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25180
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/mvebu-common.h | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 5b454a1..6fafe13 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -44,7 +44,11 @@
+ #define CONFIG_SYS_SDRAM_BASE           0x00000000
+ #define CONFIG_SYS_RESET_ADDRESS        0xffff0000
+ #define CONFIG_SYS_MALLOC_BASE          (CONFIG_SYS_TEXT_BASE + (3 << 20))  /* TEXT_BASE + 3M */
++#ifdef CONFIG_PALLADIUM
++#define CONFIG_SYS_MALLOC_LEN           (1 << 19)	/* Reserve 0.5MB for malloc*/
++#else
+ #define CONFIG_SYS_MALLOC_LEN           (5 << 20)	/* Reserve 5MB for malloc*/
++#endif
+ #define CONFIG_NR_DRAM_BANKS		(2)
+ 
+ /* maybe need to set back to 0x7fff0 */
+-- 
+1.9.1
+

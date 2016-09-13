@@ -1,0 +1,221 @@
+From bb1f314c9244d9748f0e18ca103336a18fb02921 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Fri, 18 Sep 2015 10:28:54 +0800
+Subject: [PATCH 0455/1240] armada3700: pcie: add pcie driver to Armada-3700
+
+    - Kconfig support
+    - FDT support for base address and memory map
+    - Add Compilation macros for PCIe
+	- Fix PCI compilation issue by force to u32
+Signed-off-by: Victor Gu <xigu@marvell.com>
+
+Change-Id: If33c2fff17c9edc5e5e47dfdba3cc48e34261282
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23647
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ arch/arm/dts/armada-lp-db.dts                  |  5 +++++
+ arch/arm/dts/armada-lp-palladium.dts           |  5 +++++
+ arch/arm/dts/armada-lp.dtsi                    | 11 +++++++++++
+ arch/arm/include/asm/arch-armadalp/regs-base.h |  2 --
+ configs/mvebu_armadalp_defconfig               |  1 +
+ configs/mvebu_armadalp_palladium_defconfig     |  1 +
+ doc/device-tree-bindings/README.mvebu          |  2 ++
+ doc/device-tree-bindings/pci/mvebu-pci.txt     |  3 ++-
+ drivers/pci/pci.c                              |  2 +-
+ include/configs/mvebu-common.h                 | 15 +++++++++++++++
+ include/fdtdec.h                               |  1 +
+ lib/fdtdec.c                                   |  1 +
+ 12 files changed, 45 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/dts/armada-lp-db.dts b/arch/arm/dts/armada-lp-db.dts
+index 8688b99..c9c5e27 100644
+--- a/arch/arm/dts/armada-lp-db.dts
++++ b/arch/arm/dts/armada-lp-db.dts
+@@ -24,6 +24,11 @@
+ 			i2c: i2c@11000 {
+ 				status = "okay";
+ 			};
++			pcie-controller {
++				pcie@1,0 {
++					status = "okay";
++				};
++			};
+ 		};
+ 	};
+ };
+diff --git a/arch/arm/dts/armada-lp-palladium.dts b/arch/arm/dts/armada-lp-palladium.dts
+index 80b163e..a9c52c5 100644
+--- a/arch/arm/dts/armada-lp-palladium.dts
++++ b/arch/arm/dts/armada-lp-palladium.dts
+@@ -26,6 +26,11 @@
+ 			i2c: i2c@11000 {
+ 				status = "okay";
+ 			};
++			pcie-controller {
++				pcie@1,0 {
++					status = "okay";
++				};
++			};
+ 		};
+ 	};
+ };
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index 7054101..5b7158d 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -83,6 +83,17 @@
+ 					phy-speed = <PHY_SPEED_2_5G>;
+ 				};
+ 			};
++			pcie-controller {
++				#address-cells = <1>;
++				#size-cells = <1>;
++				compatible = "marvell,advk-pcie";
++
++				pcie@1,0 {
++					reg = <0x70000 0x20000>;
++					mem = <0xE8000000 0x8000000>;
++					status = "disabled";
++				};
++			};
+ 		};
+ 	};
+ };
+diff --git a/arch/arm/include/asm/arch-armadalp/regs-base.h b/arch/arm/include/asm/arch-armadalp/regs-base.h
+index 522e85b..bccacba 100644
+--- a/arch/arm/include/asm/arch-armadalp/regs-base.h
++++ b/arch/arm/include/asm/arch-armadalp/regs-base.h
+@@ -23,8 +23,6 @@
+ 
+ #define MPP_REGS_BASE		(MVEBU_REGS_BASE + 0x18000)
+ #define MVEBU_ADEC_BASE		(MVEBU_REGS_BASE + 0xCF00)
+-#define MVEBU_PCIE_BASE(x)	(MVEBU_REGS_BASE + 0x70000)
+-
+ 
+ #define MVEBU_MISC_REGS_BASE	(MVEBU_REGS_BASE + 0x18200)
+ #define MVEBU_DEVICE_ID_REG	(MVEBU_MISC_REGS_BASE + 0x38)
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index 1623fc8..6d9f064 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -13,6 +13,7 @@ CONFIG_I2C_MV_PAD_REG=n
+ CONFIG_CUSTOMER_BOARD=y
+ CONFIG_MVEBU_MBUS=y
+ CONFIG_MVEBU_MBUS_SKIP_DRAM_WIN=y
++CONFIG_MVEBU_ADVK_PCIE=y
+ CONFIG_CMD_BDI=y
+ CONFIG_CMD_SPI=y
+ CONFIG_CMD_BOOTD=y
+diff --git a/configs/mvebu_armadalp_palladium_defconfig b/configs/mvebu_armadalp_palladium_defconfig
+index 1ba48ee..378123a 100644
+--- a/configs/mvebu_armadalp_palladium_defconfig
++++ b/configs/mvebu_armadalp_palladium_defconfig
+@@ -11,6 +11,7 @@ CONFIG_I2C_MV_PAD_REG=n
+ +S:CONFIG_DEVEL_BOARD=y
+ CONFIG_MVEBU_MBUS=y
+ CONFIG_MVEBU_MBUS_SKIP_DRAM_WIN=y
++CONFIG_MVEBU_ADVK_PCIE=y
+ CONFIG_CMD_BDI=y
+ CONFIG_CMD_SPI=y
+ CONFIG_CMD_BOOTD=y
+diff --git a/doc/device-tree-bindings/README.mvebu b/doc/device-tree-bindings/README.mvebu
+index 59bcb9e..d48e2e9 100644
+--- a/doc/device-tree-bindings/README.mvebu
++++ b/doc/device-tree-bindings/README.mvebu
+@@ -55,6 +55,8 @@ Group Ltd.
+ 				Specify the UART interface for armadaLP, check doc/device-tree-bindings/serial/mvebu-serial.txt
+ 			2.1.7 /soc/internal-regs/neta/ node;
+ 				Specify the GBE interface for armadaLP, check doc/device-tree-bindings/net/mvebu-gbe.txt
++			2.1.8 /soc/internal-regs/pcie/ node;
++				Specify the PCIe interface for armadaLP, check doc/device-tree-bindings/pci/mvebu-pci.txt
+ 
+ 3) /sar/ node:
+ 	Specify the sample at reset database, check
+diff --git a/doc/device-tree-bindings/pci/mvebu-pci.txt b/doc/device-tree-bindings/pci/mvebu-pci.txt
+index 862735d..8a22a38 100644
+--- a/doc/device-tree-bindings/pci/mvebu-pci.txt
++++ b/doc/device-tree-bindings/pci/mvebu-pci.txt
+@@ -6,7 +6,8 @@ that make up PCIe bus.
+ 
+ The mvebu-pcie requires the following proprties:
+ 	- compatible
+-		should be "marvell,mvebu-pcie"
++		should be "marvell,mvebu-pcie" for legacy Marvell EBU PCIe IP,
++		and "marvell,advk-pcie" for Marvell Ardvark PCIe IP.
+ 	- pcie
+ 		a node describing a single PCIe port.
+ 		each pcie node contains the following properties
+diff --git a/drivers/pci/pci.c b/drivers/pci/pci.c
+index fdf6d32..01596af 100644
+--- a/drivers/pci/pci.c
++++ b/drivers/pci/pci.c
+@@ -677,7 +677,7 @@ int pci_hose_scan_bus(struct pci_controller *hose, int bus)
+ 
+ 		if (pci_print_dev(hose, dev)) {
+ 			printf("%02x:%02x.%-*x - %04x:%04x - %s\n",
+-			       PCI_BUS(dev), PCI_DEV(dev), 6 - indent, PCI_FUNC(dev),
++			       (u32)PCI_BUS(dev), (u32)PCI_DEV(dev), 6 - indent, (u32)PCI_FUNC(dev),
+ 			       vendor, device, pci_class_str(class >> 8));
+ 		}
+ #endif
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 97428a5..8d2bfae 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -46,6 +46,7 @@
+ #define CONFIG_SYS_MALLOC_BASE          (CONFIG_SYS_TEXT_BASE + (3 << 20))  /* TEXT_BASE + 3M */
+ #define CONFIG_SYS_MALLOC_LEN           (1 << 20)    /* Reserve 1MB for malloc*/
+ #define CONFIG_NR_DRAM_BANKS		(2)
++
+ /* maybe need to set back to 0x7fff0 */
+ #define CONFIG_SYS_INIT_SP_ADDR         (CONFIG_SYS_TEXT_BASE + 0xFF0000)   /* End of 16M scrubbed by training in bootrom */
+ #define CONFIG_SYS_GBL_DATA_SIZE        128	/* Size in bytes reserved for init data */
+@@ -294,6 +295,20 @@
+ 
+ #endif /* CONFIG_MVEBU_PCI */
+ 
++#ifdef CONFIG_MVEBU_ADVK_PCIE
++	#define CONFIG_PCI
++	#define CONFIG_PCI_PNP	/* Enable plug-and-play */
++	#define CONFIG_PCI_SCAN_SHOW
++	#define CONFIG_SYS_PCI_64BIT
++	#define CONFIG_PCI_ADDR_PREFIX
++	#define CONFIG_PCIE_RC_MODE
++
++	/* Enable PCIE NIC for devel boards */
++	#ifdef CONFIG_DEVEL_BOARD
++		#define CONFIG_E1000
++	#endif
++#endif /* CONFIG_MVEBU_ADVK_PCIE */
++
+ /* Add network parameters when network command is enabled */
+ #ifdef CONFIG_CMD_NET
+ 	/* Environment */
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 6643e9f..7985128 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -154,6 +154,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_ARMADA_LP_DB0,
+ 	COMPAT_MVEBU_ARMADA_LP_DB1,
+ 	COMPAT_MVEBU_ARMADA_LP_CUSTOMER,
++	COMPAT_MVEBU_ADVK_PCIE,
+ 
+ 	COMPAT_COUNT,
+ };
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index a600a0d..dec3895 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -116,6 +116,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_ARMADA_LP_DB0, "marvell,armada-lp-db0"),
+ 	COMPAT(MVEBU_ARMADA_LP_DB1, "marvell,armada-lp-db1"),
+ 	COMPAT(MVEBU_ARMADA_LP_CUSTOMER, "marvell,armada-lp-customer"),
++	COMPAT(MVEBU_ADVK_PCIE, "marvell,advk-pcie"),
+ };
+ 
+ const char *fdtdec_get_compatible(enum fdt_compat_id id)
+-- 
+1.9.1
+

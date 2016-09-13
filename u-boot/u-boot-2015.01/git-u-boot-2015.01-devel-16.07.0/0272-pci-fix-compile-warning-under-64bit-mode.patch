@@ -1,0 +1,58 @@
+From a5d059d82e71909b3a0a04263d2ed0a5086c45e5 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Tue, 28 Jul 2015 09:05:19 +0300
+Subject: [PATCH 0272/1240] pci: fix compile warning under 64bit mode
+
+Update pci_dev_t type to u64 for 64bit mode
+
+Change-Id: I06f6d723caf35d7ed4cabe1f3a0355ddf9f8ebd2
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22248
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/pci/pci.c | 2 +-
+ include/pci.h     | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/pci/pci.c b/drivers/pci/pci.c
+index 3daf73c..fdf6d32 100644
+--- a/drivers/pci/pci.c
++++ b/drivers/pci/pci.c
+@@ -660,7 +660,7 @@ int pci_hose_scan_bus(struct pci_controller *hose, int bus)
+ 			found_multi = header_type & 0x80;
+ 
+ 		debug("PCI Scan: Found Bus %d, Device %d, Function %d\n",
+-			PCI_BUS(dev), PCI_DEV(dev), PCI_FUNC(dev));
++			(int)PCI_BUS(dev), (int)PCI_DEV(dev), (int)PCI_FUNC(dev));
+ 
+ 		pci_hose_read_config_word(hose, dev, PCI_DEVICE_ID, &device);
+ 		pci_hose_read_config_word(hose, dev, PCI_CLASS_DEVICE, &class);
+diff --git a/include/pci.h b/include/pci.h
+index 7f67ca6..3ef6295 100644
+--- a/include/pci.h
++++ b/include/pci.h
+@@ -422,9 +422,11 @@
+ #ifdef CONFIG_SYS_PCI_64BIT
+ typedef u64 pci_addr_t;
+ typedef u64 pci_size_t;
++typedef u64 pci_dev_t;
+ #else
+ typedef u32 pci_addr_t;
+ typedef u32 pci_size_t;
++typedef u32 pci_dev_t;
+ #endif
+ 
+ struct pci_region {
+@@ -455,8 +457,6 @@ static inline void pci_set_region(struct pci_region *reg,
+ 	reg->flags	= flags;
+ }
+ 
+-typedef int pci_dev_t;
+-
+ #define PCI_BUS(d)	(((d) >> 16) & 0xff)
+ #define PCI_DEV(d)	(((d) >> 11) & 0x1f)
+ #define PCI_FUNC(d)	(((d) >> 8) & 0x7)
+-- 
+1.9.1
+

@@ -1,0 +1,168 @@
+From 27a00c8e48b758ec67e7f9ee8140739fb75a5c09 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 30 Jul 2015 14:49:34 +0300
+Subject: [PATCH 0293/1240] config: updated armada8k defconfig files
+
+- renamed mvebu_armada8k_defcofnig to mvebu_apn806_pd_defconfig
+- created new defconfig for real soc: mvebu_apn806_defconfig
+- created new defconfig for armada8040 palladium
+
+Change-Id: Ifda86c24326fe130c77e27527b9104d89ffb77b1
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22351
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ configs/mvebu_apn806_defconfig        | 29 +++++++++++++++++++++++++++++
+ configs/mvebu_apn806_pd_defconfig     | 29 +++++++++++++++++++++++++++++
+ configs/mvebu_armada8040_pd_defconfig | 29 +++++++++++++++++++++++++++++
+ configs/mvebu_armada8k_defconfig      | 29 -----------------------------
+ 4 files changed, 87 insertions(+), 29 deletions(-)
+ create mode 100644 configs/mvebu_apn806_defconfig
+ create mode 100644 configs/mvebu_apn806_pd_defconfig
+ create mode 100644 configs/mvebu_armada8040_pd_defconfig
+ delete mode 100644 configs/mvebu_armada8k_defconfig
+
+diff --git a/configs/mvebu_apn806_defconfig b/configs/mvebu_apn806_defconfig
+new file mode 100644
+index 0000000..f300841
+--- /dev/null
++++ b/configs/mvebu_apn806_defconfig
+@@ -0,0 +1,29 @@
++CONFIG_SPL=y
++CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+++S:CONFIG_ARM=y
+++S:CONFIG_TARGET_ARMADA_8K=y
++CONFIG_MVEBU_MPP_BUS=y
++CONFIG_MVEBU_I2C=y
+++S:CONFIG_MVEBU_MK6_SUPPORT=y
+++S:CONFIG_DEVEL_BOARD=y
++CONFIG_APN_806_DB=y
++CONFIG_CMD_BOOTD=y
++CONFIG_CMD_RUN=y
++CONFIG_CMD_EDITENV=y
++CONFIG_CMD_SAVEENV=y
++CONFIG_CMD_MEMORY=y
++CONFIG_CMD_MEMTEST=y
++CONFIG_CMD_PCI=y
++CONFIG_CMD_I2C=y
++CONFIG_CMD_TIME=y
++CONFIG_CMD_MISC=y
++CONFIG_CMD_TIMER=y
++CONFIG_CMD_MVEBU_SAR=y
++CONFIG_CMD_MVEBU_MPP=y
+++S:CONFIG_OF_CONTROL=y
+++S:CONFIG_OF_EMBED=y
+++S:CONFIG_DEFAULT_DEVICE_TREE="apn-806-db"
++CONFIG_MVEBU_CCU=y
++CONFIG_MVEBU_RFU=y
+++S:CONFIG_SYS_NS16550=y
++CONFIG_MVEBU_PINCTL=y
+diff --git a/configs/mvebu_apn806_pd_defconfig b/configs/mvebu_apn806_pd_defconfig
+new file mode 100644
+index 0000000..f300841
+--- /dev/null
++++ b/configs/mvebu_apn806_pd_defconfig
+@@ -0,0 +1,29 @@
++CONFIG_SPL=y
++CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+++S:CONFIG_ARM=y
+++S:CONFIG_TARGET_ARMADA_8K=y
++CONFIG_MVEBU_MPP_BUS=y
++CONFIG_MVEBU_I2C=y
+++S:CONFIG_MVEBU_MK6_SUPPORT=y
+++S:CONFIG_DEVEL_BOARD=y
++CONFIG_APN_806_DB=y
++CONFIG_CMD_BOOTD=y
++CONFIG_CMD_RUN=y
++CONFIG_CMD_EDITENV=y
++CONFIG_CMD_SAVEENV=y
++CONFIG_CMD_MEMORY=y
++CONFIG_CMD_MEMTEST=y
++CONFIG_CMD_PCI=y
++CONFIG_CMD_I2C=y
++CONFIG_CMD_TIME=y
++CONFIG_CMD_MISC=y
++CONFIG_CMD_TIMER=y
++CONFIG_CMD_MVEBU_SAR=y
++CONFIG_CMD_MVEBU_MPP=y
+++S:CONFIG_OF_CONTROL=y
+++S:CONFIG_OF_EMBED=y
+++S:CONFIG_DEFAULT_DEVICE_TREE="apn-806-db"
++CONFIG_MVEBU_CCU=y
++CONFIG_MVEBU_RFU=y
+++S:CONFIG_SYS_NS16550=y
++CONFIG_MVEBU_PINCTL=y
+diff --git a/configs/mvebu_armada8040_pd_defconfig b/configs/mvebu_armada8040_pd_defconfig
+new file mode 100644
+index 0000000..f300841
+--- /dev/null
++++ b/configs/mvebu_armada8040_pd_defconfig
+@@ -0,0 +1,29 @@
++CONFIG_SPL=y
++CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+++S:CONFIG_ARM=y
+++S:CONFIG_TARGET_ARMADA_8K=y
++CONFIG_MVEBU_MPP_BUS=y
++CONFIG_MVEBU_I2C=y
+++S:CONFIG_MVEBU_MK6_SUPPORT=y
+++S:CONFIG_DEVEL_BOARD=y
++CONFIG_APN_806_DB=y
++CONFIG_CMD_BOOTD=y
++CONFIG_CMD_RUN=y
++CONFIG_CMD_EDITENV=y
++CONFIG_CMD_SAVEENV=y
++CONFIG_CMD_MEMORY=y
++CONFIG_CMD_MEMTEST=y
++CONFIG_CMD_PCI=y
++CONFIG_CMD_I2C=y
++CONFIG_CMD_TIME=y
++CONFIG_CMD_MISC=y
++CONFIG_CMD_TIMER=y
++CONFIG_CMD_MVEBU_SAR=y
++CONFIG_CMD_MVEBU_MPP=y
+++S:CONFIG_OF_CONTROL=y
+++S:CONFIG_OF_EMBED=y
+++S:CONFIG_DEFAULT_DEVICE_TREE="apn-806-db"
++CONFIG_MVEBU_CCU=y
++CONFIG_MVEBU_RFU=y
+++S:CONFIG_SYS_NS16550=y
++CONFIG_MVEBU_PINCTL=y
+diff --git a/configs/mvebu_armada8k_defconfig b/configs/mvebu_armada8k_defconfig
+deleted file mode 100644
+index f300841..0000000
+--- a/configs/mvebu_armada8k_defconfig
++++ /dev/null
+@@ -1,29 +0,0 @@
+-CONFIG_SPL=y
+-CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+-+S:CONFIG_ARM=y
+-+S:CONFIG_TARGET_ARMADA_8K=y
+-CONFIG_MVEBU_MPP_BUS=y
+-CONFIG_MVEBU_I2C=y
+-+S:CONFIG_MVEBU_MK6_SUPPORT=y
+-+S:CONFIG_DEVEL_BOARD=y
+-CONFIG_APN_806_DB=y
+-CONFIG_CMD_BOOTD=y
+-CONFIG_CMD_RUN=y
+-CONFIG_CMD_EDITENV=y
+-CONFIG_CMD_SAVEENV=y
+-CONFIG_CMD_MEMORY=y
+-CONFIG_CMD_MEMTEST=y
+-CONFIG_CMD_PCI=y
+-CONFIG_CMD_I2C=y
+-CONFIG_CMD_TIME=y
+-CONFIG_CMD_MISC=y
+-CONFIG_CMD_TIMER=y
+-CONFIG_CMD_MVEBU_SAR=y
+-CONFIG_CMD_MVEBU_MPP=y
+-+S:CONFIG_OF_CONTROL=y
+-+S:CONFIG_OF_EMBED=y
+-+S:CONFIG_DEFAULT_DEVICE_TREE="apn-806-db"
+-CONFIG_MVEBU_CCU=y
+-CONFIG_MVEBU_RFU=y
+-+S:CONFIG_SYS_NS16550=y
+-CONFIG_MVEBU_PINCTL=y
+-- 
+1.9.1
+

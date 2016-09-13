@@ -1,0 +1,427 @@
+From e387a813665f37e8e610d4590ff7ad639668dafa Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 14 Jun 2015 14:08:50 +0300
+Subject: [PATCH 0197/1240] pinctl: added pinctl driver
+
+- This driver is based on the GPIO subsystem and can be
+  later extended to function as a GPIO driver as well
+- This is the low level driver that modifies the mpp
+  functions, an sets them to initial values
+
+Change-Id: Ic1a38a68b94d75cca4fdc403703438694bb94913
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20181
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/armada-385-db.dts                 |  20 +++
+ arch/arm/include/asm/arch-mvebu/pinctl.h       |  30 +++++
+ board/mvebu/common/init.c                      |   6 +-
+ configs/mvebu_armada38x_defconfig              |   3 +-
+ doc/device-tree-bindings/misc/mvebu-pinctl.txt |  38 ++++++
+ drivers/gpio/Kconfig                           |   9 ++
+ drivers/gpio/Makefile                          |   1 +
+ drivers/gpio/mvebu_pinctl.c                    | 180 +++++++++++++++++++++++++
+ include/fdtdec.h                               |   1 +
+ lib/fdtdec.c                                   |   1 +
+ 10 files changed, 287 insertions(+), 2 deletions(-)
+ create mode 100644 arch/arm/include/asm/arch-mvebu/pinctl.h
+ create mode 100644 doc/device-tree-bindings/misc/mvebu-pinctl.txt
+ create mode 100644 drivers/gpio/mvebu_pinctl.c
+
+diff --git a/arch/arm/dts/armada-385-db.dts b/arch/arm/dts/armada-385-db.dts
+index 5b45cf0..afbcee7 100644
+--- a/arch/arm/dts/armada-385-db.dts
++++ b/arch/arm/dts/armada-385-db.dts
+@@ -58,6 +58,14 @@
+ 				status = "disable";
+ 			};
+ 
++			pinctl: pinctl@18000 {
++				compatible = "marvell,mvebu-pinctl";
++				bank-name ="armada-380";
++				reg = <0x18000 0x24>;
++				pin-count = <64>;
++				max-func = <7>;
++			};
++
+ 			spi0: spi@10600 {
+ 				compatible = "marvell,orion-spi";
+ 				reg = <0x10600 0x50>;
+@@ -113,3 +121,15 @@
+ 		};
+ 	};
+ };
++
++&pinctl {
++	          /* 0 1 2 3 4 5 6 7 8 9 */
++	pin-func = < 1 1 1 1 1 1 1 1 1 1
++		     1 1 1 1 1 1 1 1 0 6
++		     6 2 1 1 1 1 0 2 2 2
++		     2 2 2 0 0 0 0 2 2 2
++		     2 2 0 2 4 0 0 4 5 5
++		     5 0 5 5 5 5 0 5 5 5
++		     0 0 0 0>;
++};
++
+diff --git a/arch/arm/include/asm/arch-mvebu/pinctl.h b/arch/arm/include/asm/arch-mvebu/pinctl.h
+new file mode 100644
+index 0000000..f6d7dfc
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/pinctl.h
+@@ -0,0 +1,30 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt or on the worldwide
++ * web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#ifndef _PINCTL_H_
++#define _PINCTL_H_
++
++const char *pinctl_get_name(int bank_id);
++int  pinctl_set_pin_func(int bank, int pin_id, int func);
++int  pinctl_get_pin_func(int bank, int pin_id);
++int  pinctl_get_bank_id(const char *bank_name);
++int  pinctl_get_pin_cnt(int bank_id);
++int  mvebu_pinctl_probe(void);
++
++#endif /* _PINCTL_H_ */
++
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index c4b5104..0be5f88 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -26,6 +26,7 @@
+ #include <linux/compiler.h>
+ #include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/soc.h>
++#include <asm/arch-mvebu/pinctl.h>
+ #include "board.h"
+ #ifdef CONFIG_MVEBU_DEVEL_BOARD
+ #include "devel-board.h"
+@@ -143,7 +144,10 @@ int mvebu_board_init(void)
+ #endif
+ 
+ 	/* mpp_set */
+-	mpp_set_and_update(brd->mpp_regs);
++
++#ifdef CONFIG_MVEBU_PINCTL
++	mvebu_pinctl_probe();
++#endif
+ 
+ 	return 0;
+ }
+diff --git a/configs/mvebu_armada38x_defconfig b/configs/mvebu_armada38x_defconfig
+index 1da0066..9229efe 100644
+--- a/configs/mvebu_armada38x_defconfig
++++ b/configs/mvebu_armada38x_defconfig
+@@ -5,7 +5,7 @@ CONFIG_MVEBU_NAND=y
+ CONFIG_MVEBU_SPI=y
+ CONFIG_MVEBU_PCI=y
+ CONFIG_MVEBU_MPP=y
+-+S:CONFIG_SYS_NS16550=y
++CONFIG_MVEBU_PINCTL=y
+ +S:CONFIG_MVEBU_I2C=y
+ CONFIG_CMD_BDI=y
+ CONFIG_CMD_BOOTD=y
+@@ -30,3 +30,4 @@ CONFIG_CMD_MVEBU_BUBT=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-385-db"
+++S:CONFIG_SYS_NS16550=y
+diff --git a/doc/device-tree-bindings/misc/mvebu-pinctl.txt b/doc/device-tree-bindings/misc/mvebu-pinctl.txt
+new file mode 100644
+index 0000000..3ecd957
+--- /dev/null
++++ b/doc/device-tree-bindings/misc/mvebu-pinctl.txt
+@@ -0,0 +1,38 @@
++Marvell pinctl bindings
++=======================
++
++The mvebu-pinctl driver enables changing the function
++of multi purpose pins and controlling GPIOs. each dt
++entry describes a single pinctl bank. an SOC may
++have several pinctl banks.
++
++The mvebu-pinctl requires the following proprties:
++	- compatible
++	  	should be "marvell, mvebu-pinctl"
++	- bank-name
++	  	a unique name identifying the bank
++	- reg
++		description of the mpp register base and size
++	- pin-count
++	  	the amount of pins controlled by this bank
++	- max-func
++		the maximum function number supported by this bank
++	- pin-func
++		an array specifying the function per pin
++
++
++Example of a pinctl bank node:
++	pinctl@18000 {
++		compatible = "marvell,mvebu-pinctl";
++		bank-name ="armada-380";
++		reg = <0x18000 0x24>;
++		pin-count = <64>;
++		max-func = <7>;
++		pin-func = < 1 1 1 1 1 1 1 1 1 1
++			     1 1 1 1 1 1 1 1 0 6
++			     6 2 1 1 1 1 0 2 2 2
++			     2 2 2 0 0 0 0 2 2 2
++			     2 2 0 2 4 0 0 4 5 5
++			     5 0 5 5 5 5 0 5 5 5
++			     0 0 0 0>;
++	};
+diff --git a/drivers/gpio/Kconfig b/drivers/gpio/Kconfig
+index d21302f..a96fda3 100644
+--- a/drivers/gpio/Kconfig
++++ b/drivers/gpio/Kconfig
+@@ -4,3 +4,12 @@ config DM_GPIO
+ 	help
+ 	  If you want to use driver model for GPIO drivers, say Y.
+ 	  To use legacy GPIO drivers, say N.
++
++config MVEBU_PINCTL
++	bool "MVEBU Pin control support"
++	default n
++	help
++	  Choose this option to add support
++	  for pinctl driver. This drive implements
++	  the lowlevel control that allows changing
++	  the function of a multi purpose pin
+diff --git a/drivers/gpio/Makefile b/drivers/gpio/Makefile
+index aa11f15..2579b4c 100644
+--- a/drivers/gpio/Makefile
++++ b/drivers/gpio/Makefile
+@@ -37,3 +37,4 @@ obj-$(CONFIG_ADI_GPIO2)	+= adi_gpio2.o
+ obj-$(CONFIG_TCA642X)		+= tca642x.o
+ oby-$(CONFIG_SX151X)		+= sx151x.o
+ obj-$(CONFIG_SUNXI_GPIO)	+= sunxi_gpio.o
++obj-$(CONFIG_MVEBU_PINCTL)	+= mvebu_pinctl.o
+diff --git a/drivers/gpio/mvebu_pinctl.c b/drivers/gpio/mvebu_pinctl.c
+new file mode 100644
+index 0000000..41340bf
+--- /dev/null
++++ b/drivers/gpio/mvebu_pinctl.c
+@@ -0,0 +1,180 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt or on the worldwide
++ * web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#include <config.h>
++#include <common.h>
++#include <asm/system.h>
++#include <asm/io.h>
++#include <fdtdec.h>
++#include <malloc.h>
++#include <errno.h>
++#include <asm/arch-mvebu/fdt.h>
++
++#define CONFIG_MAX_PINCTL_BANKS		4
++#define CONFIG_MAX_PINS_PER_BANK	70
++#define CONFIG_MAX_FUNC			0xF
++
++#define BITS_PER_PIN		4
++#define PIN_FUNC_MASK		((1 << BITS_PER_PIN) - 1)
++#define PIN_REG_SHIFT		3
++#define PIN_FIELD_MASK		((1 << PIN_REG_SHIFT) - 1)
++
++DECLARE_GLOBAL_DATA_PTR;
++
++struct pinctl_data {
++	u8	*base_reg;
++	u32	pin_cnt;
++	u32	max_func;
++	const char    *bank_name;
++};
++struct pinctl_data __attribute__((section(".data"))) bank_data[CONFIG_MAX_PINCTL_BANKS];
++
++int pinctl_set_pin_func(int bank, int pin_id, int func)
++{
++	struct pinctl_data *pinctl =  &bank_data[bank];
++	int reg_offset;
++	int field_offset;
++	u32 reg, mask;
++
++	if (pin_id >= pinctl->pin_cnt) {
++		error("pin id %d doesn't exist on bank %d\n", pin_id, bank);
++		return -EINVAL;
++	}
++
++	if (func > pinctl->max_func) {
++		error("illegal function %d for pin %d\n", func, pin_id);
++		return -EINVAL;
++	}
++
++	/* Calculate register address and bit in register */
++	reg_offset   = 4 * (pin_id >> (PIN_REG_SHIFT));
++	field_offset = (BITS_PER_PIN) * (pin_id & PIN_FIELD_MASK);
++	mask = ~(PIN_FUNC_MASK << field_offset);
++
++	/* Clip value to field resolution */
++	func &= PIN_FUNC_MASK;
++
++	reg = readl(pinctl->base_reg + reg_offset);
++	reg = (reg & mask) | (func << field_offset);
++	writel(reg, pinctl->base_reg + reg_offset);
++
++	return 0;
++}
++
++int pinctl_get_pin_func(int bank, int pin_id)
++{
++	struct pinctl_data *pinctl =  &bank_data[bank];
++	int reg_offset;
++	int field_offset;
++	int func;
++
++	if (pin_id >= pinctl->pin_cnt) {
++		error("pin id %d doesnt exist on bank %d\n", pin_id, bank);
++		return -1;
++	}
++
++	reg_offset   = 4 * (pin_id >> (PIN_REG_SHIFT));
++	field_offset = (BITS_PER_PIN) * (pin_id & PIN_FIELD_MASK);
++
++	func = (readl(pinctl->base_reg + reg_offset)  >> field_offset) & PIN_FUNC_MASK;
++	return func;
++}
++
++int pinctl_get_bank_id(const char *bank_name)
++{
++	int bank_id = -1;
++	int bank;
++
++	for (bank = 0; bank < CONFIG_MAX_PINCTL_BANKS; bank++) {
++		if (strcmp(bank_name, bank_data[bank].bank_name) == 0)
++			bank_id = bank;
++	}
++
++	if (bank_id == -1)
++		error("pinctl: cannot match bank %s to bank_id\n", bank_name);
++
++	return bank_id;
++}
++
++int pinctl_get_pin_cnt(int bank_id)
++{
++	if ((bank_id < 0) || (bank_id >= CONFIG_MAX_PINCTL_BANKS))
++		return 0;
++
++	return bank_data[bank_id].pin_cnt;
++}
++
++const char *pinctl_get_name(int bank_id)
++{
++	if ((bank_id < 0) || (bank_id >= CONFIG_MAX_PINCTL_BANKS))
++		return NULL;
++
++	return bank_data[bank_id].bank_name;
++}
++
++int mvebu_pinctl_probe(void)
++{
++	struct pinctl_data *pinctl;
++	const void *blob = gd->fdt_blob;
++	int node_list[CONFIG_MAX_PINCTL_BANKS], node;
++	int count, i, err, pin;
++	u32 *pin_func;
++
++	count = fdtdec_find_aliases_for_id(gd->fdt_blob, "pinctl",
++			COMPAT_MVEBU_PINCTL, node_list, CONFIG_MAX_PINCTL_BANKS);
++
++	if (count <= 0)
++		return -ENODEV;
++
++	if (count > CONFIG_MAX_PINCTL_BANKS) {
++		error("pinctl: too many pinctl banks. using first %d banks\n", CONFIG_MAX_PINCTL_BANKS);
++		count = CONFIG_MAX_PINCTL_BANKS;
++	}
++
++	for (i = 0; i < count ; i++) {
++		node = node_list[i];
++
++		if (node <= 0)
++			continue;
++
++		pinctl = &bank_data[i];
++		pinctl->base_reg = fdt_get_regs_offs(blob, node, "reg");
++		pinctl->pin_cnt  = fdtdec_get_int(blob, node, "pin-count", CONFIG_MAX_PINS_PER_BANK);
++		pinctl->max_func  = fdtdec_get_int(blob, node, "max-func", CONFIG_MAX_FUNC);
++		pinctl->bank_name = fdt_getprop(blob, node, "bank-name", NULL);
++
++		pin_func = malloc(pinctl->pin_cnt * sizeof(u32));
++		if (pin_func == NULL) {
++			error("pinctl: no memory for pin_func array\n");
++			continue;
++		}
++		err = fdtdec_get_int_array(blob, node, "pin-func", pin_func, pinctl->pin_cnt);
++		if (err) {
++			error("Failed reading pin functions for bank %s\n", pinctl->bank_name);
++			continue;
++		}
++
++		for (pin = 0; pin < pinctl->pin_cnt; pin++) {
++			err = pinctl_set_pin_func(i, pin, pin_func[pin]);
++			if (err)
++				printf("Warning: pin %d is not set for bank %d\n", pin, i);
++		}
++	}
++
++	return 0;
++}
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index b92e584..75c5d4c 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -126,6 +126,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_TCLOCK,
+ 	COMPAT_MVEBU_I2C,
+ 	COMPAT_MVEBU_SAR,
++	COMPAT_MVEBU_PINCTL,
+ 
+ 	COMPAT_COUNT,
+ };
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 1ff117b..ed363ab 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -88,6 +88,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_TCLOCK, "marvell,tclk"),
+ 	COMPAT(MVEBU_I2C, "marvell,mvebu-i2c"),
+ 	COMPAT(MVEBU_SAR, "marvell,sample-at-reset"),
++	COMPAT(MVEBU_PINCTL, "marvell,mvebu-pinctl"),
+ };
+ 
+ const char *fdtdec_get_compatible(enum fdt_compat_id id)
+-- 
+1.9.1
+

@@ -1,0 +1,450 @@
+From 41a59c5b4f0a12cd27f5c43cda54abf2a306daa2 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 3 Aug 2015 17:25:07 +0300
+Subject: [PATCH 0300/1240] ddr: added memory test for DRAM in SPL
+
+- Added memory test (copy from mtest command) for DRAM in SPL
+
+Change-Id: I97cf0a7a4262443029957799caa2262e2a2ec02a
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22470
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Kconfig          |  11 ++
+ arch/arm/cpu/mvebu-common/Makefile         |   1 +
+ arch/arm/cpu/mvebu-common/spl.c            |   5 +
+ arch/arm/cpu/mvebu-common/tools/Kconfig    |  42 +++++
+ arch/arm/cpu/mvebu-common/tools/Makefile   |  19 +++
+ arch/arm/cpu/mvebu-common/tools/ddr_test.c | 263 +++++++++++++++++++++++++++++
+ arch/arm/include/asm/arch-mvebu/tools.h    |  24 +++
+ 7 files changed, 365 insertions(+)
+ create mode 100644 arch/arm/cpu/mvebu-common/tools/Kconfig
+ create mode 100644 arch/arm/cpu/mvebu-common/tools/Makefile
+ create mode 100644 arch/arm/cpu/mvebu-common/tools/ddr_test.c
+ create mode 100644 arch/arm/include/asm/arch-mvebu/tools.h
+
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index 6e00b08..163f9d4 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -148,3 +148,14 @@ config MVEBU_NOR_BOOT
+ 
+ endchoice
+ 
++config MVEBU_TOOLS_SUPPORT
++	bool "MVEBU tools functions for U-Boot"
++	default y
++	help
++	  Choose this option to add support
++	  for different tools function for
++	  U-Boot/SPL code
++
++if MVEBU_TOOLS_SUPPORT
++source "arch/arm/cpu/mvebu-common/tools/Kconfig"
++endif
+diff --git a/arch/arm/cpu/mvebu-common/Makefile b/arch/arm/cpu/mvebu-common/Makefile
+index 1d2fafc..68cebb1 100644
+--- a/arch/arm/cpu/mvebu-common/Makefile
++++ b/arch/arm/cpu/mvebu-common/Makefile
+@@ -26,3 +26,4 @@ obj-$(CONFIG_GENERIC_TIMER) += generic_timer.o
+ obj-$(CONFIG_MVEBU_CA9) += platform.o
+ obj-$(CONFIG_SPL_BUILD) += spl.o
+ obj-$(CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT) += dram_over_pci.o
++obj-$(CONFIG_MVEBU_TOOLS_SUPPORT) += tools/
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index 25aea32..a2cd72f 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -21,6 +21,7 @@
+ #include <fdtdec.h>
+ #include <asm/arch-mvebu/fdt.h>
+ #include <asm/arch-mvebu/comphy.h>
++#include <asm/arch-mvebu/tools.h>
+ #ifdef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+ #include <asm/arch-mvebu/dram_over_pci.h>
+ #endif
+@@ -69,4 +70,8 @@ void board_init_f(ulong silent)
+ #else
+ 	dram_over_pci_init(gd->fdt_blob);
+ #endif /* CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT */
++#ifdef CONFIG_MVEBU_SPL_MEMORY_TEST
++	if (run_memory_test())
++		printf("**** DRAM test failed ****\n");
++#endif
+ }
+diff --git a/arch/arm/cpu/mvebu-common/tools/Kconfig b/arch/arm/cpu/mvebu-common/tools/Kconfig
+new file mode 100644
+index 0000000..c115609
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/tools/Kconfig
+@@ -0,0 +1,42 @@
++
++menu "Tools support"
++depends on MVEBU_TOOLS_SUPPORT
++
++config MVEBU_SPL_MEMORY_TEST
++	bool "Memory test"
++	depends on SPL
++	default y
++	help
++	To add this option you need to edit the
++	defconfig and add the following line:
++	+S:CONFIG_MVEBU_SPL_MEMORY_TEST=y
++	Choose this option to test the memory after
++	DRAM initialization
++
++config MVEBU_MEM_TEST_ITERATION
++	int "Number of Iterations for Memory test"
++	depends on MVEBU_SPL_MEMORY_TEST
++	range 1 255
++	default 2
++	help
++	  This option set the number of the
++	  iterations for DRAM test in SPL code
++	  the range of the iteration number
++	  between 1-255
++
++config MVEBU_MEM_TEST_START_ADDR
++	hex "Start address for Memory test"
++	depends on MVEBU_SPL_MEMORY_TEST
++	default 0x100000
++	help
++	  This option set the start address
++	  of the DRAM test in SPL code
++
++config MVEBU_MEM_TEST_END_ADDR
++	hex "End address for Memory test"
++	depends on MVEBU_SPL_MEMORY_TEST
++	default 0xB00000
++	help
++	  This option set the end address
++	  of the DRAM test in SPL code
++endmenu
+diff --git a/arch/arm/cpu/mvebu-common/tools/Makefile b/arch/arm/cpu/mvebu-common/tools/Makefile
+new file mode 100644
+index 0000000..061e7a5
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/tools/Makefile
+@@ -0,0 +1,19 @@
++#
++# ***************************************************************************
++# Copyright (C) 2015 Marvell International Ltd.
++# ***************************************************************************
++# This program is free software: you can redistribute it and/or modify it
++# under the terms of the GNU General Public License as published by the Free
++# Software Foundation, either version 2 of the License, or any later version.
++#
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program.  If not, see <http://www.gnu.org/licenses/>.
++# ***************************************************************************
++#
++
++obj-$(CONFIG_MVEBU_SPL_MEMORY_TEST) += ddr_test.o
+diff --git a/arch/arm/cpu/mvebu-common/tools/ddr_test.c b/arch/arm/cpu/mvebu-common/tools/ddr_test.c
+new file mode 100644
+index 0000000..32af0dd
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/tools/ddr_test.c
+@@ -0,0 +1,263 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2015 Marvell International Ltd.
++* ***************************************************************************
++* This program is free software: you can redistribute it and/or modify it
++* under the terms of the GNU General Public License as published by the Free
++* Software Foundation, either version 2 of the License, or any later version.
++*
++* This program is distributed in the hope that it will be useful,
++* but WITHOUT ANY WARRANTY; without even the implied warranty of
++* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++* GNU General Public License for more details.
++*
++* You should have received a copy of the GNU General Public License
++* along with this program.  If not, see <http://www.gnu.org/licenses/>.
++* ***************************************************************************
++*/
++
++#include <common.h>
++#include <watchdog.h>
++#include <asm/arch-mvebu/tools.h>
++
++static ulong mem_test_alt(vu_long *buf, ulong start_addr, ulong end_addr, vu_long *dummy)
++{
++	vu_long *addr;
++	ulong errs = 0;
++	ulong val, readback;
++	int j;
++	vu_long offset;
++	vu_long test_offset;
++	vu_long pattern;
++	vu_long temp;
++	vu_long anti_pattern;
++	vu_long num_words;
++	static const ulong bitpattern[] = {
++		0x00000001,	/* single bit */
++		0x00000003,	/* two adjacent bits */
++		0x00000007,	/* three adjacent bits */
++		0x0000000F,	/* four adjacent bits */
++		0x00000005,	/* two non-adjacent bits */
++		0x00000015,	/* three non-adjacent bits */
++		0x00000055,	/* four non-adjacent bits */
++		0xaaaaaaaa,	/* alternating 1/0 */
++	};
++
++	num_words = (end_addr - start_addr) / sizeof(vu_long);
++
++	/*
++	 * Data line test: write a pattern to the first
++	 * location, write the 1's complement to a 'parking'
++	 * address (changes the state of the data bus so a
++	 * floating bus doesn't give a false OK), and then
++	 * read the value back. Note that we read it back
++	 * into a variable because the next time we read it,
++	 * it might be right (been there, tough to explain to
++	 * the quality guys why it prints a failure when the
++	 * "is" and "should be" are obviously the same in the
++	 * error message).
++	 *
++	 * Rather than exhaustively testing, we test some
++	 * patterns by shifting '1' bits through a field of
++	 * '0's and '0' bits through a field of '1's (i.e.
++	 * pattern and ~pattern).
++	 */
++	addr = buf;
++	for (j = 0; j < sizeof(bitpattern) / sizeof(bitpattern[0]); j++) {
++		val = bitpattern[j];
++		for (; val != 0; val <<= 1) {
++			*addr = val;
++			*dummy  = ~val; /* clear the test data off the bus */
++			readback = *addr;
++			if (readback != val) {
++				printf("FAILURE (data line): expected %08lx, actual %08lx\n", val, readback);
++				errs++;
++				if (ctrlc())
++					return -1;
++			}
++			*addr  = ~val;
++			*dummy  = val;
++			readback = *addr;
++			if (readback != ~val) {
++				printf("FAILURE (data line): Is %08lx, should be %08lx\n", readback, ~val);
++				errs++;
++				if (ctrlc())
++					return -1;
++			}
++		}
++	}
++
++	/*
++	 * Based on code whose Original Author and Copyright
++	 * information follows: Copyright (c) 1998 by Michael
++	 * Barr. This software is placed into the public
++	 * domain and may be used for any purpose. However,
++	 * this notice must not be changed or removed and no
++	 * warranty is either expressed or implied by its
++	 * publication or distribution.
++	 */
++
++	/*
++	* Address line test
++
++	 * Description: Test the address bus wiring in a
++	 *              memory region by performing a walking
++	 *              1's test on the relevant bits of the
++	 *              address and checking for aliasing.
++	 *              This test will find single-bit
++	 *              address failures such as stuck-high,
++	 *              stuck-low, and shorted pins. The base
++	 *              address and size of the region are
++	 *              selected by the caller.
++
++	 * Notes:	For best results, the selected base
++	 *              address should have enough LSB 0's to
++	 *              guarantee single address bit changes.
++	 *              For example, to test a 64-Kbyte
++	 *              region, select a base address on a
++	 *              64-Kbyte boundary. Also, select the
++	 *              region size as a power-of-two if at
++	 *              all possible.
++	 *
++	 * Returns:     0 if the test succeeds, 1 if the test fails.
++	 */
++	pattern = (vu_long) 0xaaaaaaaa;
++	anti_pattern = (vu_long) 0x55555555;
++
++	debug("%s:%d: length = 0x%.8lx\n", __func__, __LINE__, num_words);
++	/*
++	 * Write the default pattern at each of the
++	 * power-of-two offsets.
++	 */
++	for (offset = 1; offset < num_words; offset <<= 1)
++		addr[offset] = pattern;
++
++	/*
++	 * Check for address bits stuck high.
++	 */
++	test_offset = 0;
++	addr[test_offset] = anti_pattern;
++
++	for (offset = 1; offset < num_words; offset <<= 1) {
++		temp = addr[offset];
++		if (temp != pattern) {
++			printf("\nFAILURE: Address bit stuck high @ 0x%.8lx: expected 0x%.8lx, actual 0x%.8lx\n",
++			       start_addr + offset*sizeof(vu_long), pattern, temp);
++			errs++;
++			if (ctrlc())
++				return -1;
++		}
++	}
++	addr[test_offset] = pattern;
++	WATCHDOG_RESET();
++
++	/*
++	 * Check for addr bits stuck low or shorted.
++	 */
++	for (test_offset = 1; test_offset < num_words; test_offset <<= 1) {
++		addr[test_offset] = anti_pattern;
++
++		for (offset = 1; offset < num_words; offset <<= 1) {
++			temp = addr[offset];
++			if ((temp != pattern) && (offset != test_offset)) {
++				printf("\nFAILURE: Address bit stuck low or shorted @ 0x%.8lx: expected 0x%.8lx, actual 0x%.8lx\n",
++				       start_addr + offset*sizeof(vu_long), pattern, temp);
++				errs++;
++				if (ctrlc())
++					return -1;
++			}
++		}
++		addr[test_offset] = pattern;
++	}
++
++	/*
++	 * Description: Test the integrity of a physical
++	 *		memory device by performing an
++	 *		increment/decrement test over the
++	 *		entire region. In the process every
++	 *		storage bit in the device is tested
++	 *		as a zero and a one. The base address
++	 *		and the size of the region are
++	 *		selected by the caller.
++	 *
++	 * Returns:     0 if the test succeeds, 1 if the test fails.
++	 */
++	num_words++;
++
++	/*
++	 * Fill memory with a known pattern.
++	 */
++	for (pattern = 1, offset = 0; offset < num_words; pattern++, offset++) {
++		WATCHDOG_RESET();
++		addr[offset] = pattern;
++	}
++
++	/*
++	 * Check each location and invert it for the second pass.
++	 */
++	for (pattern = 1, offset = 0; offset < num_words; pattern++, offset++) {
++		WATCHDOG_RESET();
++		temp = addr[offset];
++		if (temp != pattern) {
++			printf("\nFAILURE (read/write) @ 0x%.8lx: expected 0x%.8lx, actual 0x%.8lx)\n",
++			       start_addr + offset*sizeof(vu_long), pattern, temp);
++			errs++;
++			if (ctrlc())
++				return -1;
++		}
++
++		anti_pattern = ~pattern;
++		addr[offset] = anti_pattern;
++	}
++
++	/*
++	 * Check each location for the inverted pattern and zero it.
++	 */
++	for (pattern = 1, offset = 0; offset < num_words; pattern++, offset++) {
++		WATCHDOG_RESET();
++		anti_pattern = ~pattern;
++		temp = addr[offset];
++		if (temp != anti_pattern) {
++			printf("\nFAILURE (read/write): @ 0x%.8lx: expected 0x%.8lx, actual 0x%.8lx)\n",
++			       start_addr + offset*sizeof(vu_long), anti_pattern, temp);
++			errs++;
++			if (ctrlc())
++				return -1;
++		}
++		addr[offset] = 0;
++	}
++
++	return 0;
++}
++
++int run_memory_test(void)
++{
++	ulong start, end;
++	vu_long *buf, *dummy;
++	int iteration_limit;
++	int ret;
++	ulong errs = 0;	/* number of errors */
++	int iteration;
++
++	start = CONFIG_MVEBU_MEM_TEST_START_ADDR;
++	end = CONFIG_MVEBU_MEM_TEST_END_ADDR;
++	iteration_limit = CONFIG_MVEBU_MEM_TEST_ITERATION;
++
++	printf("Memory testing %08x ... %08x:\n", (uint)start, (uint)end);
++	debug("%s:%d: start %#08lx end %#08lx\n", __func__, __LINE__, start, end);
++
++	buf = map_sysmem(start, end - start);
++	dummy = map_sysmem(0, sizeof(vu_long));
++	for (iteration = 0;
++			!iteration_limit || iteration < iteration_limit;
++			iteration++) {
++		printf("Iteration: %6d\r", iteration + 1);
++		debug("\n");
++		errs += mem_test_alt(buf, start, end, dummy);
++	}
++
++	printf("Tested %d iteration(s) with %lu errors.\n", iteration, errs);
++	ret = errs != 0;
++
++	return ret; /* not reached */
++}
+diff --git a/arch/arm/include/asm/arch-mvebu/tools.h b/arch/arm/include/asm/arch-mvebu/tools.h
+new file mode 100644
+index 0000000..ed614ba
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/tools.h
+@@ -0,0 +1,24 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _MVEBU_TOOLS_H_
++#define _MVEBU_TOOLS_H_
++
++int run_memory_test(void);
++
++#endif /* _MVEBU_TOOLS_H_ */
+-- 
+1.9.1
+

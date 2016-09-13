@@ -1,0 +1,33 @@
+From d47ffffb79c00b9d7904cc78a09df8a580fa50ff Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 13 Mar 2016 13:32:22 +0200
+Subject: [PATCH 0937/1240] fix: pcie: increase timeout to be 10000 usecond
+
+- When enable PCIe0 on SerDes #0, the timeout is not enough to detect link on
+  it.
+
+Change-Id: I3d10a233893cb89294aecd6b6757fefc23372d8e
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28193
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/pci/pcie_mvebu_dw.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/pci/pcie_mvebu_dw.c b/drivers/pci/pcie_mvebu_dw.c
+index d10c984..00b7010 100644
+--- a/drivers/pci/pcie_mvebu_dw.c
++++ b/drivers/pci/pcie_mvebu_dw.c
+@@ -32,7 +32,7 @@
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+-#define PCIE_LINK_UP_TIMEOUT_US		(1000)
++#define PCIE_LINK_UP_TIMEOUT_US		(10000)
+ 
+ #define PCIE_GLOBAL_CONTROL		0x8000
+ #define PCIE_APP_LTSSM_EN		(1 << 2)
+-- 
+1.9.1
+

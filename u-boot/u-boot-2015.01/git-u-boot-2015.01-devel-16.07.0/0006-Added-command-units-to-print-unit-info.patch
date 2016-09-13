@@ -1,0 +1,187 @@
+From 7bc928d80ef43399e805300093a866ce995dca64 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 9 Feb 2014 16:29:26 +0200
+Subject: [PATCH 0006/1240] Added command "units" to print unit info
+
+	- Moved all mvebu command under sob folder mvebu
+	- Added units command with list option
+
+Change-Id: Id56d070c17ccbbaed1101e20304623bad54f5770
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/unit-info.c |  2 +-
+ common/Makefile                       |  2 +-
+ common/cmd_mvebu.c                    | 38 ----------------------
+ common/mvebu/Makefile                 | 20 ++++++++++++
+ common/mvebu/cmd_misc.c               | 61 +++++++++++++++++++++++++++++++++++
+ 5 files changed, 83 insertions(+), 40 deletions(-)
+ delete mode 100644 common/cmd_mvebu.c
+ create mode 100644 common/mvebu/Makefile
+ create mode 100644 common/mvebu/cmd_misc.c
+
+diff --git a/arch/arm/cpu/mvebu-common/unit-info.c b/arch/arm/cpu/mvebu-common/unit-info.c
+index 4b803de..c4f668e 100644
+--- a/arch/arm/cpu/mvebu-common/unit-info.c
++++ b/arch/arm/cpu/mvebu-common/unit-info.c
+@@ -149,7 +149,7 @@ void dump_unit_info(void)
+ 	for (unit_id = 0; unit_id < MAX_UNIT_ID; unit_id++) {
+ 		if (*unit_mask) {
+ 			unit_mask_to_list(*unit_mask, active_list);
+-			printf("%.10s %s\n", unit_info_get_name(unit_id), active_list);
++			printf("%-8s %s\n", unit_info_get_name(unit_id), active_list);
+ 		}
+ 		unit_mask++;
+ 	}
+diff --git a/common/Makefile b/common/Makefile
+index bc99d4b..c170805 100644
+--- a/common/Makefile
++++ b/common/Makefile
+@@ -253,7 +253,7 @@ obj-$(CONFIG_FIT_SIGNATURE) += image-sig.o
+ obj-$(CONFIG_IO_TRACE) += iotrace.o
+ obj-y += memsize.o
+ obj-y += stdio.o
+-obj-$(CONFIG_MVEBU) += cmd_mvebu.o
++obj-$(CONFIG_MVEBU) += mvebu/
+ 
+ # This option is not just y/n - it can have a numeric value
+ ifdef CONFIG_FASTBOOT_FLASH_MMC_DEV
+diff --git a/common/cmd_mvebu.c b/common/cmd_mvebu.c
+deleted file mode 100644
+index dd2b4f1..0000000
+--- a/common/cmd_mvebu.c
++++ /dev/null
+@@ -1,38 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
+- * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
+- *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
+- * ***************************************************************************
+- */
+-
+-#include <config.h>
+-#include <common.h>
+-#include <command.h>
+-
+-#include <asm/arch-mvebu/adec.h>
+-
+-int dump_memory_map_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+-			char * const argv[])
+-{
+-	adec_dump();
+-	return 0;
+-}
+-
+-U_BOOT_CMD(
+-	map,      1,     1,      dump_memory_map_cmd,
+-	"map	- Display address decode windows\n",
+-	"\n"
+-	"\tDisplay address decode windows\n"
+-);
+diff --git a/common/mvebu/Makefile b/common/mvebu/Makefile
+new file mode 100644
+index 0000000..2aa43f5
+--- /dev/null
++++ b/common/mvebu/Makefile
+@@ -0,0 +1,20 @@
++#
++# *****************************************************************************
++#  Copyright (C) Marvell International Ltd. and its affiliates
++# *****************************************************************************
++# Marvell GPL License Option
++# If you received this File from Marvell, you may opt to use, redistribute
++# and/or modify this File in accordance with the terms and conditions of the
++# General Public License Version 2, June 1991 (the "GPL License"), a copy of
++# which is available along with the File in the license.txt file or by writing
++# to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++# MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++#
++# THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++# WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++# EXPRESSLY DISCLAIMED.  The GPL License provides additional details about this
++# warranty disclaimer.
++# *****************************************************************************
++#
++
++obj-y += cmd_misc.o
+diff --git a/common/mvebu/cmd_misc.c b/common/mvebu/cmd_misc.c
+new file mode 100644
+index 0000000..c5585a8
+--- /dev/null
++++ b/common/mvebu/cmd_misc.c
+@@ -0,0 +1,61 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#include <config.h>
++#include <common.h>
++#include <command.h>
++
++#include <asm/arch-mvebu/adec.h>
++#include <asm/arch-mvebu/unit-info.h>
++
++int do_map_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
++			char * const argv[])
++{
++	adec_dump();
++	return 0;
++}
++
++U_BOOT_CMD(
++	map,      1,     1,      do_map_cmd,
++	"map	- Display address decode windows\n",
++	"\n"
++	"\tDisplay address decode windows\n"
++);
++
++
++int do_units_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
++			char * const argv[])
++{
++	const char *cmd = argv[1];
++
++	if (strcmp(cmd, "list") == 0)
++		dump_unit_info();
++	else
++		printf("ERROR: unknown command to units: \"%s\"\n", cmd);
++
++	return 0;
++}
++
++U_BOOT_CMD(
++	units,      2,     1,      do_units_cmd,
++	"units	- Display and modify active units\n",
++	"\n"
++	"Display and modufy units in current setup\n"
++	"\tlist - Display current active units\n"
++);
+-- 
+1.9.1
+

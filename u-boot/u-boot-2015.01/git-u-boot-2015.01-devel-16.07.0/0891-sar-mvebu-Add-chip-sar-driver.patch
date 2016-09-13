@@ -1,0 +1,912 @@
+From ded0f268b0606025a7383681057633a24b959d24 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Mon, 22 Feb 2016 16:48:25 +0200
+Subject: [PATCH 0891/1240] sar: mvebu: Add chip-sar driver
+
+- Top level driver for handling chip sample-at-reset functionality.
+- Callback functions for the chip_sar driver, for the AP806 die.
+- Add AP-806 DT entries.
+- Remove redundant code that accesses the sample-at-reset registers.
+- Enable new chip-sar driver in U-Boot.
+- Tested to work on A70x0-DB board.
+
+Change-Id: Idbc44f35bbf67afd70caebdf9ec6264910e706c5
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27753
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/clock.c         |  36 ++---
+ arch/arm/cpu/armv8/armada8k/soc.c           |   6 +
+ arch/arm/cpu/armv8/armada8k/spl.c           |   6 +
+ arch/arm/cpu/mvebu-common/soc-init.c        |   5 +
+ arch/arm/cpu/mvebu-common/tools/Makefile    |   1 -
+ arch/arm/cpu/mvebu-common/tools/mvebu_sar.c |  72 ----------
+ arch/arm/dts/apn-806-a0.dtsi                |   5 +
+ arch/arm/dts/apn-806-z1.dtsi                |   5 +
+ arch/arm/include/asm/arch-armada8k/sar.h    |  62 ---------
+ arch/arm/include/asm/arch-mvebu/sar.h       |  52 +++++++
+ drivers/misc/Kconfig                        |  10 ++
+ drivers/misc/Makefile                       |   1 +
+ drivers/misc/mvebu_sar/Makefile             |   4 +
+ drivers/misc/mvebu_sar/ap806_sar.c          | 206 ++++++++++++++++++++++++++++
+ drivers/misc/mvebu_sar/chip_sar.c           | 155 +++++++++++++++++++++
+ drivers/misc/mvebu_sar/chip_sar.h           |  39 ++++++
+ include/fdtdec.h                            |   3 +
+ lib/fdtdec.c                                |   3 +
+ 18 files changed, 513 insertions(+), 158 deletions(-)
+ delete mode 100644 arch/arm/cpu/mvebu-common/tools/mvebu_sar.c
+ delete mode 100644 arch/arm/include/asm/arch-armada8k/sar.h
+ create mode 100644 arch/arm/include/asm/arch-mvebu/sar.h
+ create mode 100644 drivers/misc/mvebu_sar/Makefile
+ create mode 100644 drivers/misc/mvebu_sar/ap806_sar.c
+ create mode 100644 drivers/misc/mvebu_sar/chip_sar.c
+ create mode 100644 drivers/misc/mvebu_sar/chip_sar.h
+
+diff --git a/arch/arm/cpu/armv8/armada8k/clock.c b/arch/arm/cpu/armv8/armada8k/clock.c
+index 2db9adc..65c3bd3 100644
+--- a/arch/arm/cpu/armv8/armada8k/clock.c
++++ b/arch/arm/cpu/armv8/armada8k/clock.c
+@@ -19,31 +19,17 @@
+ #include <common.h>
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/clock.h>
+-#include <asm/arch/sar.h>
+-
+-#define DDR_PLL_ID	0
+-#define RING_PLL_ID	1
+-#define CPU_PLL_ID	2
+-#define PIDI_AP_PLL_ID	3
+-#define PIDI_CP_PLL_ID	4
++#include <asm/arch-mvebu/sar.h>
+ 
+ #define MSS_CLOCK_DIV	6
+ 
+-const u32 pll_freq_tbl[7][5] = {
+-	/* DDR */   /* Ring */ /* CPU */ /* PIDI-AP */  /* PIDI-CP */
+-	{1.2  * GHz, 2.0 * GHz, 2.5 * GHz, 2 * GHz,	2 * GHz},
+-	{1.05 * GHz, 1.8 * GHz, 2.2 * GHz, 1 * GHz,	1 * GHz},
+-	{900  * MHz, 1.6 * GHz, 2.0 * GHz, 1 * GHz,	1 * GHz},
+-	{800  * MHz, 1.4 * GHz, 1.7 * GHz,    0,	   0},
+-	{650  * MHz, 1.2 * GHz, 1.6 * GHz,    0,	   0},
+-	{650  * MHz, 1.2 * GHz, 1.2 * GHz,    0,	   0},
+-	{650  * MHz, 1.2 * GHz, 1.2 * GHz,    0,	   0}
+-};
+ 
+ u32 soc_ring_clk_get(void)
+ {
+-	u32 pll_idx = (readl(SAMPLE_AT_RESET_REG_1) & SAR1_PLL1_MASK) >> SAR1_PLL1_OFFSET;
+-	return pll_freq_tbl[pll_idx][RING_PLL_ID];
++	u32 freq;
++
++	mvebu_sar_value_get(SAR_AP_FABRIC_FREQ , &freq);
++	return freq;
+ }
+ 
+ u32 soc_mss_clk_get(void)
+@@ -77,14 +63,18 @@ unsigned long mvebu_get_nand_clock(void)
+ 
+ u32 soc_cpu_clk_get(void)
+ {
+-	u32 pll_idx = (readl(SAMPLE_AT_RESET_REG_1) & SAR1_PLL2_MASK) >> SAR1_PLL2_OFFSET;
+-	return pll_freq_tbl[pll_idx][CPU_PLL_ID];
++	u32 freq;
++
++	mvebu_sar_value_get(SAR_CPU_FREQ , &freq);
++	return freq;
+ }
+ 
+ u32 soc_ddr_clk_get(void)
+ {
+-	u32 pll_idx = (readl(SAMPLE_AT_RESET_REG_1) & SAR1_PLL0_MASK) >> SAR1_PLL0_OFFSET;
+-	return pll_freq_tbl[pll_idx][DDR_PLL_ID];
++	u32 freq;
++
++	mvebu_sar_value_get(SAR_DDR_FREQ, &freq);
++	return freq;
+ }
+ 
+ void soc_print_clock_info(void)
+diff --git a/arch/arm/cpu/armv8/armada8k/soc.c b/arch/arm/cpu/armv8/armada8k/soc.c
+index eb5c262..05211ef 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc.c
++++ b/arch/arm/cpu/armv8/armada8k/soc.c
+@@ -24,6 +24,8 @@
+ #include <asm/arch-mvebu/system_info.h>
+ #include <asm/arch/regs-base.h>
+ #include <asm/arch-mvebu/pinctl.h>
++#include <asm/arch-mvebu/fdt.h>
++#include <asm/arch-mvebu/sar.h>
+ #include <linux/sizes.h>
+ #include <netdev.h>
+ 
+@@ -32,6 +34,10 @@
+ 
+ int soc_early_init_f(void)
+ {
++#ifdef CONFIG_MVEBU_CHIP_SAR
++	/* Sample at reset register init */
++	mvebu_sar_init(gd->fdt_blob);
++#endif
+ #ifdef CONFIG_MVEBU_PINCTL
+ 	mvebu_pinctl_probe();
+ #endif
+diff --git a/arch/arm/cpu/armv8/armada8k/spl.c b/arch/arm/cpu/armv8/armada8k/spl.c
+index 146bfc4..bf7feef 100644
+--- a/arch/arm/cpu/armv8/armada8k/spl.c
++++ b/arch/arm/cpu/armv8/armada8k/spl.c
+@@ -26,6 +26,7 @@
+ #include <asm/arch-mvebu/flc.h>
+ #include <asm/arch-mvebu/fdt.h>
+ #include <asm/arch-armada8k/misc-regs.h>
++#include <asm/arch-mvebu/sar.h>
+ #include <spl.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+@@ -67,6 +68,11 @@ void board_init_f(ulong silent)
+ 	}
+ #endif
+ 
++#ifdef CONFIG_MVEBU_CHIP_SAR
++	/* Sample at reset register init */
++	mvebu_sar_init(gd->fdt_blob);
++#endif
++
+ #ifdef CONFIG_MVEBU_SPL_SAR_DUMP
+ 	/* Sample at reset dump register */
+ 	mvebu_sar_dump_reg();
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index ab7f267..c4c7825 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -25,6 +25,7 @@
+ #include <asm/arch-mvebu/mvebu.h>
+ #include <asm/arch-mvebu/soc.h>
+ #include <asm/arch-mvebu/thermal.h>
++#include <asm/arch-mvebu/sar.h>
+ #include <asm/arch-mvebu/mvebu_phy_indirect.h>
+ #include <ahci.h>
+ #include <scsi.h>
+@@ -108,6 +109,10 @@ int mvebu_soc_init()
+ 	sw_init = true;
+ #endif
+ 
++#ifdef CONFIG_MVEBU_CHIP_SAR
++	/* Sample at reset register init */
++	mvebu_sar_init(gd->fdt_blob);
++#endif
+ 	/* Initialize physical memory map */
+ #ifdef CONFIG_MVEBU_CCU
+ 	init_ccu(sw_init);
+diff --git a/arch/arm/cpu/mvebu-common/tools/Makefile b/arch/arm/cpu/mvebu-common/tools/Makefile
+index 1689071..061e7a5 100644
+--- a/arch/arm/cpu/mvebu-common/tools/Makefile
++++ b/arch/arm/cpu/mvebu-common/tools/Makefile
+@@ -17,4 +17,3 @@
+ #
+ 
+ obj-$(CONFIG_MVEBU_SPL_MEMORY_TEST) += ddr_test.o
+-obj-$(CONFIG_MVEBU_SPL_SAR_DUMP) += mvebu_sar.o
+diff --git a/arch/arm/cpu/mvebu-common/tools/mvebu_sar.c b/arch/arm/cpu/mvebu-common/tools/mvebu_sar.c
+deleted file mode 100644
+index 157cf48..0000000
+--- a/arch/arm/cpu/mvebu-common/tools/mvebu_sar.c
++++ /dev/null
+@@ -1,72 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#include <common.h>
+-#include <asm/system.h>
+-#include <asm/io.h>
+-#include <asm/arch/sar.h>
+-
+-struct sar_info sar_0[] = {
+-	{"Dual AP mode       ", SAR_DUAL_AP_MODE_OFFSET, SAR_DUAL_AP_MODE_MASK },
+-	{"I2C init Enable    ", SAR_I2C_INIT_EN_OFFSET, SAR_I2C_INIT_EN_MASK },
+-	{"Boot Source        ", SAR_BOOT_SRC_OFFSET, SAR_BOOT_SRC_MASK },
+-	{"C2C IHB select     ", SAR_C2C_IHB_OFFSET, SAR_C2C_IHB_MASK },
+-	{"EFUSE ByPass       ", SAR_EFUSE_BYPASS_OFFSET, SAR_EFUSE_BYPASS_MASK },
+-	{"Stand Alone AP mode", SAR_STAND_ALONE_AP_MODE_OFFSET, SAR_STAND_ALONE_AP_MODE_MASK},
+-	{"Slave AP mode      ", SAR_SLAVE_AP_MODE_OFFSET, SAR_SLAVE_AP_MODE_MASK },
+-	{"AVS master         ", SAR_AVS_MASTER_OFFSET, SAR_AVS_MASTER_MASK },
+-	{"",			-1,			-1},
+-};
+-
+-struct sar_info sar_1[] = {
+-	{"Standalone AP      ", SAR1_STANDALONE_OFFSET, SAR1_STANDALONE_MASK},
+-	{"PLL0 Config        ", SAR1_PLL0_OFFSET, SAR1_PLL0_MASK },
+-	{"PLL1 Config        ", SAR1_PLL1_OFFSET, SAR1_PLL1_MASK },
+-	{"PLL2 Config        ", SAR1_PLL2_OFFSET, SAR1_PLL2_MASK },
+-	{"",			-1,			-1},
+-};
+-
+-void mvebu_sar_dump_reg(void)
+-{
+-	u32 reg, val;
+-	struct sar_info *sar;
+-
+-	reg = readl(SAMPLE_AT_RESET_REG_0);
+-	printf("SAR register 0 [0x%08x]:\n", reg);
+-	printf("----------------------------------\n");
+-	sar = sar_0;
+-	while (sar->offset != -1) {
+-		val = (reg & sar->mask) >> sar->offset;
+-		printf("%s  0x%x\n", sar->name, val);
+-		sar++;
+-	}
+-
+-	reg = readl(SAMPLE_AT_RESET_REG_1);
+-	printf("\nSAR register 1 [0x%08x]:\n", reg);
+-	printf("----------------------------------\n");
+-	sar = sar_1;
+-	while (sar->offset != -1) {
+-		val = (reg & sar->mask) >> sar->offset;
+-		printf("%s  0x%x\n", sar->name, val);
+-		sar++;
+-	}
+-
+-	printf("CP110: SAR register 0 reg = 0x%lx [0x%08x]\n",
+-		CP0_SAMPLE_AT_RESET_REG_0, readl(CP0_SAMPLE_AT_RESET_REG_0));
+-	printf("\n");
+-}
+diff --git a/arch/arm/dts/apn-806-a0.dtsi b/arch/arm/dts/apn-806-a0.dtsi
+index 158a706..a10f2b7 100644
+--- a/arch/arm/dts/apn-806-a0.dtsi
++++ b/arch/arm/dts/apn-806-a0.dtsi
+@@ -101,6 +101,11 @@
+ 				reg = <0x6f8084 0x12>;
+ 				status = "okay";
+ 			};
++
++			sar-reg {
++				compatible = "marvell,sample-at-reset-common", "marvell,sample-at-reset-ap806";
++				reg = <0x6F8200 0x8>;
++			};
+ 		};
+ 	};
+ };
+diff --git a/arch/arm/dts/apn-806-z1.dtsi b/arch/arm/dts/apn-806-z1.dtsi
+index 93fe4e9..0332b4d 100644
+--- a/arch/arm/dts/apn-806-z1.dtsi
++++ b/arch/arm/dts/apn-806-z1.dtsi
+@@ -138,6 +138,11 @@
+ 				reg = <0x6f8084 0x12>;
+ 				status = "okay";
+ 			};
++
++			sar-reg {
++				compatible = "marvell,sample-at-reset-common", "marvell,sample-at-reset-ap806";
++				reg = <0x6F8200 0x8>;
++			};
+ 		};
+ 
+ 		pcie-controller {
+diff --git a/arch/arm/include/asm/arch-armada8k/sar.h b/arch/arm/include/asm/arch-armada8k/sar.h
+deleted file mode 100644
+index bdbed26..0000000
+--- a/arch/arm/include/asm/arch-armada8k/sar.h
++++ /dev/null
+@@ -1,62 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#ifndef _SAR_H_
+-#define _SAR_H_
+-
+-#include <asm/arch/memory-map.h>
+-
+-#define SAMPLE_AT_RESET_REG_0		(MVEBU_REGS_BASE + 0x6F8200)
+-
+-#define SAR_DUAL_AP_MODE_OFFSET		0
+-#define SAR_DUAL_AP_MODE_MASK		(0x1 << SAR_DUAL_AP_MODE_OFFSET)
+-#define SAR_I2C_INIT_EN_OFFSET		1
+-#define SAR_I2C_INIT_EN_MASK		(0x1 << SAR_I2C_INIT_EN_OFFSET)
+-#define SAR_BOOT_SRC_OFFSET		2
+-#define SAR_BOOT_SRC_MASK		(0x3 << SAR_BOOT_SRC_OFFSET)
+-#define SAR_C2C_IHB_OFFSET		4
+-#define SAR_C2C_IHB_MASK		(0x1 << SAR_C2C_IHB_OFFSET)
+-#define SAR_EFUSE_BYPASS_OFFSET		7
+-#define SAR_EFUSE_BYPASS_MASK		(0x1 << SAR_EFUSE_BYPASS_OFFSET)
+-#define SAR_STAND_ALONE_AP_MODE_OFFSET	8
+-#define SAR_STAND_ALONE_AP_MODE_MASK	(0x1 << SAR_STAND_ALONE_AP_MODE_OFFSET)
+-#define SAR_SLAVE_AP_MODE_OFFSET	9
+-#define SAR_SLAVE_AP_MODE_MASK		(0x1 << SAR_SLAVE_AP_MODE_OFFSET)
+-#define SAR_AVS_MASTER_OFFSET		11
+-#define SAR_AVS_MASTER_MASK		(0x1 << SAR_AVS_MASTER_OFFSET)
+-
+-#define SAMPLE_AT_RESET_REG_1		(MVEBU_REGS_BASE + 0x6F8204)
+-
+-#define SAR1_PLL2_OFFSET		(15)
+-#define SAR1_PLL2_MASK			(0x7 << SAR1_PLL2_OFFSET)
+-#define SAR1_PLL1_OFFSET		(18)
+-#define SAR1_PLL1_MASK			(0x7 << SAR1_PLL1_OFFSET)
+-#define SAR1_PLL0_OFFSET		(21)
+-#define SAR1_PLL0_MASK			(0x7 << SAR1_PLL0_OFFSET)
+-#define SAR1_STANDALONE_OFFSET		(24)
+-#define SAR1_STANDALONE_MASK		(1 << SAR1_STANDALONE_OFFSET)
+-
+-#define CP0_SAMPLE_AT_RESET_REG_0	(MVEBU_CP0_REGS_BASE + 0x440600)
+-
+-struct sar_info {
+-	char *name;
+-	u32 offset;
+-	u32 mask;
+-};
+-
+-#endif	/* _SAR_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/sar.h b/arch/arm/include/asm/arch-mvebu/sar.h
+new file mode 100644
+index 0000000..d42e3ff
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/sar.h
+@@ -0,0 +1,52 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _SAR_H_
++#define _SAR_H_
++
++#include <asm/types.h>
++/*
++** List of boot source options.
++** Return value for each of the options:
++**  - SAR_CPU_FREQ: Frequency (Hz)
++**  - SAR_DDR_FREQ: Frequency (Hz)
++**  - SAR_AP_FABRIC_FREQ: Frequency (Hz)
++**  - SAR_CP_FABRIC_FREQ: Frequency (Hz)
++**  - SAR_BOOT_SRC: Boot source type (see mvebu_bootsrc_type)
++*/
++enum mvebu_sar_opts {
++	SAR_CPU_FREQ = 0,
++	SAR_DDR_FREQ,
++	SAR_AP_FABRIC_FREQ,
++	SAR_CP_FABRIC_FREQ,
++	SAR_BOOT_SRC,
++	SAR_MAX_IDX
++};
++
++enum mvebu_bootsrc_type {
++	BOOTSRC_NAND,
++	BOOTSRC_SPI,
++	BOOTSRC_SD_EMMC,
++	BOOTSRC_MAX_IDX
++};
++
++
++int mvebu_sar_init(const void *blob);
++int mvebu_sar_value_get(enum mvebu_sar_opts opt, u32 *val);
++
++#endif	/* _SAR_H_ */
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index 1feb633..4b7a939 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -49,4 +49,14 @@ config MVEBU_ICU
+ 	  This driver sets up the mapping between CP-110
+ 	  interrupts and AP GIC interrupts.
+ 
++config MVEBU_CHIP_SAR
++	bool "Chip sample at reset support"
++	default y
++	help
++	  Enable support for chip level sample at reset
++	  retreval functions.
++	  These functions are used by various U-Boot drivers
++	  and subsystem to discover the SoC sample at reset
++	  configuration.
++
+ endmenu
+diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
+index 07ce433..c43e973 100644
+--- a/drivers/misc/Makefile
++++ b/drivers/misc/Makefile
+@@ -31,3 +31,4 @@ obj-$(CONFIG_FSL_IFC) += fsl_ifc.o
+ obj-$(CONFIG_MVEBU_MBUS) += mvebu_mbus.o
+ obj-$(CONFIG_MVEBU_PHY_INDIRECT) += mvebu_phy_indirect.o
+ obj-$(CONFIG_MVEBU_ICU) += mvebu_icu.o
++obj-$(CONFIG_MVEBU_CHIP_SAR) += mvebu_sar/
+diff --git a/drivers/misc/mvebu_sar/Makefile b/drivers/misc/mvebu_sar/Makefile
+new file mode 100644
+index 0000000..114328f
+--- /dev/null
++++ b/drivers/misc/mvebu_sar/Makefile
+@@ -0,0 +1,4 @@
++
++obj-$(CONFIG_MVEBU_CHIP_SAR) += chip_sar.o
++obj-$(CONFIG_TARGET_ARMADA_8K) += ap806_sar.o
++
+diff --git a/drivers/misc/mvebu_sar/ap806_sar.c b/drivers/misc/mvebu_sar/ap806_sar.c
+new file mode 100644
+index 0000000..6f0482e
+--- /dev/null
++++ b/drivers/misc/mvebu_sar/ap806_sar.c
+@@ -0,0 +1,206 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG */
++#include <common.h>
++#include <asm/io.h>
++#include <errno.h>
++#include <libfdt.h>
++#include <asm/arch-mvebu/fdt.h>
++#include <asm/arch-mvebu/clock.h>
++#include <asm/arch-mvebu/sar.h>
++
++#include "chip_sar.h"
++
++#define DDR_PLL_ID	0
++#define RING_PLL_ID	1
++#define CPU_PLL_ID	2
++
++/* SAR AP806 registers */
++#define SAR_DUAL_AP_MODE_OFFSET		0
++#define SAR_DUAL_AP_MODE_MASK		(0x1 << SAR_DUAL_AP_MODE_OFFSET)
++#define SAR_I2C_INIT_EN_OFFSET		1
++#define SAR_I2C_INIT_EN_MASK		(0x1 << SAR_I2C_INIT_EN_OFFSET)
++#define SAR_BOOT_SRC_OFFSET		2
++#define SAR_BOOT_SRC_MASK		(0x3 << SAR_BOOT_SRC_OFFSET)
++#define SAR_C2C_IHB_OFFSET		4
++#define SAR_C2C_IHB_MASK		(0x1 << SAR_C2C_IHB_OFFSET)
++#define SAR_EFUSE_BYPASS_OFFSET		7
++#define SAR_EFUSE_BYPASS_MASK		(0x1 << SAR_EFUSE_BYPASS_OFFSET)
++#define SAR_STAND_ALONE_AP_MODE_OFFSET	8
++#define SAR_STAND_ALONE_AP_MODE_MASK	(0x1 << SAR_STAND_ALONE_AP_MODE_OFFSET)
++#define SAR_SLAVE_AP_MODE_OFFSET	9
++#define SAR_SLAVE_AP_MODE_MASK		(0x1 << SAR_SLAVE_AP_MODE_OFFSET)
++#define SAR_AVS_MASTER_OFFSET		11
++#define SAR_AVS_MASTER_MASK		(0x1 << SAR_AVS_MASTER_OFFSET)
++
++#define AP806_SAR_1_REG			4
++#define SAR1_PLL2_OFFSET		(15)
++#define SAR1_PLL2_MASK			(0x7 << SAR1_PLL2_OFFSET)
++#define SAR1_PLL1_OFFSET		(18)
++#define SAR1_PLL1_MASK			(0x7 << SAR1_PLL1_OFFSET)
++#define SAR1_PLL0_OFFSET		(21)
++#define SAR1_PLL0_MASK			(0x7 << SAR1_PLL0_OFFSET)
++#define SAR1_STANDALONE_OFFSET		(24)
++#define SAR1_STANDALONE_MASK		(1 << SAR1_STANDALONE_OFFSET)
++
++struct sar_info {
++	char *name;
++	u32 offset;
++	u32 mask;
++};
++
++struct sar_info ap806_sar_0[] = {
++	{"Dual AP mode       ", SAR_DUAL_AP_MODE_OFFSET, SAR_DUAL_AP_MODE_MASK },
++	{"I2C init Enable    ", SAR_I2C_INIT_EN_OFFSET, SAR_I2C_INIT_EN_MASK },
++	{"Boot Source        ", SAR_BOOT_SRC_OFFSET, SAR_BOOT_SRC_MASK },
++	{"C2C IHB select     ", SAR_C2C_IHB_OFFSET, SAR_C2C_IHB_MASK },
++	{"EFUSE ByPass       ", SAR_EFUSE_BYPASS_OFFSET, SAR_EFUSE_BYPASS_MASK },
++	{"Stand Alone AP mode", SAR_STAND_ALONE_AP_MODE_OFFSET, SAR_STAND_ALONE_AP_MODE_MASK},
++	{"Slave AP mode      ", SAR_SLAVE_AP_MODE_OFFSET, SAR_SLAVE_AP_MODE_MASK },
++	{"AVS master         ", SAR_AVS_MASTER_OFFSET, SAR_AVS_MASTER_MASK },
++	{"",			-1,			-1},
++};
++
++struct sar_info ap806_sar_1[] = {
++	{"Standalone AP      ", SAR1_STANDALONE_OFFSET, SAR1_STANDALONE_MASK},
++	{"PLL0 Config        ", SAR1_PLL0_OFFSET, SAR1_PLL0_MASK },
++	{"PLL1 Config        ", SAR1_PLL1_OFFSET, SAR1_PLL1_MASK },
++	{"PLL2 Config        ", SAR1_PLL2_OFFSET, SAR1_PLL2_MASK },
++	{"",			-1,			-1},
++};
++
++static void __iomem *__attribute__((section(".data")))sar_base;
++
++static u32 sar_get_pll_val(u32 index)
++{
++	void __iomem *reg = sar_base + AP806_SAR_1_REG;
++
++	switch (index) {
++	case 0:
++		return (readl(reg) & SAR1_PLL0_MASK) >> SAR1_PLL0_OFFSET;
++	case 1:
++		return (readl(reg) & SAR1_PLL1_MASK) >> SAR1_PLL1_OFFSET;
++	case 2:
++		return (readl(reg) & SAR1_PLL2_MASK) >> SAR1_PLL2_OFFSET;
++	default:
++		error("sar regs: unsuported PLL index %d", index);
++	}
++
++	return -1;
++}
++
++
++static const u32 pll_freq_tbl[7][5] = {
++	/* DDR */   /* Ring */ /* CPU */ /* PIDI-AP */  /* PIDI-CP */
++	{1.2  * GHz, 2.0 * GHz, 2.5 * GHz, 2 * GHz,	2 * GHz},
++	{1.05 * GHz, 1.8 * GHz, 2.2 * GHz, 1 * GHz,	1 * GHz},
++	{900  * MHz, 1.6 * GHz, 2.0 * GHz, 1 * GHz,	1 * GHz},
++	{800  * MHz, 1.4 * GHz, 1.7 * GHz,    0,	   0},
++	{650  * MHz, 1.2 * GHz, 1.6 * GHz,    0,	   0},
++	{650  * MHz, 1.2 * GHz, 1.2 * GHz,    0,	   0},
++	{650  * MHz, 1.2 * GHz, 1.2 * GHz,    0,	   0}
++};
++
++
++int ap806_sar_value_get(enum mvebu_sar_opts sar_opt, u32 *val)
++{
++	u32 pll_idx, pll_val;
++
++	switch (sar_opt) {
++	case(SAR_CPU_FREQ):
++		pll_idx = CPU_PLL_ID;
++		break;
++	case(SAR_DDR_FREQ):
++		pll_idx = DDR_PLL_ID;
++		break;
++	case(SAR_AP_FABRIC_FREQ):
++		pll_idx = RING_PLL_ID;
++		break;
++	default:
++		error("AP806-SAR: Unsupported SAR option %d.\n", sar_opt);
++		return -EINVAL;
++	}
++	pll_val = sar_get_pll_val(pll_idx);
++	*val = pll_freq_tbl[pll_val][pll_idx];
++	return 0;
++}
++
++static int ap806_sar_dump(void)
++{
++	u32 reg, val;
++	struct sar_info *sar;
++
++	reg = readl(sar_base);
++	printf("AP806 SAR register 0 [0x%08x]:\n", reg);
++	printf("----------------------------------\n");
++	sar = ap806_sar_0;
++	while (sar->offset != -1) {
++		val = (reg & sar->mask) >> sar->offset;
++		printf("%s  0x%x\n", sar->name, val);
++		sar++;
++	}
++
++	reg = readl(sar_base + AP806_SAR_1_REG);
++	printf("\nAP806 SAR register 1 [0x%08x]:\n", reg);
++	printf("----------------------------------\n");
++	sar = ap806_sar_1;
++	while (sar->offset != -1) {
++		val = (reg & sar->mask) >> sar->offset;
++		printf("%s  0x%x\n", sar->name, val);
++		sar++;
++	}
++	return 0;
++}
++
++
++
++int ap806_sar_init(const void *blob, int node)
++{
++	uintptr_t chip_id;
++	int ret, i;
++	struct sar_chip_info info;
++
++	u32 sar_list[] = {
++		SAR_CPU_FREQ,
++		SAR_DDR_FREQ,
++		SAR_AP_FABRIC_FREQ
++	};
++
++	sar_base = fdt_get_regs_offs(blob, node, "reg");
++
++	info.sar_dump_func = ap806_sar_dump;
++	info.sar_value_get_func = ap806_sar_value_get;
++
++	ret = mvebu_sar_chip_register(COMPAT_MVEBU_SAR_REG_AP806, &info, &chip_id);
++	if (ret) {
++		error("Failed to register AP806 SAR functions.\n");
++		return ret;
++	}
++
++	for (i = 0; i < ARRAY_SIZE(sar_list); i++) {
++		ret = mvebu_sar_id_register(chip_id, sar_list[i]);
++		if (ret) {
++			error("Failed to register SAR %d, for AP806.\n", sar_list[i]);
++			return ret;
++		}
++	}
++
++	return 0;
++}
++
+diff --git a/drivers/misc/mvebu_sar/chip_sar.c b/drivers/misc/mvebu_sar/chip_sar.c
+new file mode 100644
+index 0000000..ec03424
+--- /dev/null
++++ b/drivers/misc/mvebu_sar/chip_sar.c
+@@ -0,0 +1,155 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG */
++#include <common.h>
++#include <asm/io.h>
++#include <errno.h>
++#include <libfdt.h>
++#include <asm/arch-mvebu/fdt.h>
++#include "chip_sar.h"
++
++DECLARE_GLOBAL_DATA_PTR;
++
++#define SAR_MAX_CHIP	4
++
++#define INDEX_TO_CHIP_ID(idx)	((idx) | 0x80)
++#define CHIP_ID_TO_INDEX(cid)	((cid) & ~0x80)
++
++struct sar_chip_info sar_chip_info[] = {
++#ifdef CONFIG_TARGET_ARMADA_8K
++	{.compat = COMPAT_MVEBU_SAR_REG_AP806,
++	 .sar_init_func = ap806_sar_init,
++	},
++/*	{.compat = COMPAT_MVEBU_SAR_REG_CP110,
++	 .sar_init_func = sar_cp110_init,
++	},*/
++#endif
++	{.compat = COMPAT_UNKNOWN}
++};
++
++uintptr_t __attribute__((section(".data")))soc_sar_info[SAR_MAX_IDX];
++
++static struct sar_chip_info *get_chip_config(enum fdt_compat_id compat)
++{
++	struct sar_chip_info *chip_config_ptr = sar_chip_info;
++
++	while (chip_config_ptr->compat != COMPAT_UNKNOWN) {
++		if (chip_config_ptr->compat == compat)
++			return chip_config_ptr;
++		chip_config_ptr++;
++	}
++
++	return NULL;
++}
++
++
++int mvebu_sar_chip_register(enum fdt_compat_id compat, struct sar_chip_info *info, uintptr_t *chip_id)
++{
++	struct sar_chip_info *chip_cfg_ptr;
++
++	chip_cfg_ptr = get_chip_config(compat);
++	if (chip_cfg_ptr == NULL) {
++		error("Cannot find compat %s in sar chips list.\n", fdtdec_get_compatible(compat));
++		return -ENXIO;
++	}
++
++	chip_cfg_ptr->sar_dump_func = info->sar_dump_func;
++	chip_cfg_ptr->sar_value_get_func = info->sar_value_get_func;
++	chip_cfg_ptr->sar_bootsrc_get = info->sar_bootsrc_get;
++
++	if (chip_id)
++		*chip_id = INDEX_TO_CHIP_ID(((uintptr_t)(chip_cfg_ptr - sar_chip_info)));
++
++	return 0;
++}
++
++
++int mvebu_sar_id_register(uintptr_t chip_id, u32 sar_id)
++{
++	if (soc_sar_info[sar_id]) {
++		error("sar %d was already registered.\n", sar_id);
++		return -EBUSY;
++	}
++
++	soc_sar_info[sar_id] = chip_id;
++
++	return 0;
++}
++
++
++int mvebu_sar_init(const void *blob)
++{
++	int node, sar_list[SAR_MAX_CHIP];
++	int ret;
++	u32 chip_count, i;
++	struct sar_chip_info *chip_cfg_ptr;
++
++	memset(soc_sar_info, 0, sizeof(soc_sar_info));
++	chip_count = fdtdec_find_aliases_for_id(blob, "sar-reg",
++			COMPAT_MVEBU_SAR_REG_COMMON, sar_list, SAR_MAX_CHIP);
++
++	if (chip_count <= 0) {
++		error("Cannot find sample-at-reset dt entry (%d).\n", chip_count);
++		return -ENODEV;
++	}
++
++	for (i = 0; i < chip_count ; i++) {
++		node = sar_list[i];
++		if (node <= 0)
++			continue;
++
++		chip_cfg_ptr = get_chip_config(fdtdec_next_lookup(blob, node, COMPAT_MVEBU_SAR_REG_COMMON));
++		if (chip_cfg_ptr == NULL) {
++			error("Bad compatible for sar-reg.\n");
++			continue;
++		}
++		ret = chip_cfg_ptr->sar_init_func(blob, node);
++		if (ret) {
++			error("sar_init failed (%d).\n", ret);
++			return ret;
++		}
++	}
++	return 0;
++}
++
++int mvebu_sar_value_get(enum mvebu_sar_opts opt, u32 *val)
++{
++	u32 idx;
++	struct sar_chip_info *chip_ptr;
++	if (soc_sar_info[opt]) {
++		idx = CHIP_ID_TO_INDEX(soc_sar_info[opt]);
++		chip_ptr = &sar_chip_info[idx];
++		return chip_ptr->sar_value_get_func(opt, val);
++	}
++
++	error("SAR - No chip registered on sar %d.\n", opt);
++	return -ENODEV;
++}
++
++void mvebu_sar_dump(void)
++{
++	int i;
++
++	for (i = 0; i < ARRAY_SIZE(sar_chip_info)-1; i++)
++		sar_chip_info[i].sar_dump_func();
++
++	return;
++}
++
++
+diff --git a/drivers/misc/mvebu_sar/chip_sar.h b/drivers/misc/mvebu_sar/chip_sar.h
+new file mode 100644
+index 0000000..b8fcd98
+--- /dev/null
++++ b/drivers/misc/mvebu_sar/chip_sar.h
+@@ -0,0 +1,39 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <libfdt.h>
++#include <asm/arch-mvebu/fdt.h>
++#include <asm/arch-mvebu/sar.h>
++
++struct sar_chip_info {
++	enum fdt_compat_id compat;
++	int (*sar_init_func)(const void *blob, int node);
++	int (*sar_dump_func)(void);
++	int (*sar_value_get_func)(enum mvebu_sar_opts sar, u32 *val);
++	int (*sar_bootsrc_get)(u32 *idx);
++};
++
++int mvebu_sar_chip_register(enum fdt_compat_id compat, struct sar_chip_info *info, uintptr_t *chip_id);
++int mvebu_sar_id_register(uintptr_t chip_id, u32 sar_id);
++
++/* AP806 SAR functions. */
++int ap806_sar_init(const void *blob, int node);
++
++
++
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 25311c4..ea6bb97 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -159,6 +159,9 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_MDIO,
+ 	COMPAT_MVEBU_PXA3XX_NAND,
+ 	COMPAT_MVEBU_UTMI_PHY,
++	COMPAT_MVEBU_SAR_REG_COMMON,
++	COMPAT_MVEBU_SAR_REG_AP806,
++	COMPAT_MVEBU_SAR_REG_CP110,
+ 
+ 	COMPAT_COUNT,
+ };
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 7e8e622..3bf1012 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -121,6 +121,9 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_MDIO, "marvell,mvebu-mdio"),
+ 	COMPAT(MVEBU_PXA3XX_NAND, "marvell,mvebu-pxa3xx-nand"),
+ 	COMPAT(MVEBU_UTMI_PHY, "marvell,mvebu-utmi-2.6.0"),
++	COMPAT(MVEBU_SAR_REG_COMMON, "marvell,sample-at-reset-common"),
++	COMPAT(MVEBU_SAR_REG_AP806, "marvell,sample-at-reset-ap806"),
++	COMPAT(MVEBU_SAR_REG_CP110, "marvell,sample-at-reset-cp110"),
+ 
+ };
+ 
+-- 
+1.9.1
+

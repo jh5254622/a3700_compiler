@@ -1,0 +1,175 @@
+From c6623bcb83cda0164c95288ac50e5a5fb0909d0b Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Fri, 29 Jan 2016 03:19:25 +0800
+Subject: [PATCH 0792/1240] mmc: a3700: check mmc modes during init for
+ configuration
+
+This patch checks the mmc modes from DT node.
+The default voltage will be set to 3.3v for SD/SDIO,
+and it will be set to 1.8v for eMMC.
+1. add DT property "xenon,emmc" to clarify the slot is used for
+    eMMC.
+2. set the default voltage during init according to mmc mode
+
+Change-Id: Ifa601a148d451eb43b604ce8035adeb6b57aae15
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27065
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+---
+ arch/arm/dts/armada-lp-db.dts              |  1 +
+ doc/device-tree-bindings/mmc/xenon-mmc.txt | 23 +++++++++++++++++++++
+ drivers/mmc/xenon_mmc.c                    | 33 ++++++++++++++++++++++--------
+ include/xenon_mmc.h                        |  5 +++++
+ 4 files changed, 54 insertions(+), 8 deletions(-)
+ create mode 100644 doc/device-tree-bindings/mmc/xenon-mmc.txt
+
+diff --git a/arch/arm/dts/armada-lp-db.dts b/arch/arm/dts/armada-lp-db.dts
+index bd96b90..a4f405f 100644
+--- a/arch/arm/dts/armada-lp-db.dts
++++ b/arch/arm/dts/armada-lp-db.dts
+@@ -71,6 +71,7 @@
+ 				status = "okay";
+ 			};
+ 			mmc0: mmc@D8000 {
++				xenon,emmc;
+ 				status = "okay";
+ 			};
+ 			mmc1: mmc@D0000 {
+diff --git a/doc/device-tree-bindings/mmc/xenon-mmc.txt b/doc/device-tree-bindings/mmc/xenon-mmc.txt
+new file mode 100644
+index 0000000..4741d74
+--- /dev/null
++++ b/doc/device-tree-bindings/mmc/xenon-mmc.txt
+@@ -0,0 +1,23 @@
++* Marvell Xenon MMC controller
++This file documents the properties used by the sdhci-xenon drivers.
++
++Required properties:
++- compatible: Should be "marvell,xenon-sdhci".
++- reg: base register offiset for the SDHCI registers.
++- status: enable or disable this node
++
++Optional properties:
++- xenon,emmc: whether only used for eMMC mode(does not support SD)
++  For Xenon MMC SDHC, the SDHC_SYS_CFG_INFO register (Offset 0x0104)
++  shows current slot supports both of SD/SDIO and eMMC, this property is mandatory to
++  inform driver whether current slot is used for eMMC or SD/SDIO.
++  If this property is set, current slot will be used for eMMC.
++  If this property is not set, current slot will be used for SD/SDIO.
++
++Example:
++mmc0: mmc@D8000 {
++    compatible = "marvell,xenon-sdhci";
++    reg = <0xD8000 0x300>;
++    xenon,emmc;
++    status = "disabled";
++};
+\ No newline at end of file
+diff --git a/drivers/mmc/xenon_mmc.c b/drivers/mmc/xenon_mmc.c
+index 9aacc52..1200e76 100644
+--- a/drivers/mmc/xenon_mmc.c
++++ b/drivers/mmc/xenon_mmc.c
+@@ -401,7 +401,7 @@ static int xenon_mmc_transfer_data(struct xenon_mmc_cfg *mmc_cfg, struct mmc_dat
+ 		if (timeout-- > 0) {
+ 			udelay(10);
+ 		} else {
+-			error("Transfer data timeout\n");
++			debug("Transfer data timeout\n");
+ 			return -1;
+ 		}
+ 	} while (!(stat & SDHCI_INT_DATA_END));
+@@ -761,11 +761,14 @@ static int xenon_mmc_init(struct mmc *mmc)
+ 	/* Enable slot */
+ 	xenon_mmc_set_slot(mmc_cfg, XENON_MMC_SLOT_ID_HYPERION, true);
+ 
+-	/*
+-	 * Set default power
+-	 * SDIO/eMMC 0 VDD: 3.3V, SDIO 1 VDD: 3.3V, SDIO/eMMC 0 VCCQ: 1.8V, SDIO 1 VCCQ: 1.8V
++	/* Set default power
++	 * eMMC mode, VDD: 1.8V, VCCQ: 1.8V
++	 * SD/SDIO mode, VDD: 3.3V, VCCQ: 3.3V
+ 	 */
+-	xenon_mmc_set_power(mmc_cfg, MMC_VDD_165_195, eMMC_VCCQ_1_8V);
++	if (mmc_cfg->mmc_mode == XENON_MMC_MODE_EMMC)
++		xenon_mmc_set_power(mmc_cfg, MMC_VDD_165_195, eMMC_VCCQ_1_8V);
++	else
++		xenon_mmc_set_power(mmc_cfg, MMC_VDD_32_33, eMMC_VCCQ_3_3V);
+ 
+ 	/* Set default clock */
+ 	xenon_mmc_set_clk(mmc, mmc_cfg->clk);
+@@ -805,7 +808,7 @@ static const struct mmc_ops xenon_mmc_ops = {
+ 	.init		= xenon_mmc_init,
+ };
+ 
+-int xenon_mmc_create(int dev_idx, void __iomem *reg_base, u32 max_clk)
++int xenon_mmc_create(int dev_idx, void __iomem *reg_base, u32 max_clk, u32 mmc_mode)
+ {
+ 	u32 caps;
+ 	struct xenon_mmc_cfg *mmc_cfg = NULL;
+@@ -820,8 +823,9 @@ int xenon_mmc_create(int dev_idx, void __iomem *reg_base, u32 max_clk)
+ 	mmc_cfg->quirks = SDHCI_QUIRK_NO_CD | SDHCI_QUIRK_WAIT_SEND_CMD |
+ 			  SDHCI_QUIRK_32BIT_DMA_ADDR;
+ 
+-	/* Set reg base and name */
++	/* Set reg base, mode and name */
+ 	mmc_cfg->reg_base = (u64)reg_base;
++	mmc_cfg->mmc_mode = mmc_mode;
+ 	mmc_cfg->cfg.name = driver_name;
+ 
+ 	/* Set version and ops */
+@@ -915,6 +919,7 @@ int board_mmc_init(bd_t *bis)
+ 	int node_list[XENON_MMC_PORTS_MAX];
+ 	int count, err = 0;
+ 	int port_count;
++	u32 mmc_mode;
+ 	void __iomem *reg_base;
+ 	const void *blob = gd->fdt_blob;
+ 
+@@ -936,7 +941,19 @@ int board_mmc_init(bd_t *bis)
+ 			error("Missing registers in XENON SDHCI node\n");
+ 			continue;
+ 		}
+-		xenon_mmc_create(port_count, reg_base, XENON_MMC_MAX_CLK);
++
++		/* Xenon emmc: this is a emmc slot.
++		 * Actually, whether current slot is for emmc can be
++		 * extracted from SDHC_SYS_CFG_INFO register. However, some Xenon IP
++		 * versions might not implement the slot type information. In such a case,
++		 * it is necessary to explicitly indicate the emmc type.
++		 */
++		if (fdtdec_get_bool(blob, node_list[port_count], "xenon,emmc"))
++			mmc_mode = XENON_MMC_MODE_EMMC;
++		else
++			mmc_mode = XENON_MMC_MODE_SD_SDIO;
++
++		xenon_mmc_create(port_count, reg_base, XENON_MMC_MAX_CLK, mmc_mode);
+ 	}
+ 
+ 	return err;
+diff --git a/include/xenon_mmc.h b/include/xenon_mmc.h
+index bff4a01..4204054 100644
+--- a/include/xenon_mmc.h
++++ b/include/xenon_mmc.h
+@@ -178,12 +178,17 @@
+ 
+ #define  SDHCI_RETUNE_EVT_INTSIG	0x00001000
+ 
++/* MMC modes */
++#define XENON_MMC_MODE_EMMC	0
++#define XENON_MMC_MODE_SD_SDIO	1
++
+ struct xenon_mmc_cfg {
+ 	u64 reg_base;
+ 	u32 version;
+ 	u32 quirks;
+ 	u32 clk;
+ 	u32 bus_width;
++	u32 mmc_mode;
+ 	void *aligned_buffer;
+ 	struct mmc_config cfg;
+ 	struct mmc *mmc;
+-- 
+1.9.1
+

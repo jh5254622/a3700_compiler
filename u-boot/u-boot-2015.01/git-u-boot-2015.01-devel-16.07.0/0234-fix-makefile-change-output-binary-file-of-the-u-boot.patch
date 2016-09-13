@@ -1,0 +1,44 @@
+From 313e9a285d326447478e054ccba1f0e22abb366e Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 25 Jun 2015 15:53:05 +0300
+Subject: [PATCH 0234/1240] fix: makefile: change output binary file of the
+ u-boot to u-boot-spl.bin
+
+Change-Id: I943155b13ddaaac0cc74cfa87c5ae6254735513f
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20489
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ Makefile | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 1da83e5..145e7ea 100644
+--- a/Makefile
++++ b/Makefile
+@@ -876,10 +876,10 @@ DOIMAGE_FLAGS	:= -b $(SPLIMAGE) $(NAND_DOIMAGE_FLAGS) $(DOIMAGE_SEC_FLAGS)
+ 
+ doimage: $(obj)/u-boot.bin $(DOIMAGE) $(SPLIMAGE)
+ 		@$(DOIMAGE_LIBS_CHECK)
+-		$(DOIMAGE) $(DOIMAGE_FLAGS) u-boot.bin u-boot-$(CONFIG_SYS_SOC).bin
++		$(DOIMAGE) $(DOIMAGE_FLAGS) u-boot.bin u-boot-spl.bin
+ 
+ bin2phex: doimage
+-		$(BIN2PHEX) -w 1  -i u-boot-$(CONFIG_SYS_SOC).bin -o u-boot-$(CONFIG_SYS_SOC).hex -b 0x0
++		$(BIN2PHEX) -w 1  -i u-boot-spl.bin -o u-boot-spl.hex -b 0x0
+ 		$(BIN2PHEX) -w 16 -i u-boot.bin -o u-boot.hex -b 0x0
+ 
+ else # CONFIG_TARGET_ARMADA_38X
+@@ -894,7 +894,7 @@ DOIMAGE_FLAGS	:= -T $(CONFIG_DOIMAGE_TYPE) -D 0x0 -E 0x0 $(NAND_OPTS) -G $(SPLIM
+ doimage: $(obj)/u-boot.bin $(DOIMAGE) $(SPLIMAGE)
+ 		cp spl/u-boot-spl.bin spl/u-boot-spl.bin.old; cat tools/marvell/params.raw > spl/u-boot-spl.bin;
+ 		cat spl/u-boot-spl.bin.old >> spl/u-boot-spl.bin;
+-		$(DOIMAGE) $(DOIMAGE_FLAGS) u-boot.bin u-boot-$(CONFIG_SYS_SOC)-$(CONFIG_DOIMAGE_SUFFIX).bin
++		$(DOIMAGE) $(DOIMAGE_FLAGS) u-boot.bin u-boot-spl.bin
+ 
+ endif # CONFIG_TARGET_ARMADA_8K
+ endif # CONFIG_MVEBU
+-- 
+1.9.1
+

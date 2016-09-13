@@ -1,0 +1,33 @@
+From 11b2b4421f611e97c990a2df2c5e1260a01bdccd Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Tue, 12 Apr 2016 11:39:05 +0300
+Subject: [PATCH 108/239] fix: ddr: 70x0: fix dram size to 2G instead of 4G
+
+4G configuration caused linux boot to hang
+
+Change-Id: I210a6e0020b0e2b09925a72bdd65d4a8dbdd05e3
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28955
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-by: Victor Axelrod <victora@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ plat/marvell/a8k/a70x0/board/dram_port.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/plat/marvell/a8k/a70x0/board/dram_port.c b/plat/marvell/a8k/a70x0/board/dram_port.c
+index c9b8346..8161659 100644
+--- a/plat/marvell/a8k/a70x0/board/dram_port.c
++++ b/plat/marvell/a8k/a70x0/board/dram_port.c
+@@ -52,7 +52,7 @@ struct dram_config dram_cfg = {
+ 		/* Bus configuration */
+ 		.bus[0] = {
+ 			.bus_width = 32,
+-			.size_mb   = 0x1000,
++			.size_mb   = 0x800,
+ 		},
+ 	},
+ };
+-- 
+1.9.1
+

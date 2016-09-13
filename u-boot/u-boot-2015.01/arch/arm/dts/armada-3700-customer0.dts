@@ -1,0 +1,62 @@
+
+/dts-v1/;
+
+#include "armada-3700.dtsi"
+#include <dt-bindings/ddr/ddr_data.h>
+
+/ {
+	model = "DB-88F37XX-Customer0";
+	compatible = "marvell,armada-3700-db0", "marvell,armada-3700";
+
+	soc {
+		internal-regs {
+			avs@11500 {
+				status = "okay";
+			};
+			serial: serial@12000 {
+				status = "okay";
+			};
+			spi0: spi@10600 {
+				status = "okay";
+			};
+			pm@14000 {
+				status = "okay";
+			};
+			neta0: neta@30000 {
+				status = "okay";
+				phy_addr = <0x0>;
+				phy_mode = "sgmii";
+			};
+			i2c: i2c@11000 {
+				status = "okay";
+			};
+			comphy {
+				phy0 {
+					phy-type = <PHY_TYPE_SGMII0>;
+					phy-speed = <PHY_SPEED_1_25G>;
+				};
+				phy1 {
+					phy-type = <PHY_TYPE_UNCONNECTED>;
+					phy-speed = <PHY_SPEED_1_25G>;
+				};
+			};
+			pcie-controller {
+				pcie@1,0 {
+					status = "disabled";
+				};
+			};
+			sata: sata@e0000 {
+				status = "okay";
+			};
+			mmc0: mmc@D8000 {
+				status = "disabled";
+			};
+			mmc1: mmc@D0000 {
+				status = "disabled";
+			};
+			usb3: usb3@58000 {
+				status = "disabled";
+			};
+		};
+	};
+};

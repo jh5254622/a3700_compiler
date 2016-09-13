@@ -1,0 +1,37 @@
+From 074eacc20b6fd82d9c0e4ca5231cdc76a53ba87f Mon Sep 17 00:00:00 2001
+From: Grzegorz Jaszczyk <jaz@semihalf.com>
+Date: Thu, 25 Feb 2016 15:48:33 +0100
+Subject: [PATCH 217/538] ARM: mvebu: a390: add missing compatibility string
+ and add missing bracket
+
+Change-Id: I899044c7dd64ae71cde711cdf8c318a258c380db
+Signed-off-by: Grzegorz Jaszczyk <jaz@semihalf.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27970
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Lior Amsalem <alior@marvell.com>
+---
+ arch/arm/boot/dts/armada-390.dtsi | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/arch/arm/boot/dts/armada-390.dtsi b/arch/arm/boot/dts/armada-390.dtsi
+index 094e39c..6cd18d8 100644
+--- a/arch/arm/boot/dts/armada-390.dtsi
++++ b/arch/arm/boot/dts/armada-390.dtsi
+@@ -47,6 +47,8 @@
+ #include "armada-39x.dtsi"
+ 
+ / {
++	compatible = "marvell,armada390";
++
+ 	soc {
+ 		internal-regs {
+ 			pinctrl@18000 {
+@@ -54,4 +56,5 @@
+ 				reg = <0x18000 0x20>;
+ 			};
+ 		};
++	};
+ };
+-- 
+1.9.1
+

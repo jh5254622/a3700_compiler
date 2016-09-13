@@ -1,0 +1,277 @@
+From 8976535cc8877948cd1926e3a7134240620d641c Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 26 Apr 2016 13:49:39 +0300
+Subject: [PATCH 135/239] llc: Enable LLC for AP806-A0
+
+Copy llc driver from u-boot.
+Enable LLC by default.
+Add compilation option to disable LLC.
+LLC should be disabled by default for AP806-Z1 (since it causes
+apn to fail).
+
+Change-Id: Ia1ebeed3403206c08ac8f455683fbbfd9b363bdb
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29283
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ Makefile                              |  8 +++
+ drivers/marvell/cache_llc.c           | 91 +++++++++++++++++++++++++++++++++++
+ include/drivers/marvell/cache_llc.h   | 32 ++++++++++++
+ plat/marvell/a8k/a7040_rz/platform.mk |  3 +-
+ plat/marvell/a8k/a70x0/apn806_setup.c | 11 +++++
+ plat/marvell/a8k/a70x0/plat_def.h     |  1 +
+ plat/marvell/a8k/a70x0/platform.mk    |  4 +-
+ plat/marvell/a8k/apn806/platform.mk   |  3 +-
+ 8 files changed, 150 insertions(+), 3 deletions(-)
+ create mode 100644 drivers/marvell/cache_llc.c
+ create mode 100644 include/drivers/marvell/cache_llc.h
+
+diff --git a/Makefile b/Makefile
+index b797aec..4660f94 100644
+--- a/Makefile
++++ b/Makefile
+@@ -103,6 +103,13 @@ SPIN_ON_BL1_EXIT		:= 0
+ PL011_GENERIC_UART		:= 0
+ # Enable compilation for Palladium platform
+ PALLADIUM			:= 0
++# Disable LLC in A8K family of SoCs
++LLC_DISABLE			:= 0
++
++ifeq ($(PLAT),$(filter $(PLAT),apn806 a7040_rz))
++# For AP806-Z1 & A7040-Z1 LLC must be disabled by default.
++LLC_DISABLE			:= 1
++endif
+ 
+ # Marvell images
+ BOOT_IMAGE			:= boot-image.bin
+@@ -490,6 +497,7 @@ $(eval $(call add_define,EL3_PAYLOAD_BASE))
+ endif
+ $(eval $(call add_define,PL011_GENERIC_UART))
+ $(eval $(call add_define,PALLADIUM))
++$(eval $(call add_define,LLC_DISABLE))
+ 
+ 
+ ################################################################################
+diff --git a/drivers/marvell/cache_llc.c b/drivers/marvell/cache_llc.c
+new file mode 100644
+index 0000000..2919524
+--- /dev/null
++++ b/drivers/marvell/cache_llc.c
+@@ -0,0 +1,91 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <assert.h>
++#include <mmio.h>
++#include <plat_def.h>
++
++#define LLC_CTRL                       0x100
++#define LLC_CACHE_SYNC                 0x700
++#define L2X0_INV_WAY                    0x77C
++#define L2X0_CLEAN_WAY                 0x7BC
++#define L2X0_CLEAN_INV_WAY             0x7FC
++
++#define LLC_CTRL_EN	                1
++#define LLC_EXCLUSIVE_EN		0x100
++#define LLC_WAY_MASK			0xFFFFFFFF
++
++void llc_cache_sync(void)
++{
++	mmio_write_32(MVEBU_LLC_BASE + LLC_CACHE_SYNC, 0);
++	/* Atumic write no need to wait */
++}
++
++void llc_flush_all(void)
++{
++	mmio_write_32(MVEBU_LLC_BASE + L2X0_CLEAN_INV_WAY, LLC_WAY_MASK);
++	llc_cache_sync();
++}
++
++void llc_clean_all(void)
++{
++	mmio_write_32(MVEBU_LLC_BASE + L2X0_CLEAN_WAY, LLC_WAY_MASK);
++	llc_cache_sync();
++}
++
++void llc_inv_all(void)
++{
++	/* Invalidating when L2 is enabled is a nono */
++	assert(mmio_read_32(MVEBU_LLC_BASE + LLC_CTRL) & LLC_CTRL_EN);
++	mmio_write_32(MVEBU_LLC_BASE + L2X0_INV_WAY, LLC_WAY_MASK);
++	llc_cache_sync();
++}
++
++void llc_disable(void)
++{
++	llc_flush_all();
++	mmio_write_32(MVEBU_LLC_BASE + LLC_CTRL, 0);
++	__asm__ volatile("dsb st");
++}
++
++void llc_enable(int excl_mode)
++{
++	uint32_t val;
++
++	__asm__ volatile("dsb sy");
++	llc_inv_all();
++	__asm__ volatile("dsb sy");
++
++	val = LLC_CTRL_EN;
++	if (excl_mode)
++		val |= LLC_EXCLUSIVE_EN;
++
++	mmio_write_32(MVEBU_LLC_BASE + LLC_CTRL, val);
++	__asm__ volatile("dsb sy");
++}
++
++
++void llc_save(void)
++{
++	/* TBD */
++}
++
++void llc_resume(void)
++{
++	/* TBD */
++}
+diff --git a/include/drivers/marvell/cache_llc.h b/include/drivers/marvell/cache_llc.h
+new file mode 100644
+index 0000000..584e007
+--- /dev/null
++++ b/include/drivers/marvell/cache_llc.h
+@@ -0,0 +1,32 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _CACHE_LLC_H_
++#define _CACHE_LLC_H_
++
++void llc_cache_sync(void);
++void llc_flush_all(void);
++void llc_clean_all(void);
++void llc_inv_all(void);
++void llc_disable(void);
++void llc_enable(int excl_mode);
++void llc_save(void);
++void llc_resume(void);
++
++#endif /* _CACHE_LLC_H_ */
++
+diff --git a/plat/marvell/a8k/a7040_rz/platform.mk b/plat/marvell/a8k/a7040_rz/platform.mk
+index 8010773..b73eaee 100644
+--- a/plat/marvell/a8k/a7040_rz/platform.mk
++++ b/plat/marvell/a8k/a7040_rz/platform.mk
+@@ -76,7 +76,8 @@ BL1_SOURCES		+=	$(PLAT_SRC_BASE)/aarch64/plat_helpers.S	\
+ MARVELL_DRV		:= 	$(MARVELL_DRV_BASE)/rfu_z.c	\
+ 				$(MARVELL_DRV_BASE)/iob.c	\
+ 				$(MARVELL_DRV_BASE)/ccu.c	\
+-				$(MARVELL_DRV_BASE)/amb_adec.c
++				$(MARVELL_DRV_BASE)/amb_adec.c	\
++				$(MARVELL_DRV_BASE)/cache_llc.c
+ 
+ BL31_SOURCES		+=	lib/cpus/aarch64/cortex_a72.S				\
+ 				$(PLAT_SRC_BASE)/aarch64/plat_helpers.S			\
+diff --git a/plat/marvell/a8k/a70x0/apn806_setup.c b/plat/marvell/a8k/a70x0/apn806_setup.c
+index 6423b76..1271cd9 100644
+--- a/plat/marvell/a8k/a70x0/apn806_setup.c
++++ b/plat/marvell/a8k/a70x0/apn806_setup.c
+@@ -37,6 +37,7 @@
+ #include <rfu.h>
+ #include <ccu.h>
+ #include <mmio.h>
++#include <cache_llc.h>
+ 
+ #define SMMU_sACR		(MVEBU_SMMU_BASE + 0x10)
+ #define SMMU_sACR_PG_64K	(1 << 16)
+@@ -62,6 +63,16 @@ void init_aurora2(void)
+ 	reg = mmio_read_32(CCU_GSPMU_CR);
+ 	reg |= GSPMU_CPU_CONTROL;
+ 	mmio_write_32(CCU_GSPMU_CR, reg);
++
++#if !LLC_DISABLE
++#ifdef PLAT_MARVELL_APN_806_Z
++	/* Enable LLC in non-exclusive mode */
++	llc_enable(0);
++#else
++	/* Enable LLC in exclusive mode */
++	llc_enable(1);
++#endif /* AP806-Z1 */
++#endif
+ }
+ 
+ void apn806_init(void)
+diff --git a/plat/marvell/a8k/a70x0/plat_def.h b/plat/marvell/a8k/a70x0/plat_def.h
+index cbea0e4..70e621d 100644
+--- a/plat/marvell/a8k/a70x0/plat_def.h
++++ b/plat/marvell/a8k/a70x0/plat_def.h
+@@ -50,6 +50,7 @@
+ #define MVEBU_CP0_REGS_BASE		0xF2000000
+ #define MVEBU_RFU_BASE			(MVEBU_REGS_BASE + 0x6F0000)
+ #define MVEBU_CCU_BASE			(MVEBU_REGS_BASE + 0x4000)
++#define MVEBU_LLC_BASE			(MVEBU_REGS_BASE + 0x8000)
+ #define MVEBU_IOB_BASE			(MVEBU_CP0_REGS_BASE + 0x190000)
+ #define MVEBU_DRAM_MAC_BASE		(MVEBU_REGS_BASE + 0x20000)
+ #define MVEBU_DRAM_PHY_BASE		(MVEBU_REGS_BASE + 0x20000)
+diff --git a/plat/marvell/a8k/a70x0/platform.mk b/plat/marvell/a8k/a70x0/platform.mk
+index 8a5ad17..f81ca43 100644
+--- a/plat/marvell/a8k/a70x0/platform.mk
++++ b/plat/marvell/a8k/a70x0/platform.mk
+@@ -79,7 +79,9 @@ endif
+ MARVELL_DRV		:= 	$(MARVELL_DRV_BASE)/rfu.c	\
+ 				$(MARVELL_DRV_BASE)/iob.c	\
+ 				$(MARVELL_DRV_BASE)/ccu.c	\
+-				$(MARVELL_DRV_BASE)/amb_adec.c
++				$(MARVELL_DRV_BASE)/amb_adec.c	\
++				$(MARVELL_DRV_BASE)/cache_llc.c
++
+ 
+ BL31_PORTING_SOURCES	:=	$(PLAT_FAMILY_BASE)/$(PLAT)/board/marvell_plat_config.c
+ 
+diff --git a/plat/marvell/a8k/apn806/platform.mk b/plat/marvell/a8k/apn806/platform.mk
+index 6be8bc8..f1d821a 100644
+--- a/plat/marvell/a8k/apn806/platform.mk
++++ b/plat/marvell/a8k/apn806/platform.mk
+@@ -74,7 +74,8 @@ BL1_SOURCES		+=	$(PLAT_SRC_BASE)/aarch64/plat_helpers.S	\
+ 				lib/cpus/aarch64/cortex_a72.S
+ 
+ MARVELL_DRV		:= 	$(MARVELL_DRV_BASE)/rfu_z.c	\
+-				$(MARVELL_DRV_BASE)/ccu.c
++				$(MARVELL_DRV_BASE)/ccu.c	\
++				$(MARVELL_DRV_BASE)/cache_llc.c
+ 
+ BL31_SOURCES		+=	lib/cpus/aarch64/cortex_a72.S				\
+ 				$(PLAT_SRC_BASE)/aarch64/plat_helpers.S			\
+-- 
+1.9.1
+

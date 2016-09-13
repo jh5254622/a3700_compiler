@@ -1,0 +1,100 @@
+From 5c68fa1f357269545ee4009af6383a7dd993246b Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 8 Mar 2015 16:47:53 +0200
+Subject: [PATCH 0139/1240] spl: save, and restore SP register for SPL
+
+	- Modify the start.S for SPL run:
+	  Save the SP register on the stack
+	  Jump for board_init_f to run the SPL code
+	  Restore SP register to return to the BootRoom
+
+Change-Id: Ife73eb3b6a8e349f8fc042fe41f1d100b2d0c8f2
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17302
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv7/start.S | 10 ++++++++++
+ arch/arm/cpu/armv8/start.S | 17 +++++++++++++++++
+ 2 files changed, 27 insertions(+)
+
+diff --git a/arch/arm/cpu/armv7/start.S b/arch/arm/cpu/armv7/start.S
+index fdc05b9..bf63908 100644
+--- a/arch/arm/cpu/armv7/start.S
++++ b/arch/arm/cpu/armv7/start.S
+@@ -33,6 +33,7 @@
+ 	.globl	reset
+ 
+ reset:
++#if defined(CONFIG_MVEBU) && !defined(CONFIG_SPL_BUILD)
+ 	bl	save_boot_params
+ 	/*
+ 	 * disable interrupts (FIQ and IRQ), also set the cpu to SVC32 mode,
+@@ -45,6 +46,9 @@ reset:
+ 	orrne	r0, r0, #0x13		@ set SVC mode
+ 	orr	r0, r0, #0xc0		@ disable FIQ and IRQ
+ 	msr	cpsr,r0
++#else
++	stmfd	sp!, {r0 - r12, lr}     /* @ save registers on stack */
++#endif /* defined(CONFIG_MVEBU) && !defined(CONFIG_SPL_BUILD) */
+ 
+ /*
+  * Setup vector:
+@@ -62,6 +66,7 @@ reset:
+ 	mcr	p15, 0, r0, c12, c0, 0	@Set VBAR
+ #endif
+ 
++#if defined(CONFIG_MVEBU) && !defined(CONFIG_SPL_BUILD)
+ 	/* the mask ROM code should have PLL and others stable */
+ #ifndef CONFIG_SKIP_LOWLEVEL_INIT
+ 	bl	cpu_init_cp15
+@@ -69,6 +74,11 @@ reset:
+ #endif
+ 
+ 	bl	_main
++#else
++	bl	board_init_f
++	mov	r0, #0x0                                /* @ return value: 0x0 NO_ERR */
++	ldmfd	sp!, {r0 - r12, pc}     /* @ restore regs and return */
++#endif /* defined(CONFIG_MVEBU) && !defined(CONFIG_SPL_BUILD) */
+ 
+ /*------------------------------------------------------------------------------*/
+ 
+diff --git a/arch/arm/cpu/armv8/start.S b/arch/arm/cpu/armv8/start.S
+index 8fbcf50..dc14d79 100644
+--- a/arch/arm/cpu/armv8/start.S
++++ b/arch/arm/cpu/armv8/start.S
+@@ -47,6 +47,7 @@ _bss_end_ofs:
+ 	.quad	__bss_end - _start
+ 
+ reset:
++#if defined(CONFIG_MVEBU) && !defined(CONFIG_SPL_BUILD)
+ 	/*
+ 	 * Could be EL3/EL2/EL1, Initial State:
+ 	 * Little Endian, MMU Disabled, i/dCache Disabled
+@@ -103,6 +104,22 @@ slave_cpu:
+ 	 */
+ master_cpu:
+ 	bl	_main
++#else
++	stp	x19, x20,[sp, #-16]!	/* @ save registers on stack */
++	stp	x21, x22,[sp, #-16]!
++	stp	x23, x24,[sp, #-16]!
++	stp	x25, x26,[sp, #-16]!
++	stp	x27, x28,[sp, #-16]!
++	stp	x29, x30,[sp, #-16]!
++
++	bl	board_init_f
++	ldp	x29, x30,[sp], #16	/* @ restore regs and return */
++	ldp	x27, x28,[sp], #16
++	ldp	x25, x26,[sp], #16
++	ldp	x23, x24,[sp], #16
++	ldp	x21, x22,[sp], #16
++	ldp	x19, x20,[sp!, #16
++#endif /* defined(CONFIG_MVEBU) && !defined(CONFIG_SPL_BUILD) */
+ 
+ /*-----------------------------------------------------------------------*/
+ 
+-- 
+1.9.1
+

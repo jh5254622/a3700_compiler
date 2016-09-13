@@ -1,0 +1,30 @@
+From e8e8b1aa553054c747e6cc1c8b7e7e65f85a27ae Mon Sep 17 00:00:00 2001
+From: Joe Zhou <shjzhou@marvell.com>
+Date: Wed, 15 Jul 2015 13:51:58 +0800
+Subject: [PATCH 0332/1240] arlp: change register base to 0xD0000000
+
+Change-Id: I76279416d3986606e0e6224fc8a3f082fa7191e3
+Signed-off-by: Joe Zhou <shjzhou@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/21287
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/armada-lp.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index 0f4addd..21b16b5 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -16,7 +16,7 @@
+ 			compatible = "marvell,internal-regs";
+ 			#address-cells = <1>;
+ 			#size-cells = <1>;
+-			reg = <0xf1000000 0x4>;
++			reg = <0xd0000000 0x4>;
+ 
+ 			serial: serial@12000 {
+ 				compatible = "marvell,armadalp-uart";
+-- 
+1.9.1
+

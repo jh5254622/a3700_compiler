@@ -1,0 +1,33 @@
+From ff5291b3fe5cceca7087118c6aa99a6ca87fdda9 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Thu, 12 Nov 2015 17:32:00 +0200
+Subject: [PATCH 0492/1240] armada3700: serdes: fixed COMPHY init call case
+
+- fixed condition on which comphy_init() is called
+  JIRA SYSTEMSW-2035
+
+Change-Id: I9c5487a6795d0c089e4ddb7b4309a156d19cb0bf
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24809
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/spl.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index 4624ed2..adf6edc 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -96,7 +96,7 @@ void board_init_f(ulong silent)
+ /* when DDR over PCIE is enabled, add delay before and after the comphy_init
+    to verify that the PCIE card init done, before setting the comphy to avoid
+    collisions. and no ddr init require */
+-#if CONFIG_MVEBU_COMPHY_SUPPORT
++#ifdef CONFIG_MVEBU_COMPHY_SUPPORT
+ 	if (comphy_init(gd->fdt_blob))
+ 		error("COMPHY initialization failed\n");
+ #endif
+-- 
+1.9.1
+

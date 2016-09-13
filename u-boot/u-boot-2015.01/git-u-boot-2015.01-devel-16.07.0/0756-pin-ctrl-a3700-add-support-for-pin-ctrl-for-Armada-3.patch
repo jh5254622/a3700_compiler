@@ -1,0 +1,140 @@
+From e93c634f79e8eaf7209673385e65fbd82a75f272 Mon Sep 17 00:00:00 2001
+From: Terry Zhou <bjzhou@marvell.com>
+Date: Wed, 27 Jan 2016 16:58:51 +0800
+Subject: [PATCH 0756/1240] pin-ctrl: a3700: add support for pin-ctrl for
+ Armada-3700
+
+- Add pinctl probe in early initialization
+- Enable pin ctrl driver, also add mpp command for user interface
+- Add the device tree nodes of pin ctrl for a3700
+
+Change-Id: I27618e5997dde9b69a869d9a37838fec45971daa
+Signed-off-by: Terry Zhou <bjzhou@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27042
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ arch/arm/cpu/armv8/armadalp/soc-init.c |  5 +++++
+ arch/arm/dts/armada-lp-db.dts          | 36 ++++++++++++++++++++++++++++++++++
+ arch/arm/dts/armada-lp.dtsi            | 16 +++++++++++++++
+ configs/mvebu_armadalp_defconfig       |  3 +++
+ 4 files changed, 60 insertions(+)
+
+diff --git a/arch/arm/cpu/armv8/armadalp/soc-init.c b/arch/arm/cpu/armv8/armadalp/soc-init.c
+index c5a9876..9cb82a2 100644
+--- a/arch/arm/cpu/armv8/armadalp/soc-init.c
++++ b/arch/arm/cpu/armv8/armadalp/soc-init.c
+@@ -24,6 +24,7 @@
+ #include <netdev.h>
+ #include <asm/arch/mbus_reg.h>
+ #include <asm/arch-mvebu/mbus.h>
++#include <asm/arch-mvebu/pinctl.h>
+ #include <i2c.h>
+ 
+ /* IO expander I2C device */
+@@ -38,6 +39,10 @@
+ 
+ int soc_early_init_f(void)
+ {
++#ifdef CONFIG_MVEBU_PINCTL
++	mvebu_pinctl_probe();
++#endif
++
+ 	return 0;
+ }
+ 
+diff --git a/arch/arm/dts/armada-lp-db.dts b/arch/arm/dts/armada-lp-db.dts
+index 51cbf84..8aaa82b 100644
+--- a/arch/arm/dts/armada-lp-db.dts
++++ b/arch/arm/dts/armada-lp-db.dts
+@@ -88,3 +88,39 @@
+ 		};
+ 	};
+ };
++
++&pinctl0 { /* north bridge */
++		/* MPP Bus:
++		   JTAG     0
++		   SDIO     1
++		   eMMC     2
++		   PWM      [3-6]
++		   PMIC     [7-8]
++		   I2C      [9-10]
++		   SPI      [15]
++		   ONEWIRE  [16]
++		   UART     [17]
++		   SPI_QUAD [18]
++		   UART2    [19]
++		   LED      [20-23]
++		*/
++			/* 0 1 2 3 4 5 6 7 */
++	pin-func = < 0 1 0 1 1 1 1 1
++			   1 1 0 0 1 1 1 0
++			   1 0 0 0 0 0 0 0 >;
++};
++
++&pinctl1 { /* south bridge */
++		/* MPP Bus:
++		   USB32    0
++		   USB2     1
++		   SB-SDIO  2
++		   RGMII    3
++		   PCIE     4
++		   PTP      [5-7]
++		   MII      8
++		*/
++			/* 0 1 2 3 4 5 6 7 */
++	pin-func = < 1 1 1 0 1 1 0 0
++			   0 >;
++};
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index d2bb9da..41c57b3 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -43,6 +43,22 @@
+ 				status = "disabled";
+ 			};
+ 
++			pinctl0: pinctl@13830 { /* north bridge */
++				compatible = "marvell,mvebu-pinctl";
++				bank-name ="armadalp-nb";
++				reg = <0x13830 0x4>;
++				pin-count = <24>;
++				max-func = <1>;
++			};
++
++			pinctl1: pinctl@18830 { /* south bridge */
++				compatible = "marvell,mvebu-pinctl";
++				bank-name ="armadalp-sb";
++				reg = <0x18830 0x4>;
++				pin-count = <9>;
++				max-func = <1>;
++			};
++
+ 			mbus {
+ 				compatible = "marvell,mvebu-mbus";
+ 				reg = <0xcf00 0xf0>;
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index 14c3de7..bf29887 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -7,6 +7,8 @@ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_MVEBU_A3700_CLOCK=y
+ +S:CONFIG_MVEBU_UART_ARLP=y
+ CONFIG_XENON_MMC=y
++CONFIG_MVEBU_MPP_BUS=y
++CONFIG_MVEBU_PINCTL=y
+ +S:CONFIG_DEVEL_BOARD=y
+ +S:# CONFIG_MULTI_DT_FILE is not set
+ CONFIG_CMD_BDI=y
+@@ -19,6 +21,7 @@ CONFIG_CMD_ECHO=y
+ CONFIG_CMD_NET=y
+ CONFIG_CMD_PING=y
+ CONFIG_CMD_MII=y
++CONFIG_CMD_MVEBU_MPP=y
+ CONFIG_CMD_MVEBU_BUBT=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+-- 
+1.9.1
+

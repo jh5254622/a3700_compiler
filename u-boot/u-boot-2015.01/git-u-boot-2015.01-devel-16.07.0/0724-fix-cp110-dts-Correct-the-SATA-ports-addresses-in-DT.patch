@@ -1,0 +1,44 @@
+From cf6676138d541d4654b3fa818237e31dcef711fe Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Mon, 25 Jan 2016 16:49:41 +0200
+Subject: [PATCH 0724/1240] fix: cp110: dts: Correct the SATA ports addresses
+ in DT
+
+- Set SATA0 and SATA1 ports addresses and size according
+  to the latest design (Cider)
+
+Change-Id: Ic4f76b844d8e199542af6fbbf8c8e0723efe9302
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27009
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/cp110.dtsi | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index deb53c7..f5e6b47 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -45,14 +45,14 @@ i2c@701100 { /* i2c1 */
+ 	reg = <0x701100 0x100>;
+ 	status = "disabled";
+ };
+-sata@540000 { /* SATA0 */
++sata@550000 { /* SATA0 */
+ 	compatible = "marvell,mvebu-sata";
+-	reg = <540000 0x200>;
++	reg = <550000 0x1000>;
+ 	status = "disabled";
+ };
+-sata@550000 { /* SATA1 */
++sata@560000 { /* SATA1 */
+ 	compatible = "marvell,mvebu-sata";
+-	reg = <550000 0x200>;
++	reg = <560000 0x1000>;
+ 	status = "disabled";
+ };
+ mmc@780000 {
+-- 
+1.9.1
+

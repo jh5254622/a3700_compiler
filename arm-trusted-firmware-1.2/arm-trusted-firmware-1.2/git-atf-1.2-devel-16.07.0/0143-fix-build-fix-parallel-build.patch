@@ -1,0 +1,42 @@
+From 6d9a353e8899004ce2b6b3760d5c7e84872b9893 Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Sat, 7 May 2016 22:41:58 +0300
+Subject: [PATCH 143/239] fix: build: fix parallel build
+
+Change-Id: I30356301696147344e9e77d0fe9c542ef473e606
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29583
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ Makefile   | 2 +-
+ ble/ble.mk | 3 +++
+ 2 files changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index 4660f94..40b1995 100644
+--- a/Makefile
++++ b/Makefile
+@@ -694,7 +694,7 @@ fip: ${BUILD_PLAT}/${FIP_NAME} ${DOIMAGETOOL}
+ 	$(DOIMAGETOOL) $(DOIMAGE_FLAGS)
+ 	$(TIM2IMG) $(TIM2IMGARGS) -o $(BUILD_PLAT)/$(FLASH_IMAGE)
+ else
+-fip: ${BUILD_PLAT}/${FIP_NAME} ${DOIMAGETOOL}
++fip: ${BUILD_PLAT}/${FIP_NAME} ${DOIMAGETOOL} ${BUILD_PLAT}/ble.bin
+ 	$(shell truncate -s %128K ${BUILD_PLAT}/bl1.bin)
+ 	$(shell cat ${BUILD_PLAT}/bl1.bin ${BUILD_PLAT}/${FIP_NAME} > ${BUILD_PLAT}/${BOOT_IMAGE})
+ 	${DOIMAGETOOL} ${DOIMAGE_FLAGS} ${BUILD_PLAT}/${BOOT_IMAGE} ${BUILD_PLAT}/${FLASH_IMAGE}
+diff --git a/ble/ble.mk b/ble/ble.mk
+index 0eb2edf..2aec878 100644
+--- a/ble/ble.mk
++++ b/ble/ble.mk
+@@ -46,3 +46,6 @@ BLE_LINKERFILE		:=	ble/ble.ld.S
+ 
+ $(MV_DDR_LIB):
+ 	@make -C $(MV_DDR_ROOT) --no-print-directory PLAT_INCLUDES="$(PLAT_INCLUDES)" PLATFORM=$(PLAT) OBJ_DIR=$(CURDIR)/$(BUILD_PLAT)/ble
++
++#make sure that ble finished its build and copied ddr4 lib before checking that ddr4 lib exists
++$(MV_DDR4_LIB):	$(MV_DDR_LIB)
+-- 
+1.9.1
+

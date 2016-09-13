@@ -1,0 +1,353 @@
+From dcca99bfd98f4c5c7ce618bbde2aeff8b88f3c02 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 22 May 2016 11:30:23 +0300
+Subject: [PATCH 180/239] fix: xdb: move xdb scripts to spesific file
+
+move XDB scripts under spesific file to be more easy for user
+to run batch file in XDB tool.
+
+Change-Id: I06683ed1d8bf78348f63c7b06aa908cbdbb509ad
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29849
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ scripts/debugger/atf.xdb                          | 53 -----------------------
+ scripts/debugger/binary_extension.xdb             | 53 -----------------------
+ scripts/debugger/bootloader.xdb                   | 28 ------------
+ scripts/debugger/xdb_debug.xdb                    |  6 +--
+ scripts/debugger/xdb_scripts/atf.xdb              | 53 +++++++++++++++++++++++
+ scripts/debugger/xdb_scripts/binary_extension.xdb | 53 +++++++++++++++++++++++
+ scripts/debugger/xdb_scripts/bootloader.xdb       | 28 ++++++++++++
+ 7 files changed, 137 insertions(+), 137 deletions(-)
+ delete mode 100644 scripts/debugger/atf.xdb
+ delete mode 100644 scripts/debugger/binary_extension.xdb
+ delete mode 100644 scripts/debugger/bootloader.xdb
+ create mode 100644 scripts/debugger/xdb_scripts/atf.xdb
+ create mode 100644 scripts/debugger/xdb_scripts/binary_extension.xdb
+ create mode 100644 scripts/debugger/xdb_scripts/bootloader.xdb
+
+diff --git a/scripts/debugger/atf.xdb b/scripts/debugger/atf.xdb
+deleted file mode 100644
+index 2c8a4cd..0000000
+--- a/scripts/debugger/atf.xdb
++++ /dev/null
+@@ -1,53 +0,0 @@
+-if (@strcmp(@ATF_FIB_BIN_PATH,"EMPTY")==0) then
+-	set value @ATF_FIB_BIN_PATH = @queryinputfile("select FIB bin file", "all files (*.*)|*.*");
+-	if @strlen(@bin_ext_elf_path) == 0 then
+-		!user hit cancel button
+-		print "user abort\n"
+-		MESSAGE "Update the path of the ATF FIB binary, and reload the script"
+-		EXIT
+-	end
+-end
+-if (@strcmp(@ATF_BL1_ELF_PATH,"EMPTY")==0) then
+-	set value @ATF_BL1_ELF_PATH = @queryinputfile("select BL1 ELF file", "all files (*.*)|*.*|elf files (*.afx;*.elf)|*.afx;*.elf||");
+-	if @strlen(@ATF_BL1_ELF_PATH) == 0 then
+-		!user hit cancel button
+-		print "user abort\n"
+-		MESSAGE "Update the path of the BL1 ELF, and reload the script"
+-		EXIT
+-	end
+-end
+-
+-! Set value atf_run = 1 if the user run this script
+-set val @atf_run = 1
+-
+-! if the bin_ext script is not run, reset the board and stop at 0xffff0000
+-IF @bin_ext_run != 1 THEN
+-TCI TRESET
+-RESTART
+-END
+-
+-DELETE BREAKPOINT /ALL
+-! break at bl1
+-SET BREAKPOINT AT (0x4100000) HARD
+-
+-! If the SPL script run, it already run the bootrom code.
+-IF @bin_ext_run != 1 THEN
+-RUN
+-END
+-
+-! load fip.bin (loaded by BL1 from 0x4120000)
+-LOAD /BINARY /ADDRESS=0x4120000 OF @ATF_FIB_BIN_PATH
+-
+-! load BL1.elf (run from 0x4100000)
+-LOAD /SEGMENT /DEBUG /GLOBAL /INIT="" OF @ATF_BL1_ELF_PATH
+-
+-! break at call to bl2_main function
+-SET BREAKPOINT AT (0x4017000) HARD
+-
+-! break at bl31 function
+-SET BREAKPOINT AT (0x4023000) HARD
+-
+-! break at U-Boot
+-SET BREAKPOINT AT (0x0) HARD
+-
+-RUN
+diff --git a/scripts/debugger/binary_extension.xdb b/scripts/debugger/binary_extension.xdb
+deleted file mode 100644
+index 389e23f..0000000
+--- a/scripts/debugger/binary_extension.xdb
++++ /dev/null
+@@ -1,53 +0,0 @@
+-if (@strcmp(@BIN_EXT_ELF_PATH,"EMPTY")==0) then
+-	SET VALUE @BIN_EXT_ELF_PATH = @queryinputfile("Select BLE elf file", "All Files (*.*)|*.*|ELF Files (*.afx;*.elf)|*.afx;*.elf||");
+-	IF @strlen(@BIN_EXT_ELF_PATH) == 0 then
+-		!User hit cancel button
+-		print "USER ABORT\n"
+-		MESSAGE "Update the path of the binary extension, and reload the script"
+-		EXIT
+-	END
+-end
+-
+-! Set value bin_ext_run = 1 if the user run this script
+-set val @bin_ext_run = 1
+-
+-! Reset the board
+-TCI TRESET
+-RESTART
+-
+-IF @flash_empty != 1 THEN
+-! break at start of bin_ext_run
+-SET BREAKPOINT AT (0xFFE1C048) HARD
+-ELSE
+-! break at UART error of Bootrom
+-SET BREAKPOINT AT (0xffff2270) HARD
+-RUN
+-SET BREAKPOINT AT (0xffff3244) HARD
+-END
+-
+-! Run till the breakpoint
+-RUN
+-DELETE BREAKPOINT /ALL
+-
+-
+-IF @flash_empty != 1 THEN
+-! load SPL elf file (run from 0xFFE1C048)
+-LOAD /SEGMENT /DEBUG /GLOBAL OF @BIN_EXT_ELF_PATH
+-ELSE
+-! load SPL elf file (run from 0xffff21f8) and Update the PC to the start of the SPL
+-LOAD /SEGMENT /DEBUG /GLOBAL /INIT="" OF @BIN_EXT_ELF_PATH
+-END
+-
+-! Break at the end of bin_ext_run before jumping back top BootROM
+-SET BREAKPOINT AT (0xFFE1C08C) HARD
+-RUN
+-DELETE BREAKPOINT /ALL
+-
+-! DRAM should be ready now.
+-! Jump to BootRom to disable MMU and clean caches
+-SET REGISTER X1=0x0
+-SET REGISTER PC=0xffff0668
+-
+-! Before run the BootRom, set breakpoint before jump to image execution
+-SET BREAKPOINT AT (0xffff068c) HARD
+-RUN
+diff --git a/scripts/debugger/bootloader.xdb b/scripts/debugger/bootloader.xdb
+deleted file mode 100644
+index fc82339..0000000
+--- a/scripts/debugger/bootloader.xdb
++++ /dev/null
+@@ -1,28 +0,0 @@
+-if (@strcmp(@BL_ELF_PATH,"EMPTY")==0) then
+-	set value @BL_ELF_PATH  = @queryinputfile("select BL ELF file", "all files (*.*)|*.*");
+-	if @strlen(BL_ELF_PATH) == 0 then
+-		!user hit cancel button
+-		print "user abort\n"
+-		MESSAGE "Update the path of the Bootloader binary, and reload the script"
+-		EXIT
+-	end
+-end
+-
+-! if the ATF script is not run, reset the board and stop at 0xffff0000
+-IF @atf_run != 1 THEN
+-TCI TRESET
+-RESTART
+-END
+-
+-DELETE BREAKPOINT /ALL
+-! break at U-Boot
+-SET BREAKPOINT AT (0x0) HARD
+-! Run till the U-boot
+-RUN
+-
+-DELETE BREAKPOINT /ALL
+-
+-! load U-Boot ELF image
+-LOAD /SEGMENT /DEBUG /GLOBAL /INIT="" OF @BL_ELF_PATH
+-
+-! RUN
+diff --git a/scripts/debugger/xdb_debug.xdb b/scripts/debugger/xdb_debug.xdb
+index d727de4..f3a267c 100644
+--- a/scripts/debugger/xdb_debug.xdb
++++ b/scripts/debugger/xdb_debug.xdb
+@@ -19,9 +19,9 @@ set val @flash_empty = 0
+ ! if the flash empty - run the SPL script to load SPL code, then ATF code, and U-Boot code.
+ define macro /OVERWRITE /button empty_flash "set val @flash_empty = 1; @binary_extension; @atf; @bootloader;"
+ 
+-define macro /OVERWRITE /button binary_extension "batch \"scripts/debugger/binary_extension.xdb\"\n"
+-define macro /OVERWRITE /button atf "batch \"scripts/debugger/atf.xdb\"\n"
+-define macro /OVERWRITE /button bootloader "batch \"scripts/debugger/bootloader.xdb\"\n"
++define macro /OVERWRITE /button binary_extension "batch \"scripts/debugger/xdb_scripts/binary_extension.xdb\"\n"
++define macro /OVERWRITE /button atf "batch \"scripts/debugger/xdb_scripts/atf.xdb\"\n"
++define macro /OVERWRITE /button bootloader "batch \"scripts/debugger/xdb_scripts/bootloader.xdb\"\n"
+ define macro /OVERWRITE /button help_message "\
+ MESSAGE \"			HELP MESSAGE\\n\
+ This help is relevant for Armada-7k/8k SoC debug and recovery\\n\
+diff --git a/scripts/debugger/xdb_scripts/atf.xdb b/scripts/debugger/xdb_scripts/atf.xdb
+new file mode 100644
+index 0000000..2c8a4cd
+--- /dev/null
++++ b/scripts/debugger/xdb_scripts/atf.xdb
+@@ -0,0 +1,53 @@
++if (@strcmp(@ATF_FIB_BIN_PATH,"EMPTY")==0) then
++	set value @ATF_FIB_BIN_PATH = @queryinputfile("select FIB bin file", "all files (*.*)|*.*");
++	if @strlen(@bin_ext_elf_path) == 0 then
++		!user hit cancel button
++		print "user abort\n"
++		MESSAGE "Update the path of the ATF FIB binary, and reload the script"
++		EXIT
++	end
++end
++if (@strcmp(@ATF_BL1_ELF_PATH,"EMPTY")==0) then
++	set value @ATF_BL1_ELF_PATH = @queryinputfile("select BL1 ELF file", "all files (*.*)|*.*|elf files (*.afx;*.elf)|*.afx;*.elf||");
++	if @strlen(@ATF_BL1_ELF_PATH) == 0 then
++		!user hit cancel button
++		print "user abort\n"
++		MESSAGE "Update the path of the BL1 ELF, and reload the script"
++		EXIT
++	end
++end
++
++! Set value atf_run = 1 if the user run this script
++set val @atf_run = 1
++
++! if the bin_ext script is not run, reset the board and stop at 0xffff0000
++IF @bin_ext_run != 1 THEN
++TCI TRESET
++RESTART
++END
++
++DELETE BREAKPOINT /ALL
++! break at bl1
++SET BREAKPOINT AT (0x4100000) HARD
++
++! If the SPL script run, it already run the bootrom code.
++IF @bin_ext_run != 1 THEN
++RUN
++END
++
++! load fip.bin (loaded by BL1 from 0x4120000)
++LOAD /BINARY /ADDRESS=0x4120000 OF @ATF_FIB_BIN_PATH
++
++! load BL1.elf (run from 0x4100000)
++LOAD /SEGMENT /DEBUG /GLOBAL /INIT="" OF @ATF_BL1_ELF_PATH
++
++! break at call to bl2_main function
++SET BREAKPOINT AT (0x4017000) HARD
++
++! break at bl31 function
++SET BREAKPOINT AT (0x4023000) HARD
++
++! break at U-Boot
++SET BREAKPOINT AT (0x0) HARD
++
++RUN
+diff --git a/scripts/debugger/xdb_scripts/binary_extension.xdb b/scripts/debugger/xdb_scripts/binary_extension.xdb
+new file mode 100644
+index 0000000..389e23f
+--- /dev/null
++++ b/scripts/debugger/xdb_scripts/binary_extension.xdb
+@@ -0,0 +1,53 @@
++if (@strcmp(@BIN_EXT_ELF_PATH,"EMPTY")==0) then
++	SET VALUE @BIN_EXT_ELF_PATH = @queryinputfile("Select BLE elf file", "All Files (*.*)|*.*|ELF Files (*.afx;*.elf)|*.afx;*.elf||");
++	IF @strlen(@BIN_EXT_ELF_PATH) == 0 then
++		!User hit cancel button
++		print "USER ABORT\n"
++		MESSAGE "Update the path of the binary extension, and reload the script"
++		EXIT
++	END
++end
++
++! Set value bin_ext_run = 1 if the user run this script
++set val @bin_ext_run = 1
++
++! Reset the board
++TCI TRESET
++RESTART
++
++IF @flash_empty != 1 THEN
++! break at start of bin_ext_run
++SET BREAKPOINT AT (0xFFE1C048) HARD
++ELSE
++! break at UART error of Bootrom
++SET BREAKPOINT AT (0xffff2270) HARD
++RUN
++SET BREAKPOINT AT (0xffff3244) HARD
++END
++
++! Run till the breakpoint
++RUN
++DELETE BREAKPOINT /ALL
++
++
++IF @flash_empty != 1 THEN
++! load SPL elf file (run from 0xFFE1C048)
++LOAD /SEGMENT /DEBUG /GLOBAL OF @BIN_EXT_ELF_PATH
++ELSE
++! load SPL elf file (run from 0xffff21f8) and Update the PC to the start of the SPL
++LOAD /SEGMENT /DEBUG /GLOBAL /INIT="" OF @BIN_EXT_ELF_PATH
++END
++
++! Break at the end of bin_ext_run before jumping back top BootROM
++SET BREAKPOINT AT (0xFFE1C08C) HARD
++RUN
++DELETE BREAKPOINT /ALL
++
++! DRAM should be ready now.
++! Jump to BootRom to disable MMU and clean caches
++SET REGISTER X1=0x0
++SET REGISTER PC=0xffff0668
++
++! Before run the BootRom, set breakpoint before jump to image execution
++SET BREAKPOINT AT (0xffff068c) HARD
++RUN
+diff --git a/scripts/debugger/xdb_scripts/bootloader.xdb b/scripts/debugger/xdb_scripts/bootloader.xdb
+new file mode 100644
+index 0000000..fc82339
+--- /dev/null
++++ b/scripts/debugger/xdb_scripts/bootloader.xdb
+@@ -0,0 +1,28 @@
++if (@strcmp(@BL_ELF_PATH,"EMPTY")==0) then
++	set value @BL_ELF_PATH  = @queryinputfile("select BL ELF file", "all files (*.*)|*.*");
++	if @strlen(BL_ELF_PATH) == 0 then
++		!user hit cancel button
++		print "user abort\n"
++		MESSAGE "Update the path of the Bootloader binary, and reload the script"
++		EXIT
++	end
++end
++
++! if the ATF script is not run, reset the board and stop at 0xffff0000
++IF @atf_run != 1 THEN
++TCI TRESET
++RESTART
++END
++
++DELETE BREAKPOINT /ALL
++! break at U-Boot
++SET BREAKPOINT AT (0x0) HARD
++! Run till the U-boot
++RUN
++
++DELETE BREAKPOINT /ALL
++
++! load U-Boot ELF image
++LOAD /SEGMENT /DEBUG /GLOBAL /INIT="" OF @BL_ELF_PATH
++
++! RUN
+-- 
+1.9.1
+

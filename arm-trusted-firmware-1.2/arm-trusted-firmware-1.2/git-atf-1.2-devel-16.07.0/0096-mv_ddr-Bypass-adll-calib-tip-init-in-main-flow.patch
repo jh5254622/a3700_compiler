@@ -1,0 +1,52 @@
+From c338876e0e314611733460aeebae45a2aa29afba Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Thu, 31 Mar 2016 16:40:57 +0300
+Subject: [PATCH 096/239] mv_ddr: Bypass adll calib & tip init in main flow
+
+This patch temporarily disables adll calib & tip init
+in main flow for platforms different from a38/9x ones.
+
+Change-Id: I22a074ab02971a610691d37f697411996315ea99
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28704
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28853
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/marvell/mv_ddr/ddr3_training.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/marvell/mv_ddr/ddr3_training.c b/drivers/marvell/mv_ddr/ddr3_training.c
+index cdf8a2b..84a0960 100644
+--- a/drivers/marvell/mv_ddr/ddr3_training.c
++++ b/drivers/marvell/mv_ddr/ddr3_training.c
+@@ -2518,7 +2518,10 @@ int ddr3_tip_adll_regs_bypass(u32 dev_num, u32 reg_val1, u32 reg_val2)
+ static int ddr3_tip_ddr3_training_main_flow(u32 dev_num)
+ {
+ 	enum hws_ddr_freq freq = init_freq;
++/* TODO: enable this functionality for other platforms */
++#if defined(CONFIG_ARMADA_38X) || defined(CONFIG_ARMADA_39X)
+ 	struct init_cntr_param init_cntr_prm;
++#endif
+ 	int ret = MV_OK;
+ 	int adll_bypass_flag = 0;
+ 	u32 if_id;
+@@ -2550,6 +2553,8 @@ static int ddr3_tip_ddr3_training_main_flow(u32 dev_num)
+ 		}
+ 	}
+ 
++/* TODO: enable this functionality for other platforms */
++#if defined(CONFIG_ARMADA_38X) || defined(CONFIG_ARMADA_39X)
+ 	if (is_adll_calib_before_init != 0) {
+ 		DEBUG_TRAINING_IP(DEBUG_LEVEL_INFO,
+ 				  ("with adll calib before init\n"));
+@@ -2580,6 +2585,7 @@ static int ddr3_tip_ddr3_training_main_flow(u32 dev_num)
+ 				return MV_FAIL;
+ 		}
+ 	}
++#endif
+ 
+ #ifdef STATIC_ALGO_SUPPORT
+ 	if (mask_tune_func & STATIC_LEVELING_MASK_BIT) {
+-- 
+1.9.1
+

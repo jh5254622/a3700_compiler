@@ -1,0 +1,52 @@
+From d2d7339b02828700e4462d54ccc8275c68ee2748 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Tue, 26 Jan 2016 19:36:25 +0200
+Subject: [PATCH 0736/1240] fix: fdt: update the order of multi Device Tree
+ compilation list
+
+	- Before: the compilation list of FDT's sorted in lexical order,
+	  therefore the first element in the list could change even if we did not mean it,
+	  if we add a new file with a lower lexical value.
+	- Update the compilation list, so the first element is fixed to
+	  the value in CONFIG_DEFAULT_DEVICE_TREE.
+	- The Makefile must sort the order of the list,
+	  since the selection of the DT in setup_fdt() is done fixed to the 1st DT element.
+
+Change-Id: I22859182649fe7148d7de9927178d4533c6535b0
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27040
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ dts/Makefile | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/dts/Makefile b/dts/Makefile
+index 55f9a71..102f82a 100644
+--- a/dts/Makefile
++++ b/dts/Makefile
+@@ -11,7 +11,6 @@ DEVICE_TREE ?= $(CONFIG_DEFAULT_DEVICE_TREE:"%"=%)
+ ifeq ($(DEVICE_TREE),)
+ DEVICE_TREE := unset
+ endif
+-DTB_PRINT_LIST = ""
+ ifneq ($(EXT_DTB),)
+ DTB := $(EXT_DTB)
+ else
+@@ -20,7 +19,11 @@ endif
+ 
+ $(obj)/dt.dtb: arch-dtbs
+ ifdef CONFIG_MULTI_DT_FILE
+-	$(eval DTB := $(shell echo arch/$(ARCH)/dts/*.dtb))
++#The Makefile must sort the order of the list,
++#since the selection of the DT in setup_fdt() is one fixed to the 1st DT element.
++	$(eval DTB_WITHOUT_DEFAULT := $(shell echo arch/$(ARCH)/dts/*.dtb))
++	$(eval DTB_WITHOUT_DEFAULT:= $(filter-out $(DTB), $(DTB_WITHOUT_DEFAULT)))
++	$(eval DTB += $(DTB_WITHOUT_DEFAULT))
+ 	@echo "List Of FDT files:"
+ 	$(foreach i, $(DTB), $(eval DTB_PRINT_LIST += $(i)\n ))
+ 	@echo "$(DTB_PRINT_LIST)"
+-- 
+1.9.1
+

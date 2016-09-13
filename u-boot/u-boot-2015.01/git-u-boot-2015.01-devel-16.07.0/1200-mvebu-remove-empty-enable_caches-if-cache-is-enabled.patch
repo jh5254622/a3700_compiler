@@ -1,0 +1,47 @@
+From 508c3cf4e8b4f4670b238a58531158bd87e73237 Mon Sep 17 00:00:00 2001
+From: Anton <antone@marvell.com>
+Date: Fri, 27 May 2016 21:35:03 -0700
+Subject: [PATCH 1200/1240] mvebu: remove empty enable_caches if cache is
+ enabled
+
+arch/arm/cpu/mvebu-common/misc.c implements
+enable_caches() with a weak alias to an empty function.
+The real implementation in arch/arm/cpu/armv8/cache_v8.c
+is also weak.
+Result: even with CONFIG_SYS_DCACHE_OFF NOT defined
+the first implementation is taken, so MMU/Cache are not enabled.
+
+Solution: make the empty enable_caches in misc.c non-weak
+under CONFIG_SYS_DCACHE_OFF.
+
+Change-Id: I56ecfaef4d492fe7e5d2d05989febd9b173f6ad0
+Signed-off-by: Anton <antone@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30081
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/misc.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/misc.c b/arch/arm/cpu/mvebu-common/misc.c
+index 259960c..3113d0b 100644
+--- a/arch/arm/cpu/mvebu-common/misc.c
++++ b/arch/arm/cpu/mvebu-common/misc.c
+@@ -98,9 +98,9 @@ void __reset_cpu(ulong addr)
+ void reset_cpu(ulong addr) __attribute__((weak, alias("__reset_cpu")));
+ 
+ 
+-
+-void _enable_caches(void)
++#ifdef CONFIG_SYS_DCACHE_OFF
++void enable_caches(void)
+ {
+ 	/* Nothing to be done */
+ }
+-void enable_caches(void) __attribute__((weak, alias("_enable_caches")));
++#endif
+-- 
+1.9.1
+

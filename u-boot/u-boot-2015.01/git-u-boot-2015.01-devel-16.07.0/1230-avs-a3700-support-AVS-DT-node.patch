@@ -1,0 +1,66 @@
+From f8962d8ffefb375c1bad61ba31d7a38b5a193693 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Wed, 22 Jun 2016 22:04:17 +0800
+Subject: [PATCH 1230/1240] avs: a3700: support AVS DT node
+
+This patch adds DT nodes for AVS.
+
+Change-Id: Ia9b8856e3b1add5cf5c100bb09c7217154a47b37
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30651
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/dts/armada-3700-customer0.dts | 3 +++
+ arch/arm/dts/armada-3700-ddr3-db.dts   | 3 +++
+ arch/arm/dts/armada-3700.dtsi          | 6 ++++++
+ 3 files changed, 12 insertions(+)
+
+diff --git a/arch/arm/dts/armada-3700-customer0.dts b/arch/arm/dts/armada-3700-customer0.dts
+index ba92915..276e41f 100644
+--- a/arch/arm/dts/armada-3700-customer0.dts
++++ b/arch/arm/dts/armada-3700-customer0.dts
+@@ -10,6 +10,9 @@
+ 
+ 	soc {
+ 		internal-regs {
++			avs@11500 {
++				status = "okay";
++			};
+ 			serial: serial@12000 {
+ 				status = "okay";
+ 			};
+diff --git a/arch/arm/dts/armada-3700-ddr3-db.dts b/arch/arm/dts/armada-3700-ddr3-db.dts
+index 7dfd50a..bdc4399 100644
+--- a/arch/arm/dts/armada-3700-ddr3-db.dts
++++ b/arch/arm/dts/armada-3700-ddr3-db.dts
+@@ -30,6 +30,9 @@
+ 
+ 	soc {
+ 		internal-regs {
++			avs@11500 {
++				status = "okay";
++			};
+ 			serial: serial@12000 {
+ 				status = "okay";
+ 			};
+diff --git a/arch/arm/dts/armada-3700.dtsi b/arch/arm/dts/armada-3700.dtsi
+index 6a90f23..47ad048 100644
+--- a/arch/arm/dts/armada-3700.dtsi
++++ b/arch/arm/dts/armada-3700.dtsi
+@@ -20,6 +20,12 @@
+ 			#size-cells = <1>;
+ 			ranges = <0x0000 0xd0000000 0x2000000>;
+ 
++			avs@11500 {
++				compatible = "marvell,armada-3700-avs";
++				reg = <0x11500 0x40>;
++				status = "disabled";
++			};
++
+ 			serial: serial@12000 {
+ 				compatible = "marvell,armada-3700-uart";
+ 				reg = <0x12000 0x20>;
+-- 
+1.9.1
+

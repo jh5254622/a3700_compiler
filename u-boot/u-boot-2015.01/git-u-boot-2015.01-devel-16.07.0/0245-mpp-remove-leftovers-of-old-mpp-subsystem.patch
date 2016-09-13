@@ -1,0 +1,140 @@
+From 6d0503027961b4f034c95311dcb92fe1d4cbb63c Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 12 Jul 2015 13:58:36 +0300
+Subject: [PATCH 0245/1240] mpp: remove leftovers of old mpp subsystem
+
+Change-Id: Ic8700bf9d6eab8c79a36b842cc079c412029b947
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/21200
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/include/asm/arch-mvebu/soc.h   | 10 ----------
+ board/mvebu/armada38x/customer-board.c  |  2 --
+ board/mvebu/armada38x/db-88f6820-info.c |  2 --
+ board/mvebu/armada38x/rd-88f6820-info.c |  2 --
+ board/mvebu/armada8k/db-8210-info.c     |  1 -
+ board/mvebu/armada8k/rd-8210-info.c     |  1 -
+ board/mvebu/armadalp/customer-board.c   |  1 -
+ board/mvebu/common/board.h              |  2 --
+ 8 files changed, 21 deletions(-)
+
+diff --git a/arch/arm/include/asm/arch-mvebu/soc.h b/arch/arm/include/asm/arch-mvebu/soc.h
+index f9de20b..e6c8e83 100644
+--- a/arch/arm/include/asm/arch-mvebu/soc.h
++++ b/arch/arm/include/asm/arch-mvebu/soc.h
+@@ -36,10 +36,6 @@ struct mvebu_soc_family {
+ 	char	rev_name[MAX_SOC_REVS][MAX_REV_NAME];
+ 	struct	mvebu_soc_info *soc_table;
+ 	struct	mvebu_soc_info *curr_soc;
+-
+-	u32 mpp_protect[MAX_MPP_REGS];
+-	u32 mpp_update[MAX_MPP_REGS];
+-	u32 mpp_mask[MAX_MPP_REGS];
+ };
+ 
+ int common_soc_init(struct mvebu_soc_family *soc_family_info);
+@@ -53,12 +49,6 @@ struct mvebu_soc_family *soc_init(void);
+ int mvebu_soc_init(void);
+ void mvebu_print_soc_info(void);
+ 
+-/* MPP API */
+-char **soc_get_mpp_desc_table(void);
+-u32 *soc_get_mpp_update_mask(void);
+-u32 *soc_get_mpp_update_val(void);
+-u32 *soc_get_mpp_protect_mask(void);
+-
+ DECLARE_GLOBAL_DATA_PTR;
+ #define get_soc_family()  (struct mvebu_soc_family *)(gd->arch.soc_family)
+ #define set_soc_family(x) (gd->arch.soc_family = (struct mvebu_soc_family *)(x))
+diff --git a/board/mvebu/armada38x/customer-board.c b/board/mvebu/armada38x/customer-board.c
+index 94494e4..f3b760a 100644
+--- a/board/mvebu/armada38x/customer-board.c
++++ b/board/mvebu/armada38x/customer-board.c
+@@ -23,8 +23,6 @@
+ struct mvebu_board_info a38x_customer_info = {
+ 	.name = "CUSTOMER-BOARD",
+ 	.id = ARMADA_38X_CUSTOMER_ID,
+-	.mpp_regs = {0x11111111, 0x11111111, 0x55266011, 0x25252051,
+-		     0x25255555, 0x40042565, 0x55550555, 0x00005550},
+ 	.configurable = 0,
+ };
+ 
+diff --git a/board/mvebu/armada38x/db-88f6820-info.c b/board/mvebu/armada38x/db-88f6820-info.c
+index 92e975b..d4da8aa 100644
+--- a/board/mvebu/armada38x/db-88f6820-info.c
++++ b/board/mvebu/armada38x/db-88f6820-info.c
+@@ -49,8 +49,6 @@ int db_a38x_configure_mpp(void)
+ struct mvebu_board_info a38x_db_info = {
+ 	.name = "DB-88F6820-BP",
+ 	.id = ARMADA_38X_DB_ID,
+-	.mpp_regs = {0x11111111, 0x11111111, 0x11266011, 0x22222011,
+-		     0x22200002, 0x40042022, 0x55550555, 0x00005550},
+ 	.configure_mpp = &db_a38x_configure_mpp,
+ 	.configurable = 1,
+ 	.config_data = &db_a38x_config,
+diff --git a/board/mvebu/armada38x/rd-88f6820-info.c b/board/mvebu/armada38x/rd-88f6820-info.c
+index 4a7b8ce..2a03975 100644
+--- a/board/mvebu/armada38x/rd-88f6820-info.c
++++ b/board/mvebu/armada38x/rd-88f6820-info.c
+@@ -42,8 +42,6 @@ int rd_a38x_configure_mpp(void)
+ struct mvebu_board_info a38x_rd_info = {
+ 	.name = "RD-88F6820-GP",
+ 	.id = ARMADA_38X_RD_ID,
+-	.mpp_regs = {0x11111111, 0x11111111, 0x11266011, 0x22222011,
+-				0x22200002, 0x40042022, 0x55550555, 0x00005550},
+ 	.configure_mpp = &rd_a38x_configure_mpp,
+ 	.configurable = 1,
+ 	.config_data = &rd_a38x_config,
+diff --git a/board/mvebu/armada8k/db-8210-info.c b/board/mvebu/armada8k/db-8210-info.c
+index fcc5e11..2c38d8d 100644
+--- a/board/mvebu/armada8k/db-8210-info.c
++++ b/board/mvebu/armada8k/db-8210-info.c
+@@ -30,7 +30,6 @@ struct mvebu_board_config db_a8021_config = {
+ struct mvebu_board_info a8021_db_info = {
+ 	.name = "DB-MV8021",
+ 	.id = ARMADA_8021_DB_ID,
+-	.mpp_regs = {0x11111111, 0x00100001},
+ 	.configurable = 1,
+ 	.config_data = &db_a8021_config,
+ };
+diff --git a/board/mvebu/armada8k/rd-8210-info.c b/board/mvebu/armada8k/rd-8210-info.c
+index a38bf3c..cd5b87e 100644
+--- a/board/mvebu/armada8k/rd-8210-info.c
++++ b/board/mvebu/armada8k/rd-8210-info.c
+@@ -31,7 +31,6 @@ struct mvebu_board_config rd_a8021_config = {
+ struct mvebu_board_info a8021_rd_info = {
+ 	.name = "RD-MV8021",
+ 	.id = ARMADA_8021_RD_ID,
+-	.mpp_regs = {0x11111111, 0x00100001},
+ 	.configurable = 1,
+ 	.config_data = &rd_a8021_config,
+ };
+diff --git a/board/mvebu/armadalp/customer-board.c b/board/mvebu/armadalp/customer-board.c
+index b764e3f..26b5bbb 100644
+--- a/board/mvebu/armadalp/customer-board.c
++++ b/board/mvebu/armadalp/customer-board.c
+@@ -23,7 +23,6 @@
+ struct mvebu_board_info armadalp_customer_info = {
+ 	.name = "CUSTOMER-BOARD0-MV-ARMADA-LP",
+ 	.id = ARMADA_LP_CUSTOMER0_ID,
+-	.mpp_regs = {0x11111111, 0x00100001},
+ 	.configurable = 0,
+ };
+ 
+diff --git a/board/mvebu/common/board.h b/board/mvebu/common/board.h
+index 80b67d9..d8d8fc4 100644
+--- a/board/mvebu/common/board.h
++++ b/board/mvebu/common/board.h
+@@ -61,8 +61,6 @@ struct mvebu_board_config {
+ struct mvebu_board_info {
+ 	char name[MAX_BOARD_NAME];
+ 	u32  id;
+-	/* Default MPP configurations */
+-	u32 mpp_regs[MAX_MPP_REGS];
+ 
+ 	/* Only for development boards */
+ 	bool configurable;
+-- 
+1.9.1
+

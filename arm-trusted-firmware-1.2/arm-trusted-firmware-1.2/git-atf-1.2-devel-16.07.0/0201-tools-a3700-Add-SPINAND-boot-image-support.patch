@@ -1,0 +1,43 @@
+From e6e3b7999aae41df6119a9b547f55fabebbc9db9 Mon Sep 17 00:00:00 2001
+From: Terry Zhou <bjzhou@marvell.com>
+Date: Fri, 3 Jun 2016 10:13:17 +0800
+Subject: [PATCH 201/239] tools: a3700: Add SPINAND boot image support
+
+Add SPINAND boot device support to Makefile
+
+Change-Id: I77edce826c1112933da7bb7c890c6597b3d78b56
+Signed-off-by: Terry Zhou <bjzhou@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30313
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-by: Hua Jing <jinghua@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ Makefile | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/Makefile b/Makefile
+index b7f5ef1..800c876 100644
+--- a/Makefile
++++ b/Makefile
+@@ -382,6 +382,7 @@ BUILD_UART		:= uart-images
+ SRCPATH			:= $(dir $(BL33))
+ CONFIG_DEFAULT_DEVICE_TREE := $(shell grep "CONFIG_DEFAULT_DEVICE_TREE" -m 1 $(SRCPATH)/.config |cut -d"=" -f2)
+ CONFIG_MVEBU_SPI_BOOT	:= $(shell grep "CONFIG_MVEBU_SPI_BOOT" -m 1 $(SRCPATH)/.config |cut -d"=" -f2)
++CONFIG_MVEBU_SPINAND_BOOT	:= $(shell grep "CONFIG_MVEBU_SPINAND_BOOT" -m 1 $(SRCPATH)/.config |cut -d"=" -f2)
+ CONFIG_MVEBU_MMC_BOOT	:= $(shell grep "CONFIG_MVEBU_MMC_BOOT" -m 1 $(SRCPATH)/.config |cut -d"=" -f2)
+ CONFIG_MVEBU_SATA_BOOT	:= $(shell grep "CONFIG_MVEBU_SATA_BOOT" -m 1 $(SRCPATH)/.config |cut -d"=" -f2)
+ 
+@@ -391,6 +392,9 @@ CLOCKSPRESET		:= $(shell grep CONFIG_PRESET_ $(SRCPATH)/.config |grep =|cut -d"=
+ ifeq ($(CONFIG_MVEBU_SPI_BOOT),y)
+ BOOTDEV			:= SPINOR
+ PARTNUM			:= 0
++else ifeq ($(CONFIG_MVEBU_SPINAND_BOOT),y)
++BOOTDEV			:= SPINAND
++PARTNUM			:= 0
+ else ifeq ($(CONFIG_MVEBU_MMC_BOOT),y)
+ BOOTDEV			:= EMMCNORM
+ PARTNUM			:= $(shell grep "CONFIG_SYS_MMC_ENV_PART" -m 1 $(SRCPATH)/.config |cut -d"=" -f2)
+-- 
+1.9.1
+

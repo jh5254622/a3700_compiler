@@ -1,0 +1,31 @@
+From f4144ed6e8342e62035d9d7836055b7fca69f289 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 29 Sep 2014 15:50:43 +0300
+Subject: [PATCH 0080/1240] nand: adjust nand driver after after rebase to
+ 2014.10
+
+	fixed the storing of device and manufacturer id
+
+Change-Id: I68bf03c95b106d275e31573949451116e74e50a7
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ drivers/mtd/nand/pxa3xx_nand.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/mtd/nand/pxa3xx_nand.c b/drivers/mtd/nand/pxa3xx_nand.c
+index 3e4a893..5fa6262 100644
+--- a/drivers/mtd/nand/pxa3xx_nand.c
++++ b/drivers/mtd/nand/pxa3xx_nand.c
+@@ -1549,7 +1549,8 @@ static int pxa3xx_nand_scan(struct pxa3xx_nand_host *host)
+ 	}
+ 	memset(pxa3xx_flash_ids, 0x00, sizeof(pxa3xx_flash_ids));
+ 	pxa3xx_flash_ids[0].name = f->name;
+-	pxa3xx_flash_ids[0].id = (f->chip_id >> 8) & 0xffff;
++	pxa3xx_flash_ids[0].mfr_id = (uint8_t)(f->chip_id & 0xff);
++	pxa3xx_flash_ids[0].dev_id = (uint8_t)((f->chip_id >> 8) & 0xff);
+ 	pxa3xx_flash_ids[0].pagesize = f->page_size;
+ 	chipsize = (uint64_t)f->num_blocks * f->page_per_block * f->page_size;
+ 	pxa3xx_flash_ids[0].chipsize = chipsize >> 20;
+-- 
+1.9.1
+

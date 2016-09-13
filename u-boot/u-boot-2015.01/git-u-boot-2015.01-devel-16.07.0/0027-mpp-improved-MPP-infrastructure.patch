@@ -1,0 +1,833 @@
+From e70082ddc156779feca2b7a7bb8a581239ca72b4 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 3 Apr 2014 16:21:46 +0300
+Subject: [PATCH 0027/1240] mpp: improved MPP infrastructure
+
+	- Added mpp command
+	- Added description of mpp buses
+
+Change-Id: I737b38d016b8d11bf633aecb7300100a33a526ce
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv7/armada38x/tables.c          |  19 +-
+ arch/arm/cpu/mvebu-common/Makefile             |   1 +
+ arch/arm/cpu/mvebu-common/mpp.c                | 142 +++++++++++--
+ arch/arm/cpu/mvebu-common/soc-init.c           |  25 ++-
+ arch/arm/include/asm/arch-armada38x/soc-info.h |   5 +-
+ arch/arm/include/asm/arch-mvebu/mpp.h          |  36 +++-
+ arch/arm/include/asm/arch-mvebu/soc.h          |  12 ++
+ board/mvebu/armada38x/customer-board.c         |   4 +-
+ board/mvebu/armada38x/db-88f6820-info.c        |   2 +
+ board/mvebu/armada38x/rd-88f6820-info.c        |   2 +
+ board/mvebu/common/board.h                     |   6 +
+ board/mvebu/common/init.c                      |   3 +
+ common/mvebu/Makefile                          |   1 +
+ common/mvebu/cmd_mpp.c                         | 284 +++++++++++++++++++++++++
+ include/configs/mvebu-common.h                 |  11 +-
+ 15 files changed, 516 insertions(+), 37 deletions(-)
+ create mode 100644 common/mvebu/cmd_mpp.c
+
+diff --git a/arch/arm/cpu/armv7/armada38x/tables.c b/arch/arm/cpu/armv7/armada38x/tables.c
+index c18b0e3..fbef846 100644
+--- a/arch/arm/cpu/armv7/armada38x/tables.c
++++ b/arch/arm/cpu/armv7/armada38x/tables.c
+@@ -59,12 +59,22 @@ u16 armada6285_unit_disable[MAX_UNIT_ID] = {
+ 
+ /* MPP description table. Informative only */
+ char *a38x_mpp_desc[MAX_MPP_ID + 1][MAX_MPP_OPTS] = {
+-/* 0 */	{"GPIO_0", "NF_IO_2", "SPI_0_CSn",	"SPI_1_CSn",	"NA",           "ND_IO_2", "NA"},
+-/* 1 */	{"GPIO_1", "NF_IO_3", "SPI_0_MOSI",	"SPI_1_MOSI",	"NA",	        "ND_IO_3", "NA"},
+-/* 2 */	{"GPIO_2", "NF_IO_4", "PTP_EVENT_REQ",  "C0_LED",	"AU_I2S_DI",	"ND_IO_4", "SPI_1_MOSI"},
+-/* 3 */	{"GPIO_3", "NF_IO_5", "PTP_TRIG_GEN",	"P3_LED",	"AU_I2S_MCLK",	"ND_IO_5", "SPI_1_MISO"},
++/*	0x0        0x1         0x2              0x3             0x4             0x5             0x6 */
++/* 0 */	{"GPIO_0", "UA_0_RXD", "NA",		"NA",		"NA",           "NA",		"NA"},
++/* 1 */	{"GPIO_1", "UA_0_TXD", "NA",		"NA",		"NA",		"NA",		"NA"},
++/* 2 */	{"GPIO_2", "I2C_0_SCK", "NA",		"NA",		"NA",		"NA",		"NA"},
++/* 3 */	{"GPIO_3", "I2C_0_SDA", "NA",		"NA",		"NA",		"NA",		"NA"},
++/* 4 */	{"GPIO_4", "GE_MDC",    "UA_1_RXD",	"UA_0_RTS",	"NA",		"NA",		"NA"},
++/* 5 */	{"GPIO_5", "GE_MDIO",   "UA_1_TXD",	"UA_0_CTS",	"NA",		"NA",		"NA"},
+ };
+ 
++/* Describe the available MPP buses */
++struct mpp_bus a38x_mpp_buses[MAX_MPP_BUS] = {
++	[UART_0_MPP_BUS] = {"UART 0", 2, 1, {{{0, 0x1}, {1, 0x1} } } },
++	[UART_1_MPP_BUS] = {"UART 1", 2, 1, {{{4, 0x2}, {5, 0x2} } } },
++	[SPI_0_MPP_BUS]  = {"SPI 0", 4, 1, {{{0, 0x1}, {1, 0x1} } } },
++	[SPI_1_MPP_BUS]  = {"SPI 1", 4, 1, {{{0, 0x1}, {1, 0x1} } } },
++};
+ 
+ struct mvebu_soc_info a38x_soc_info[] = {
+ 	/* Armda 380 */
+@@ -100,4 +110,5 @@ struct mvebu_soc_family a38x_family_info = {
+ 	.soc_table = a38x_soc_info,
+ 	.mpp_desc  = (char **)a38x_mpp_desc,
+ 	.adec_type = ADEC_MBUS,
++	.mpp_buses = a38x_mpp_buses,
+ };
+diff --git a/arch/arm/cpu/mvebu-common/Makefile b/arch/arm/cpu/mvebu-common/Makefile
+index 20314ec..fc4180b 100644
+--- a/arch/arm/cpu/mvebu-common/Makefile
++++ b/arch/arm/cpu/mvebu-common/Makefile
+@@ -20,6 +20,7 @@
+ obj-y += unit-info.o
+ obj-y += soc-init.o
+ obj-y += misc.o
++obj-y += mpp.o
+ obj-$(CONFIG_AURORA_TIMER) += timer_aurora.o
+ obj-$(CONFIG_MVEBU_CA9) += platform.o
+ obj-$(CONFIG_ADEC) += adec.o
+diff --git a/arch/arm/cpu/mvebu-common/mpp.c b/arch/arm/cpu/mvebu-common/mpp.c
+index 487dfbf..f383262 100644
+--- a/arch/arm/cpu/mvebu-common/mpp.c
++++ b/arch/arm/cpu/mvebu-common/mpp.c
+@@ -23,62 +23,162 @@
+ #include <common.h>
+ #include <asm/system.h>
+ #include <asm/bitops.h>
++#include <asm/io.h>
+ #include <asm/arch-mvebu/mpp.h>
++#include <asm/arch-mvebu/soc.h>
+ 
+-char *mpp_get_desc_table(void)
++char **mpp_get_desc_table(void)
+ {
+ 	return soc_get_mpp_desc_table();
+ }
+ 
+-void set_mpp(int mpp_id, int value)
++static void set_field(int mpp_id, int value, u32 *base_ptr)
+ {
+ 	int reg_offset;
+ 	int field_offset;
+ 	u32 reg, mask;
+ 
+-	if (value > MAX_MPP_OPTS)
+-		printf("Warning: MPP value %d > max value %d\n", value, MAX_MPP_OPTS);
+-
+ 	/* Calculate register address and bit in register */
+-	reg_offset   = mpp_id >> (MPP_FIELD_BITS);
++	reg_offset   = 4 * (mpp_id >> (MPP_FIELD_BITS));
+ 	field_offset = (MPP_BIT_CNT) * (mpp_id & MPP_FIELD_MASK);
+-	mask = (MPP_VAL_MASK << field_offset);
++	mask = ~(MPP_VAL_MASK << field_offset);
+ 
+ 	/* Clip value to bit resolution */
+ 	value &= MPP_VAL_MASK;
+ 
+-	reg = readl(MPP_REGS_BASE + reg_offset);
++	reg = readl(base_ptr + reg_offset);
+ 	reg = (reg & mask) | (value << field_offset);
+-	writel(reg, MPP_REGS_BASE + reg_offset);
++	writel(reg, base_ptr + reg_offset);
+ }
+ 
+-u8 get_mpp(int mpp_id)
++static u8 get_field(int mpp_id, u32 *base_ptr)
+ {
+ 	int reg_offset;
+ 	int field_offset;
+-	u32 reg, mask;
++	u32 reg;
+ 	u8 value;
+ 
+ 	/* Calculate register address and bit in register */
+-	reg_offset   = mpp_id >> (MPP_FIELD_BITS);
++	reg_offset   = 4 * (mpp_id >> (MPP_FIELD_BITS));
+ 	field_offset = (MPP_BIT_CNT) * (mpp_id & MPP_FIELD_MASK);
+ 
+-	reg = readl(MPP_REGS_BASE + reg_offset);
+-	val = (reg >> field_offset) & MPP_VAL_MASK;
++	reg = readl(base_ptr + reg_offset);
++	value = (reg >> field_offset) & MPP_VAL_MASK;
++
++	return value;
++}
+ 
++void mpp_set_pin(int mpp_id, int value)
++{
+ 	if (value > MAX_MPP_OPTS)
+-		printf("Warning: MPP value %d > max value %d\n", val, MAX_MPP_OPTS);
++		printf("Warning: MPP value %d > max value %d\n", value, MAX_MPP_OPTS);
+ 
+-	return val;
++	/* Set the new MPP to HW registers */
++	set_field(mpp_id, value, (u32 *)MPP_REGS_BASE);
+ }
+ 
+-void set_mpp_reg(u32 *mpp_reg, int first_reg, int last_reg)
++u8 mpp_get_pin(int mpp_id)
+ {
+-	int reg_offset;
+-	int field_offset;
+-	int reg, mask;
++	u8 value;
++
++	/* Calculate register address and bit in register */
++	value = get_field(mpp_id, (u32 *)MPP_REGS_BASE);
+ 
+-	while (reg = first_reg; reg < last_reg; reg++; mpp_reg++)
++	if (value > MAX_MPP_OPTS)
++		printf("Warning: MPP value %d > max value %d\n", value, MAX_MPP_OPTS);
++
++	return value;
++}
++
++void mpp_set_reg(u32 *mpp_reg, int first_reg, int last_reg)
++{
++	int reg;
++
++	for (reg = first_reg; reg < last_reg; reg++, mpp_reg++)
+ 		writel(*mpp_reg, MPP_REGS_BASE + reg);
+ }
+ 
++void mpp_set_and_update(u32 *mpp_reg)
++{
++	int i;
++	u32 *update_mask = soc_get_mpp_update_mask();
++	u32 *update_val = soc_get_mpp_update_val();
++	u32 *protect_mask = soc_get_mpp_protect_mask();
++
++	for (i = 0; i < MAX_MPP_REGS; i++) {
++		/* Disable modifying protected MPPs */
++		update_mask[i] &= ~protect_mask[i];
++		update_val[i]  &= ~protect_mask[i];
++
++		/* Make sure the mask and val are synced */
++		update_val[i] &= update_mask[i];
++
++		/* Now update the required MPP fields */
++		mpp_reg[i] &= ~update_mask[i];
++		mpp_reg[i] |= update_val[i];
++
++		debug("Set mpp reg 0x%08x\n", mpp_reg[i]);
++
++		/* Write to register */
++		writel(mpp_reg[i], MPP_REGS_BASE + (4 * i));
++	}
++}
++
++int mpp_is_bus_enabled(struct mpp_bus *bus)
++{
++	int bus_alt;
++	int pin;
++
++	for (bus_alt = 0; bus_alt < bus->bus_cnt; bus_alt++) {
++		for (pin = 0; pin < bus->pin_cnt; pin++) {
++			u8 id = bus->pin_data[bus_alt][pin].id;
++			u8 val = bus->pin_data[bus_alt][pin].val;
++			if (mpp_get_pin(id) != val)
++				return 0;
++		}
++	}
++
++	return 1;
++}
++
++int mpp_is_bus_valid(struct mpp_bus *bus)
++{
++	int valid = (bus->pin_cnt > 0);
++	return valid;
++}
++
++int mpp_enable_bus(int bus_id, int bus_alt)
++{
++	int i;
++	struct mpp_pin *pin;
++	struct mpp_bus *bus = soc_get_mpp_bus(bus_id);
++	u32 *update_mask = soc_get_mpp_update_mask();
++	u32 *update_val = soc_get_mpp_update_val();
++
++	debug("Enabling MPP bus %s\n", bus->name);
++
++	if (bus_alt < (bus->bus_cnt - 1)) {
++		error("Bus alternative %d doesn't exist for bus %s\n", bus_alt, bus->name);
++		return 1;
++	}
++
++	/* Check if someone already modified one of the pins */
++	for (i = 0; i < bus->pin_cnt; i++) {
++		pin = &bus->pin_data[bus_alt][i];
++		if (get_field(pin->id, update_mask) == MPP_VAL_MASK) {
++			error("Pin %d of Bus %s already modified\n", pin->id, bus->name);
++			return 1;
++		}
++	}
++
++	/* Update the mask and value */
++	for (i = 0; i < bus->pin_cnt; i++) {
++		pin = &bus->pin_data[bus_alt][i];
++		debug("Setting [pin, val] = [%d, 0x%x]\n", pin->id, pin->val);
++		set_field(pin->id, MPP_VAL_MASK, update_mask);
++		set_field(pin->id, pin->val, update_val);
++	}
++
++	return 0;
++}
++
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index 9376024..4aa7e70 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -48,6 +48,28 @@ char **soc_get_mpp_desc_table(void)
+ 	return soc_family->mpp_desc;
+ }
+ 
++u32 *soc_get_mpp_update_mask(void)
++{
++	struct mvebu_soc_family *soc_family = get_soc_family();
++	return soc_family->mpp_mask;
++}
++u32 *soc_get_mpp_update_val(void)
++{
++	struct mvebu_soc_family *soc_family = get_soc_family();
++	return soc_family->mpp_update;
++}
++u32 *soc_get_mpp_protect_mask(void)
++{
++	struct mvebu_soc_family *soc_family = get_soc_family();
++	return soc_family->mpp_protect;
++}
++
++struct mpp_bus *soc_get_mpp_bus(int bus_id)
++{
++	struct mvebu_soc_family *soc_family = get_soc_family();
++	return soc_family->mpp_buses + bus_id;
++}
++
+ 
+ static int update_soc_units(struct mvebu_soc_info *soc)
+ {
+@@ -86,7 +108,7 @@ int mvebu_soc_init()
+ 	set_soc_family(soc_init());
+ 	soc_family = get_soc_family();
+ 	if (!soc_family)
+-		printf("Error: Failed to get SOC Family info\n");
++		error("Failed to get SOC Family info\n");
+ 
+ 	soc_id  = soc_get_id();
+ 	soc_rev = soc_get_rev();
+@@ -126,6 +148,7 @@ int mvebu_soc_init()
+ 
+ 	debug_exit();
+ 
++
+ 	return 0;
+ }
+ 
+diff --git a/arch/arm/include/asm/arch-armada38x/soc-info.h b/arch/arm/include/asm/arch-armada38x/soc-info.h
+index d18ec25..015087a 100644
+--- a/arch/arm/include/asm/arch-armada38x/soc-info.h
++++ b/arch/arm/include/asm/arch-armada38x/soc-info.h
+@@ -22,11 +22,14 @@
+ 
+ /* General MPP definitions */
+ #define MAX_MPP_OPTS		7
+-#define MAX_MPP_ID		69
++#define MAX_MPP_ID		59
+ 
+ #define MPP_BIT_CNT		4
+ #define MPP_FIELD_MASK		0x7
+ #define MPP_FIELD_BITS		3
+ #define MPP_VAL_MASK		0xF
+ 
++#define MPPS_PER_REG		(32 / MPP_BIT_CNT)
++#define MAX_MPP_REGS		((MAX_MPP_ID + MPPS_PER_REG) / MPPS_PER_REG)
++
+ #endif	/* _SOC_INFO_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/mpp.h b/arch/arm/include/asm/arch-mvebu/mpp.h
+index 3944d20..e492cfd 100644
+--- a/arch/arm/include/asm/arch-mvebu/mpp.h
++++ b/arch/arm/include/asm/arch-mvebu/mpp.h
+@@ -22,9 +22,41 @@
+ 
+ #include  <asm/arch/soc-info.h>
+ 
+-#define		MAX_MPP_NAME	32
++#define		MAX_MPP_NAME		32
++#define		MAX_BUS_NAME		32
++#define		MAX_PINS_PER_BUS	8
++#define		MAX_BUS_OPTS		2
+ 
+-char *mpp_get_desc(void);
++char **mpp_get_desc_table(void);
+ 
++enum mpp_bus_id {
++	UART_0_MPP_BUS,
++	UART_1_MPP_BUS,
++	SPI_0_MPP_BUS,
++	SPI_1_MPP_BUS,
++	NAND_0_MPP_BUS,
++	RGMII_0_MPP_BUS,
++	MAX_MPP_BUS
++};
++
++struct mpp_pin {
++	u8 id;
++	u8 val;
++};
++
++struct mpp_bus {
++	char name[MAX_BUS_NAME];
++	int pin_cnt;
++	int bus_cnt;
++	struct mpp_pin pin_data[MAX_BUS_OPTS][MAX_PINS_PER_BUS];
++};
++
++u8   mpp_get_pin(int mpp_id);
++void mpp_set_pin(int mpp_id, int value);
++int  mpp_enable_bus(int bus_id, int bus_alt);
++int  mpp_is_bus_valid(struct mpp_bus *bus);
++int  mpp_is_bus_enabled(struct mpp_bus *bus);
++void mpp_set_and_update(u32 *mpp_reg);
++struct mpp_bus *soc_get_mpp_bus(int bus_id);
+ 
+ #endif /* _MPP_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/soc.h b/arch/arm/include/asm/arch-mvebu/soc.h
+index 332d166..b6a0918 100644
+--- a/arch/arm/include/asm/arch-mvebu/soc.h
++++ b/arch/arm/include/asm/arch-mvebu/soc.h
+@@ -45,6 +45,11 @@ struct mvebu_soc_family {
+ 	struct	mvebu_soc_info *soc_table;
+ 	struct	mvebu_soc_info *curr_soc;
+ 	enum adec_types adec_type;
++
++	struct mpp_bus *mpp_buses;
++	u32 mpp_protect[MAX_MPP_REGS];
++	u32 mpp_update[MAX_MPP_REGS];
++	u32 mpp_mask[MAX_MPP_REGS];
+ };
+ 
+ 
+@@ -61,8 +66,15 @@ void mvebu_print_soc_info(void);
+ 
+ u16 *soc_get_unit_mask_table(void);
+ 
++/* MPP API */
++char **soc_get_mpp_desc_table(void);
++u32 *soc_get_mpp_update_mask(void);
++u32 *soc_get_mpp_update_val(void);
++u32 *soc_get_mpp_protect_mask(void);
++
+ DECLARE_GLOBAL_DATA_PTR;
+ #define get_soc_family()  (struct mvebu_soc_family *)(gd->arch.soc_family)
+ #define set_soc_family(x) (gd->arch.soc_family = (struct mvebu_soc_family *)(x))
++#define get_soc_info()  (struct mvebu_soc_info *)(gd->arch.soc_family->curr_soc)
+ 
+ #endif /* _SOC_H_ */
+diff --git a/board/mvebu/armada38x/customer-board.c b/board/mvebu/armada38x/customer-board.c
+index b7e2501..09bc0be 100644
+--- a/board/mvebu/armada38x/customer-board.c
++++ b/board/mvebu/armada38x/customer-board.c
+@@ -33,8 +33,8 @@ struct mvebu_board_info a38x_customer_info = {
+ 	.id = ARMADA_38X_CUSTOMER_ID,
+ 	.unit_mask = a38x_customer_unit_disable,
+ 	.unit_update_mode = UNIT_INFO_DISABLE,
+-	.mpp_regs = {0x22222222, 0x00000000, 0x52230044, 0x00334200,
+-		     0x00004444, 0x52230044, 0x00334200, 0x22222222, 0x52230044},
++	.mpp_regs = {0x11111111, 0x11111111, 0x55266011, 0x25252051,
++		     0x25255555, 0x40042565, 0x55550555, 0x00005550},
+ 	.configurable = 0,
+ };
+ 
+diff --git a/board/mvebu/armada38x/db-88f6820-info.c b/board/mvebu/armada38x/db-88f6820-info.c
+index d7d5560..1932a6f 100644
+--- a/board/mvebu/armada38x/db-88f6820-info.c
++++ b/board/mvebu/armada38x/db-88f6820-info.c
+@@ -32,6 +32,8 @@ struct mvebu_board_config db_a38x_config = {
+ struct mvebu_board_info a38x_db_info = {
+ 	.name = "DB-88F6820-BP",
+ 	.id = ARMADA_38X_DB_ID,
++	.mpp_regs = {0x11111111, 0x11111111, 0x55266011, 0x25252051,
++		     0x25255555, 0x40042565, 0x55550555, 0x00005550},
+ 	.configurable = 1,
+ 	.config_data = &db_a38x_config,
+ };
+diff --git a/board/mvebu/armada38x/rd-88f6820-info.c b/board/mvebu/armada38x/rd-88f6820-info.c
+index 35ab11c..9df1f94 100644
+--- a/board/mvebu/armada38x/rd-88f6820-info.c
++++ b/board/mvebu/armada38x/rd-88f6820-info.c
+@@ -40,6 +40,8 @@ struct mvebu_board_info a38x_rd_info = {
+ 	.id = ARMADA_38X_RD_ID,
+ 	.unit_mask = a38x_rd_unit_disable,
+ 	.unit_update_mode = UNIT_INFO_DISABLE,
++	.mpp_regs = {0x11111111, 0x11111111, 0x55266011, 0x25252051,
++		     0x25255555, 0x40042565, 0x55550555, 0x00005550},
+ 	.configurable = 1,
+ 	.config_data = &rd_a38x_config,
+ };
+diff --git a/board/mvebu/common/board.h b/board/mvebu/common/board.h
+index 497b9b7..515ff92 100644
+--- a/board/mvebu/common/board.h
++++ b/board/mvebu/common/board.h
+@@ -23,6 +23,7 @@
+ #include <common.h>
+ #include <asm/arch-mvebu/mvebu.h>
+ #include <asm/arch-mvebu/unit-info.h>
++#include <asm/arch/soc-info.h>
+ #include <linux/compiler.h>
+ #include "sar.h"
+ #include "config.h"
+@@ -64,6 +65,9 @@ struct mvebu_board_info {
+ 	u32  id;
+ 	u16  *unit_mask;
+ 	enum unit_update_mode unit_update_mode;
++	u32 mpp_regs[MAX_MPP_REGS];
++
++	/* Only for development boards */
+ 	bool configurable;
+ 	struct mvebu_board_config *config_data;
+ };
+@@ -83,6 +87,8 @@ struct mvebu_board_family {
+ 	int  board_cnt;
+ 	struct mvebu_board_info *curr_board;
+ 	struct mvebu_board_info **boards_info;
++
++	/* Only for development boards */
+ 	struct sar_data *sar;
+ 	struct cfg_data *cfg;
+ };
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index 7de0a27..17af6e4 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -135,6 +135,9 @@ int mvebu_board_init(void)
+ #endif
+ 
+ 	/* mpp_set */
++	mpp_enable_bus(UART_1_MPP_BUS, 0);
++	mpp_set_and_update(brd->mpp_regs);
++
+ 
+ 	return 0;
+ }
+diff --git a/common/mvebu/Makefile b/common/mvebu/Makefile
+index ce73efd..edb30d3 100644
+--- a/common/mvebu/Makefile
++++ b/common/mvebu/Makefile
+@@ -20,3 +20,4 @@
+ obj-y += cmd_misc.o
+ obj-$(CONFIG_CMD_MVEBU_SAR) += cmd_sar.o
+ obj-$(CONFIG_CMD_MVEBU_CONFIG) += cmd_config.o
++obj-$(CONFIG_CMD_MVEBU_MPP) += cmd_mpp.o
+diff --git a/common/mvebu/cmd_mpp.c b/common/mvebu/cmd_mpp.c
+new file mode 100644
+index 0000000..23738a9
+--- /dev/null
++++ b/common/mvebu/cmd_mpp.c
+@@ -0,0 +1,284 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#include <config.h>
++#include <common.h>
++#include <command.h>
++#include <vsprintf.h>
++#include <errno.h>
++#include "asm/arch-mvebu/mpp.h"
++#include "asm/arch/soc-info.h"
++
++static int set_range(int *start, int *end)
++{
++	/* Print full range */
++	if (*start < 0) {
++		*start = 0;
++		*end = MAX_MPP_ID;
++	}
++	/* Print single MPP */
++	if ((*start >= 0) && (*end < 0))
++		*end = *start;
++
++	/* clip end to MAX_MPP_ID */
++	*end = min(*end, MAX_MPP_ID);
++
++	/* Error checking on range */
++	if (*start > *end) {
++		printf("Error: Start MPP (%d) higher then end MPP (%d)\n", *start, *end);
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
++static int cmd_mpp_list(char **mpp_desc, int start, int end)
++{
++	int i, pin, ret;
++	char *mpp_opt;
++
++	ret = set_range(&start, &end);
++	if (ret)
++		return ret;
++
++	/* Print table head */
++	printf("No  ");
++	for (i = 0; i < MAX_MPP_OPTS; i++)
++		printf("0x%-12x", i);
++	printf("\n-----------------------------------------------------------------------------\n");
++
++	for (pin = start; pin <= end; pin++) {
++		printf("%02d  ", pin);
++		for (i = 0; i < MAX_MPP_OPTS; i++) {
++			mpp_opt = *(mpp_desc + (pin * MAX_MPP_OPTS) + i);
++			printf("%-14s", mpp_opt);
++		}
++		printf("\n");
++	}
++
++	printf("\n");
++	return 0;
++}
++
++static int cmd_mpp_read(char **mpp_desc, int start, int end)
++{
++	u8 value;
++	int pin, ret;
++	char *mpp_opt;
++
++	ret = set_range(&start, &end);
++	if (ret)
++		return ret;
++
++	printf("No  Value  Name\n");
++	printf("--------------------------\n");
++
++	for (pin = start; pin <= end; pin++) {
++		value = min(mpp_get_pin(pin), MAX_MPP_OPTS);
++		mpp_opt = *(mpp_desc + (pin * MAX_MPP_OPTS) + value);
++
++		printf("%02d  0x%x   %s\n", pin, value, mpp_opt);
++	}
++
++	return 0;
++}
++
++static int cmd_mpp_write(char **mpp_desc, int pin, int value)
++{
++	char *mpp_opt;
++
++	if ((pin < 0) || (pin > MAX_MPP_ID)) {
++		printf("Error: Pin No %d out of range [%d, %d]\n", pin, 0, MAX_MPP_ID);
++		return -EINVAL;
++	}
++
++	mpp_set_pin(pin, value);
++
++	/* Readback to verify */
++	value = min(mpp_get_pin(pin), MAX_MPP_OPTS);
++	mpp_opt = *(mpp_desc + (pin * MAX_MPP_OPTS) + value);
++	printf("%02d  0x%x   %s\n", pin, value, mpp_opt);
++
++	return 0;
++}
++
++
++int do_mpp_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
++			char * const argv[])
++{
++	const char *cmd = argv[1];
++	char  **mpp_desc;
++	int value = 0;
++	int start_pin = -1;
++	int end_pin = -1;
++
++	if ((strcmp(cmd, "write") == 0) && (argc < 4)) {
++		printf("Error: Please specify MPP number and value\n");
++		return 1;
++	}
++
++	mpp_desc = mpp_get_desc_table();
++
++	if (argc > 2)
++		start_pin = (int)simple_strtoul(argv[2], NULL, 10);
++
++	if (argc > 3) {
++		value = (int)simple_strtoul(argv[3], NULL, 16);
++		end_pin = (int)simple_strtoul(argv[3], NULL, 10);
++	}
++
++	if ((strcmp(cmd, "list") == 0) || (argc < 2)) {
++		if (cmd_mpp_list(mpp_desc, start_pin, end_pin))
++			return -EINVAL;
++	} else if (strcmp(cmd, "read") == 0) {
++		if (cmd_mpp_read(mpp_desc, start_pin, end_pin))
++			return -EINVAL;
++	} else if (strcmp(cmd, "write") == 0) {
++		if (cmd_mpp_write(mpp_desc, start_pin, value))
++			return -EINVAL;
++	} else {
++		printf("ERROR: unknown command to mpp: \"%s\"\n", cmd);
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
++U_BOOT_CMD(
++	mpp,      6,     0,      do_mpp_cmd,
++	"mpp - Display or modify MPP values\n",
++	"\n"
++	"Display or modify MPP values\n"
++	"\tlist		- Display MPP pins and their options\n"
++	"\tlist <x>	- Display available option of MPP x\n"
++	"\tlist <x> <y>	- Display available option of MPP x to y\n"
++	"\tread		- Read all MPP values\n"
++	"\tread <x>	- Read MPP x value\n"
++	"\tread <x> <y>	- Read MPP x to y values\n"
++	"\twrite x y	- Write y to MPP x\n"
++);
++
++
++
++static int cmd_mppbus_enable(char **mpp_desc, int bus_id)
++{
++	struct mpp_bus *bus = soc_get_mpp_bus(bus_id);
++	int pin;
++	int bus_alt = 0;
++
++	if (bus_alt > (bus->bus_cnt - 1)) {
++		error("Bus alternative %d not exist on bus %s", bus_alt, bus->name);
++		return -EINVAL;
++	}
++
++	printf("Enabling bus %s Alternative %d\n", bus->name, bus_alt);
++	for (pin = 0; pin < bus->pin_cnt; pin++) {
++		u8 id = bus->pin_data[bus_alt][pin].id;
++		u8 val = bus->pin_data[bus_alt][pin].val;
++		mpp_set_pin(id, val);
++	}
++	return 0;
++}
++
++static int cmd_mppbus_list(char **mpp_desc, int bus_id)
++{
++	int id, opt, start, end, pin;
++	struct mpp_bus *bus;
++
++	start = bus_id;
++	end = bus_id + 1;
++
++	if (bus_id < 0) {
++		start = 0;
++		end = MAX_MPP_BUS;
++	}
++
++	printf("Id  Name            Pins  Status\n");
++	printf("----------------------------------\n");
++	for (id = start; id < end; id++) {
++		bus = soc_get_mpp_bus(id);
++		if (!mpp_is_bus_valid(bus))
++			continue;
++		if (mpp_is_bus_enabled(bus))
++			printf("%02d  %-15s %d     %s\n", id, bus->name, bus->pin_cnt, "Enabled");
++		else
++			printf("%02d  %-15s %d     %s\n", id, bus->name, bus->pin_cnt, "Disabled");
++	}
++
++	if (bus_id >= 0) {
++		bus = soc_get_mpp_bus(bus_id);
++		for (opt = 0; opt < bus->bus_cnt; opt++) {
++			printf("\nAlternative %d\n", opt);
++			for (pin = 0; pin < bus->pin_cnt; pin++) {
++				u8 id = bus->pin_data[opt][pin].id;
++				u8 val = bus->pin_data[opt][pin].val;
++				char *pin_name = *(mpp_desc + (id * MAX_MPP_OPTS) + val);
++
++				printf("MPP %d  0x%x %s\n", id, val, pin_name);
++			}
++		}
++	}
++	return 0;
++}
++
++int do_mppbus_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
++			char * const argv[])
++{
++	const char *cmd = argv[1];
++	char  **mpp_desc;
++	int bus_id = -1;
++
++	if ((strcmp(cmd, "enable") == 0) && (argc < 3)) {
++		printf("Error: Please specify MPP bus id and alternative no\n");
++		return 1;
++	}
++
++	mpp_desc = mpp_get_desc_table();
++
++	if (argc > 2)
++		bus_id = (int)simple_strtoul(argv[2], NULL, 10);
++
++	if (bus_id > MAX_MPP_BUS) {
++		error("MPP bus id exceeds maximum of %d\n", MAX_MPP_BUS);
++		return -EINVAL;
++	}
++
++	if ((strcmp(cmd, "list") == 0) || (argc < 2)) {
++		if (cmd_mppbus_list(mpp_desc, bus_id))
++			return -EINVAL;
++	} else if (strcmp(cmd, "enable") == 0) {
++		if (cmd_mppbus_enable(mpp_desc, bus_id))
++			return -EINVAL;
++	} else {
++		error("unknown command to mppbus: \"%s\"\n", cmd);
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
++U_BOOT_CMD(
++	mppbus,      6,     0,      do_mppbus_cmd,
++	"mppbus - Display or modify MPP bus info\n",
++	"\n"
++	"Display or modify MPP bus info\n"
++	"\tlist		- Display available MPP buses\n"
++	"\tlist <x>	- Display MPP bus x info\n"
++	"\tenable <x> <y> - Enable MPP bus x alternative y\n"
++);
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index cf50e54..ea35ac6 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -114,10 +114,7 @@
+ 
+ /* MVEBU Generic commands */
+ #define CONFIG_CMD_MVEBU_MAP
+-#ifdef CONFIG_MVEBU_DEVEL_BOARD
+-#define CONFIG_CMD_MVEBU_SAR
+-#define CONFIG_CMD_MVEBU_CONFIG
+-#endif
++#define CONFIG_CMD_MVEBU_MPP
+ 
+ 
+ /* No flash setup */
+@@ -154,8 +151,10 @@
+ 
+ /* I2C */
+ #if defined(MV_INCLUDE_I2C)
+-	#define CONFIG_CMD_MVEBU_SAR
+-	#define CONFIG_CMD_MVEBU_CONFIG
++	#ifdef CONFIG_MVEBU_DEVEL_BOARD
++		#define CONFIG_CMD_MVEBU_SAR
++		#define CONFIG_CMD_MVEBU_CONFIG
++	#endif
+ 	#define CONFIG_CMD_EEPROM
+ 	#define CONFIG_CMD_I2C
+ 	#define CONFIG_I2C_MVEBU
+-- 
+1.9.1
+

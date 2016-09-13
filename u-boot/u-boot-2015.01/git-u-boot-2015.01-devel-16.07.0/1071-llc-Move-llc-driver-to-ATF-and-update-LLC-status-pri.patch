@@ -1,0 +1,237 @@
+From 02c308b8afbf510a9550b9b24c0b399162e07b61 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 26 Apr 2016 13:59:27 +0300
+Subject: [PATCH 1071/1240] llc: Move llc driver to ATF and update LLC status
+ printouts
+
+Move LLC driver to ATF, keep only LLC status function.
+Update uboot boot log LLC status to use new LLC driver APIs.
+
+Change-Id: I2cc19d2b3647760dd426bc3532c1447083934e21
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29284
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/Makefile           |  2 +-
+ arch/arm/cpu/armv8/armada8k/cache_llc.c        | 82 +++++---------------------
+ arch/arm/cpu/armv8/armada8k/soc.c              | 16 +++--
+ arch/arm/include/asm/arch-armada8k/cache_llc.h | 25 ++++++++
+ board/mvebu/Kconfig                            | 18 ------
+ 5 files changed, 48 insertions(+), 95 deletions(-)
+ create mode 100644 arch/arm/include/asm/arch-armada8k/cache_llc.h
+
+diff --git a/arch/arm/cpu/armv8/armada8k/Makefile b/arch/arm/cpu/armv8/armada8k/Makefile
+index 7517350..eafab1d 100644
+--- a/arch/arm/cpu/armv8/armada8k/Makefile
++++ b/arch/arm/cpu/armv8/armada8k/Makefile
+@@ -20,7 +20,7 @@ obj-y += soc.o
+ obj-$(CONFIG_SPL_BUILD) += spl.o
+ obj-y += clock.o
+ obj-$(CONFIG_ARMV8_PSCI)	+= psci.o
+-obj-$(CONFIG_MVEBU_LLC_ENABLE)	+= cache_llc.o
++obj-y	+= cache_llc.o
+ obj-$(CONFIG_MVEBU_CCU) += mvebu_ccu.o
+ obj-$(CONFIG_MVEBU_RFU) += mvebu_rfu.o
+ obj-$(CONFIG_MVEBU_IOB) += mvebu_iob.o
+diff --git a/arch/arm/cpu/armv8/armada8k/cache_llc.c b/arch/arm/cpu/armv8/armada8k/cache_llc.c
+index cceeb41..43ac185 100644
+--- a/arch/arm/cpu/armv8/armada8k/cache_llc.c
++++ b/arch/arm/cpu/armv8/armada8k/cache_llc.c
+@@ -21,81 +21,29 @@
+ #include <asm/arch-armada8k/regs-base.h>
+ 
+ #define LLC_CTRL                       0x100
+-#define LLC_CACHE_SYNC                 0x700
+-#define L2X0_INV_WAY                    0x77C
+-#define L2X0_CLEAN_WAY                 0x7BC
+-#define L2X0_CLEAN_INV_WAY             0x7FC
+ 
+ #define LLC_CTRL_EN	                1
+ #define LLC_EXCLUSIVE_EN		0x100
+-#define LLC_WAY_MASK			0xFFFFFFFF
+ 
+-/* insert all LLC function to secure section - part of the PSCI FW */
+-void llc_cache_sync(void) __attribute__ ((section (".secure_text")));
+-void llc_flush_all(void) __attribute__ ((section (".secure_text")));
+-void llc_clean_all(void) __attribute__ ((section (".secure_text")));
+-void llc_inv_all(void) __attribute__ ((section (".secure_text")));
+-void llc_disable(void) __attribute__ ((section (".secure_text")));
+-void llc_enable(void) __attribute__ ((section (".secure_text")));
+-void llc_save(void) __attribute__ ((section (".secure_text")));
+-void llc_resume(void) __attribute__ ((section (".secure_text")));
+-
+-void llc_cache_sync(void)
+-{
+-	__raw_writel(0, MVEBU_LLC_BASE + LLC_CACHE_SYNC);
+-	/* Atumic write no need to wait */
+-}
+-
+-void llc_flush_all(void)
+-{
+-	__raw_writel(LLC_WAY_MASK, MVEBU_LLC_BASE + L2X0_CLEAN_INV_WAY);
+-	llc_cache_sync();
+-}
+-
+-void llc_clean_all(void)
+-{
+-	__raw_writel(LLC_WAY_MASK, MVEBU_LLC_BASE + L2X0_CLEAN_WAY);
+-	llc_cache_sync();
+-}
+-
+-void llc_inv_all(void)
+-{
+-	/* Invalidating when L2 is enabled is a nono */
+-	BUG_ON(readl(MVEBU_LLC_BASE + LLC_CTRL) & LLC_CTRL_EN);
+-	__raw_writel(LLC_WAY_MASK, MVEBU_LLC_BASE + L2X0_INV_WAY);
+-	llc_cache_sync();
+-}
+-
+-void llc_disable(void)
+-{
+-	llc_flush_all();
+-	__raw_writel(0, MVEBU_LLC_BASE + LLC_CTRL);
+-	asm volatile("dsb st");
+-}
+-
+-void llc_enable(void)
++/*
++** Get LLC status and mode.
++** Returns 1 if LLC is enabled.
++*/
++int llc_mode_get(int *excl_mode)
+ {
+ 	u32 val;
++	int ret = 0, excl = 0;
+ 
+-	asm volatile("dsb sy");
+-	llc_inv_all();
+-	asm volatile("dsb sy");
++	val = readl(MVEBU_LLC_BASE + LLC_CTRL);
++	if (val & LLC_CTRL_EN) {
++		ret = 1;
++		if (val & LLC_EXCLUSIVE_EN)
++			excl = 1;
++	}
++	if (excl_mode)
++		*excl_mode = excl;
+ 
+-	val = LLC_CTRL_EN;
+-#ifdef CONFIG_MVEBU_LLC_EXCLUSIVE_EN
+-	val |= LLC_EXCLUSIVE_EN;
+-#endif
+-	__raw_writel(val, MVEBU_LLC_BASE + LLC_CTRL);
+-	asm volatile("dsb sy");
++	return ret;
+ }
+ 
+ 
+-void llc_save(void)
+-{
+-	/* TBD */
+-}
+-
+-void llc_resume(void)
+-{
+-	/* TBD */
+-}
+diff --git a/arch/arm/cpu/armv8/armada8k/soc.c b/arch/arm/cpu/armv8/armada8k/soc.c
+index bf25480..93cbce8 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc.c
++++ b/arch/arm/cpu/armv8/armada8k/soc.c
+@@ -26,6 +26,7 @@
+ #include <asm/arch/regs-base.h>
+ #include <asm/arch-mvebu/pinctl.h>
+ #include <asm/arch-mvebu/fdt.h>
++#include <asm/arch-armada8k/cache_llc.h>
+ #include <linux/sizes.h>
+ #include <netdev.h>
+ #include <mvebu_chip_sar.h>
+@@ -168,18 +169,15 @@ void reset_cpu(ulong ignored)
+ 
+ void print_soc_specific_info(void)
+ {
++	int llc_en, llc_excl_mode;
++
+ #ifdef CONFIG_MVEBU_SYS_INFO
+ 	printf("\tDDR %d Bit width\n", get_info(DRAM_BUS_WIDTH));
+ #endif
+-#ifdef CONFIG_MVEBU_LLC_ENABLE
+-	printf("\tLLC Enabled");
+-#ifdef CONFIG_MVEBU_LLC_EXCLUSIVE_EN
+-	printf(" (Exclusive Mode)");
+-#endif
+-	printf("\n");
+-#else /* CONFIG_MVEBU_LLC_ENABLE */
+-	printf("\tLLC Disabled\n");
+-#endif
++
++	llc_en = llc_mode_get(&llc_excl_mode);
++	printf("\tLLC %s%s\n", llc_en ? "Enabled" : "Disabled",
++	       llc_excl_mode ? " (Exclusive Mode)" : "");
+ }
+ 
+ #ifdef CONFIG_USB_XHCI
+diff --git a/arch/arm/include/asm/arch-armada8k/cache_llc.h b/arch/arm/include/asm/arch-armada8k/cache_llc.h
+new file mode 100644
+index 0000000..b3743ce
+--- /dev/null
++++ b/arch/arm/include/asm/arch-armada8k/cache_llc.h
+@@ -0,0 +1,25 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _CACHE_LLC_INC_
++#define _CACHE_LLC_INC_
++#include <common.h>
++
++int llc_mode_get(int *excl_mode);
++
++#endif /* _CACHE_LLC_INC_ */
+diff --git a/board/mvebu/Kconfig b/board/mvebu/Kconfig
+index 2eb26ec..0322a95 100644
+--- a/board/mvebu/Kconfig
++++ b/board/mvebu/Kconfig
+@@ -27,24 +27,6 @@ endmenu
+ 
+ menu "Soc Options"
+ 
+-config MVEBU_LLC_ENABLE
+-	depends on TARGET_ARMADA_8K && !MVEBU_SPL_DDR_OVER_PCI_SUPPORT && !SPL_BUILD
+-	bool "Enable Last Level Cache (LLC) support"
+-	default y
+-	help
+-	  Enable LLC in PSCI code
+-
+-config MVEBU_LLC_EXCLUSIVE_EN
+-	depends on MVEBU_LLC_ENABLE
+-	bool "LLC Exclusive mode"
+-	default n
+-	help
+-	  Enable LLC in exclusive mode.
+-	  When Set
+-	  1. Upon a Read hit, the CL is evicted from the LLC
+-	  2. Read Allocate directive is ignored (i.e. no Linefilll done into LLC as a result of a read that misses)
+-
+-
+ config MVEBU_FLC
+ 	bool "Enable Final Level Cache (FLC) driver"
+ 	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+-- 
+1.9.1
+

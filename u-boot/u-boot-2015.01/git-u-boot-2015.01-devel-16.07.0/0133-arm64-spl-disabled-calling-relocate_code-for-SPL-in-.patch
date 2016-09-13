@@ -1,0 +1,43 @@
+From e4198bfdda7f33d7ced7dd2b44e8668f59df6bce Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 5 Mar 2015 18:02:39 +0200
+Subject: [PATCH 0133/1240] arm64: spl: disabled calling relocate_code for SPL
+ in arm64
+
+	- Disabled calling relocation code for SPL in arm64
+	- No need to relocate the code of the SPL, also at this stage
+	  there's no stable DRAM
+	- The relocation code is relevant only for U-Boot run, and not for SPL
+
+Change-Id: I242be1ff83ea79ceb4adb0f1f3d0b7f0d354046c
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17270
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/lib/crt0_64.S | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/arch/arm/lib/crt0_64.S b/arch/arm/lib/crt0_64.S
+index 7756396..6009869 100644
+--- a/arch/arm/lib/crt0_64.S
++++ b/arch/arm/lib/crt0_64.S
+@@ -68,6 +68,8 @@ ENTRY(_main)
+ 	mov	x0, #0
+ 	bl	board_init_f
+ 
++#if defined(CONFIG_MVEBU) && !defined(CONFIG_SPL_BUILD)
++
+ /*
+  * Set up intermediate environment (new sp and gd) and call
+  * relocate_code(addr_moni). Trick here is that we'll return
+@@ -110,4 +112,6 @@ clear_loop:
+ 
+ 	/* NOTREACHED - board_init_r() does not return */
+ 
++#endif /* defined(CONFIG_MVEBU) && !defined(CONFIG_SPL_BUILD) */
++
+ ENDPROC(_main)
+-- 
+1.9.1
+

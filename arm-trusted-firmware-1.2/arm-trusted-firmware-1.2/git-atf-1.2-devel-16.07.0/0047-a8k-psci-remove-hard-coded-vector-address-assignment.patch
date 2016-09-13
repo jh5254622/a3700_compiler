@@ -1,0 +1,81 @@
+From c76f6e4f11155874e452d1cc3dee33b1dd4cba2a Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Tue, 1 Mar 2016 19:39:57 +0200
+Subject: [PATCH 047/239] a8k: psci: remove hard-coded vector address
+ assignment
+
+When the slave CPUs were awaken, they got a hardcoded vector
+address.
+This patch saves the master CPU vector address and assign
+it to the slave CPUs.
+
+Change-Id: I192996bb4591df3da7c468dad1e8d77d36fe146c
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27963
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ plat/marvell/a8k/a7040_rz/aarch64/plat_psci.S | 21 +++++++++++++++------
+ 1 file changed, 15 insertions(+), 6 deletions(-)
+
+diff --git a/plat/marvell/a8k/a7040_rz/aarch64/plat_psci.S b/plat/marvell/a8k/a7040_rz/aarch64/plat_psci.S
+index c966751..a9a04e9 100644
+--- a/plat/marvell/a8k/a7040_rz/aarch64/plat_psci.S
++++ b/plat/marvell/a8k/a7040_rz/aarch64/plat_psci.S
+@@ -73,7 +73,6 @@
+  ******************************************************************************/
+ .global _armada8k_cpu_entry
+ _armada8k_cpu_entry:
+-	//b		.
+ 	/* get current CPU */
+ 	mrs 	x2, MPIDR_EL1   	/* get current CPU - Use affinity level 1 */
+ 	asr 	x2, x2, #8
+@@ -93,9 +92,10 @@ _armada8k_cpu_entry:
+ 	 * Could be EL3/EL2/EL1, Initial State:
+ 	 * Little Endian, MMU Disabled, i/dCache Disabled
+ 	 */
+-	//adr	x0, vectors		TODO - Get vector address from CPU0
+-	//ldr	x0, =0x4029000 //EL3
+-	ldr	x0, =0xFFFFFFC000084800 //EL1
++	/* Update vectors table address (which was obtained from Master) */
++	adr	x0, _vectors
++	ldr	x0, [x0]
++
+ 	switch_el x1, 3f, 2f, 1f
+ 3:	msr	vbar_el3, x0
+ 	mrs	x0, scr_el3
+@@ -229,13 +229,19 @@ psci_0_2_cpu_on_64:
+ 
+ 	dsb     sy
+ 
++	/* read vbar from master CPU and save it
++	   for later use when the slave CPUs are awaken */
++	mrs	x3, vbar_el1		/* Obtain vectors table address (for EL1) from Master */
++	adr	x2, _vectors
++	str	x3, [x2]		/* Store vectors table address for slaves */
++
+ 	/* get cpu number - use affinity level 2 */
+ 	asr 	x1, x1, #8
+ 	and 	x1, x1, #0xff
+ 
+ 	/* set CPU private UID */
+-	mov		x0, #(MVEBU_REGS_BASE)
+-	add		x3, x0, #(MVEBU_PRIVATE_UID_REG)
++	mov	x0, #(MVEBU_REGS_BASE)
++	add	x3, x0, #(MVEBU_PRIVATE_UID_REG)
+ 	add     x2, x1, #0x4
+ 	str 	w2, [x3]
+ 
+@@ -269,5 +275,8 @@ psci_0_2_cpu_on_64:
+ _target_pc:
+ 	.quad 0x0
+ 
++_vectors:
++	.quad 0x0
++
+ text_end:
+ 	.popsection
+-- 
+1.9.1
+

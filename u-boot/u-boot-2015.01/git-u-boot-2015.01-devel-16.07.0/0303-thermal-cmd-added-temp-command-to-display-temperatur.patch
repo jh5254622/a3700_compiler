@@ -1,0 +1,79 @@
+From 9a8e4762f0af40d6350f752c46291a2f67d324b9 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 5 Aug 2015 12:01:42 +0300
+Subject: [PATCH 0303/1240] thermal: cmd: added temp command to display
+ temperature of the device
+
+Change-Id: I6165173bb5cd57d6e569c8c6ba46b9f2903822ee
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22544
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ common/mvebu/Kconfig    |  9 +++++++++
+ common/mvebu/cmd_misc.c | 14 ++++++++++++++
+ drivers/thermal/Kconfig |  1 +
+ 3 files changed, 24 insertions(+)
+
+diff --git a/common/mvebu/Kconfig b/common/mvebu/Kconfig
+index 4621d32..8df1671 100644
+--- a/common/mvebu/Kconfig
++++ b/common/mvebu/Kconfig
+@@ -43,4 +43,13 @@ config CMD_MVEBU_MSS_BOOT
+ 	default y
+ 	help
+ 	  mss_boot - Loads MSS code into CM3 ID RAM and release from reset
++
++config CMD_MVEBU_TSEN
++	bool "tsen"
++	depends on MVEBU_THERMAL_SENSOR_28NM
++	default n
++	help
++	  tsen - Display the SoC temperature
++	  as read from the on chip thermal sensor
++
+ endmenu
+diff --git a/common/mvebu/cmd_misc.c b/common/mvebu/cmd_misc.c
+index 903f7a6..d355520 100644
+--- a/common/mvebu/cmd_misc.c
++++ b/common/mvebu/cmd_misc.c
+@@ -22,6 +22,7 @@
+ #include <cli.h>
+ 
+ #include <asm/io.h>
++#include <asm/arch-mvebu/thermal.h>
+ 
+ #ifdef CONFIG_MVEBU_CCU
+ #include <asm/arch-mvebu/ccu.h>
+@@ -185,3 +186,16 @@ U_BOOT_CMD(
+ 	"\tPressing enter without any value keeps the value unchanged.\n"
+ );
+ 
++#ifdef CONFIG_CMD_MVEBU_TSEN
++int thermal_sensor_cmd(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
++{
++	printf("Temperature = %d\n", mvebu_thermal_sensor_read());
++	return 1;
++}
++
++U_BOOT_CMD(
++	tsen, 1, 1, thermal_sensor_cmd,
++	"temp   - Display the SoC temperature.\n",
++	"\n\tDisplay the SoC temperature as read from the on chip thermal sensor.\n"
++);
++#endif
+diff --git a/drivers/thermal/Kconfig b/drivers/thermal/Kconfig
+index 547833f..f8f63cd 100644
+--- a/drivers/thermal/Kconfig
++++ b/drivers/thermal/Kconfig
+@@ -1,6 +1,7 @@
+ config MVEBU_THERMAL_SENSOR_28NM
+ 	bool "Enable Thermal Sensor 28NM driver"
+ 	default n
++	select CMD_MVEBU_TEMP
+ 	help
+ 	  Choose this option to add support for
+ 	  thermal sensor 28nm driver.
+-- 
+1.9.1
+

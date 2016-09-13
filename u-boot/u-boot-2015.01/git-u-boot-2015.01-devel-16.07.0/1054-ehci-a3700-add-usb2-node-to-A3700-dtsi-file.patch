@@ -1,0 +1,36 @@
+From 069eda4dd110a1968afdb1a5ec58ed366cd45176 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Fri, 18 Mar 2016 00:41:08 +0800
+Subject: [PATCH 1054/1240] ehci: a3700: add usb2 node to A3700 dtsi file
+
+Change-Id: Icdb86f3106fd050e99ce6451c36ca0e973322024
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28318
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/armada-3700.dtsi | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/arch/arm/dts/armada-3700.dtsi b/arch/arm/dts/armada-3700.dtsi
+index 761a97c..deb50a1 100644
+--- a/arch/arm/dts/armada-3700.dtsi
++++ b/arch/arm/dts/armada-3700.dtsi
+@@ -140,6 +140,15 @@
+ 				reg = <0x58000 0x450>;
+ 				status = "disabled";
+ 			};
++			/* no concurrent support for USB2.0 and USB3.0 now
++			 * Need to disable the XHCI driver and enable EHCI
++			 * driver before turn on USB2.0 interface.
++			 */
++			usb: usb@5e000 {
++				compatible = "marvell,mvebu-usb";
++				reg = <0x5e000 0x450>;
++				status = "disabled";
++			};
+ 			ddr-mac {
+ 				compatible = "marvell,mvebu-ddr-mac";
+ 				reg = <0x0000 0x1000>;
+-- 
+1.9.1
+

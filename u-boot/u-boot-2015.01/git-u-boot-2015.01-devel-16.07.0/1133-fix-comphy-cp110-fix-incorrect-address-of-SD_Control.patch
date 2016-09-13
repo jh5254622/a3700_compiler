@@ -1,0 +1,57 @@
+From 384ec6dc6d85bd7ff302022b84fe5bde4d65f98b Mon Sep 17 00:00:00 2001
+From: Igal Liberman <igall@marvell.com>
+Date: Wed, 18 May 2016 14:40:03 +0300
+Subject: [PATCH 1133/1240] fix: comphy: cp110: fix incorrect address of
+ SD_Control register
+
+SD_Control register address is incorrect.
+Currently 'comphy_addr + 0x148' is used.
+'comphy_addr' contains 'compy_base' + lane offset.
+SD_Control register appears only once (not per lane),
+so 'compy_base + 0x148' should be used.
+This patch fixes 2 occurrence of the same bug:
+- RXAUI
+- PCIE (in this case this bug is hidden, accessed when lane = 0).
+
+Change-Id: I5158c32adf36e623c68e3b83266b023a40f89703
+Signed-off-by: Igal Liberman <igall@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29799
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/phy/comphy_cp110.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/phy/comphy_cp110.c b/drivers/phy/comphy_cp110.c
+index 5f07ab3..6a00f9d 100644
+--- a/drivers/phy/comphy_cp110.c
++++ b/drivers/phy/comphy_cp110.c
+@@ -99,10 +99,10 @@ static int comphy_pcie_power_up(u32 lane, u32 pcie_width, bool clk_src, void __i
+ 	/* enable PCIe by4 and by2 */
+ 	if (lane == 0) {
+ 		if (pcie_width == 4) {
+-			reg_set(comphy_addr + COMMON_PHY_SD_CTRL1,
++			reg_set(comphy_base + COMMON_PHY_SD_CTRL1,
+ 				0x1 << COMMON_PHY_SD_CTRL1_PCIE_X4_EN_OFFSET, COMMON_PHY_SD_CTRL1_PCIE_X4_EN_MASK);
+ 		} else if (pcie_width == 2) {
+-			reg_set(comphy_addr + COMMON_PHY_SD_CTRL1,
++			reg_set(comphy_base + COMMON_PHY_SD_CTRL1,
+ 				0x1 << COMMON_PHY_SD_CTRL1_PCIE_X2_EN_OFFSET, COMMON_PHY_SD_CTRL1_PCIE_X2_EN_MASK);
+ 		}
+ 	}
+@@ -998,10 +998,10 @@ static int comphy_rxauii_power_up(u32 lane, void __iomem *hpipe_base, void __iom
+ 	reg_set(comphy_addr + COMMON_PHY_CFG1_REG, data, mask);
+ 
+ 	if (lane == 2)
+-		reg_set(comphy_addr + COMMON_PHY_SD_CTRL1,
++		reg_set(comphy_base + COMMON_PHY_SD_CTRL1,
+ 			0x1 << COMMON_PHY_SD_CTRL1_RXAUI0_OFFSET, COMMON_PHY_SD_CTRL1_RXAUI0_MASK);
+ 	if (lane == 4)
+-		reg_set(comphy_addr + COMMON_PHY_SD_CTRL1,
++		reg_set(comphy_base + COMMON_PHY_SD_CTRL1,
+ 			0x1 << COMMON_PHY_SD_CTRL1_RXAUI1_OFFSET, COMMON_PHY_SD_CTRL1_RXAUI1_MASK);
+ 
+ 	/* Select Baud Rate of Comphy And PD_PLL/Tx/Rx */
+-- 
+1.9.1
+

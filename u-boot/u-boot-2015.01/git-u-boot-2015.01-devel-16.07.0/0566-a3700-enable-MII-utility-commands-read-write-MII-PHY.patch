@@ -1,0 +1,53 @@
+From 0b285e459d9c76b6a9db659f7efa2a1a49e5cbc0 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Thu, 26 Nov 2015 15:48:20 +0200
+Subject: [PATCH 0566/1240] a3700: enable MII utility commands - read/write MII
+ PHY
+
+- enabled MII command for Armada-3700: read/write PHY via SMI
+- added relevant network Kconfig entry
+
+Change-Id: I064ead381c5a6769cb28bc9e4b8b9d67c02aa613
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25554
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ common/Kconfig                   | 8 ++++++++
+ configs/mvebu_armadalp_defconfig | 1 +
+ 2 files changed, 9 insertions(+)
+
+diff --git a/common/Kconfig b/common/Kconfig
+index 639c249..3af4e36 100644
+--- a/common/Kconfig
++++ b/common/Kconfig
+@@ -267,6 +267,14 @@ config CMD_PING
+ 	help
+ 	  Send ICMP ECHO_REQUEST to network host
+ 
++config CMD_MII
++	bool "mii"
++	help
++	  MII utility commands - read/write MII PHY.4
++	  This provides a bit-banged interface to
++	  the ethernet MII management channel.
++	  Support general MII register bit mapping and register information
++
+ config CMD_CDP
+ 	bool "cdp"
+ 	help
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index 0539f19..2554c51 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -32,6 +32,7 @@ CONFIG_CMD_MEMORY=y
+ CONFIG_CMD_USB=y
+ CONFIG_CMD_NET=y
+ CONFIG_CMD_PING=y
++CONFIG_CMD_MII=y
+ CONFIG_CMD_MVEBU_BUBT=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+-- 
+1.9.1
+

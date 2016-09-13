@@ -1,0 +1,268 @@
+From 63eb0305e39995e574556f5c2e0fdfaeedec3ed7 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Tue, 16 Feb 2016 11:41:03 +0200
+Subject: [PATCH 0874/1240] doc: mvebu: Common for all SoC's - TW review
+
+Change-Id: I17ae5d7395bb9ee74bcd469c82ee3015780f6ca5
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27547
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Gina Tadmore <gina@marvell.com>
+---
+ doc/device-tree-bindings/i2c/mvebu-i2c.txt     | 20 ++++++++++--------
+ doc/device-tree-bindings/misc/mvebu-pinctl.txt | 25 ++++++++++++----------
+ doc/device-tree-bindings/net/mvebu-mdio.txt    |  9 +++++---
+ doc/device-tree-bindings/pci/mvebu-pci.txt     | 20 ++++++++++--------
+ doc/device-tree-bindings/phy/mvebu_comphy.txt  | 29 +++++++++++++-------------
+ doc/device-tree-bindings/sata/mvebu-sata.txt   | 11 ++++++----
+ doc/device-tree-bindings/usb/mvebu-usb3.txt    |  8 +++++--
+ 7 files changed, 70 insertions(+), 52 deletions(-)
+
+diff --git a/doc/device-tree-bindings/i2c/mvebu-i2c.txt b/doc/device-tree-bindings/i2c/mvebu-i2c.txt
+index 53a5a37..0636472 100644
+--- a/doc/device-tree-bindings/i2c/mvebu-i2c.txt
++++ b/doc/device-tree-bindings/i2c/mvebu-i2c.txt
+@@ -1,18 +1,20 @@
+ Marvell I2C bindings
+ ====================
+ 
+-I2C driver provides read / write access to external peripherals
++The I2C driver provides read / write access to external peripherals
+ using the I2C bus.
+ 
+ Mandatory properties:
+-	- compatible = "marvell,mvebu-i2c";
+-	- reg = <0x511000 0x4>;
+-		base address of I2C-0
+-	- clock = <&tclk>;
+-		This property points to the used clock for the I2C interface.
+-		in this example the node point to the t-clock.
+-	- status = "okay";
+-		Set if the I2C interface is enabled/disabled.
++SoC specific:
++	- compatible
++		Should be "marvell,mvebu-i2c".
++	- reg
++		Base address and size of I2C-0.
++	- clock
++		This property points to the clock used for the I2C interface.
++		In this example the node points to the t-clock.
++	- status
++		Set to okay/disabled if the I2C interface is enabled/disabled.
+ 
+ Example for I2C-0 node:
+ 	i2c0: i2c@11000 {
+diff --git a/doc/device-tree-bindings/misc/mvebu-pinctl.txt b/doc/device-tree-bindings/misc/mvebu-pinctl.txt
+index c9cbd5c..18b3720 100644
+--- a/doc/device-tree-bindings/misc/mvebu-pinctl.txt
++++ b/doc/device-tree-bindings/misc/mvebu-pinctl.txt
+@@ -2,26 +2,28 @@ Marvell pinctl bindings
+ =======================
+ 
+ The mvebu-pinctl driver enables changing the function
+-of multi purpose pins and controlling GPIOs. each dt
+-entry describes a single pinctl bank. an SOC may
++of multi-purpose pins and controlling GPIOs. each dt
++entry describes a single pinctl bank. An SOC may
+ have several pinctl banks.
+ 
+ Mandatory proprties:
++SoC specific:
+ 	- compatible
+-	  	should be "marvell, mvebu-pinctl"
++	  	should be "marvell, mvebu-pinctl".
+ 	- bank-name
+-	  	a unique name identifying the bank
++	  	Unique name identifying the bank.
+ 	- reg
+-		description of the mpp register base and size
++		Description of the mpp register base and size.
+ 	- pin-count
+-	  	the amount of pins controlled by this bank
++	  	Amount of pins controlled by this bank.
+ 	- max-func
+-		the maximum function number supported by this bank
+-	- pin-func
+-		an array specifying the function per pin
++		Maximum function number supported by this bank.
+ 	- reverse_reg
+-		a boolean specifying the reigster order is reversed, meaning
+-		pin x is controlled in register (base - x/8) instead of (base + x/8)
++		A boolean specifying the reigster order is reversed, meaning
++		pin x is controlled in register (base - x/8) instead of (base + x/8).
++Board specific:
++	- pin-func
++		Array specifying the function per pin, from left to right.
+ 
+ Example of a pinctl bank node:
+ 	pinctl@18000 {
+@@ -30,6 +32,7 @@ Example of a pinctl bank node:
+ 		reg = <0x18000 0x24>;
+ 		pin-count = <64>;
+ 		max-func = <7>;
++			  /* 0 1 2 3 4 5 6 7 8 9 */
+ 		pin-func = < 1 1 1 1 1 1 1 1 1 1
+ 			     1 1 1 1 1 1 1 1 0 6
+ 			     6 2 1 1 1 1 0 2 2 2
+diff --git a/doc/device-tree-bindings/net/mvebu-mdio.txt b/doc/device-tree-bindings/net/mvebu-mdio.txt
+index b564146..20165db 100644
+--- a/doc/device-tree-bindings/net/mvebu-mdio.txt
++++ b/doc/device-tree-bindings/net/mvebu-mdio.txt
+@@ -2,13 +2,16 @@ Marvell MDIO bindings
+ ====================
+ 
+ The MDIO driver implements the required APIs to access
+-ethernet PHYs/switches, using the SMI or XSMI protocols.
++Ethernet PHYs/switches, using the SMI or XSMI protocols.
+ 
+ Mandatory properties:
++SoC specific:
+ 	- compatible
+ 		should be "marvell,mvebu-mdio".
+-	- reg_xsmi: the base address XSMI bus.
+-	- reg_smi: the base address SMI bus.
++	- reg_xsmi: the base address and size XSMI bus.
++	- reg_smi: the base address and size SMI bus.
++	- status
++		Set to okay/disabled if the MDIO interface is enabled/disabled.
+ 
+ Example for MDIO node:
+ 	mdio0@30000 {
+diff --git a/doc/device-tree-bindings/pci/mvebu-pci.txt b/doc/device-tree-bindings/pci/mvebu-pci.txt
+index f82de6f..5cc7344 100644
+--- a/doc/device-tree-bindings/pci/mvebu-pci.txt
++++ b/doc/device-tree-bindings/pci/mvebu-pci.txt
+@@ -1,27 +1,29 @@
+ Marvell MVEBU PCIe bindings
+ ===========================
+ 
+-The mvebu-pcie driver controls a set of PCIe ports
++The MVEBU-PCIe driver controls a set of PCIe ports
+ that make up PCIe bus.
+ 
+ Mandatory proprties:
++SoC specific:
+ 	- compatible
+-		should be "marvell,mvebu-pcie" for legacy Marvell EBU PCIe IP,
++		Should be "marvell,mvebu-pcie" for legacy Marvell EBU PCIe IP,
+ 		and "marvell,advk-pcie" for Marvell Ardvark PCIe IP.
+ 	- pcie
+-		a node describing a single PCIe port.
+-		each pcie node contains the following properties
++		Node describing a single PCIe port.
++		Each pcie node contains the following properties.
+ 		- reg
+-			the register base of the pci port
++			Register base and size of the pci port.
+ 		- mem
+-			an array describing the PCIe port's memory space
++			Array describing the PCIe port's memory space.
+ 		- endpoint
+-			an optional boolean specifying this port should be
++			Optional boolean specifying this port should be
+ 			configured as PCIe endpoint.
++Board specific:
+ 		- status
+-			the pcie port's status. can be "okay" or "disabled".
++			PCIe port's status. can be "okay" or "disabled".
+ 
+-Example of a pcie node:
++Example of a PCIe node:
+ 	pcie-controller {
+ 		#address-cells = <1>;
+ 		#size-cells = <1>;
+diff --git a/doc/device-tree-bindings/phy/mvebu_comphy.txt b/doc/device-tree-bindings/phy/mvebu_comphy.txt
+index e0fefbe..2b1f14c 100644
+--- a/doc/device-tree-bindings/phy/mvebu_comphy.txt
++++ b/doc/device-tree-bindings/phy/mvebu_comphy.txt
+@@ -1,24 +1,26 @@
+ Marvell COMPHY SerDes lane bindings
+ =====================================
+ 
+-The COMPHY node include description about the COMPHY SerDes lane configuration.
+-The comphy driver initialize the MUX of the SerDes lanes, and power up the serdes
++The COMPHY node includes a description of the COMPHY SerDes lane configuration.
++The COMPHY driver initializes the MUX of the SerDes lanes, and powers up the SerDes
+ by dependencies on the FDT blob configurations
+ 
+ Mandatory properties:
++SoC specific:
+ 	- compatible:
+-		the compatible should include "marvell,mvebu-comphy"
++		The compatible should include "marvell,mvebu-comphy"
+ 		and the COMPHY per chip compatible:
+-		"marvell,comphy-armada38x" for Armada-38x
+-		the COMPHY per chip used to set which MUX configuration to use, and COMPHY power-up revision
+-	- reg-comphy: the base address of the COMPHY units
+-	- reg-hpipe3: the base address of the hpipe3 units
+-	- max-lanes: maximum number of comphy lanes
+-	- mux-bitcount: number of bits that allocated for every mux in the comphy-selector register
+-	- phy: entry that include the configuration of the phy
+-	  every phy should have the below parameters:
+-	  - phy-type: the PHY type (SGMII0/SATA1/PEX2...), the posible modes under include/dt-bindings/comphy/comphy_data.h
+-	  - phy-speed: the PHY speed (1G/1.5G...), the posible speeds under include/dt-bindings/comphy/comphy_data.h
++		"marvell,comphy-armada38x" for Armada-38x.
++		The COMPHY per chip used to set which MUX configuration to use, and COMPHY power-up revision.
++	- reg-comphy: Base address and size of the COMPHY units.
++	- reg-hpipe3: Base address and size of the hpipe3 units.
++	- max-lanes: Maximum number of comphy lanes.
++	- mux-bitcount: Number of bits that are allocated for every MUX in the COMPHY-selector register.
++Board specific:
++	- phy: Entry that include the configuration of the phy.
++	  Every phy should have the below parameters:
++	  - phy-type: PHY type (SGMII0/SATA1/PEX2...), the posible modes under include/dt-bindings/comphy/comphy_data.h
++	  - phy-speed: PHY speed (1G/1.5G...), the posible speeds under include/dt-bindings/comphy/comphy_data.h
+ 
+ Example:
+ 	comphy {
+@@ -40,4 +42,3 @@ Example:
+ 			phy-speed = <PHY_SPEED_5G>;
+ 		};
+ 	};
+-
+diff --git a/doc/device-tree-bindings/sata/mvebu-sata.txt b/doc/device-tree-bindings/sata/mvebu-sata.txt
+index ce19835..36eae96 100644
+--- a/doc/device-tree-bindings/sata/mvebu-sata.txt
++++ b/doc/device-tree-bindings/sata/mvebu-sata.txt
+@@ -1,12 +1,15 @@
+ Marvell EBU SATA bindings
+ =========================
+ 
+-Support for the AHCI based Sata unit in mvebu SoC's.
++Support for the AHCI based Sata unit in MVEBU SoCs.
+ 
+ Mandatory properties:
+-	- compatible
+-		should be "marvell,mvebu-sata".
+-	- reg: the base address of the SATA unit.
++SoC specific:
++	- compatible: Should be "marvell,mvebu-sata".
++	- reg: Base address and size of the SATA unit.
++Board specific:
++	- status
++		SATA port's status. It can be "okay" or "disabled".
+ 
+ Example for SATA-0 node:
+ 	sata0@e0000 {
+diff --git a/doc/device-tree-bindings/usb/mvebu-usb3.txt b/doc/device-tree-bindings/usb/mvebu-usb3.txt
+index 3e3fd54..7673525 100644
+--- a/doc/device-tree-bindings/usb/mvebu-usb3.txt
++++ b/doc/device-tree-bindings/usb/mvebu-usb3.txt
+@@ -5,8 +5,12 @@ This USB 3.0 driver is based on mainline xHCI, and it supports Marvell EBU SoC,
+ which implements the xHCI core operations.
+ 
+ Mandatory properties:
+-	- compatible: should be "marvell,mvebu-usb3".
+-	- reg: the base address of the xHCI unit.
++SoC specific:
++	- compatible: Should be "marvell,mvebu-usb3".
++	- reg: Base address and size of the xHCI unit.
++Board specific:
++	- status
++		The USB3 port status can be "okay" or "disabled".
+ 
+ Example for USB 3.0 node:
+ 	usb3: usb3@58000 {
+-- 
+1.9.1
+

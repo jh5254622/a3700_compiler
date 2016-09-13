@@ -1,0 +1,46 @@
+From fcbe73485b9189beb6a888824c9a4963e2c2e935 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 2 Feb 2016 21:48:53 +0200
+Subject: [PATCH 0833/1240] fix: dts: 7040rz: enable USB node for Armada-7040RZ
+ board
+
+Change-Id: Ie4142a00a4d77ee6682dc2f581b5ce635c639896
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27162
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/armada-7040-rz-db_dop.dts | 4 ++--
+ configs/mvebu_armada70x0_dop_defconfig | 2 ++
+ 2 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/dts/armada-7040-rz-db_dop.dts b/arch/arm/dts/armada-7040-rz-db_dop.dts
+index d01fa6b..cbe4ece 100644
+--- a/arch/arm/dts/armada-7040-rz-db_dop.dts
++++ b/arch/arm/dts/armada-7040-rz-db_dop.dts
+@@ -61,10 +61,10 @@
+ 				status = "disabled";
+ 			};
+ 			usb3@500000 {
+-				status = "disabled";
++				status = "okay";
+ 			};
+ 			usb3@510000 {
+-				status = "disabled";
++				status = "okay";
+ 			};
+ 			sata@540000 {
+ 				status = "okay";
+diff --git a/configs/mvebu_armada70x0_dop_defconfig b/configs/mvebu_armada70x0_dop_defconfig
+index 2e263a6..622b5ec 100644
+--- a/configs/mvebu_armada70x0_dop_defconfig
++++ b/configs/mvebu_armada70x0_dop_defconfig
+@@ -47,3 +47,5 @@ CONFIG_MVEBU_PINCTL=y
+ CONFIG_MVEBU_THERMAL_SENSOR=y
+ CONFIG_MVEBU_THERMAL_SENSOR_28NM_V2=y
+ # CONFIG_MVEBU_SPL_DDR_SUPPORT is not set
++CONFIG_USB=y
++CONFIG_USB_XHCI_HCD=y
+-- 
+1.9.1
+

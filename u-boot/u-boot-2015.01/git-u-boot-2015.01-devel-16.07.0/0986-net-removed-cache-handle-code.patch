@@ -1,0 +1,33 @@
+From 5e30a53fe0ecd2ae2fa5a8e4ed483e7a31d4a40f Mon Sep 17 00:00:00 2001
+From: Stefan Chulski <stefanc@marvell.com>
+Date: Mon, 28 Mar 2016 12:22:41 +0300
+Subject: [PATCH 0986/1240] net: removed cache handle code
+
+- u-boot doesn't work with cache so this code was never called.
+
+Change-Id: Ib2e0e3356f39a98e5d862dbfb386967bbb9cd6bc
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28592
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/net/mv_pp2x.c | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/drivers/net/mv_pp2x.c b/drivers/net/mv_pp2x.c
+index 38113da..e29b446 100644
+--- a/drivers/net/mv_pp2x.c
++++ b/drivers/net/mv_pp2x.c
+@@ -5124,10 +5124,6 @@ int mv_pp2x_initialize_dev(bd_t *bis, struct mv_pp2x *pp2,
+ 		if (bd_space == NULL)
+ 			return -ENOMEM;
+ 
+-#ifndef CONFIG_SYS_DCACHE_OFF /* Uboot cache always off */
+-		mmu_set_region_dcache_behaviour((u32)bd_space, BD_SPACE,
+-						DCACHE_OFF);
+-#endif
+ 		buffer_loc.tx_descs = (struct mv_pp2x_tx_desc *)bd_space;
+ 
+ 		buffer_loc.aggr_tx_descs = (struct mv_pp2x_tx_desc *)
+-- 
+1.9.1
+

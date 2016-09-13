@@ -1,0 +1,36 @@
+From e618293da9ed19a7e412d6726b92814873bb4704 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 6 Apr 2016 18:16:36 +0300
+Subject: [PATCH 1011/1240] fix: dts: remove unused DRAM node from
+ Armada-70x0-DB device tree
+
+Change-Id: I47198d25beb175fc11b84d1c9325ab8357579ea7
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28838
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/armada-70x0-db_router.dts | 7 -------
+ 1 file changed, 7 deletions(-)
+
+diff --git a/arch/arm/dts/armada-70x0-db_router.dts b/arch/arm/dts/armada-70x0-db_router.dts
+index 6a268ee..d7d2b55 100644
+--- a/arch/arm/dts/armada-70x0-db_router.dts
++++ b/arch/arm/dts/armada-70x0-db_router.dts
+@@ -35,13 +35,6 @@
+ 			i2c0: i2c@511000 {
+ 				status = "okay";
+ 			};
+-			ddr-mac {
+-				cs_count = <1>;
+-				bus_width = <DDR_BUS_WIDTH_32>;
+-				cs0 { /* 4GiB */
+-					size = <0x00000001 0x00000000>;
+-				};
+-			};
+ 			pinctl: pinctl@6F4000 {
+ 					/* MPP Bus:
+ 						SPI0 [0-3]
+-- 
+1.9.1
+

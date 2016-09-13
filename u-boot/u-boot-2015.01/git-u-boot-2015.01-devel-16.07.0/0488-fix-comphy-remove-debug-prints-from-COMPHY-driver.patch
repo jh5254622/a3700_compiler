@@ -1,0 +1,29 @@
+From 99db721b4c775baf0a95635ae7659eed150a02a1 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 10 Nov 2015 19:52:41 +0200
+Subject: [PATCH 0488/1240] fix: comphy: remove debug prints from COMPHY driver
+
+Change-Id: I48e09c02cd09607510f5387e933f0b600fea2dfa
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24718
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/phy/comphy_core.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/phy/comphy_core.c b/drivers/phy/comphy_core.c
+index 5e00108..17bb913 100644
+--- a/drivers/phy/comphy_core.c
++++ b/drivers/phy/comphy_core.c
+@@ -15,7 +15,7 @@
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * ***************************************************************************
+ */
+-#define DEBUG
++/* #define DEBUG */
+ #include <common.h>
+ #include <fdtdec.h>
+ #include <asm/io.h>
+-- 
+1.9.1
+

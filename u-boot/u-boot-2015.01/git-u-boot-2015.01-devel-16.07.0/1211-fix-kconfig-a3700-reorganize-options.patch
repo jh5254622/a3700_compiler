@@ -1,0 +1,132 @@
+From f440152752a989ffcb3d0719ad897dc4e116b501 Mon Sep 17 00:00:00 2001
+From: Ken Ma <make@marvell.com>
+Date: Tue, 14 Jun 2016 00:08:25 +0800
+Subject: [PATCH 1211/1240] fix: kconfig: a3700: reorganize options
+
+- Aramada 3700's kconfig options of boot mode switch and preset cpu&ddr
+  frquency are moved from top dir to "-> Support MVEBU devices ->
+  Marvell Platform Options -> Soc Options"
+
+Change-Id: I3b370cdf95923fef134a466f2f54c2b78c618212
+Signed-off-by: Ken Ma <make@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30415
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/cpu/armv8/armada3700/Kconfig | 40 --------------------------------
+ board/mvebu/Kconfig                   | 43 +++++++++++++++++++++++++++++++++++
+ 2 files changed, 43 insertions(+), 40 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada3700/Kconfig b/arch/arm/cpu/armv8/armada3700/Kconfig
+index 95b49c0..4e5f07a 100644
+--- a/arch/arm/cpu/armv8/armada3700/Kconfig
++++ b/arch/arm/cpu/armv8/armada3700/Kconfig
+@@ -24,19 +24,6 @@ config ARMV8_PSCI
+ 	bool
+ 	default y
+ 
+-
+-config MVEBU_BOOTMODE_SWITCH_SUPPORT
+-	bool "Mvebu bootmode switch support"
+-	depends on DEVEL_BOARD
+-	default n
+-	help
+-	  Choose this option to switch the boot source
+-	  to uart at the early stage of SPL while the boot source
+-	  is supposed to be restored at the last stage before reaching
+-	  u-boot prompt. This mechanism is introduced
+-	  in order to fallback to uart mode automatically
+-	  when a mal-function bootloader image is present in flash.
+-
+ config OSLO_START_ADDR
+         hex "OSLO image start address"
+         default 4100000
+@@ -49,30 +36,3 @@ config OSLO_START_ADDR
+           address after it is loaded.
+ 
+ endif
+-
+-choice
+-	prompt "CPU and DDR Clock preset"
+-	default PRESET_CPU_800_DDR_800
+-
+-config PRESET_CPU_600_DDR_600
+-	bool "CPU at 600 MHz, DDR at 600 MHz"
+-	help
+-	  Run system with the following clock
+-	  tree configuration preset:
+-	  CPU at 600 MHz, DDR3 at 600 MHz
+-
+-config PRESET_CPU_800_DDR_800
+-	bool "CPU at 800 MHz, DDR at 800 MHz"
+-	help
+-	  Run system with the following clock
+-	  tree configuration preset:
+-	  CPU at 800 MHz, DDR3 at 800 MHz
+-
+-config PRESET_CPU_1000_DDR_800
+-	bool "CPU at 1000 MHz, DDR at 800 MHz"
+-	help
+-	  Run system with the following clock
+-	  tree configuration preset:
+-	  CPU at 1000 MHz, DDR3 at 800 MHz
+-
+-endchoice
+diff --git a/board/mvebu/Kconfig b/board/mvebu/Kconfig
+index d60e07e..b1364ab 100644
+--- a/board/mvebu/Kconfig
++++ b/board/mvebu/Kconfig
+@@ -66,6 +66,49 @@ config MVEBU_A3700_PM
+ 	  This configuration set default PM settings
+ 	  according to current DT and clock configuration.
+ 
++config MVEBU_BOOTMODE_SWITCH_SUPPORT
++	bool "Mvebu bootmode switch support"
++	depends on DEVEL_BOARD && TARGET_ARMADA_3700
++	default n
++	help
++	  For armada-3700 Z series DB board, the boot source is
++	  switched to uart at the early stage of ATF, choose this
++	  option to restore the boot source at the last stage before
++	  reaching u-boot prompt. This mechanism is introduced
++	  in order to fallback to uart mode automatically
++	  when a mal-function bootloader image is present in flash.
++
++choice
++	depends on TARGET_ARMADA_3700
++	prompt "CPU and DDR Clock preset"
++	default PRESET_CPU_800_DDR_800
++
++config PRESET_CPU_600_DDR_600
++	bool "CPU at 600 MHz, DDR at 600 MHz"
++	help
++	  Run system with the following clock
++	  tree configuration preset:
++	  CPU at 600 MHz,
++	  DDR3 at 600 MHz
++
++config PRESET_CPU_800_DDR_800
++	bool "CPU at 800 MHz, DDR at 800 MHz"
++	help
++	  Run system with the following clock
++	  tree configuration preset:
++	  CPU at 800 MHz,
++	  DDR3 at 800 MHz
++
++config PRESET_CPU_1000_DDR_800
++	bool "CPU at 1000 MHz, DDR at 800 MHz"
++	help
++	  Run system with the following clock
++	  tree configuration preset:
++	  CPU at 1000 MHz,
++	  DDR3 at 800 MHz
++
++endchoice
++
+ endmenu
+ 
+ config PALLADIUM
+-- 
+1.9.1
+

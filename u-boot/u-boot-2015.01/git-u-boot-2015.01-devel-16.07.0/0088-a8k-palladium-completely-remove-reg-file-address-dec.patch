@@ -1,0 +1,65 @@
+From a39f3dc54a8c5923f417181ba1896334328a7079 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Tue, 7 Oct 2014 08:09:17 +0300
+Subject: [PATCH 0088/1240] a8k: palladium: completely remove reg file address
+ decode WA
+
+Change-Id: I466c4c016e4cef53b5b18748ed2262a918867189
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/13521
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/soc-init.c | 6 ------
+ arch/arm/cpu/armv8/start.S             | 4 ----
+ include/configs/armada8k.h             | 2 +-
+ 3 files changed, 1 insertion(+), 11 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/soc-init.c b/arch/arm/cpu/armv8/armada8k/soc-init.c
+index 8f4946e..89ba703 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc-init.c
++++ b/arch/arm/cpu/armv8/armada8k/soc-init.c
+@@ -27,12 +27,6 @@
+ 
+ int soc_early_init_f(void)
+ {
+-#if CONFIG_PALLADIUM
+-	/* Temporary configs. remove in future models */
+-
+-	/* Define the mapping inside register space */
+-	writel(0xf0100201, 0xf00040b0);
+-#endif
+ 	return 0;
+ }
+ 
+diff --git a/arch/arm/cpu/armv8/start.S b/arch/arm/cpu/armv8/start.S
+index 89fbad3..78947d2 100644
+--- a/arch/arm/cpu/armv8/start.S
++++ b/arch/arm/cpu/armv8/start.S
+@@ -226,10 +226,6 @@ ENTRY(fixup_affinity)
+ 	ldr     w1, =0x0
+ 	str     w1, [x0]
+ 
+-	ldr     x0, =0xf00040b0
+-	ldr     w1, =0xf0080401
+-	str     w1, [x0]
+-
+ 	ret
+ 
+ ENDPROC(fixup_affinity)
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index 0706828..2ae97bf 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -71,7 +71,7 @@
+ #define CONFIG_BAUDRATE                 4000
+ 
+ #undef CONFIG_BOOTARGS
+-#define CONFIG_BOOTARGS			"console=ttyS0,4000 earlyprintk=uart8250-32bit,0xf0512000,4000"
++#define CONFIG_BOOTARGS			"console=ttyS0,5652 earlyprintk=uart8250-32bit,0xf0512000,5652"
+ 
+ #undef  CONFIG_EXTRA_ENV_SETTINGS
+ #define CONFIG_EXTRA_ENV_SETTINGS	"kernel_addr=0x107ffc0\0"	\
+-- 
+1.9.1
+

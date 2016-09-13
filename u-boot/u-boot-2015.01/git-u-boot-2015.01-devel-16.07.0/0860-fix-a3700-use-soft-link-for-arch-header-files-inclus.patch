@@ -1,0 +1,152 @@
+From 6b9d8d9a1c7920244c7387ef2deffb6e5f82e86d Mon Sep 17 00:00:00 2001
+From: Wilson Ding <dingwei@marvell.com>
+Date: Tue, 16 Feb 2016 16:38:41 +0800
+Subject: [PATCH 0860/1240] fix: a3700: use soft-link for arch header files
+ inclusion
+
+- No need to specify the arch name when including the soc header
+  files.
+- Replace <asm/arch-armadalp/xxx.h> with <asm/arch/xxx.h>.
+
+Change-Id: I13959cc2d12dc10f46403d10984a10d256f6a9ae
+Signed-off-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27549
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armadalp/clock.c            | 2 +-
+ arch/arm/cpu/armv8/armadalp/mvebu_clock.c      | 4 ++--
+ arch/arm/cpu/armv8/armadalp/mvebu_gpio.c       | 2 +-
+ arch/arm/cpu/armv8/armadalp/spl.c              | 4 ++--
+ arch/arm/include/asm/arch-armadalp/misc-regs.h | 2 +-
+ drivers/ddr/ddr_mckinley6_arlp.c               | 2 +-
+ drivers/mmc/xenon_mmc.c                        | 2 +-
+ drivers/pci/pci_advk.c                         | 2 +-
+ drivers/phy/comphy_a3700.c                     | 2 +-
+ 9 files changed, 11 insertions(+), 11 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armadalp/clock.c b/arch/arm/cpu/armv8/armadalp/clock.c
+index 299a31e..dace4f9 100644
+--- a/arch/arm/cpu/armv8/armadalp/clock.c
++++ b/arch/arm/cpu/armv8/armadalp/clock.c
+@@ -18,7 +18,7 @@
+ 
+ #include <common.h>
+ #include <asm/arch-mvebu/clock.h>
+-#include <asm/arch-armadalp/clock.h>
++#include <asm/arch/clock.h>
+ 
+ u32 soc_tclk_get(void)
+ {
+diff --git a/arch/arm/cpu/armv8/armadalp/mvebu_clock.c b/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
+index 856baa0..db0ca74 100644
+--- a/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
++++ b/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
+@@ -21,8 +21,8 @@
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/fdt.h>
+ #include <asm/arch-mvebu/mvebu.h>
+-#include <asm/arch-armadalp/clock.h>
+-#include <asm/arch-armadalp/soc-info.h>	/* XTAL and Boot mode */
++#include <asm/arch/clock.h>
++#include <asm/arch/soc-info.h>	/* XTAL and Boot mode */
+ #include <asm/io.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+diff --git a/arch/arm/cpu/armv8/armadalp/mvebu_gpio.c b/arch/arm/cpu/armv8/armadalp/mvebu_gpio.c
+index 261b6ed..4811cc0 100644
+--- a/arch/arm/cpu/armv8/armadalp/mvebu_gpio.c
++++ b/arch/arm/cpu/armv8/armadalp/mvebu_gpio.c
+@@ -18,7 +18,7 @@
+ 
+ #include <common.h>
+ #include <asm/io.h>
+-#include <asm/arch-armadalp/gpio.h>
++#include <asm/arch/gpio.h>
+ 
+ /*
+  * reset PCIe device
+diff --git a/arch/arm/cpu/armv8/armadalp/spl.c b/arch/arm/cpu/armv8/armadalp/spl.c
+index 0795e37..2fa37f5 100644
+--- a/arch/arm/cpu/armv8/armadalp/spl.c
++++ b/arch/arm/cpu/armv8/armadalp/spl.c
+@@ -19,9 +19,9 @@
+ #include <common.h>
+ #include <asm/arch-mvebu/comphy.h>
+ #include <asm/arch-mvebu/io_addr_dec.h>
+-#include <asm/arch-armadalp/clock.h>
++#include <asm/arch/clock.h>
+ #include <asm/arch-mvebu/mbus.h>
+-#include <asm/arch-armadalp/gpio.h>
++#include <asm/arch/gpio.h>
+ #include <asm/arch-mvebu/mvebu_misc.h>
+ #include <asm/arch-mvebu/ddr.h>
+ #include <asm/arch-mvebu/fdt.h>
+diff --git a/arch/arm/include/asm/arch-armadalp/misc-regs.h b/arch/arm/include/asm/arch-armadalp/misc-regs.h
+index 924796f..9dfe1d8 100644
+--- a/arch/arm/include/asm/arch-armadalp/misc-regs.h
++++ b/arch/arm/include/asm/arch-armadalp/misc-regs.h
+@@ -18,7 +18,7 @@
+ 
+ #ifndef _MISC_REGS_H_
+ #define _MISC_REGS_H_
+-#include <asm/arch-armadalp/regs-base.h>
++#include <asm/arch/regs-base.h>
+ 
+ #define MVEBU_NB_PM_PWRDWN_OPT_REG     (MVEBU_NORTH_PM_REGS_BASE + 0x8)
+ #define L2_SRAM_LKG_PD_EN              (BIT8)
+diff --git a/drivers/ddr/ddr_mckinley6_arlp.c b/drivers/ddr/ddr_mckinley6_arlp.c
+index 87034eb..2b62db5 100644
+--- a/drivers/ddr/ddr_mckinley6_arlp.c
++++ b/drivers/ddr/ddr_mckinley6_arlp.c
+@@ -22,7 +22,7 @@
+ #include <asm/arch-mvebu/mvebu.h>
+ #include <asm/arch-mvebu/ddr.h>
+ #include <asm/arch-mvebu/system_info.h>
+-#include <asm/arch-armadalp/misc-regs.h>
++#include <asm/arch/misc-regs.h>
+ #include "ddr_mckinley6.h"
+ 
+ enum mvebu_mck_freq_support {
+diff --git a/drivers/mmc/xenon_mmc.c b/drivers/mmc/xenon_mmc.c
+index 23b8451..af9e8d1 100644
+--- a/drivers/mmc/xenon_mmc.c
++++ b/drivers/mmc/xenon_mmc.c
+@@ -37,7 +37,7 @@
+ #include <xenon_mmc.h>
+ #include <linux/sizes.h>
+ #include <asm/arch-mvebu/mvebu.h>
+-#include <asm/arch-armadalp/gpio.h>
++#include <asm/arch/gpio.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+diff --git a/drivers/pci/pci_advk.c b/drivers/pci/pci_advk.c
+index 0123d26..2746cfe 100644
+--- a/drivers/pci/pci_advk.c
++++ b/drivers/pci/pci_advk.c
+@@ -30,7 +30,7 @@
+ #include <asm/arch/pcie-core.h>
+ #include <pci.h>
+ #include <asm/arch-mvebu/fdt.h>
+-#include <asm/arch-armadalp/gpio.h>
++#include <asm/arch/gpio.h>
+ 
+ /* #define DEBUG */
+ /* #define DEBUG_CFG_CYCLE */
+diff --git a/drivers/phy/comphy_a3700.c b/drivers/phy/comphy_a3700.c
+index c7b6615..d5570e4 100644
+--- a/drivers/phy/comphy_a3700.c
++++ b/drivers/phy/comphy_a3700.c
+@@ -22,7 +22,7 @@
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/fdt.h>
+ #include <asm/arch-mvebu/mvebu.h>
+-#include <asm/arch-armadalp/clock.h>
++#include <asm/arch/clock.h>
+ #include "comphy_a3700.h"
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+-- 
+1.9.1
+

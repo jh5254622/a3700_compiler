@@ -1,0 +1,134 @@
+From 516b4ab4b75f04fdf72e201fe58789395180222f Mon Sep 17 00:00:00 2001
+From: Ken Ma <make@marvell.com>
+Date: Fri, 19 Feb 2016 00:44:07 +0800
+Subject: [PATCH 1130/1240] spi: a3700: replace old gpio APIs with new general
+ APIs
+
+- In armada3700 spi fdt nodes, a new property "output-enable-gpio"
+  node is added
+- The old gpio subroutines for SPI are moved to the armada3700 spi
+  driver, and the old pinctrl codes are kept and will be removed in
+  future
+
+Change-Id: Ie027d95b3e7e4ab748a94a9c6886139dd36000f6
+Signed-off-by: Ken Ma <make@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27670
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ arch/arm/cpu/armv8/armada3700/mvebu_gpio.c  | 13 ------------
+ arch/arm/dts/armada-3700-db.dts             |  1 +
+ arch/arm/include/asm/arch-armada3700/gpio.h |  4 ----
+ drivers/spi/mvebu_spi_a3700.c               | 31 ++++++++++++++++++++++++++++-
+ 4 files changed, 31 insertions(+), 18 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada3700/mvebu_gpio.c b/arch/arm/cpu/armv8/armada3700/mvebu_gpio.c
+index bf953c2..8e4873e 100644
+--- a/arch/arm/cpu/armv8/armada3700/mvebu_gpio.c
++++ b/arch/arm/cpu/armv8/armada3700/mvebu_gpio.c
+@@ -82,19 +82,6 @@ void mvebu_init_gpio(void)
+ 	reg_val = reg_val & (~(1 << MVEBU_GPIO_SPI_GPIO_EN_OFF));
+ 	writel(reg_val, MVEBU_GPIO_NB_SEL_REG);
+ 
+-	/* set hiden GPIO setting for SPI
+-	 * in north_bridge_test_pin_out_en register 13804,
+-	 * bit 28 is the one which enables CS, CLK pin to be
+-	 * output, need to set it to 1.
+-	 * normally, it is needed only in UART boot mode,
+-	 * but after trying all other modes, it is OK to set it.
+-	 * later, we could read the SAR register, and do not
+-	 * set it in other boot mode.
+-	 */
+-	reg_val = readl(MVEBU_GPIO_NB_OUTPUT_EN_HIGH_REG);
+-	reg_val = reg_val | (1 << MVEBU_GPIO_NB_OUTPUT_SPI_EN_OFF);
+-	writel(reg_val, MVEBU_GPIO_NB_OUTPUT_EN_HIGH_REG);
+-
+ 	/* Set test pin to SDIO mode */
+ 	mvebu_init_sdio();
+ 
+diff --git a/arch/arm/dts/armada-3700-db.dts b/arch/arm/dts/armada-3700-db.dts
+index f8439fb..6e071dd 100644
+--- a/arch/arm/dts/armada-3700-db.dts
++++ b/arch/arm/dts/armada-3700-db.dts
+@@ -41,6 +41,7 @@
+ 				status = "okay";
+ 			};
+ 			spi0: spi@10600 {
++				output-enable-gpio = <&gpio0 ARMADA_3700_GPIO(BANK_0, 60) GPIO_ACTIVE_HIGH>;
+ 				status = "okay";
+ 			};
+ 			neta0: neta@30000 {
+diff --git a/arch/arm/include/asm/arch-armada3700/gpio.h b/arch/arm/include/asm/arch-armada3700/gpio.h
+index b941a70..f82523f 100644
+--- a/arch/arm/include/asm/arch-armada3700/gpio.h
++++ b/arch/arm/include/asm/arch-armada3700/gpio.h
+@@ -20,10 +20,6 @@
+ #define _MVEBU_GPIO_H_
+ #include <asm/arch-mvebu/gpio.h>
+ 
+-#define MVEBU_GPIO_NB_OUTPUT_EN_REG		(MVEBU_GPIO_NB_REG_BASE)
+-#define MVEBU_GPIO_NB_OUTPUT_EN_HIGH_REG	(MVEBU_GPIO_NB_REG_BASE + 0x4)
+-#define MVEBU_GPIO_NB_OUTPUT_SPI_EN_OFF		(28)/* This is hidden bit which is reserved in function spec */
+-#define MVEBU_GPIO_NB_OUTPUT_VAL_REG		(MVEBU_GPIO_NB_REG_BASE + 0x18)
+ #define MVEBU_GPIO_NB_SEL_REG			(MVEBU_GPIO_NB_REG_BASE + 0x30)
+ #define MVEBU_GPIO_TW1_GPIO_EN_OFF		(10)
+ #define MVEBU_GPIO_SPI_GPIO_EN_OFF		(18)
+diff --git a/drivers/spi/mvebu_spi_a3700.c b/drivers/spi/mvebu_spi_a3700.c
+index a4b8afc..cd71749 100644
+--- a/drivers/spi/mvebu_spi_a3700.c
++++ b/drivers/spi/mvebu_spi_a3700.c
+@@ -24,6 +24,7 @@
+ #include <fdtdec.h>
+ #include <asm/arch-mvebu/fdt.h>
+ #include <asm/arch-mvebu/mvebu.h>
++#include <asm/gpio.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+@@ -242,7 +243,9 @@ struct spi_slave *spi_setup_slave(unsigned int bus, unsigned int cs,
+ 	struct spi_slave *slave;
+ 	u32 timeout = SPI_TIMEOUT;
+ 	u32 data;
+-
++#ifdef CONFIG_MVEBU_GPIO
++	struct fdt_gpio_state output_enable_gpio;
++#endif
+ 	int node_list[CONFIG_MAX_SPI_NUM], node;
+ 	u32 i, count;
+ 
+@@ -261,6 +264,32 @@ struct spi_slave *spi_setup_slave(unsigned int bus, unsigned int cs,
+ 		mvebu_spi_reg_base = (unsigned long)fdt_get_regs_offs(gd->fdt_blob, node, "reg");
+ 		mvebu_spi_max_freq = fdtdec_get_int(gd->fdt_blob, node, "spi-max-frequency", 0);
+ 		mvebu_spi_input_clock = fdtdec_get_int(gd->fdt_blob, node, "clock-frequency", 0);
++
++#ifdef CONFIG_MVEBU_GPIO
++		/* set hiden GPIO setting for SPI
++		 * in north_bridge_test_pin_out_en register 13804(high GPIO register),
++		 * bit 28(since it's in high regsiter, so the local pin number in bank is 60)
++		 * which is hidden bit which is reserved in function spec
++		 * (the corresponding gpio is ARMADA_3700_GPIO(BANK_0, 60) in a3700 spi dts node)
++		 * is the one which enables CS, CLK pin to be
++		 * output, need to set it to 1.
++		 * normally, it is needed only in UART boot mode,
++		 * but after trying all other modes, it is OK to set it.
++		 * later, we could read the SAR register, and do not
++		 * set it in other boot mode.
++		 */
++		fdtdec_decode_gpio(gd->fdt_blob, node, "output-enable-gpio", &output_enable_gpio);
++		fdtdec_setup_gpio(&output_enable_gpio);
++		if (fdt_gpio_isvalid(&output_enable_gpio)) {
++			int val;
++
++			/* Set to output enbale GPIO in output mode with low level by default */
++			val = output_enable_gpio.flags & FDT_GPIO_ACTIVE_LOW ? 1 : 0;
++			gpio_direction_output(output_enable_gpio.gpio, val);
++		}
++#else
++		printf("ERROR: CS, CLK pins are not enabled in output mode, need to implement gpio in SOC code\n");
++#endif
+ 		break;
+ 	}
+ 
+-- 
+1.9.1
+

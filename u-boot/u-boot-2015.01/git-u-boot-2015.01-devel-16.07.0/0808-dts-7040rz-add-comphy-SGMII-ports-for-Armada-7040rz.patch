@@ -1,0 +1,52 @@
+From d74fc2ca546985ecd25f41d1ac94db8bb4510970 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Thu, 4 Feb 2016 15:31:52 +0200
+Subject: [PATCH 0808/1240] dts: 7040rz: add comphy SGMII ports for
+ Armada-7040rz
+
+- Enable it for Dram Over PCIe
+
+Change-Id: Ie7f5d673c9159449df9afdf34ec4aeba10e56839
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27231
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/armada-7040-rz-db_dop.dts | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/dts/armada-7040-rz-db_dop.dts b/arch/arm/dts/armada-7040-rz-db_dop.dts
+index 1d0e17a..d01fa6b 100644
+--- a/arch/arm/dts/armada-7040-rz-db_dop.dts
++++ b/arch/arm/dts/armada-7040-rz-db_dop.dts
+@@ -97,15 +97,15 @@
+ 			};
+ 			comphy {
+ 				/* Serdes Configuration:
+-					Lane 0: UNCONNECTED
++					Lane 0: SGMII2
+ 					Lane 1: USB3-HOST0
+-					Lane 2: UNCONNECTED
++					Lane 2: SGMII0
+ 					Lane 3: SATA1
+ 					Lane 4: USB3-HOST1
+ 					Lane 5: PEX2x1
+ 				*/
+ 				phy0 {
+-					phy-type = <PHY_TYPE_UNCONNECTED>;
++					phy-type = <PHY_TYPE_SGMII2>;
+ 					phy-speed = <PHY_SPEED_1_25G>;
+ 				};
+ 				phy1 {
+@@ -113,7 +113,7 @@
+ 					phy-speed = <PHY_SPEED_5G>;
+ 				};
+ 				phy2 {
+-					phy-type = <PHY_TYPE_UNCONNECTED>;
++					phy-type = <PHY_TYPE_SGMII0>;
+ 					phy-speed = <PHY_SPEED_1_25G>;
+ 				};
+ 				phy3 {
+-- 
+1.9.1
+

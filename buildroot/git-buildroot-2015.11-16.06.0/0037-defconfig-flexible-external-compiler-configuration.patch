@@ -1,0 +1,92 @@
+From 64790f8d103340af430724597e1c93efce5306a6 Mon Sep 17 00:00:00 2001
+From: Ofer Heifetz <oferh@marvell.com>
+Date: Tue, 12 Jan 2016 15:20:13 +0200
+Subject: [PATCH 37/66] defconfig: flexible external compiler configuration
+
+To make compile procedure easier, the following was performed:
+- use empty string for the BR2_TOOLCHAIN_EXTERNAL_PATH
+- use the correct toolchain prefix
+
+Since now users use Marvell toolchain, every user can place
+Toolchain in a different path, to build BR2 w/o any need to
+modify the config file, use the following:
+BR2_TOOLCHAIN_EXTERNAL_PATH=/path/to/toolchain make
+
+The default compiler prefix is: aarch64-marvell-linux-gnu
+for the mvebu_armv8_le_defconfig.
+
+Change-Id: I543cc1d92c6c87d774baebd59bc727aa234585dd
+Signed-off-by: Ofer Heifetz <oferh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26736
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Tested-by: Shadi Ammouri <shadi@marvell.com>
+---
+ configs/mvebu_armv7_be_defconfig      | 4 ++--
+ configs/mvebu_armv7_tiny_le_defconfig | 4 ++--
+ configs/mvebu_armv8_le_defconfig      | 4 ++--
+ configs/mvebu_armv8_tiny_le_defconfig | 4 ++--
+ 4 files changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/configs/mvebu_armv7_be_defconfig b/configs/mvebu_armv7_be_defconfig
+index e883711..1d90af1 100644
+--- a/configs/mvebu_armv7_be_defconfig
++++ b/configs/mvebu_armv7_be_defconfig
+@@ -4,8 +4,8 @@ BR2_ARM_EABIHF=y
+ BR2_ARM_FPU_VFPV3=y
+ BR2_TOOLCHAIN_EXTERNAL=y
+ BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y
+-BR2_TOOLCHAIN_EXTERNAL_PATH="/path/to/compile"
+-BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="$(ARCH)"
++BR2_TOOLCHAIN_EXTERNAL_PATH=""
++BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="arm-marvell-linux-gnueabi"
+ BR2_TOOLCHAIN_EXTERNAL_GCC_4_6=y
+ BR2_TOOLCHAIN_EXTERNAL_HEADERS_3_2=y
+ BR2_TOOLCHAIN_EXTERNAL_CUSTOM_GLIBC=y
+diff --git a/configs/mvebu_armv7_tiny_le_defconfig b/configs/mvebu_armv7_tiny_le_defconfig
+index ec53662..74543ef 100644
+--- a/configs/mvebu_armv7_tiny_le_defconfig
++++ b/configs/mvebu_armv7_tiny_le_defconfig
+@@ -4,8 +4,8 @@ BR2_ARM_EABIHF=y
+ BR2_ARM_FPU_VFPV3=y
+ BR2_TOOLCHAIN_EXTERNAL=y
+ BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y
+-BR2_TOOLCHAIN_EXTERNAL_PATH="/path/to/compile"
+-BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="$(ARCH)-"
++BR2_TOOLCHAIN_EXTERNAL_PATH=""
++BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="arm-marvell-linux-gnueabi"
+ BR2_TOOLCHAIN_EXTERNAL_GCC_4_6=y
+ BR2_TOOLCHAIN_EXTERNAL_HEADERS_3_2=y
+ BR2_TOOLCHAIN_EXTERNAL_CUSTOM_GLIBC=y
+diff --git a/configs/mvebu_armv8_le_defconfig b/configs/mvebu_armv8_le_defconfig
+index a512fd1..80d224a 100644
+--- a/configs/mvebu_armv8_le_defconfig
++++ b/configs/mvebu_armv8_le_defconfig
+@@ -2,8 +2,8 @@ BR2_aarch64=y
+ BR2_OPTIMIZE_2=y
+ BR2_TOOLCHAIN_EXTERNAL=y
+ BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y
+-BR2_TOOLCHAIN_EXTERNAL_PATH="/path/to/compile"
+-BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="$(ARCH)-"
++BR2_TOOLCHAIN_EXTERNAL_PATH=""
++BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="aarch64-marvell-linux-gnu"
+ BR2_TOOLCHAIN_EXTERNAL_GCC_5=y
+ BR2_TOOLCHAIN_EXTERNAL_HEADERS_3_18=y
+ BR2_TOOLCHAIN_EXTERNAL_CUSTOM_GLIBC=y
+diff --git a/configs/mvebu_armv8_tiny_le_defconfig b/configs/mvebu_armv8_tiny_le_defconfig
+index 819024b..fb2490e 100644
+--- a/configs/mvebu_armv8_tiny_le_defconfig
++++ b/configs/mvebu_armv8_tiny_le_defconfig
+@@ -1,8 +1,8 @@
+ BR2_aarch64=y
+ BR2_TOOLCHAIN_EXTERNAL=y
+ BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y
+-BR2_TOOLCHAIN_EXTERNAL_PATH="/path/to/compile"
+-BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="$(ARCH)-"
++BR2_TOOLCHAIN_EXTERNAL_PATH=""
++BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="aarch64-marvell-linux-gnu"
+ BR2_TOOLCHAIN_EXTERNAL_GCC_5=y
+ BR2_TOOLCHAIN_EXTERNAL_HEADERS_3_18=y
+ BR2_TOOLCHAIN_EXTERNAL_CUSTOM_GLIBC=y
+-- 
+1.9.1
+

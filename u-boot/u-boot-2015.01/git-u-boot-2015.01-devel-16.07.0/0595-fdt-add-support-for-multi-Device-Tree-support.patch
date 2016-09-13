@@ -1,0 +1,174 @@
+From 4261de0c02ecfb93d53a64f5594b9ec5f18c5069 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Mon, 7 Dec 2015 18:55:22 +0200
+Subject: [PATCH 0595/1240] fdt: add support for multi Device Tree support
+
+	- This patch added support for multi FDT support
+	- To enable this feature need to enable CONFIG_MULTI_DT_FILE config
+	  and set the list of the device tree blob files
+	- This feature is enabled for AP-806 DB board.
+
+Change-Id: I5144f8dbcd936cb8c0b0c5dc87717a03f3661035
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25693
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/spl.c |  7 +++++++
+ arch/arm/dts/Makefile           |  4 +++-
+ common/board_f.c                |  7 +++++++
+ configs/mvebu_apn806_defconfig  |  1 +
+ dts/Kconfig                     |  9 ++++++++-
+ dts/Makefile                    | 25 ++++++++++++++++---------
+ include/configs/mvebu-common.h  |  1 +
+ 7 files changed, 43 insertions(+), 11 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index ac60ed9..3e0929f 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -31,7 +31,14 @@ static int setup_fdt(void)
+ #ifdef CONFIG_OF_CONTROL
+ #ifdef CONFIG_OF_EMBED
+ 	/* Get a pointer to the FDT */
++#ifdef CONFIG_MULTI_DT_FILE
++	/* This change is temporary. We are using hardcoded value because
++	   for now the desired FDT is "apn-806-db" and it's in the second index of the dtb list.
++	   After adding "FDT from EEPROM" patch. this change will be removed */
++	gd->fdt_blob = __dtb_dt_begin + (2*MVEBU_FDT_SIZE);
++#else
+ 	gd->fdt_blob = __dtb_dt_begin;
++#endif
+ #else
+ 	#error "Support only embedded FDT mode in SPL"
+ #endif
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index 32227ef..1a2d459 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -64,7 +64,9 @@ dtb-$(CONFIG_TARGET_ARMADA_8K) += apn-806-db.dtb \
+ 
+ targets += $(dtb-y)
+ 
+-DTC_FLAGS += -R 4 -p 0x1000
++# alignment fdt file to 8k. this is helpful to support multi fdt.
++# This alignment allows selecting DT files easily by skipping over a predefined DT size.
++DTC_FLAGS += -R 4 -S 0x2000
+ 
+ PHONY += dtbs
+ dtbs: $(addprefix $(obj)/, $(dtb-y))
+diff --git a/common/board_f.c b/common/board_f.c
+index cfd77f8..2a0b7e4 100644
+--- a/common/board_f.c
++++ b/common/board_f.c
+@@ -340,7 +340,14 @@ static int setup_fdt(void)
+ #ifdef CONFIG_OF_CONTROL
+ # ifdef CONFIG_OF_EMBED
+ 	/* Get a pointer to the FDT */
++#ifdef CONFIG_MULTI_DT_FILE
++	/* This change is temporary. We are using hardcoded value because
++	   for now the desired FDT is "apn-806-db" and it's in the second index of the dtb list.
++	   After adding "FDT from EEPROM" patch. this change will be removed */
++	gd->fdt_blob = __dtb_dt_begin + (2*MVEBU_FDT_SIZE);
++#else
+ 	gd->fdt_blob = __dtb_dt_begin;
++#endif
+ # elif defined CONFIG_OF_SEPARATE
+ 	/* FDT is at end of image */
+ 	gd->fdt_blob = (ulong *)&_end;
+diff --git a/configs/mvebu_apn806_defconfig b/configs/mvebu_apn806_defconfig
+index 4826953..bed0809 100644
+--- a/configs/mvebu_apn806_defconfig
++++ b/configs/mvebu_apn806_defconfig
+@@ -23,6 +23,7 @@ CONFIG_CMD_MVEBU_BUBT=y
+ CONFIG_CMD_MVEBU_TSEN=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+++S:CONFIG_MULTI_DT_FILE=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="apn-806-db"
+ CONFIG_MVEBU_PCI=y
+ CONFIG_MVEBU_CCU=y
+diff --git a/dts/Kconfig b/dts/Kconfig
+index ca5bd6f..84fc949 100644
+--- a/dts/Kconfig
++++ b/dts/Kconfig
+@@ -50,5 +50,12 @@ config DEFAULT_DEVICE_TREE
+ 	  This option specifies the default Device Tree used for DT control.
+ 	  It can be overridden from the command line:
+ 	  $ make DEVICE_TREE=<device-tree-name>
+-
++config MULTI_DT_FILE
++	bool "Support multi DT files in U-boot image"
++	depends on OF_CONTROL
++	help
++	  If this option is enabled, U-Boot will support different DT files.
++	  Each FDT has a fixed size of 8KB, so to choose between them in u-boot,
++	  it will be executerd by a jump of 8KB.
++	  The u-boot separates between the DTB by the flavor/board id
+ endmenu
+diff --git a/dts/Makefile b/dts/Makefile
+index d3122aa..55f9a71 100644
+--- a/dts/Makefile
++++ b/dts/Makefile
+@@ -11,30 +11,37 @@ DEVICE_TREE ?= $(CONFIG_DEFAULT_DEVICE_TREE:"%"=%)
+ ifeq ($(DEVICE_TREE),)
+ DEVICE_TREE := unset
+ endif
+-
++DTB_PRINT_LIST = ""
+ ifneq ($(EXT_DTB),)
+ DTB := $(EXT_DTB)
+ else
+ DTB := arch/$(ARCH)/dts/$(DEVICE_TREE).dtb
+ endif
+ 
+-$(obj)/dt.dtb: $(DTB) FORCE
+-	$(call if_changed,shipped)
+-
+-targets += dt.dtb
+-
+-$(DTB): arch-dtbs
+-	$(Q)test -e $@ || (						\
++$(obj)/dt.dtb: arch-dtbs
++ifdef CONFIG_MULTI_DT_FILE
++	$(eval DTB := $(shell echo arch/$(ARCH)/dts/*.dtb))
++	@echo "List Of FDT files:"
++	$(foreach i, $(DTB), $(eval DTB_PRINT_LIST += $(i)\n ))
++	@echo "$(DTB_PRINT_LIST)"
++endif
++	$(Q)test -e $(firstword $(DTB)) || (						\
+ 	echo >&2;							\
+ 	echo >&2 "Device Tree Source is not correctly specified.";	\
+ 	echo >&2 "Please define 'CONFIG_DEFAULT_DEVICE_TREE'";		\
+ 	echo >&2 "or build with 'DEVICE_TREE=<device_tree>' argument";	\
+ 	echo >&2;							\
+ 	/bin/false)
++	$(shell cat $(DTB) > $@)
++
++targets += dt.dtb
+ 
+-arch-dtbs:
++arch-dtbs: clear-dtbs
+ 	$(Q)$(MAKE) $(build)=arch/$(ARCH)/dts dtbs
+ 
++clear-dtbs:
++	$(shell rm -f arch/$(ARCH)/dts/*.dtb 2>/dev/null || true)
++
+ .SECONDARY: $(obj)/dt.dtb.S
+ 
+ obj-$(CONFIG_OF_EMBED) := dt.dtb.o
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index fe7dd6b..757bf4b 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -218,6 +218,7 @@
+ 
+ /* Flat Device Tree Definitions */
+ #define CONFIG_OF_LIBFDT
++#define MVEBU_FDT_SIZE 0x2000
+ 
+ /* SMP Spin Table Definitions */
+ #define CPU_RELEASE_ADDR               (CONFIG_SYS_SDRAM_BASE + 0x2000000)
+-- 
+1.9.1
+

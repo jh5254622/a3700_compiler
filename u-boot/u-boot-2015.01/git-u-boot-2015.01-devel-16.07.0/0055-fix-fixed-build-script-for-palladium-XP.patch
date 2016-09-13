@@ -1,0 +1,70 @@
+From a3a0632f6555643f37c6829ab603a213224b2bd2 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Tue, 26 Aug 2014 12:58:24 +0300
+Subject: [PATCH 0055/1240] fix: fixed build script for palladium XP
+
+	Palladium XP output files are different so
+	need to consider that when copying output files
+
+Change-Id: I767096a5ce0439d879110759b1bc70d436427dbd
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/11308
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ build.pl | 39 +++++++++++++++++++++++----------------
+ 1 file changed, 23 insertions(+), 16 deletions(-)
+
+diff --git a/build.pl b/build.pl
+index f5b0964..312155c 100755
+--- a/build.pl
++++ b/build.pl
+@@ -201,22 +201,29 @@ if(defined $opt_o)
+ 	print "\n**** [Copying output] *****\n\n";
+ 
+ 	system("mkdir -p $opt_o/");
+-	system("mkdir -p $opt_o/bin_hdr");
+-
+-	# Copy images
+-	system("cp u-boot-$flash_name.bin $opt_o/u-boot.bin");
+-	system("cp u-boot-$flash_name.bin      $opt_o/");
+-	system("cp u-boot-$flash_name-uart.bin $opt_o/");
+-
+-	# Copy meta data
+-	system("cp u-boot $opt_o/u-boot-$flash_name");
+-	system("cp u-boot.srec $opt_o/u-boot-$flash_name.srec");
+-
+-	# Copy bin header images 
+-	system("cp tools/marvell/bin_hdr/bin_hdr.bin $opt_o/bin_hdr/");
+-	system("cp tools/marvell/bin_hdr/bin_hdr.elf $opt_o/bin_hdr/");
+-	system("cp tools/marvell/bin_hdr/bin_hdr.dis $opt_o/bin_hdr/");
+-	system("cp tools/marvell/bin_hdr/bin_hdr.srec $opt_o/bin_hdr/");
++
++	unless ($board eq "armada8k-pxp") {
++		system("mkdir -p $opt_o/bin_hdr");
++
++		# Copy images
++		system("cp u-boot-$flash_name.bin $opt_o/u-boot.bin");
++		system("cp u-boot-$flash_name.bin      $opt_o/");
++		system("cp u-boot-$flash_name-uart.bin $opt_o/");
++
++		# Copy meta data
++		system("cp u-boot $opt_o/u-boot-$flash_name");
++		system("cp u-boot.srec $opt_o/u-boot-$flash_name.srec");
++
++		# Copy bin header images
++		system("cp tools/marvell/bin_hdr/bin_hdr.bin $opt_o/bin_hdr/");
++		system("cp tools/marvell/bin_hdr/bin_hdr.elf $opt_o/bin_hdr/");
++		system("cp tools/marvell/bin_hdr/bin_hdr.dis $opt_o/bin_hdr/");
++		system("cp tools/marvell/bin_hdr/bin_hdr.srec $opt_o/bin_hdr/");
++	} else {
++		system("cp u-boot $opt_o/.");
++		system("cp u-boot.bin $opt_o/.");
++		system("cp u-boot.hex $opt_o/.");
++	}
+ }
+ 
+ exit 0;
+-- 
+1.9.1
+

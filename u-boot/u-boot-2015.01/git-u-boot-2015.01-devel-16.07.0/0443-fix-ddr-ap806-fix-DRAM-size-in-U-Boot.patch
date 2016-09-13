@@ -1,0 +1,120 @@
+From f19418ec91613cc961a0d70714de3181c68e61db Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 15 Oct 2015 12:58:59 +0300
+Subject: [PATCH 0443/1240] fix: ddr: ap806: fix DRAM size in U-Boot
+
+- Update the DRAM size in UBoot, got the DRAM size from Mckinley unit
+- Update banks of DRAM
+- Return 1G size to U-Boot for relocation
+
+Change-Id: Iabb55197b4f5c7702eb9953b315222a56f9a019f
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24026
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/soc.c | 62 +++++++++++++++++++++++----------------
+ include/configs/mvebu-common.h    |  2 +-
+ 2 files changed, 38 insertions(+), 26 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/soc.c b/arch/arm/cpu/armv8/armada8k/soc.c
+index c7e335c..8c47c7c 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc.c
++++ b/arch/arm/cpu/armv8/armada8k/soc.c
+@@ -25,14 +25,8 @@
+ #include <asm/arch/regs-base.h>
+ #include <linux/sizes.h>
+ 
+-#define ADDRESS_SHIFT			(20)
+-#define MAX_CCU_WINDOWS			(8)
+-#define DRAM_0_TID			0x03
+-#define CCU_WIN_CR_OFFSET(win)		(MVEBU_ADEC_AP_BASE + 0x0 + (0x10 * win))
+-#define CCU_TARGET_ID_OFFSET		(8)
+-#define CCU_TARGET_ID_MASK		(0x7F)
+-#define CCU_WIN_ALR_OFFSET(win)		(MVEBU_ADEC_AP_BASE + 0x8 + (0x10 * win))
+-#define CCU_WIN_AHR_OFFSET(win)		(MVEBU_ADEC_AP_BASE + 0xC + (0x10 * win))
++#define MVEBU_MCKINLEY_REGS_BASE	(MVEBU_REGS_BASE + 0x20000)
++#define MVEBU_MC_MEM_ADDR_MAP_REG	(MVEBU_MCKINLEY_REGS_BASE + 0x200)
+ 
+ #define RFU_GLOBAL_SW_RST		(MVEBU_RFU_BASE + 0x84)
+ #define RFU_SW_RESET_OFFSET		0
+@@ -66,29 +60,47 @@ int dram_init(void)
+ #elif defined(CONFIG_PALLADIUM)
+ 	gd->ram_size = 0x20000000;
+ #else
+-	u32 alr, ahr;
+-	u32 target_id, ctrl;
+-	u32 win;
+-
+-	for (win = 0; win < MAX_CCU_WINDOWS; win++) {
+-		ctrl = readl(CCU_WIN_CR_OFFSET(win));
+-		target_id = (ctrl >> CCU_TARGET_ID_OFFSET) & CCU_TARGET_ID_MASK;
+-
+-		if (target_id == DRAM_0_TID) {
+-			alr = readl(CCU_WIN_ALR_OFFSET(win)) << ADDRESS_SHIFT;
+-			ahr = readl(CCU_WIN_AHR_OFFSET(win)) << ADDRESS_SHIFT;
+-			gd->ram_size = ahr - alr + 1;
+-			gd->bd->bi_dram[0].size = gd->ram_size;
+-			gd->bd->bi_dram[0].start = alr;
+-
+-			debug("DRAM base 0x%08x size 0x%x\n", alr, (uint)gd->ram_size);
+-		}
++	u32 dram_length, ram_size;
++
++	dram_length = (readl(MVEBU_MC_MEM_ADDR_MAP_REG) >> 16) & 0x1F;
++	if (dram_length > 0x3) {
++		dram_length -= 0x7;
++		ram_size = 8 * SZ_1M;
++	} else {
++		ram_size = 384 * SZ_1M;
+ 	}
++
++	gd->ram_size = (u64)((u64)ram_size << dram_length);
+ #endif
+ 
+ 	return 0;
+ }
+ 
++phys_size_t get_effective_memsize(void)
++{
++	/* Set Memory size of U-Boot to 1GB only - for relocation only */
++	if (gd->ram_size < SZ_1G)
++		return gd->ram_size;
++
++	return SZ_1G;
++}
++
++void dram_init_banksize(void)
++{
++	/* Config 2 DRAM banks:
++	** Bank 0 - max size 4G - 256M
++	** Bank 1 - max size 4G */
++	gd->bd->bi_dram[0].start = CONFIG_SYS_SDRAM_BASE;
++	if (gd->ram_size <= SZ_4G) {
++		gd->bd->bi_dram[0].size = min(gd->ram_size, (phys_size_t)(SZ_4G - SZ_256M));
++		return;
++	}
++
++	gd->bd->bi_dram[0].size = SZ_4G - SZ_256M;
++	gd->bd->bi_dram[1].start = SZ_4G;
++	gd->bd->bi_dram[1].size = gd->ram_size - SZ_4G;
++}
++
+ void reset_cpu(ulong ignored)
+ {
+ 	u32 reg;
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 9b91b79..787a4ba 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -45,7 +45,7 @@
+ #define CONFIG_SYS_RESET_ADDRESS        0xffff0000
+ #define CONFIG_SYS_MALLOC_BASE          (CONFIG_SYS_TEXT_BASE + (3 << 20))  /* TEXT_BASE + 3M */
+ #define CONFIG_SYS_MALLOC_LEN           (1 << 20)    /* Reserve 1MB for malloc*/
+-#define CONFIG_NR_DRAM_BANKS		(4)
++#define CONFIG_NR_DRAM_BANKS		(2)
+ /* maybe need to set back to 0x7fff0 */
+ #define CONFIG_SYS_INIT_SP_ADDR         (CONFIG_SYS_TEXT_BASE + 0xFF0000)   /* End of 16M scrubbed by training in bootrom */
+ #define CONFIG_SYS_GBL_DATA_SIZE        128	/* Size in bytes reserved for init data */
+-- 
+1.9.1
+

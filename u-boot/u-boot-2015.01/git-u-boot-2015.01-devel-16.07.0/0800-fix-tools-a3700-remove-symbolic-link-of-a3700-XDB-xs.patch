@@ -1,0 +1,96 @@
+From 9e4d6fa694639f79cf1a6d7a05271098fc1ddd68 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Wed, 3 Feb 2016 23:06:57 +0800
+Subject: [PATCH 0800/1240] fix: tools: a3700: remove symbolic link of a3700
+ XDB xsf file
+
+There is a symbolic link of a3700 xsf file
+u-boot\tools\marvell\debugger_scripts\XDB\hyperion_add\hyperion_3core.xsf
+It links to the real file
+u-boot\tools\marvell\debugger_scripts\XDB\hyperion_3core.xsf
+When STAR does the u-boot release job, at the end it compares all the files
+under UNI GIT and release folder, finds that this symbolic file has became
+a real file during release copy, so STAR gives a WARNING.
+
+File hyperion_add\hyperion_3core.xsf is used by add_hyperion.bat or
+add_hyperion.sh under the same folder, to prepare the hyperion environment
+for XDB software, so it could not be removed.
+
+To fix this warning, replace the symbolic link of hyperion_3core.xsf with
+real file, and remove the original real hyperion_3core.xsf file under
+upper flolder.
+
+Change-Id: Ifebc30ea23406fa217bd3099c04065d81a069630
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27167
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+---
+ .../marvell/debugger_scripts/XDB/hyperion_3core.xsf  | 19 -------------------
+ .../XDB/hyperion_add/hyperion_3core.xsf              | 20 +++++++++++++++++++-
+ 2 files changed, 19 insertions(+), 20 deletions(-)
+ delete mode 100644 tools/marvell/debugger_scripts/XDB/hyperion_3core.xsf
+ mode change 120000 => 100644 tools/marvell/debugger_scripts/XDB/hyperion_add/hyperion_3core.xsf
+
+diff --git a/tools/marvell/debugger_scripts/XDB/hyperion_3core.xsf b/tools/marvell/debugger_scripts/XDB/hyperion_3core.xsf
+deleted file mode 100644
+index 48fc0db..0000000
+--- a/tools/marvell/debugger_scripts/XDB/hyperion_3core.xsf
++++ /dev/null
+@@ -1,19 +0,0 @@
+------------------------------------------------------------------------
+- MARVELL INTERNATIONAL LTD., ON BEHALF OF ITSELF AND ITS WORLDWIDE
+-AFFILIATES(COLLECTIVELY, "MARVELL"), MAKES NO WARRANTY OF ANY KIND WITH
+-REGARD TO THIS MATERIAL, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+-OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+-MARVELL ASSUMES NO RESPONSIBILITY FOR ANY ERRORS THAT MAY
+-APPEAR IN THIS DOCUMENT. MARVELL MAKES NO COMMITMENT TO
+-UPDATE NOR TO KEEP CURRENT THE INFORMATION CONTAINED IN THIS DOCUMENT.
+------------------------------------------------------------------------
+-[PROJECT]
+-Target=JTAG CS/CS/CS
+-Template=true
+-Version=2:2
+-[SETTINGS]
+-Global=-plg ".\..\plugin\common\vt100\vt100.dll " -sync "EctHardware"
+-CS=-plg ".\..\plugin\arm\trace\etmtrace.dll " -L "tcp:127.0.0.1:3020:usb:" -target override=ap:1,debug:0x80030000,cti:0x80038000 scanchain=JTAG_CS_CS_CS_dap4_jcs_hyperion_v8 hotdebug tckoverwrite=10.0MHz device=mjc
+-CS$2=-plg ".\..\plugin\arm\trace\etmtrace.dll " -L "tcp:127.0.0.1:3020:usb:" -target override=ap:1,debug:0x80032000,cti:0x80039000 -target scanchain=JTAG_CS_CS_CS_dap4_jcs_hyperion_v8 hotdebug tckoverwrite=10.0MHz device=mjc
+-CS$3=-plg ".\..\plugin\arm\trace\etmtrace.dll " -L "tcp:127.0.0.1:3020:usb:" -target override=ap:3 -target scanchain=JTAG_CS_CS_CS_dap4_jcs_hyperion hotdebug tckoverwrite=10.0MHz device=mjc
+-
+diff --git a/tools/marvell/debugger_scripts/XDB/hyperion_add/hyperion_3core.xsf b/tools/marvell/debugger_scripts/XDB/hyperion_add/hyperion_3core.xsf
+deleted file mode 120000
+index 3d4df8f..0000000
+--- a/tools/marvell/debugger_scripts/XDB/hyperion_add/hyperion_3core.xsf
++++ /dev/null
+@@ -1 +0,0 @@
+-../hyperion_3core.xsf
+\ No newline at end of file
+diff --git a/tools/marvell/debugger_scripts/XDB/hyperion_add/hyperion_3core.xsf b/tools/marvell/debugger_scripts/XDB/hyperion_add/hyperion_3core.xsf
+new file mode 100644
+index 0000000..48fc0db
+--- /dev/null
++++ b/tools/marvell/debugger_scripts/XDB/hyperion_add/hyperion_3core.xsf
+@@ -0,0 +1,19 @@
++-----------------------------------------------------------------------
++ MARVELL INTERNATIONAL LTD., ON BEHALF OF ITSELF AND ITS WORLDWIDE
++AFFILIATES(COLLECTIVELY, "MARVELL"), MAKES NO WARRANTY OF ANY KIND WITH
++REGARD TO THIS MATERIAL, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
++MARVELL ASSUMES NO RESPONSIBILITY FOR ANY ERRORS THAT MAY
++APPEAR IN THIS DOCUMENT. MARVELL MAKES NO COMMITMENT TO
++UPDATE NOR TO KEEP CURRENT THE INFORMATION CONTAINED IN THIS DOCUMENT.
++-----------------------------------------------------------------------
++[PROJECT]
++Target=JTAG CS/CS/CS
++Template=true
++Version=2:2
++[SETTINGS]
++Global=-plg ".\..\plugin\common\vt100\vt100.dll " -sync "EctHardware"
++CS=-plg ".\..\plugin\arm\trace\etmtrace.dll " -L "tcp:127.0.0.1:3020:usb:" -target override=ap:1,debug:0x80030000,cti:0x80038000 scanchain=JTAG_CS_CS_CS_dap4_jcs_hyperion_v8 hotdebug tckoverwrite=10.0MHz device=mjc
++CS$2=-plg ".\..\plugin\arm\trace\etmtrace.dll " -L "tcp:127.0.0.1:3020:usb:" -target override=ap:1,debug:0x80032000,cti:0x80039000 -target scanchain=JTAG_CS_CS_CS_dap4_jcs_hyperion_v8 hotdebug tckoverwrite=10.0MHz device=mjc
++CS$3=-plg ".\..\plugin\arm\trace\etmtrace.dll " -L "tcp:127.0.0.1:3020:usb:" -target override=ap:3 -target scanchain=JTAG_CS_CS_CS_dap4_jcs_hyperion hotdebug tckoverwrite=10.0MHz device=mjc
++
+-- 
+1.9.1
+

@@ -1,0 +1,152 @@
+From cc3f23aee3f780dac2f979fc04dd6921840e0a73 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 27 Jan 2016 13:38:12 +0200
+Subject: [PATCH 0737/1240] fix: dts: a7040: move the common comphy node to
+ common dtsi file
+
+Change-Id: I061e735bf1c497bc2333f5d5a839a6e8589de3b4
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27047
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/armada-7040-rz-db_all_pci.dts    | 5 -----
+ arch/arm/dts/armada-7040-rz-db_kr.dts         | 5 -----
+ arch/arm/dts/armada-7040-rz-db_nand.dts       | 5 -----
+ arch/arm/dts/armada-7040-rz-db_rgmii_only.dts | 5 -----
+ arch/arm/dts/armada-7040-rz-db_router.dts     | 5 -----
+ arch/arm/dts/armada-7040-rz-db_rxaui.dts      | 5 -----
+ arch/arm/dts/armada-7040-rz-db_rxaui_pci.dts  | 5 -----
+ arch/arm/dts/cp110.dtsi                       | 7 +++++++
+ 8 files changed, 7 insertions(+), 35 deletions(-)
+
+diff --git a/arch/arm/dts/armada-7040-rz-db_all_pci.dts b/arch/arm/dts/armada-7040-rz-db_all_pci.dts
+index 748f080..e20f843 100644
+--- a/arch/arm/dts/armada-7040-rz-db_all_pci.dts
++++ b/arch/arm/dts/armada-7040-rz-db_all_pci.dts
+@@ -84,11 +84,6 @@
+ 			};
+ 
+ 			comphy {
+-				compatible = "marvell,mvebu-comphy", "marvell,comphy-cp110";
+-				mux-bitcount = <4>;
+-				max-lanes = <6>;
+-				reg-comphy = <0x441000 0x8>;
+-				reg-hpipe3 = <0x120800 0x8>;
+ 				/* Serdes Configuration:
+ 					Lane 0-3: PEX0x4
+ 					Lane 4:   PEX1x1
+diff --git a/arch/arm/dts/armada-7040-rz-db_kr.dts b/arch/arm/dts/armada-7040-rz-db_kr.dts
+index 472e12a..7f71b3e 100644
+--- a/arch/arm/dts/armada-7040-rz-db_kr.dts
++++ b/arch/arm/dts/armada-7040-rz-db_kr.dts
+@@ -90,11 +90,6 @@
+ 			};
+ 
+ 			comphy {
+-				compatible = "marvell,mvebu-comphy", "marvell,comphy-cp110";
+-				mux-bitcount = <4>;
+-				max-lanes = <6>;
+-				reg-comphy = <0x441000 0x8>;
+-				reg-hpipe3 = <0x120800 0x8>;
+ 				/* Serdes Configuration:
+ 					Lane 0: PEX0x1
+ 					Lane 1: SATA0
+diff --git a/arch/arm/dts/armada-7040-rz-db_nand.dts b/arch/arm/dts/armada-7040-rz-db_nand.dts
+index 9b02402..645707b 100644
+--- a/arch/arm/dts/armada-7040-rz-db_nand.dts
++++ b/arch/arm/dts/armada-7040-rz-db_nand.dts
+@@ -93,11 +93,6 @@
+ 			};
+ 
+ 			comphy {
+-				compatible = "marvell,mvebu-comphy", "marvell,comphy-cp110";
+-				mux-bitcount = <4>;
+-				max-lanes = <6>;
+-				reg-comphy = <0x441000 0x8>;
+-				reg-hpipe3 = <0x120800 0x8>;
+ 				/* Serdes Configuration:
+ 					Lane 0: PEX0x1
+ 					Lane 1: USB3-HOST0
+diff --git a/arch/arm/dts/armada-7040-rz-db_rgmii_only.dts b/arch/arm/dts/armada-7040-rz-db_rgmii_only.dts
+index a515b50..d8a9133 100644
+--- a/arch/arm/dts/armada-7040-rz-db_rgmii_only.dts
++++ b/arch/arm/dts/armada-7040-rz-db_rgmii_only.dts
+@@ -96,11 +96,6 @@
+ 			};
+ 
+ 			comphy {
+-				compatible = "marvell,mvebu-comphy", "marvell,comphy-cp110";
+-				mux-bitcount = <4>;
+-				max-lanes = <6>;
+-				reg-comphy = <0x441000 0x8>;
+-				reg-hpipe3 = <0x120800 0x8>;
+ 				/* Serdes Configuration:
+ 					Lane 0: PEX0x1
+ 					Lane 1: USB3-HOST0
+diff --git a/arch/arm/dts/armada-7040-rz-db_router.dts b/arch/arm/dts/armada-7040-rz-db_router.dts
+index f1d23db..63e66a9 100644
+--- a/arch/arm/dts/armada-7040-rz-db_router.dts
++++ b/arch/arm/dts/armada-7040-rz-db_router.dts
+@@ -92,11 +92,6 @@
+ 			};
+ 
+ 			comphy {
+-				compatible = "marvell,mvebu-comphy", "marvell,comphy-cp110";
+-				mux-bitcount = <4>;
+-				max-lanes = <6>;
+-				reg-comphy = <0x441000 0x8>;
+-				reg-hpipe3 = <0x120800 0x8>;
+ 				/* Serdes Configuration:
+ 					Lane 0: SGMII2
+ 					Lane 1: USB3-HOST0
+diff --git a/arch/arm/dts/armada-7040-rz-db_rxaui.dts b/arch/arm/dts/armada-7040-rz-db_rxaui.dts
+index 1d02b41..656c082 100644
+--- a/arch/arm/dts/armada-7040-rz-db_rxaui.dts
++++ b/arch/arm/dts/armada-7040-rz-db_rxaui.dts
+@@ -88,11 +88,6 @@
+ 			};
+ 
+ 			comphy {
+-				compatible = "marvell,mvebu-comphy", "marvell,comphy-cp110";
+-				mux-bitcount = <4>;
+-				max-lanes = <6>;
+-				reg-comphy = <0x441000 0x8>;
+-				reg-hpipe3 = <0x120800 0x8>;
+ 				/* Serdes Configuration:
+ 					Lane 0: SATA0
+ 					Lane 1: SATA1
+diff --git a/arch/arm/dts/armada-7040-rz-db_rxaui_pci.dts b/arch/arm/dts/armada-7040-rz-db_rxaui_pci.dts
+index 253745a..fd0758b 100644
+--- a/arch/arm/dts/armada-7040-rz-db_rxaui_pci.dts
++++ b/arch/arm/dts/armada-7040-rz-db_rxaui_pci.dts
+@@ -85,11 +85,6 @@
+ 			};
+ 
+ 			comphy {
+-				compatible = "marvell,mvebu-comphy", "marvell,comphy-cp110";
+-				mux-bitcount = <4>;
+-				max-lanes = <6>;
+-				reg-comphy = <0x441000 0x8>;
+-				reg-hpipe3 = <0x120800 0x8>;
+ 				/* Serdes Configuration:
+ 					Lane 0: PEX0x1
+ 					Lane 1: SATA0
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index f5e6b47..c16a110 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -115,3 +115,10 @@ pcie-controller {
+ 	};
+ };
+ 
++comphy {
++	compatible = "marvell,mvebu-comphy", "marvell,comphy-cp110";
++	mux-bitcount = <4>;
++	max-lanes = <6>;
++	reg-comphy = <0x441000 0x8>;
++	reg-hpipe3 = <0x120800 0x8>;
++};
+-- 
+1.9.1
+

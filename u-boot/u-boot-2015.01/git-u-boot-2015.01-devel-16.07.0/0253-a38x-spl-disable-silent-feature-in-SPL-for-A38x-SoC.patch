@@ -1,0 +1,33 @@
+From 35de9541337cba09e01730c0770de2510d2a0ed0 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 16 Jul 2015 15:46:20 +0300
+Subject: [PATCH 0253/1240] a38x: spl: disable silent feature in SPL for A38x
+ SoC
+
+Change-Id: Id5d518774ce151df882336a7d2cd538bfe3ca2b5
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/21950
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/spl.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index edd62e1..5c636a4 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -44,8 +44,10 @@ void board_init_f(ulong silent)
+ 	gd = &gdata;
+ 	gd->baudrate = CONFIG_BAUDRATE;
+ 
++#ifndef CONFIG_TARGET_ARMADA_38X
+ 	if (silent)
+ 		gd->flags |= GD_FLG_SILENT;
++#endif
+ 
+ 	setup_fdt();
+ 	preloader_console_init();
+-- 
+1.9.1
+

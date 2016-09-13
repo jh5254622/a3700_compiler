@@ -1,0 +1,33 @@
+From 49dba2fcc5b87d3c234a725daee61c2692e6b2dc Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Sun, 23 Aug 2015 11:18:31 +0300
+Subject: [PATCH 0344/1240] fix: arlp: Adjust the DDR init in NTIM for
+ Palladium model Rev2
+
+- Fix the memory initialization sequence in NTIM descriptor
+  for matching Palladium model changes introduced in Rev2
+
+Change-Id: I197f56c5cd4f3ad619a1829fc47b6e1693b1a446
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23028
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ tools/wtp/u-boot-ntim.txt | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/tools/wtp/u-boot-ntim.txt b/tools/wtp/u-boot-ntim.txt
+index c84ad87..6fbe556 100644
+--- a/tools/wtp/u-boot-ntim.txt
++++ b/tools/wtp/u-boot-ntim.txt
+@@ -49,6 +49,7 @@ Operations:
+ DDR_INIT_ENABLE: 0x00000001
+ End Operations:
+ Instructions:
++WRITE: 0xC0014008 0x00404500
+ WRITE: 0xC0002000 0x00010000
+ WRITE: 0xC0002004 0x00000000
+ WRITE: 0xC0000340 0x0f0f0fef
+-- 
+1.9.1
+

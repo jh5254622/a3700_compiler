@@ -1,0 +1,28 @@
+From d13b0ecb86bb7d1e20d354a5e24808ced2a7739c Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Sun, 30 Aug 2015 13:32:19 +0300
+Subject: [PATCH 0382/1240] defconfig: spl: apn806: enable spl memory test
+
+Add CONFIG_MVEBU_SPL_MEMORY_TEST to mvebu_apn806_defconfig
+
+Change-Id: I0e32f603dfde026c55b2901784744754b9d2ac9e
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23303
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ configs/mvebu_apn806_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/configs/mvebu_apn806_defconfig b/configs/mvebu_apn806_defconfig
+index e0546d5..d7bdc58 100644
+--- a/configs/mvebu_apn806_defconfig
++++ b/configs/mvebu_apn806_defconfig
+@@ -33,3 +33,4 @@ CONFIG_ENC28J60=y
+ CONFIG_MVEBU_PINCTL=y
+ +S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+ +S:CONFIG_MVEBU_MK6_SUPPORT=y
+++S:CONFIG_MVEBU_SPL_MEMORY_TEST=y
+-- 
+1.9.1
+

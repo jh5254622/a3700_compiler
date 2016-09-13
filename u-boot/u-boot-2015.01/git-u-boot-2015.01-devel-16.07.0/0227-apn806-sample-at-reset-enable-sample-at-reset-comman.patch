@@ -1,0 +1,113 @@
+From 4a5b558bd562fe30eb289bc57863ba54c82e05d8 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Fri, 26 Jun 2015 11:15:53 +0300
+Subject: [PATCH 0227/1240] apn806:sample at reset: enable sample at reset
+ command
+
+- Added mapping of sample at reset command for APN-806
+
+Change-Id: Ibc686414a54c42b30200c2f53021fd83ee05fea4
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20513
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/apn-806-db.dts      | 69 ++++++++++++++++++++++++++++++++++++++++
+ configs/mvebu_armada8k_defconfig |  1 +
+ 2 files changed, 70 insertions(+)
+
+diff --git a/arch/arm/dts/apn-806-db.dts b/arch/arm/dts/apn-806-db.dts
+index 7fdbcea..6591eb1 100644
+--- a/arch/arm/dts/apn-806-db.dts
++++ b/arch/arm/dts/apn-806-db.dts
+@@ -31,6 +31,75 @@
+ 		device_type = "memory";
+ 		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
+ 	};
++	/* This should go only into devel boards */
++	sar {
++		compatible = "marvell,sample-at-reset";
++		#address-cells = <1>;
++		#size-cells = <0>;
++		reg = <0x4c 0x4d 0x0>;
++		chip_count = <2>;
++		bit_width = <5>;
++
++		freq {
++			key = "freq";
++			description = "CPU/DDR frequencies";
++			start-bit = <0>;
++			bit-length = <5>;
++			option-cnt = <4>;
++			options = "0x4", "2500/525 Mhz",
++				"0x6", "2500/800 Mhz",
++				"0x9", "2200/800 Mhz",
++				"0x13", "1600/800 Mhz";
++			default = <0x9>;
++			swap-bit;
++			status = "okay";
++		};
++		bootsrc {
++			key = "bootsrc";
++			description = "Boot source options";
++			start-bit = <5>;
++			bit-length = <2>;
++			option-cnt = <3>;
++			options = "0x0", "BootRoom",
++				"0x1", "Companion Device",
++				"0x2", "SPI";
++			default = <0x2>;
++			status = "okay";
++		};
++		c2c_ihb {
++			key = "c2c_ihb";
++			description = "C2C IHB select";
++			start-bit = <7>;
++			bit-length = <1>;
++			option-cnt = <2>;
++			options = "0x0", "IHB",
++				"0x1", "C2C";
++			default = <0x1>;
++			status = "okay";
++		};
++		dual_ap {
++			key = "dual_ap";
++			description = "Dual AP mode";
++			start-bit = <8>;
++			bit-length = <1>;
++			option-cnt = <2>;
++			options = "0x0", "Single AP mode",
++				"0x1", "Dual AP mode";
++			default = <0x0>;
++			status = "okay";
++		};
++		avs_enable {
++			key = "avs_enable";
++			description = "AVS Enable";
++			start-bit = <9>;
++			bit-length = <1>;
++			option-cnt = <2>;
++			options = "0x0", "AVS disabled",
++				"0x1", "AVS enabled";
++			default = <0x1>;
++			status = "okay";
++		};
++	};
+ };
+ 
+ &pinctl {
+diff --git a/configs/mvebu_armada8k_defconfig b/configs/mvebu_armada8k_defconfig
+index b6b8343..f260e48 100644
+--- a/configs/mvebu_armada8k_defconfig
++++ b/configs/mvebu_armada8k_defconfig
+@@ -17,6 +17,7 @@ CONFIG_CMD_I2C=y
+ CONFIG_CMD_TIME=y
+ CONFIG_CMD_MISC=y
+ CONFIG_CMD_TIMER=y
++CONFIG_CMD_MVEBU_SAR=y
+ CONFIG_CMD_MVEBU_MPP=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+-- 
+1.9.1
+

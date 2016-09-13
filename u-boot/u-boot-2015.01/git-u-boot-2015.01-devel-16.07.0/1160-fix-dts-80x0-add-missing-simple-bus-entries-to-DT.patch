@@ -1,0 +1,48 @@
+From c827d766377b6750f98bbcbcc8aa4f38171b4a31 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Wed, 25 May 2016 13:07:47 +0300
+Subject: [PATCH 1160/1240] fix: dts: 80x0: add missing simple-bus entries to
+ DT
+
+GPIO driver is using driver model, which requires 'simple-bus' entries
+in root each node, to scan sub-nodes of relevant units.
+
+Change-Id: I253e50cf2b9cb1927f7fa5b3052902c53c0c83a2
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29995
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/cp110-slave.dtsi | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/dts/cp110-slave.dtsi b/arch/arm/dts/cp110-slave.dtsi
+index 38fc885..003ce27 100644
+--- a/arch/arm/dts/cp110-slave.dtsi
++++ b/arch/arm/dts/cp110-slave.dtsi
+@@ -20,12 +20,12 @@
+ 	model = "Marvell Armada CPN-110 Slave";
+ 
+ 	cp110-slave {
+-		compatible = "marvell,armada-cpn110-slave";
++		compatible = "marvell,armada-cpn110-slave", "simple-bus";
+ 		#address-cells = <1>;
+ 		#size-cells = <1>;
+ 
+ 		internal-regs {
+-			compatible = "marvell,internal-regs";
++			compatible = "marvell,internal-regs", "simple-bus";
+ 			ranges = <0x0000 0xf4000000 0x1000000>;
+ 			#address-cells = <1>;
+ 			#size-cells = <1>;
+@@ -51,7 +51,6 @@
+ 			sar-reg {
+ 				status = "disabled";
+ 			};
+-
+ 			gop {
+ 				emac4: mac0 {
+ 					mac-address = [00 00 00 00 00 04];
+-- 
+1.9.1
+

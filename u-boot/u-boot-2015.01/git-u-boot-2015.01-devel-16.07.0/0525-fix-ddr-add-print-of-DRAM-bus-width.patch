@@ -1,0 +1,164 @@
+From 996870b7132b0410d219e597e47e0d1ef0e7e3a5 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Mon, 23 Nov 2015 19:14:23 +0200
+Subject: [PATCH 0525/1240] fix: ddr: add print of DRAM bus width
+
+	- Passing DRAM information from spl to u-boot
+	  and print DRAM bus width.
+	- JIRA SYSTEM-2023.
+
+Change-Id: If5ff49eb3b25502add656a5e17f3387f32d2c780
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25184
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/soc.c             |  8 +++++
+ arch/arm/include/asm/arch-mvebu/system_info.h | 10 ++++++
+ drivers/ddr/ddr_mckinley6.c                   | 49 ++++++++++++++++++++++++---
+ 3 files changed, 63 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/soc.c b/arch/arm/cpu/armv8/armada8k/soc.c
+index 8c47c7c..f555c9c 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc.c
++++ b/arch/arm/cpu/armv8/armada8k/soc.c
+@@ -21,6 +21,7 @@
+ #include <common.h>
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/soc.h>
++#include <asm/arch-mvebu/system_info.h>
+ #include <asm/arch-armada8k/armada8k.h>
+ #include <asm/arch/regs-base.h>
+ #include <linux/sizes.h>
+@@ -108,3 +109,10 @@ void reset_cpu(ulong ignored)
+ 	reg &= ~(1 << RFU_SW_RESET_OFFSET);
+ 	writel(reg, RFU_GLOBAL_SW_RST);
+ }
++
++void print_soc_specific_info(void)
++{
++#ifdef CONFIG_MVEBU_SYS_INFO
++	printf("\tDDR %d Bit width\n", get_info(DRAM_BUS_WIDTH));
++#endif
++}
+diff --git a/arch/arm/include/asm/arch-mvebu/system_info.h b/arch/arm/include/asm/arch-mvebu/system_info.h
+index 2aae346..537bca1 100644
+--- a/arch/arm/include/asm/arch-mvebu/system_info.h
++++ b/arch/arm/include/asm/arch-mvebu/system_info.h
+@@ -23,6 +23,16 @@
+ 
+ enum sys_info_type {
+ 	ARRAY_SIZE,
++	DRAM_CS0_SIZE,
++	DRAM_CS1_SIZE,
++	DRAM_CS2_SIZE,
++	DRAM_CS3_SIZE,
++	DRAM_BUS_WIDTH,
++	DRAM_ECC,
++	DRAM_CS0,
++	DRAM_CS1,
++	DRAM_CS2,
++	DRAM_CS3,
+ 	MAX_OPTION,
+ };
+ 
+diff --git a/drivers/ddr/ddr_mckinley6.c b/drivers/ddr/ddr_mckinley6.c
+index 3c4ca0a..d6eb521 100644
+--- a/drivers/ddr/ddr_mckinley6.c
++++ b/drivers/ddr/ddr_mckinley6.c
+@@ -21,6 +21,7 @@
+ #include <asm/utils.h>
+ #include <asm/arch-mvebu/mvebu.h>
+ #include <asm/arch-mvebu/ddr.h>
++#include <asm/arch-mvebu/system_info.h>
+ 
+ #define MCK6_USER_COMMAND_0_REG	(0x20)
+ #define SDRAM_INIT_REQ_MASK	(0x1)
+@@ -28,11 +29,14 @@
+ #define CMD_CS_MASK(m)		((m) << 24)
+ 
+ #define MCK6_CTRL_0_REG		(0x44)
++#define CTRL_DATA_WIDTH_OFFSET	8
+ #define CTRL_DATA_WIDTH_MASK	(0xF << 8)
+ #define BUS_WIDTH_2_IDX(w)	(((w) <= 16) ? ((w) / 8) : (((w) / 32) + 2))
+ #define CTRL_DATA_WIDTH(w)	(BUS_WIDTH_2_IDX(w) << 8)
++#define CTRL_DATA_WIDTH_CALC(v)	(1 << ((v) + 2))
+ 
+-#define MCK6_MMAP0_LOW_CH0_REG	(0x200)
++#define MCK6_MMAP0_LOW_CH(i)	(0x200 + 8*(i))
++#define MMAP_AREA_LEN_OFFSET	16
+ #define MMAP_AREA_LEN_MASK	(0x1F << 16)
+ #define MMAP_AREA_LEN(x)	((x) << 16)
+ 
+@@ -1085,7 +1089,7 @@ void mvebu_dram_mac_init(struct mvebu_dram_config *dram_config)
+ 
+ 	if (dram_config->size_mb != 0) {
+ 		/* DRAM size */
+-		reg = readl(base_addr + MCK6_MMAP0_LOW_CH0_REG);
++		reg = readl(base_addr + MCK6_MMAP0_LOW_CH(0));
+ 		reg &= ~(MMAP_AREA_LEN_MASK);
+ 
+ 		switch (dram_config->size_mb) {
+@@ -1102,13 +1106,48 @@ void mvebu_dram_mac_init(struct mvebu_dram_config *dram_config)
+ 			size = (1 << idx) * 8;
+ 			break;
+ 		}
+-		mck6_writel(reg, base_addr + MCK6_MMAP0_LOW_CH0_REG);
++		mck6_writel(reg, base_addr + MCK6_MMAP0_LOW_CH(0));
+ 		debug("DRAM size set to %dMB.\n", size);
+ 	}
+ 
+ 	debug_exit();
+ }
+ 
++/* set_dram_info - passing dram information from spl to u-boot by saving it on dram, start from address 0x04000000 */
++void set_dram_info(void *base_addr)
++{
++	u32 reg, i, size;
++	/* set dram bus width */
++	reg = readl(base_addr + MCK6_CTRL_0_REG);
++	reg = (reg & CTRL_DATA_WIDTH_MASK) >> CTRL_DATA_WIDTH_OFFSET;
++	reg = CTRL_DATA_WIDTH_CALC(reg);
++	set_info(DRAM_BUS_WIDTH, reg);
++
++	for (i = 0; i < 4; i++) {
++		reg = readl(base_addr + MCK6_MMAP0_LOW_CH(i));
++		/* set dram size */
++		size = (reg & MMAP_AREA_LEN_MASK) >> MMAP_AREA_LEN_OFFSET;
++		switch (size) {
++		case(0):
++		case(1):
++		case(2):
++		case(3):
++			size = 384 << size;
++			break;
++		default:
++			size = 8 << (size - 7);
++			break;
++		}
++		set_info(DRAM_CS0_SIZE + i, size);
++
++		/* set dram chip select */
++		if (reg & 0x1)
++			set_info(DRAM_CS0 + i, 1);
++		else
++			set_info(DRAM_CS0 + i, 0);
++	}
++}
++
+ void mvebu_dram_phy_init(struct mvebu_dram_config *dram_config)
+ {
+ 	void __iomem *base_addr = dram_config->phy_base;
+@@ -1129,6 +1168,8 @@ void mvebu_dram_phy_init(struct mvebu_dram_config *dram_config)
+ 		cs_mask = (1 << dram_config->cs_count) - 1;
+ 	reg |= CMD_CS_MASK(cs_mask);
+ 	mck6_writel(reg, base_addr + MCK6_USER_COMMAND_0_REG);
+-
++#ifdef CONFIG_MVEBU_SYS_INFO
++	set_dram_info(base_addr);
++#endif
+ 	debug_exit();
+ }
+-- 
+1.9.1
+

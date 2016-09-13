@@ -1,0 +1,31 @@
+From 802421402d5d19ff4d4d9cad54f82b7687a15660 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Thu, 10 Sep 2015 14:57:39 +0300
+Subject: [PATCH 0418/1240] a8k: llc: can't run llc with ddr over pcie mode
+
+Change-Id: I50f12484b357007a4974b21c898944b52d9e4c27
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23526
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/psci.S | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/psci.S b/arch/arm/cpu/armv8/armada8k/psci.S
+index 31e6c34..5b4d9ad 100644
+--- a/arch/arm/cpu/armv8/armada8k/psci.S
++++ b/arch/arm/cpu/armv8/armada8k/psci.S
+@@ -58,7 +58,9 @@ psci_arch_init:
+ 	add     x29, x30, 0 /* keep return address */
+ 	bl	enable_affinity
+ 	bl	psci_build_stack
++#ifndef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+ 	bl	llc_enable
++#endif
+ 	ret	x29
+ 
+ psci_build_stack:
+-- 
+1.9.1
+

@@ -1,0 +1,74 @@
+From 6fb27573cce3608ab7476e24908af37670d63ab1 Mon Sep 17 00:00:00 2001
+From: zachary <zhangzg@marvell.com>
+Date: Thu, 17 Mar 2016 21:28:59 +0800
+Subject: [PATCH 1131/1240] tool: a3700: enable hash checksum in tim script
+
+enable hash checkusm in tim config script
+
+Change-Id: Ie317d7c9ca8daddac2ad5fa0c0455e739ae49efb
+Signed-off-by: zachary <zhangzg@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27882
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ tools/wtp/untrusted/img-1.txt | 2 +-
+ tools/wtp/untrusted/img-2.txt | 2 +-
+ tools/wtp/untrusted/img-3.txt | 2 +-
+ tools/wtp/untrusted/tim.txt   | 2 +-
+ 4 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/tools/wtp/untrusted/img-1.txt b/tools/wtp/untrusted/img-1.txt
+index b4b8003..0516d7e 100644
+--- a/tools/wtp/untrusted/img-1.txt
++++ b/tools/wtp/untrusted/img-1.txt
+@@ -2,7 +2,7 @@ Image ID:                       0x4F424d49		; OBMI (SPL) 64K code + 16K data
+ Next Image ID:                  0x57544d49		; WTMI next
+ Flash Entry Address:            0x00004000		; OBMI flash addr
+ Load Address:                   0x61000000		; OBMI RAM addr
+-Image Size To CRC in bytes:     0x00000000
++Image Size To CRC in bytes:     0xFFFFFFFF
+ Hash Algorithm ID:              32			; SHA-256
+ Partition Number:               0x00000000
+ Image Filename: spl/u-boot-spl.bin
+diff --git a/tools/wtp/untrusted/img-2.txt b/tools/wtp/untrusted/img-2.txt
+index b651a97..c68ab86 100644
+--- a/tools/wtp/untrusted/img-2.txt
++++ b/tools/wtp/untrusted/img-2.txt
+@@ -2,7 +2,7 @@ Image ID:                       0x57544d49		; WTMI
+ Next Image ID:                  0x4F534C4F		; OSLO next
+ Flash Entry Address:            0x00024000		; WTMI flash addr
+ Load Address:                   0x1FFF0000		; WTMI RAM addr
+-Image Size To CRC in bytes:     0x00000000
++Image Size To CRC in bytes:     0xFFFFFFFF
+ Hash Algorithm ID:              32			; SHA-256
+ Partition Number:               0x00000000
+ Image Filename: tools/wtp/wtmi/build/wtmi.bin
+diff --git a/tools/wtp/untrusted/img-3.txt b/tools/wtp/untrusted/img-3.txt
+index 9bf7bad..cfd8fd1 100644
+--- a/tools/wtp/untrusted/img-3.txt
++++ b/tools/wtp/untrusted/img-3.txt
+@@ -2,7 +2,7 @@ Image ID:                       0x4F534C4F		; OSLO
+ Next Image ID:                  0xFFFFFFFF		; NONE
+ Flash Entry Address:            0x00026000		; OSLO flash addr
+ Load Address:                   0x60000000		; OSLO RAM addr
+-Image Size To CRC in bytes:     0x00000000
++Image Size To CRC in bytes:     0xFFFFFFFF
+ Hash Algorithm ID:              32			; SHA-256
+ Partition Number:               0x00000000
+ Image Filename: u-boot.bin
+diff --git a/tools/wtp/untrusted/tim.txt b/tools/wtp/untrusted/tim.txt
+index 0318ecf..eeb271b 100644
+--- a/tools/wtp/untrusted/tim.txt
++++ b/tools/wtp/untrusted/tim.txt
+@@ -2,7 +2,7 @@ Image ID:                       0x54494D48		; TIMH
+ Next Image ID:                  0x4F424d49		; OBMI next
+ Flash Entry Address:            0x00000000		; TIM flash addr
+ Load Address:                   0x20006000		; TIM ISRAM addr
+-Image Size To CRC in bytes:     0x00000000
++Image Size To CRC in bytes:     0xFFFFFFFF
+ Hash Algorithm ID:              32			; SHA-256
+ Partition Number:               0x00000000
+ Image Filename: TIM_UBOOT_NON_TRUSTED.bin
+-- 
+1.9.1
+

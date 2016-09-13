@@ -1,0 +1,36 @@
+From e232db46d38aa50a29eaa8d0bdda97c53e1c9a49 Mon Sep 17 00:00:00 2001
+From: Minghuan Lian <Minghuan.Lian@freescale.com>
+Date: Thu, 22 Jan 2015 13:21:55 +0800
+Subject: [PATCH 0261/1240] drivers/pci/pci_rom.c: fix compile warning under
+ 64bit mode
+
+Fix this:
+drivers/pci/pci_rom.c:95:15: warning: cast to pointer from
+integer of different size [-Wint-to-pointer-cast]
+rom_header = (struct pci_rom_header *)rom_address;
+
+Change-Id: I0c07017ab1e545919606d8192fa346d79c423fab
+Signed-off-by: Minghuan Lian <Minghuan.Lian@freescale.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22094
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/pci/pci_rom.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/pci/pci_rom.c b/drivers/pci/pci_rom.c
+index af6a3ae..ed2757a 100644
+--- a/drivers/pci/pci_rom.c
++++ b/drivers/pci/pci_rom.c
+@@ -92,7 +92,7 @@ static int pci_rom_probe(pci_dev_t dev, uint class,
+ 			       rom_address | PCI_ROM_ADDRESS_ENABLE);
+ #endif
+ 	debug("Option ROM address %x\n", rom_address);
+-	rom_header = (struct pci_rom_header *)rom_address;
++	rom_header = (struct pci_rom_header *)(unsigned long)rom_address;
+ 
+ 	debug("PCI expansion ROM, signature %#04x, INIT size %#04x, data ptr %#04x\n",
+ 	      le32_to_cpu(rom_header->signature),
+-- 
+1.9.1
+

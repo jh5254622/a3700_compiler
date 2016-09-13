@@ -1,0 +1,168 @@
+From 26c08a63cd704e708e990b8db60c34aab48a1d3d Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 9 Jun 2016 09:28:56 +0300
+Subject: [PATCH 1193/1240] fix: mpp: cp110: add MPP bus information for CP-110
+
+Add MPP bus information for CP-110
+This used to change/check MPP busses
+Added for both Armada-70x0, Armada-80x0
+
+Change-Id: I06698f35cb6c809d7182d8f8c04cf0036fa9aca6
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30379
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/armada-70x0-dev-info.dtsi |   1 +
+ arch/arm/dts/armada-80x0-db.dtsi       |   1 +
+ arch/arm/dts/cp110-mpp-bus-info.dtsi   | 114 +++++++++++++++++++++++++++++++++
+ 3 files changed, 116 insertions(+)
+ create mode 100644 arch/arm/dts/cp110-mpp-bus-info.dtsi
+
+diff --git a/arch/arm/dts/armada-70x0-dev-info.dtsi b/arch/arm/dts/armada-70x0-dev-info.dtsi
+index ed9420f..fcc9b06 100644
+--- a/arch/arm/dts/armada-70x0-dev-info.dtsi
++++ b/arch/arm/dts/armada-70x0-dev-info.dtsi
+@@ -16,6 +16,7 @@
+  * ***************************************************************************
+  */
+ 
++#include "cp110-mpp-bus-info.dtsi" /* include MPP bus info */
+ / {
+ 	/* This should go only into devel boards */
+ 	compatible = "marvell,cp110";
+diff --git a/arch/arm/dts/armada-80x0-db.dtsi b/arch/arm/dts/armada-80x0-db.dtsi
+index eb7a6f2..f745667 100644
+--- a/arch/arm/dts/armada-80x0-db.dtsi
++++ b/arch/arm/dts/armada-80x0-db.dtsi
+@@ -19,6 +19,7 @@
+ #include "armada-80x0.dtsi" /* include SoC device tree */
+ /* TODO:
+ #include "armada-80x0-dev-info.dtsi" /* include Marvell specific info (S@R, MPP cmd) */
++#include "cp110-mpp-bus-info.dtsi" /* include MPP bus info */
+ 
+ / {
+ 	model = "DB-ARMADA-80x0";
+diff --git a/arch/arm/dts/cp110-mpp-bus-info.dtsi b/arch/arm/dts/cp110-mpp-bus-info.dtsi
+new file mode 100644
+index 0000000..db016c2
+--- /dev/null
++++ b/arch/arm/dts/cp110-mpp-bus-info.dtsi
+@@ -0,0 +1,114 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/ {
++	/* This should go only into devel boards */
++	mpp-buses {
++		cp-mpp-bus0 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "spi1";
++			bank-name = "cp110";
++			pin-count = <4>;
++			pins = <13 3  14 3  15 3  16 3>;
++		};
++		cp-mpp-bus1 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "i2c";
++			bank-name = "cp110";
++			pin-count = <2>;
++			pins = <37 2  38 2>;
++		};
++		cp-mpp-bus2 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "uart0";
++			bank-name = "cp110";
++			pin-count = <2>;
++			pins = <29 0xA  30 0xA>;
++		};
++		cp-mpp-bus3 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "uart1";
++			bank-name = "cp110";
++			pin-count = <2>;
++			pins = <40 7  41 7>;
++		};
++		cp-mpp-bus4 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "sd";
++			bank-name = "cp110";
++			pin-count = <7>;
++			pins = <56 0xE  57 0xE  58 0xE 59 0xE  60 0xE  61 0xE  62 0xE>;
++		};
++		cp-mpp-bus5 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "tdm";
++			bank-name = "cp110";
++			pin-count = <12>;
++			pins = <0 4  1 4  2 4  3 4  4 4  5 4  6 4  7 4  8 4  9 4  10 4  11 4>;
++		};
++		cp-mpp-bus6 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "rgmii0";
++			bank-name = "cp110";
++			pin-count = <12>;
++			pins = <0 3  1 3  2 3  3 3  4 3  5 3  6 3  7 3  8 3  9 3  10 3  11 3>;
++		};
++		cp-mpp-bus7 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "rgmii1";
++			bank-name = "cp110";
++			pin-count = <11>;
++			pins = <45 2  46 1  47 1  48 1  49 1  50 1  51 1  52 1  53 1  54 1  55 1>;
++		};
++		cp-mpp-bus8 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "nand";
++			bank-name = "cp110";
++			pin-count = <14>;
++			pins = <13 2 15 1 16 1 17 1 18 1 19 1 20 1 21 1 22 1 23 1 24 1 25 1 26 1 27 1>;
++		};
++		cp-mpp-bus9 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "sata0";
++			bank-name = "cp110";
++			pin-count = <1>;
++			pins = <13 6>;
++		};
++		cp-mpp-bus10 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "sata1";
++			bank-name = "cp110";
++			pin-count = <1>;
++			pins = <28 9>;
++		};
++		cp-mpp-bus11 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "smi";
++			bank-name = "cp110";
++			pin-count = <2>;
++			pins = <32 7  34 7>;
++		};
++		cp-mpp-bus12 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "xsmi";
++			bank-name = "cp110";
++			pin-count = <2>;
++			pins = <35 7  36 7>;
++		};
++	};
++};
+-- 
+1.9.1
+

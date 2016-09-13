@@ -1,0 +1,105 @@
+From 3a8ac7db7309e1367720cd9f917ad0ab3043fb01 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Thu, 4 Feb 2016 11:05:50 +0200
+Subject: [PATCH 0803/1240] fix: usb, vbus: initalize VBUS power only in case
+ usb detection required
+
+USB vbus sequence was called during SoC init flow.
+to avoid unnecessary delay during SoC init, relocated VBUS sequence to
+be triggered only when usb detection is called ('usb reset/start')
+- call vbus sequence from Marvell xHCI wrapper.
+
+Change-Id: I477e22dd5c124b2431f29e0b3adf1df5ff70d6f5
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27219
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/soc.c      | 2 +-
+ arch/arm/cpu/armv8/armadalp/soc-init.c | 4 ++--
+ arch/arm/cpu/mvebu-common/soc-init.c   | 5 -----
+ arch/arm/include/asm/arch-mvebu/soc.h  | 2 +-
+ drivers/usb/host/xhci-mvebu.c          | 6 ++++++
+ 5 files changed, 10 insertions(+), 9 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/soc.c b/arch/arm/cpu/armv8/armada8k/soc.c
+index 7b996f8..aafb7ec 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc.c
++++ b/arch/arm/cpu/armv8/armada8k/soc.c
+@@ -130,7 +130,7 @@ void print_soc_specific_info(void)
+ }
+ 
+ #ifdef CONFIG_USB_XHCI
+-void board_usb_vbus_set(void)
++void board_usb_vbus_init(void)
+ {
+ 	/* TBD - implement VBUS cycle for here*/
+ }
+diff --git a/arch/arm/cpu/armv8/armadalp/soc-init.c b/arch/arm/cpu/armv8/armadalp/soc-init.c
+index 66ad0bf..283d4a5 100644
+--- a/arch/arm/cpu/armv8/armadalp/soc-init.c
++++ b/arch/arm/cpu/armv8/armadalp/soc-init.c
+@@ -181,9 +181,9 @@ void board_ahci_power_on(void)
+ #endif /* CONFIG_SCSI_AHCI_PLAT */
+ 
+ #ifdef CONFIG_USB_XHCI
+-void board_usb_vbus_set(void)
+-{
+ /* Set USB VBUS signals (via I2C IO expander/GPIO) as output and set output value as enabled */
++void board_usb_vbus_init(void)
++{
+ #ifdef CONFIG_DEVEL_BOARD
+ /* This I2C IO expander configuration is board specific, only to Marvell A3700 DB board.
+  * (I2C device at address 0x22, Register 0, BIT 1) */
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index 53b2ce2..ab7f267 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -128,11 +128,6 @@ int mvebu_soc_init()
+ 
+ 	mvebu_thermal_sensor_probe();
+ 
+-#ifdef CONFIG_USB_XHCI
+-	/* Power on USB VBUS power */
+-	board_usb_vbus_set();
+-#endif
+-
+ 	/* Soc specific init */
+ 	ret = soc_late_init();
+ 	if (ret)
+diff --git a/arch/arm/include/asm/arch-mvebu/soc.h b/arch/arm/include/asm/arch-mvebu/soc.h
+index ccc1e85..286d25c 100644
+--- a/arch/arm/include/asm/arch-mvebu/soc.h
++++ b/arch/arm/include/asm/arch-mvebu/soc.h
+@@ -32,7 +32,7 @@ void soc_init(void);
+ 
+ /* Common SOC API */
+ #ifdef CONFIG_USB_XHCI
+-void board_usb_vbus_set(void);
++void board_usb_vbus_init(void);
+ #endif
+ int mvebu_soc_init(void);
+ void mvebu_print_soc_info(void);
+diff --git a/drivers/usb/host/xhci-mvebu.c b/drivers/usb/host/xhci-mvebu.c
+index d665784..a0fc84b 100644
+--- a/drivers/usb/host/xhci-mvebu.c
++++ b/drivers/usb/host/xhci-mvebu.c
+@@ -32,8 +32,14 @@ int xhci_hcd_init(int index, struct xhci_hccr **hccr, struct xhci_hcor **hcor)
+ 	int i, count;
+ 	unsigned long usb3_reg_base;
+ 
++	/* Enable USB VBUS
++	 * will be updated according to Device tree, and will be triggered
++	 * below per port (while going through enabled ports DT info) */
++	board_usb_vbus_init();
++
+ 	/* in dts file, go through all the 'usb3' nodes.
+ 	 */
++
+ 	count = fdtdec_find_aliases_for_id(gd->fdt_blob, "usb3",
+ 			COMPAT_MVEBU_USB3, node_list, CONFIG_SYS_USB_XHCI_MAX_ROOT_PORTS);
+ 	if (count == 0) {
+-- 
+1.9.1
+

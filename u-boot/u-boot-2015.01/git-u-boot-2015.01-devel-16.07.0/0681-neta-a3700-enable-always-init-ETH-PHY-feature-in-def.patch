@@ -1,0 +1,36 @@
+From 1a7752239d690f70575954a3a2f59057e6f540cf Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Tue, 12 Jan 2016 16:54:45 +0800
+Subject: [PATCH 0681/1240] neta: a3700: enable "always init ETH PHY" feature
+ in defconfig
+
+Currently Linux Marvell neta driver does not support 1512 PHY,
+thus a patch is added to always initialize the ETH PHY in u-boot.
+This patch enables the feature in defconfig.
+Once the 1512 PHY is supported by Linux Marvell neta driver,
+this patch could be reverted.
+
+Change-Id: I8e95d5df3734ea69b98aee32cd9a08aade5dcc8c
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26721
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ configs/mvebu_armadalp_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index 62a2183..a41cbb6 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -7,6 +7,7 @@ CONFIG_MVNETA=y
+ CONFIG_MV_INCLUDE_SATA=y
+ CONFIG_SCSI_AHCI_PLAT=y
+ CONFIG_MVEBU_NETA_BYPASS_DEC_WIN=y
++CONFIG_MVEBU_NETA_ALWAYS_INIT_PHY=y
+ CONFIG_I2C_MV=y
+ CONFIG_I2C_MV_PAD_REG=n
+ CONFIG_USB=y
+-- 
+1.9.1
+

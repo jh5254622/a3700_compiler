@@ -1,0 +1,60 @@
+From 9046b44a626d9f700c7863ff7571f85f095b9138 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Tue, 19 Apr 2016 17:49:42 +0800
+Subject: [PATCH 133/239] fix: makefile: a3700: solve the compilation issue for
+ UART image build
+
+- This patch is to fix the compilation error when the ATF build
+  directory is not clean.
+- Clean up the uart image folder in build directory & ATF root
+  directory on each build.
+- Rename uart image folder as macro
+
+Change-Id: I09fcbc16c008bfd7b890dae600e53d0fde56cb67
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29172
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ Makefile | 13 +++++++------
+ 1 file changed, 7 insertions(+), 6 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 44ca913..b797aec 100644
+--- a/Makefile
++++ b/Makefile
+@@ -370,6 +370,7 @@ IMAGESPATH		:= $(DOIMAGEPATH)/untrusted
+ WTMI_IMG		:= $(DOIMAGEPATH)/wtmi/wtmi.bin
+ SECURE			:= 0
+ TIM2IMGARGS		:= -i $(DOIMAGE_CFG)
++BUILD_UART		:= uart-images
+ 
+ SRCPATH			:= $(dir $(BL33))
+ CONFIG_DEFAULT_DEVICE_TREE := $(shell grep "CONFIG_DEFAULT_DEVICE_TREE" -m 1 $(SRCPATH)/.config |cut -d"=" -f2)
+@@ -666,16 +667,16 @@ fip: ${BUILD_PLAT}/${FIP_NAME} ${DOIMAGETOOL}
+ 	@echo
+ 	@echo "Building uart images"
+ 	$(TIMBUILD) $(TIMBLDUARTARGS)
+-	@cp $(SPL_IMAGE) $(BUILD_PLAT)
++	@cp -f $(SPL_IMAGE) $(BUILD_PLAT)
+ 	sed -i 's|SPL_IMAGE|$(BUILD_PLAT)/$(SPL_BASENAME)|1' $(DOIMAGE_CFG)
+ 	sed -i 's|WTMI_IMG|$(WTMI_IMG)|1' $(DOIMAGE_CFG)
+ 	sed -i 's|BOOT_IMAGE|$(BUILD_PLAT)/$(BOOT_IMAGE)|1' $(DOIMAGE_CFG)
+ 	$(DOIMAGETOOL) $(DOIMAGE_FLAGS)
+-	@mkdir uart-images
+-	@mv -t uart-images $(TIM_IMAGE) $(DOIMAGE_CFG)
+-	@find . -name "*_h.*" |xargs cp -t uart-images
+-	@tar czf uart-images.tgz uart-images
+-	@mv uart-images* $(BUILD_PLAT)/
++	@rm -rf $(BUILD_PLAT)/$(BUILD_UART)*
++	@mkdir $(BUILD_PLAT)/$(BUILD_UART)
++	@mv -t $(BUILD_PLAT)/$(BUILD_UART) $(TIM_IMAGE) $(DOIMAGE_CFG)
++	@find . -name "*_h.*" |xargs cp -ut $(BUILD_PLAT)/$(BUILD_UART)
++	@tar czf $(BUILD_UART).tgz $(BUILD_PLAT)/$(BUILD_UART)
+ 	@echo
+ 	@echo "Building flash image"
+ 	$(TIMBUILD) $(TIMBLDARGS)
+-- 
+1.9.1
+

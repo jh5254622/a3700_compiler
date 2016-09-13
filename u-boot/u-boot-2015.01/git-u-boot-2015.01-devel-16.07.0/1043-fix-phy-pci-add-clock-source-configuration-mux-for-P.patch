@@ -1,0 +1,128 @@
+From 635d9f2c1c8bec4c68806c201346cd780d902b78 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 14 Apr 2016 14:30:01 +0300
+Subject: [PATCH 1043/1240] fix: phy: pci: add clock source configuration mux
+ for PCIe refclock
+
+- Add clock source configuration mux for PCIe refclock
+- The MUX set of the clock is coming from SerDes lane 4 pr SerDes lane 5.
+  using src-clk in the device tree the user can set if the source clock from lane 5
+  (since by default the clock source is lane 4)
+
+Change-Id: I9a6e1ac96e3c6a2b7e0fe69b6efa0a6cb384206e
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29049
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/include/asm/arch-mvebu/comphy.h      |  5 +++++
+ doc/device-tree-bindings/phy/mvebu_comphy.txt |  3 +++
+ drivers/phy/comphy_core.c                     |  1 +
+ drivers/phy/comphy_cp110.c                    | 21 +++++++++++++++++----
+ 4 files changed, 26 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/include/asm/arch-mvebu/comphy.h b/arch/arm/include/asm/arch-mvebu/comphy.h
+index b6e469e..51e66c7 100644
+--- a/arch/arm/include/asm/arch-mvebu/comphy.h
++++ b/arch/arm/include/asm/arch-mvebu/comphy.h
+@@ -54,6 +54,10 @@
+ #define COMMON_PHY_SD_CTRL1_RXAUI0_OFFSET		27
+ #define COMMON_PHY_SD_CTRL1_RXAUI0_MASK			(0x1 << COMMON_PHY_SD_CTRL1_RXAUI0_OFFSET)
+ 
++#define DFX_DEV_GEN_CTRL12			(MVEBU_CP0_REGS_BASE + 0x400280)
++#define DFX_DEV_GEN_PCIE_CLK_SRC_OFFSET		7
++#define DFX_DEV_GEN_PCIE_CLK_SRC_MASK		(0x3 << DFX_DEV_GEN_PCIE_CLK_SRC_OFFSET)
++
+ #define MAX_LANE_OPTIONS			10
+ #define MAX_UTMI_PHY_COUNT			2
+ 
+@@ -71,6 +75,7 @@ struct comphy_map {
+ 	u32 type;
+ 	u32 speed;
+ 	u32 invert;
++	bool clk_src;
+ };
+ 
+ struct chip_serdes_phy_config {
+diff --git a/doc/device-tree-bindings/phy/mvebu_comphy.txt b/doc/device-tree-bindings/phy/mvebu_comphy.txt
+index c005685..7a91bd9 100644
+--- a/doc/device-tree-bindings/phy/mvebu_comphy.txt
++++ b/doc/device-tree-bindings/phy/mvebu_comphy.txt
+@@ -24,6 +24,9 @@ Board specific:
+ 	Optional properties:
+ 	  - phy-invert : Polarity invert (PHY_POLARITY_TXD_INVERT/PHY_POLARITY_RXD_INVERT), the
+ 	  	posible bits under include/dt-bindings/comphy/comphy_data.h
++	  - clk-src : Set the clock source of PCIe, if configured to PCIe clock output
++		This relevant for SerDes lane 5 only (by default, lane 4 is the clock source)
++		for Armada-7040 boards.
+ 
+ Example:
+ 	comphy {
+diff --git a/drivers/phy/comphy_core.c b/drivers/phy/comphy_core.c
+index 943a860..8f762ea 100644
+--- a/drivers/phy/comphy_core.c
++++ b/drivers/phy/comphy_core.c
+@@ -181,6 +181,7 @@ u32 comphy_init(const void *blob)
+ 			comphy_map_data[lane].type = fdtdec_get_int(blob, sub_node, "phy-type", PHY_SPEED_INVALID);
+ 			comphy_map_data[lane].invert = fdtdec_get_int(blob, sub_node, "phy-invert",
+ 												PHY_POLARITY_NO_INVERT);
++			comphy_map_data[lane].clk_src = fdtdec_get_bool(blob, sub_node, "clk-src");
+ 			if ((comphy_map_data[lane].speed == PHY_TYPE_INVALID) ||
+ 			    (comphy_map_data[lane].type == PHY_SPEED_INVALID))
+ 				printf("no phy speed or type for lane %d, setting lane as unconnedted\n", lane + 1);
+diff --git a/drivers/phy/comphy_cp110.c b/drivers/phy/comphy_cp110.c
+index 51bb9e1..1464a0b 100644
+--- a/drivers/phy/comphy_cp110.c
++++ b/drivers/phy/comphy_cp110.c
+@@ -73,7 +73,8 @@ struct comphy_mux_data cp110_comphy_pipe_mux_data[] = {
+ /* Lane 5 */ {2, {{PHY_TYPE_UNCONNECTED, 0x0}, {PHY_TYPE_PEX2, 0x4} } },
+ };
+ 
+-static int comphy_pcie_power_up(u32 lane, u32 pcie_width, void __iomem *hpipe_base, void __iomem *comphy_base)
++static int comphy_pcie_power_up(u32 lane, u32 pcie_width, bool clk_src, void __iomem *hpipe_base,
++				void __iomem *comphy_base)
+ {
+ 	u32 mask, data, ret = 1;
+ 	void __iomem *hpipe_addr = HPIPE_ADDR(hpipe_base, lane);
+@@ -106,6 +107,12 @@ static int comphy_pcie_power_up(u32 lane, u32 pcie_width, void __iomem *hpipe_ba
+ 		}
+ 	}
+ 
++	/* if PCIe clock is output and clock source from SerDes lane 5, need to configure the clock-source MUX.
++	** By default, the clock source is from lane 4 */
++	if (pcie_clk && clk_src && (lane == 5))
++		reg_set((void __iomem *)DFX_DEV_GEN_CTRL12, 0x3 << DFX_DEV_GEN_PCIE_CLK_SRC_OFFSET,
++			DFX_DEV_GEN_PCIE_CLK_SRC_MASK);
++
+ 	debug("stage: RFU configurations - hard reset comphy\n");
+ 	/* RFU configurations - hard reset comphy */
+ 	mask = COMMON_PHY_CFG1_PWR_UP_MASK;
+@@ -178,8 +185,13 @@ static int comphy_pcie_power_up(u32 lane, u32 pcie_width, void __iomem *hpipe_ba
+ 		0x1 << HPIPE_DFE_CTRL_28_PIPE4_OFFSET, HPIPE_DFE_CTRL_28_PIPE4_MASK);
+ 	/* TODO: check if pcie clock is output/input - for bringup use input*/
+ 	/* Enable PIN clock 100M_125M */
+-	mask = HPIPE_MISC_CLK100M_125M_MASK;
+-	data = 0x1 << HPIPE_MISC_CLK100M_125M_OFFSET;
++	mask = 0;
++	data = 0;
++	/* Only if clock is output, configure the clock-source mux */
++	if (pcie_clk) {
++		mask |= HPIPE_MISC_CLK100M_125M_MASK;
++		data |= 0x1 << HPIPE_MISC_CLK100M_125M_OFFSET;
++	}
+ 	/* Set PIN_TXDCLK_2X Clock Frequency Selection for outputs 500MHz clock */
+ 	mask |= HPIPE_MISC_TXDCLK_2X_MASK;
+ 	data |= 0x0 << HPIPE_MISC_TXDCLK_2X_OFFSET;
+@@ -1337,7 +1349,8 @@ int comphy_cp110_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy
+ 		case PHY_TYPE_PEX1:
+ 		case PHY_TYPE_PEX2:
+ 		case PHY_TYPE_PEX3:
+-			ret = comphy_pcie_power_up(lane, pcie_width, hpipe_base_addr, comphy_base_addr);
++			ret = comphy_pcie_power_up(lane, pcie_width, ptr_comphy_map->clk_src,
++						   hpipe_base_addr, comphy_base_addr);
+ 			break;
+ 		case PHY_TYPE_SATA0:
+ 		case PHY_TYPE_SATA1:
+-- 
+1.9.1
+

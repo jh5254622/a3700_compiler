@@ -1,0 +1,91 @@
+From 175f40cb25fc599a29feae92b6bfee8de19f37d6 Mon Sep 17 00:00:00 2001
+From: Ahmad Abbas <ahmada@marvell.com>
+Date: Mon, 15 Feb 2016 15:52:55 +0200
+Subject: [PATCH 0915/1240] menuconfig: mvebu: menuconfig clean up - MVEBU
+ board Support
+
+moved MVEBU Board support configurations from arm architecture to
+Machine options.
+
+Change-Id: Ia9cea7364acf619c51079ed1c2877573ed60eb32
+Signed-off-by: Ahmad Abbas <ahmada@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27463
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ Kconfig                           |  2 ++
+ arch/arm/Kconfig                  |  1 -
+ arch/arm/cpu/mvebu-common/Kconfig |  8 --------
+ board/mvebu/Kconfig               | 16 +++++++++++++++-
+ 4 files changed, 17 insertions(+), 10 deletions(-)
+
+diff --git a/Kconfig b/Kconfig
+index 60cf1dd..d6f6a53 100644
+--- a/Kconfig
++++ b/Kconfig
+@@ -158,3 +158,5 @@ source "drivers/Kconfig"
+ source "fs/Kconfig"
+ 
+ source "lib/Kconfig"
++
++source "board/mvebu/Kconfig"
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index 3c41a3c..a8edc92 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -858,7 +858,6 @@ source "arch/arm/cpu/armv7/zynq/Kconfig"
+ source "arch/arm/cpu/armv7/Kconfig"
+ 
+ source "arch/arm/cpu/mvebu-common/Kconfig"
+-source "board/mvebu/Kconfig"
+ 
+ source "board/aristainetos/Kconfig"
+ source "board/BuR/kwb/Kconfig"
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index 2f52fa1..ab9931a 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -1,12 +1,4 @@
+ 
+-source "arch/arm/cpu/armv8/armada8k/Kconfig"
+-source "arch/arm/cpu/armv7/armada38x/Kconfig"
+-source "arch/arm/cpu/armv8/armada3700/Kconfig"
+-
+-config MVEBU
+-	bool "Support MVEBU devices"
+-	depends on $SYS_VENDOR="mvebu"
+-	default y
+ 
+ config MVEBU_SECURE_BOOT
+ 	bool "Trusted Boot Image format"
+diff --git a/board/mvebu/Kconfig b/board/mvebu/Kconfig
+index cba8e17..bbd323e 100644
+--- a/board/mvebu/Kconfig
++++ b/board/mvebu/Kconfig
+@@ -1,4 +1,16 @@
+-menu "MVEBU Board Support"
++source "arch/arm/cpu/armv8/armada8k/Kconfig"
++source "arch/arm/cpu/armv7/armada38x/Kconfig"
++source "arch/arm/cpu/armv8/armada3700/Kconfig"
++
++config MVEBU
++	bool "Support MVEBU devices"
++	depends on $SYS_VENDOR="mvebu"
++	default y
++
++menu "Marvell Platform Options"
++	depends on MVEBU
++
++menu "Board Options"
+ 
+ config DEVEL_BOARD
+ 	bool "Support MVEBU development boards"
+@@ -12,3 +24,5 @@ config DEVEL_BOARD
+ 
+ source "board/mvebu/common/Kconfig"
+ endmenu
++
++endmenu
+-- 
+1.9.1
+

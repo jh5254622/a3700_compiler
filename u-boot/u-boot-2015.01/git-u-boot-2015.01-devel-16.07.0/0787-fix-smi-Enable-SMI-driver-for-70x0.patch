@@ -1,0 +1,49 @@
+From 2657527b34631fed96232b9b18f1e58d53eebfd2 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Wed, 3 Feb 2016 17:26:44 +0200
+Subject: [PATCH 0787/1240] fix: smi: Enable SMI driver for 70x0
+
+Fix compilation error - Add MDIO function declaration to miiphy
+header file
+
+Change-Id: I7ebbc60f4d8192255037f2d616ad33279272fa0e
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27188
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ board/mvebu/common/eth_init.c | 1 +
+ include/miiphy.h              | 5 +++++
+ 2 files changed, 6 insertions(+)
+
+diff --git a/board/mvebu/common/eth_init.c b/board/mvebu/common/eth_init.c
+index 02aa36a..5572a46 100644
+--- a/board/mvebu/common/eth_init.c
++++ b/board/mvebu/common/eth_init.c
+@@ -20,6 +20,7 @@
+ #include <errno.h>
+ #include <netdev.h>
+ #include <spi.h>
++#include <miiphy.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+diff --git a/include/miiphy.h b/include/miiphy.h
+index bb4655a..5b2abef 100644
+--- a/include/miiphy.h
++++ b/include/miiphy.h
+@@ -90,6 +90,11 @@ int bb_miiphy_write(const char *devname, unsigned char addr,
+ 		     unsigned char reg, unsigned short value);
+ #endif
+ 
++#ifdef CONFIG_MVEBU_MDIO
++int mvebu_mdio_initialize(const void *blob);
++int miiphy_set_current_dev(const char *devname);
++#endif
++
+ /* phy seed setup */
+ #define AUTO			99
+ #define _1000BASET		1000
+-- 
+1.9.1
+

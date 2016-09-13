@@ -1,0 +1,1252 @@
+From 42b0c4cb8487df0d6ddecda23fb494b444c3ca2c Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Wed, 9 Mar 2016 13:22:45 +0200
+Subject: [PATCH 1064/1240] tools: wtmi: a3700: Initial commit of new WTMI
+ code.
+
+- Remove the dummy WTMI code with a single branch instruction.
+- Add basic CPU startup code (exceptions and stack pointer).
+- Modify linker script for reflecting new SRAM code location.
+- Add dependency to the main Makefile for ensuring WTMI build
+  on each u-boot compilation
+- Initial code commit contains basic headers, clock and mailbox
+  access functions
+- Update MVEBU build instructions with Cortex M3 toolchain
+  installation steps.
+
+Change-Id: I80f2832ce215ce6f697ce552eccfd8c888a5bb96
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28142
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Wilson Ding <dingwei@marvell.com>
+---
+ Makefile                      |  12 +++-
+ doc/mvebu/build.txt           |  12 ++++
+ tools/wtp/untrusted/img-2.txt |   2 +-
+ tools/wtp/wtmi.dummy          |   1 -
+ tools/wtp/wtmi/Makefile       | 104 +++++++++++++++++++++++++--
+ tools/wtp/wtmi/bits.h         |  56 +++++++++++++++
+ tools/wtp/wtmi/clock.c        | 161 ++++++++++++++++++++++++++++++++++++++++++
+ tools/wtp/wtmi/clock.h        |  45 ++++++++++++
+ tools/wtp/wtmi/efuse.c        |  39 ++++++++++
+ tools/wtp/wtmi/efuse.h        |  29 ++++++++
+ tools/wtp/wtmi/io.h           |  27 +++++++
+ tools/wtp/wtmi/main.c         |  98 +++++++++++++++++++++++++
+ tools/wtp/wtmi/mbox.c         |  83 ++++++++++++++++++++++
+ tools/wtp/wtmi/mbox.h         |  32 +++++++++
+ tools/wtp/wtmi/regs.h         |  70 ++++++++++++++++++
+ tools/wtp/wtmi/start.S        | 135 +++++++++++++++++++++++++++++++++++
+ tools/wtp/wtmi/types.h        |  48 +++++++++++++
+ tools/wtp/wtmi/wtmi.S         |   4 --
+ tools/wtp/wtmi/wtmi.dis       |  23 ------
+ tools/wtp/wtmi/wtmi.h         |  26 +++++++
+ tools/wtp/wtmi/wtmi.ld        |  12 +++-
+ 21 files changed, 977 insertions(+), 42 deletions(-)
+ delete mode 100644 tools/wtp/wtmi.dummy
+ create mode 100644 tools/wtp/wtmi/bits.h
+ create mode 100644 tools/wtp/wtmi/clock.c
+ create mode 100644 tools/wtp/wtmi/clock.h
+ create mode 100644 tools/wtp/wtmi/efuse.c
+ create mode 100644 tools/wtp/wtmi/efuse.h
+ create mode 100644 tools/wtp/wtmi/io.h
+ create mode 100644 tools/wtp/wtmi/main.c
+ create mode 100644 tools/wtp/wtmi/mbox.c
+ create mode 100644 tools/wtp/wtmi/mbox.h
+ create mode 100644 tools/wtp/wtmi/regs.h
+ create mode 100644 tools/wtp/wtmi/start.S
+ create mode 100644 tools/wtp/wtmi/types.h
+ delete mode 100644 tools/wtp/wtmi/wtmi.S
+ delete mode 100644 tools/wtp/wtmi/wtmi.dis
+ create mode 100644 tools/wtp/wtmi/wtmi.h
+
+diff --git a/Makefile b/Makefile
+index 644c179..3aa5aae 100644
+--- a/Makefile
++++ b/Makefile
+@@ -842,6 +842,8 @@ OBJCOPYFLAGS_u-boot.ldr.srec := -I binary -O srec
+ u-boot.ldr.hex u-boot.ldr.srec: u-boot.ldr FORCE
+ 	$(call if_changed,objcopy)
+ 
++WTMIPATH	:= $(srctree)/tools/wtp/wtmi
++
+ ifdef CONFIG_MVEBU
+ SPLIMAGE	:= $(srctree)/spl/u-boot-spl.bin
+ 
+@@ -920,7 +922,7 @@ DOIMAGE_LIBS_CHECK = \
+ # - Collect all UART downloadable images into archive
+ # - Create TIM descriptor(s) with final boot signature according
+ #   to defconfig for the next build stage (SPI.eMMC,etc.)
+-uartimage: $(obj)/u-boot.bin $(SPLIMAGE)
++uartimage: $(obj)/u-boot.bin $(SPLIMAGE) wtmi
+ 		@$(DOIMAGE_LIBS_CHECK)
+ 		$(TIMBUILD) $(TIMBLDUARTARGS)
+ 		$(DOIMAGE) $(DOIMAGE_FLAGS)
+@@ -942,6 +944,10 @@ bin2phex: doimage
+ 		$(TIM2PHEX) -i $(DOIMAGE_CFG) -o u-boot-$(CONFIG_SYS_SOC).hex
+ 		$(BIN2PHEX) -w 16 -i u-boot.bin -o u-boot.hex -b 0x0
+ 
++wtmi:
++	@echo "  =====WTMI====="
++	@$(MAKE) -C $(WTMIPATH)
++
+ else # CONFIG_TARGET_ARMADA_38X
+ 
+ DOIMAGE		:= $(srctree)/tools/marvell/doimage
+@@ -1406,8 +1412,8 @@ CLEAN_DIRS  += $(MODVERDIR) \
+ CLEAN_FILES += include/bmp_logo.h include/bmp_logo_data.h \
+ 	       u-boot* MLO* SPL System.map
+ 
+-MARVELL_CLEAN_DIRS  += uart-images
+-MARVELL_CLEAN_FILES += uart-images.tgz TIM_UBOOT*
++MARVELL_CLEAN_DIRS  += uart-images $(WTMIPATH)/build
++MARVELL_CLEAN_FILES += uart-images.tgz TIM_UBOOT* $(WTMIPATH)/*.o
+ 
+ # Directories & files removed with 'make mrproper'
+ MRPROPER_DIRS  += include/config include/generated spl tpl \
+diff --git a/doc/mvebu/build.txt b/doc/mvebu/build.txt
+index 69e7008..169f387 100644
+--- a/doc/mvebu/build.txt
++++ b/doc/mvebu/build.txt
+@@ -148,3 +148,15 @@ Tools installation for Armada-3700 builds:
+ 
+ 4. Make sure the "ntbb_linux.exe" can be executed from any
+    location and the U-Boot "make" passes without error.
++
++5. Install a cross GNU ARM tool chain for building the WTMI binary.
++   Any cross GNU ARM tool chain able to build ARM Cortex M3 binaries
++   is suitable.
++   On Debian/Uboot hosts the default GNU ARM tool chain can be installed
++   using the following command:
++   # sudo apt-get install gcc-arm-linux-gnueabi
++   If required, the default tool chain prefix "arm-linux-gnueabi-" can be
++   overwritten using environment variable CROSS_CM3.
++   Example for BASH shell:
++   # export CROSS_CM3=/opt/arm-cross/bin/arm-linux-gnueabi
++
+diff --git a/tools/wtp/untrusted/img-2.txt b/tools/wtp/untrusted/img-2.txt
+index 54c1bec..b651a97 100644
+--- a/tools/wtp/untrusted/img-2.txt
++++ b/tools/wtp/untrusted/img-2.txt
+@@ -5,4 +5,4 @@ Load Address:                   0x1FFF0000		; WTMI RAM addr
+ Image Size To CRC in bytes:     0x00000000
+ Hash Algorithm ID:              32			; SHA-256
+ Partition Number:               0x00000000
+-Image Filename: tools/wtp/wtmi.dummy
++Image Filename: tools/wtp/wtmi/build/wtmi.bin
+diff --git a/tools/wtp/wtmi.dummy b/tools/wtp/wtmi.dummy
+deleted file mode 100644
+index 967006e..0000000
+--- a/tools/wtp/wtmi.dummy
++++ /dev/null
+@@ -1 +0,0 @@
+-ÀFýç
+\ No newline at end of file
+diff --git a/tools/wtp/wtmi/Makefile b/tools/wtp/wtmi/Makefile
+index 55c6e3a..87207cb 100644
+--- a/tools/wtp/wtmi/Makefile
++++ b/tools/wtp/wtmi/Makefile
+@@ -1,10 +1,100 @@
+-CROSS=arm-linux-gnueabi-
++#/*
++# * ***************************************************************************
++# * Copyright (C) 2015 Marvell International Ltd.
++# * ***************************************************************************
++# * This program is free software: you can redistribute it and/or modify it
++# * under the terms of the GNU General Public License as published by the Free
++# * Software Foundation, either version 2 of the License, or any later version.
++# *
++# * This program is distributed in the hope that it will be useful,
++# * but WITHOUT ANY WARRANTY; without even the implied warranty of
++# * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# * GNU General Public License for more details.
++# *
++# * You should have received a copy of the GNU General Public License
++# * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++# * ***************************************************************************
++#*/
+ 
+-all:
+-	$(CROSS)as -mcpu=cortex-m3  -o wtmi.o wtmi.S
+-	$(CROSS)gcc -nostdlib -T wtmi.ld -Xlinker "--build-id=none" wtmi.o -o wtmi.elf
+-	$(CROSS)objcopy -S -O binary wtmi.elf wtmi.bin
+-	$(CROSS)objdump -D -S wtmi.elf > wtmi.dis
++CROSS_CM3 ?= arm-linux-gnueabi-
++
++LD       = $(CROSS_CM3)ld
++CC       = $(CROSS_CM3)gcc
++AS       = $(CROSS_CM3)as
++OBJCOPY  = $(CROSS_CM3)objcopy
++OBJDUMP  = $(CROSS_CM3)objdump
++HOSTCC   = gcc
++
++RM       = @rm -rf
++MKDIR    = @mkdir -p
++CD       = @cd
++MV       = @mv
++CAT      = @cat
++PWD      = @pwd
++ECHO     = @echo
++
++CPUOPTS  = -mthumb -mcpu=cortex-m3 -mlittle-endian
++
++BINPATH  = build
++LDSCRIPT = wtmi.ld
++INCLUDE  = -I.
++
++CFLAGS   = -g -gdwarf-2 -Wall -fno-stack-protector $(INCLUDE) -Os $(CPUOPTS)
++CPPFLAGS =
++ASFLAGS  = -g --gdwarf-2 --warn $(INCLUDE) $(CPUOPTS)
++LDFLAGS  = -nostdlib -T $(LDSCRIPT) -Xlinker "--build-id=none"
++
++
++CSRC = $(wildcard *.c)
++ASRC = $(wildcard *.S)
++
++COBJ   = $(CSRC:.c=.o)
++AOBJ   = $(ASRC:.S=.o)
++
++COMPILER_FOUND  = $(shell which $(CC))
++TOOLCHAIN_CHECK = \
++	if [ -z "$(COMPILER_FOUND)" ]; then \
++		echo "***************************************************" >&2; \
++		echo "ARM GCC toolchain installation is missing!" >&2; \
++		echo "Please install GNU ARM toolchain suitable for" >&2; \
++		echo "compiling code for Cortex M3 targets" >&2; \
++		echo "On Debian/Ubuntu run the following command for" >&2; \
++		echo "the default toolchain installation:" >&2; \
++		echo " sudo apt-get install gcc-arm-linux-gnueabi" >&2; \
++		echo "If non-default toolchain is used, please export" >&2; \
++		echo "the CROSS_CM3 environment variable pointin to it." >&2; \
++		echo "For instance, with BASH shell:" >&2; \
++		echo " export CROSS_CM3=/opt/arm-cross/bin/arm-linux-gnueabi" >&2; \
++		echo "***************************************************" >&2; \
++		exit 1; \
++	fi
++
++.SILENT:
++
++all: clean tools $(COBJ) $(AOBJ) $(BINPATH)
++	$(ECHO) "  LD    $(MAKECMDGOALS)"
++	$(RM) $(BINPATH)/*
++	$(CC) $(LDFLAGS)  $(AOBJ)  $(COBJ) -o $(BINPATH)/wtmi.elf
++	$(OBJCOPY) -S -O binary $(BINPATH)/wtmi.elf $(BINPATH)/wtmi.bin
++	if [ `uname -m` = "x86_64" ]; then $(OBJDUMP) -D -S $(BINPATH)/wtmi.elf > $(BINPATH)/wtmi.dis; fi
++
++%.o: %.c
++	$(ECHO) "  CC    $<"
++	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $(subst .o,.c,$@)
++
++%.o: %.S
++	$(ECHO) "  AS    $<"
++	$(AS) $(ASFLAGS) -o $@ $(subst .o,.S,$@)
++
++$(BINPATH):
++	@$(MKDIR) $(BINPATH)
+ 
+ clean:
+-	@rm *.elf *.bin *dis 2>/dev/null
++	$(ECHO) "  CLEAN"
++	@$(RM) *.o
++
++tools:
++	@$(TOOLCHAIN_CHECK)
++
++distclean: clean
++	@$(RM) $(BINPATH)
+diff --git a/tools/wtp/wtmi/bits.h b/tools/wtp/wtmi/bits.h
+new file mode 100644
+index 0000000..f77b6e2
+--- /dev/null
++++ b/tools/wtp/wtmi/bits.h
+@@ -0,0 +1,56 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++*/
++
++#ifndef __BITS_H
++#define __BITS_H
++
++#define NO_BIT          0x00000000
++#define BIT0            0x00000001
++#define BIT1            0x00000002
++#define BIT2            0x00000004
++#define BIT3            0x00000008
++#define BIT4            0x00000010
++#define BIT5            0x00000020
++#define BIT6            0x00000040
++#define BIT7            0x00000080
++#define BIT8            0x00000100
++#define BIT9            0x00000200
++#define BIT10           0x00000400
++#define BIT11           0x00000800
++#define BIT12           0x00001000
++#define BIT13           0x00002000
++#define BIT14           0x00004000
++#define BIT15           0x00008000
++#define BIT16           0x00010000
++#define BIT17           0x00020000
++#define BIT18           0x00040000
++#define BIT19           0x00080000
++#define BIT20           0x00100000
++#define BIT21           0x00200000
++#define BIT22           0x00400000
++#define BIT23           0x00800000
++#define BIT24           0x01000000
++#define BIT25           0x02000000
++#define BIT26           0x04000000
++#define BIT27           0x08000000
++#define BIT28           0x10000000
++#define BIT29           0x20000000
++#define BIT30           0x40000000
++#define BIT31           0x80000000
++
++#endif /* __BITS_H */
+diff --git a/tools/wtp/wtmi/clock.c b/tools/wtp/wtmi/clock.c
+new file mode 100644
+index 0000000..1f90fdc
+--- /dev/null
++++ b/tools/wtp/wtmi/clock.c
+@@ -0,0 +1,161 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++*/
++
++#include "types.h"
++#include "io.h"
++#include "regs.h"
++#include "bits.h"
++#include "clock.h"
++
++#define CYCLES_PER_LOOP		3	/* see wait_ns() implementation for loop content */
++static u32 clk_ns, loop_ns;
++
++/***************************************************************************************************
++  * get_ref_clk
++  *
++  * return: reference clock in MHz (25 or 40)
++ ***************************************************************************************************/
++u32 get_ref_clk(void)
++{
++	u32 regval;
++
++	regval = (readl(MVEBU_TEST_PIN_LATCH_N) & MVEBU_XTAL_MODE_MASK) >> MVEBU_XTAL_MODE_OFFS;
++
++	if (regval == MVEBU_XTAL_CLOCK_25MHZ)
++		return 25;
++	else
++		return 40;
++}
++
++/***************************************************************************************************
++  * get_tbg_clk
++  *
++  * return: TBG-X clock in MHz
++ ***************************************************************************************************/
++static u32 get_tbg_clk(enum clock_line tbg_typ)
++{
++	u32 tbg_M, tbg_N, vco_div;
++	u32 ref, reg_val;
++
++	/* TBG frequency is calculated according to formula:
++		Ftbg = Fkvco / vco_div
++	   where
++		Fkvco = N * Fref * 4 / M
++
++	   N - TBG_A_FBDIV or TBG_B_FBDIV
++	   M - TBG_A_REFDIV or TBG_B_REFDIV
++	   vco_div - TBG_A_VCODIV_SEL or TBG_B_VCODIV_SEL
++	   Fref - reference clock 25MHz or 40 MHz
++	*/
++
++	/* get ref clock */
++	ref = get_ref_clk();
++
++	/* get M, N */
++	reg_val = readl(MVEBU_NORTH_BRG_TBG_CTRL7);
++	tbg_M = ((tbg_typ == TBG_A_S) || (tbg_typ == TBG_A_P)) ?
++		(reg_val & 0x1FFUL) : ((reg_val >> 16) & 0x1FFUL);
++	tbg_M = (tbg_M == 0) ? 1 : tbg_M;
++
++	reg_val = readl(MVEBU_NORTH_BRG_TBG_CTRL0);
++	tbg_N = ((tbg_typ == TBG_A_S) || (tbg_typ == TBG_A_P)) ?
++		((reg_val >> 2) & 0x1FFUL) : ((reg_val >> 18) & 0x1FFUL);
++
++	if ((tbg_typ == TBG_A_S) || (tbg_typ == TBG_B_S)) {
++		/* get SE VCODIV */
++		reg_val = readl(MVEBU_NORTH_BRG_TBG_CTRL1);
++		reg_val = (tbg_typ == TBG_A_S) ?
++			  (reg_val & 0x1FFUL) : ((reg_val >> 16) & 0x1FFUL);
++	} else {
++		/* get DIFF VCODIV */
++		reg_val = readl(MVEBU_NORTH_BRG_TBG_CTRL8);
++		reg_val = (tbg_typ == TBG_A_P) ?
++			  ((reg_val >> 1) & 0x1FFUL) : ((reg_val >> 17) & 0x1FFUL);
++	}
++	if (reg_val > 7)
++		return 0;
++
++	vco_div = 0x1 << reg_val;
++
++	return ((tbg_N * ref) << 2)/(tbg_M * vco_div);
++}
++
++/***************************************************************************************************
++  * get_cm3_clk
++  *
++  * return: CM3 CPU clock in MHz
++ ***************************************************************************************************/
++u32 get_cm3_clk(void)
++{
++	u32 tbg, cm3_pre_scl1, cm3_pre_scl2;
++	enum clock_line tbg_typ;
++
++	/* 1. check CM3 clock select */
++	if (!((readl(MVEBU_NORTH_CLOCK_SELECT_REG) >> 4) & 0x1))
++		return get_ref_clk(); /* CPU clock is using XTAL output*/
++
++	/* 2. get TSECM TBG select */
++	tbg_typ = (readl(MVEBU_NORTH_CLOCK_TBG_SELECT_REG) >> 8) & 0x3;
++
++	/* 3. get TBG clock */
++	tbg = get_tbg_clk(tbg_typ);
++	if (tbg == 0)
++		return 0;
++
++	/* 4. get CM3 clk dividers */
++	cm3_pre_scl1 = (readl(MVEBU_NORTH_CLOCK_DIVIDER_SELECT1_REG) >> 15) & 0x7;
++	if (cm3_pre_scl1 == 7 || cm3_pre_scl1 == 0)
++		return 0; /* divider value error */
++
++	cm3_pre_scl2 = (readl(MVEBU_NORTH_CLOCK_DIVIDER_SELECT1_REG) >> 12) & 0x7;
++	if (cm3_pre_scl2 == 7 || cm3_pre_scl2 == 0)
++		return 0; /* divider value error */
++
++	return tbg/(cm3_pre_scl1 * cm3_pre_scl2);
++}
++
++/***************************************************************************************************
++  * wait_ns
++  *
++  * return: None
++ ***************************************************************************************************/
++void wait_ns(u32 wait_ns)
++{
++	u32 loop = wait_ns / loop_ns;
++
++	asm volatile("0:" "subs %[count], 1;" "bne 0b;" :[count]"+r"(loop));
++}
++
++/***************************************************************************************************
++  * clock_init
++  *
++  * return: None
++ ***************************************************************************************************/
++u32 clock_init(void)
++{
++	u32 cm3_clk = get_cm3_clk();
++	u32 status = ERR_BAD_CONFIGURATION;
++
++	if (cm3_clk != 0) {
++		clk_ns = 1000 / cm3_clk;
++		loop_ns = clk_ns / CYCLES_PER_LOOP;
++		status = NO_ERROR;
++	}
++
++	return status;
++}
+diff --git a/tools/wtp/wtmi/clock.h b/tools/wtp/wtmi/clock.h
+new file mode 100644
+index 0000000..69575bb
+--- /dev/null
++++ b/tools/wtp/wtmi/clock.h
+@@ -0,0 +1,45 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++*/
++
++#ifndef __CLOCK_H
++#define __CLOCK_H
++
++#define MVEBU_XTAL_MODE_MASK		BIT9
++#define MVEBU_XTAL_MODE_OFFS		(9)
++#define MVEBU_XTAL_CLOCK_25MHZ		(0x0)
++#define MVEBU_XTAL_CLOCK_40MHZ		(0x1)
++
++enum clock_src {
++	TBG_A,
++	TBG_B
++};
++
++enum clock_line {
++	TBG_A_P = 0,
++	TBG_B_P = 1,
++	TBG_A_S = 2,
++	TBG_B_S = 3
++};
++
++
++u32 clock_init(void);
++u32 get_ref_clk(void);
++u32 get_cm3_clk(void);
++void wait_ns(u32 wait_ns);
++
++#endif /* __CLOCK_H */
+diff --git a/tools/wtp/wtmi/efuse.c b/tools/wtp/wtmi/efuse.c
+new file mode 100644
+index 0000000..a3248a7
+--- /dev/null
++++ b/tools/wtp/wtmi/efuse.c
+@@ -0,0 +1,39 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++*/
++#include "types.h"
++#include "efuse.h"
++
++/***************************************************************************************************
++  * efuse_write
++  *
++  * return: status
++ ***************************************************************************************************/
++u32 efuse_write(u32 row, u32 *args)
++{
++	return NO_ERROR;
++}
++
++/***************************************************************************************************
++  * efuse_read
++  *
++  * return: status
++ ***************************************************************************************************/
++u32 efuse_read(u32 row, u32 *args)
++{
++	return NO_ERROR;
++}
+diff --git a/tools/wtp/wtmi/efuse.h b/tools/wtp/wtmi/efuse.h
+new file mode 100644
+index 0000000..1822e41
+--- /dev/null
++++ b/tools/wtp/wtmi/efuse.h
+@@ -0,0 +1,29 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++*/
++
++#ifndef __EFUSE_H
++#define __EFUSE_H
++
++#define EFUSE_MAX_ROW		43
++#define EFUSE_WORDS_IN_ROW	2	/* 64 bits */
++
++
++u32 efuse_write(u32 row, u32 *args);
++u32 efuse_read(u32 row, u32 *args);
++
++#endif /* __EFUSE_H */
+diff --git a/tools/wtp/wtmi/io.h b/tools/wtp/wtmi/io.h
+new file mode 100644
+index 0000000..d499094
+--- /dev/null
++++ b/tools/wtp/wtmi/io.h
+@@ -0,0 +1,27 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++*/
++
++#ifndef __IO_H
++#define __IO_H
++
++#define readw(addr)		(*(volatile u16 *)(addr))
++#define readl(addr)		(*(volatile u32 *)(addr))
++#define writew(val, addr)	((*(volatile u16 *)(addr)) = (val))
++#define writel(val, addr)	((*(volatile u32 *)(addr)) = (val))
++
++#endif /* __IO_H */
+diff --git a/tools/wtp/wtmi/main.c b/tools/wtp/wtmi/main.c
+new file mode 100644
+index 0000000..a04fc88
+--- /dev/null
++++ b/tools/wtp/wtmi/main.c
+@@ -0,0 +1,98 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++*/
++#include "types.h"
++#include "mbox.h"
++#include "efuse.h"
++#include "clock.h"
++#include "wtmi.h"
++
++/***************************************************************************************************
++  * exception_handler
++  *
++  * return: None
++ ***************************************************************************************************/
++static void exception_handler(int exception)
++{
++	return;
++}
++
++/***************************************************************************************************
++  * cmd_execute
++  *
++  * return: None
++ ***************************************************************************************************/
++u32 cmd_execute(u32 cmd, u32 *args, u32 *nargs)
++{
++	u32 row;
++	u32 status;
++
++	*nargs = 0;
++
++	if ((cmd >= CMD_WRITE_EFUSE_ROW_BASE) &&
++	    (cmd <= (CMD_WRITE_EFUSE_ROW_BASE + EFUSE_MAX_ROW))) {
++		/* WRITE */
++		row = cmd - CMD_WRITE_EFUSE_ROW_BASE;
++		status = efuse_write(row, args);
++	} else if ((cmd >= CMD_READ_EFUSE_ROW_BASE) &&
++		   (cmd <= (CMD_READ_EFUSE_ROW_BASE + EFUSE_MAX_ROW))) {
++		/* READ */
++		row = cmd - CMD_READ_EFUSE_ROW_BASE;
++		*nargs = EFUSE_WORDS_IN_ROW;
++		status = efuse_read(row, args);
++	} else {
++		/* ERROR */
++		status = ERR_INVALID_COMMAND;
++	}
++
++	return status;
++}
++
++/***************************************************************************************************
++  * main
++  *
++  * return: None
++ ***************************************************************************************************/
++int main(int exception, char **dummy)
++{
++	u32 cmd, args[MAILBOX_MAX_ARGS];
++	u32 status, nargs;
++
++	if (exception != 0) {
++		exception_handler(exception);
++		return NO_ERROR;
++	}
++
++	/* Initialization stuff */
++	clock_init();
++
++	/* Mailbox commands handling loop */
++	while (1) {
++		status = mbox_receive(&cmd, args);
++		if (status == NO_ERROR)
++			status = cmd_execute(cmd, args, &nargs);
++
++		if (status != NO_ERROR)
++			nargs = 0;
++
++
++		mbox_send(status, args, nargs);
++
++	} /* read and execute mailbox commands */
++
++	return NO_ERROR;
++}
+diff --git a/tools/wtp/wtmi/mbox.c b/tools/wtp/wtmi/mbox.c
+new file mode 100644
+index 0000000..c198a5e
+--- /dev/null
++++ b/tools/wtp/wtmi/mbox.c
+@@ -0,0 +1,83 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++*/
++#include "types.h"
++#include "bits.h"
++#include "io.h"
++#include "regs.h"
++#include "mbox.h"
++
++/***************************************************************************************************
++  * mbox_receive - BLOCKING
++  *
++  * cmd - command buffer
++  * args - arguments buffer
++  *
++  * return: 0 on success
++ ***************************************************************************************************/
++u32 mbox_receive(u32 *cmd, u32 *args)
++{
++	u32 n, status = NO_ERROR;
++	u32 regval;
++
++	if ((cmd == 0) || (args == 0)) {
++		status = ERR_INVALID_ARGUMENT;
++		goto rx_exit;
++	}
++
++	while (!(readl(SP_CONTROL) & CMD_REG_OCCUPIED_BIT))
++		/* continue polling */;
++
++	*cmd = readl(MAILBOX_IN_CMD) & MAILBOX_CMD_MASK;
++
++	for (n = 0; n < MAILBOX_MAX_ARGS; n++)
++		args[n] = readl(MAILBOX_IN_ARG(n));
++
++rx_exit:
++	/* Reset INT */
++	writel(CMD_REG_OCCUPIED_RESET_BIT, SP_INT_RESET);
++	regval = readl(SP_CONTROL) & ~CMD_REG_OCCUPIED_BIT;
++	writel(regval, SP_CONTROL);
++
++	return status;
++}
++
++/***************************************************************************************************
++  * mbox_send
++  *
++  * status - status to return to host
++  * args - arguments to return to host
++  * nargs - number or argumens
++ *
++  * return: 0 on success
++ ***************************************************************************************************/
++void mbox_send(u32 status, u32 *args, u32 nargs)
++{
++	u32 n, regval;
++
++	if ((args == 0) || (nargs >= MAILBOX_MAX_ARGS))
++		return;
++
++	for (n = 0; n < nargs; n++)
++		writel(args[n], MAILBOX_OUT_ARG(n));
++
++	/* Set status */
++	writel(status, MAILBOX_OUT_STATUS);
++	/* Pop host INT CMD complete */
++	regval = readl(HOST_INT_SET) | HOST_INT_CMD_COMPLETE_BIT;
++	writel(regval, HOST_INT_SET);
++}
+diff --git a/tools/wtp/wtmi/mbox.h b/tools/wtp/wtmi/mbox.h
+new file mode 100644
+index 0000000..6658999
+--- /dev/null
++++ b/tools/wtp/wtmi/mbox.h
+@@ -0,0 +1,32 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++*/
++
++#ifndef __MBOX_H
++#define __MBOX_H
++
++#define MAILBOX_MAX_ARGS		16
++#define MAILBOX_CMD_MASK		0x0000FFFF
++
++#define CMD_REG_OCCUPIED_RESET_BIT	BIT1
++#define CMD_REG_OCCUPIED_BIT		BIT0
++#define HOST_INT_CMD_COMPLETE_BIT	BIT0
++
++u32 mbox_receive(u32 *cmd, u32 *args);
++void mbox_send(u32 cmd, u32 *args, u32 nargs);
++
++#endif /* __MBOX_H */
+diff --git a/tools/wtp/wtmi/regs.h b/tools/wtp/wtmi/regs.h
+new file mode 100644
+index 0000000..5223b06
+--- /dev/null
++++ b/tools/wtp/wtmi/regs.h
+@@ -0,0 +1,70 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++*/
++
++#ifndef __REGS_H
++#define __REGS_H
++
++#define MVEBU_REGS_BASE			(0xC0000000)
++
++/* Clocks */
++#define MVEBU_NORTH_CLOCK_REGS_BASE	(MVEBU_REGS_BASE + 0x13000)
++#define MVEBU_SOUTH_CLOCK_REGS_BASE	(MVEBU_REGS_BASE + 0x18000)
++#define MVEBU_TESTPIN_NORTH_REG_BASE	(MVEBU_NORTH_CLOCK_REGS_BASE + 0x800)
++
++
++/****************/
++/* North Bridge */
++/****************/
++#define MVEBU_NORTH_BRG_PLL_BASE		(MVEBU_NORTH_CLOCK_REGS_BASE + 0x200)
++#define MVEBU_NORTH_BRG_TBG_CFG			(MVEBU_NORTH_BRG_PLL_BASE + 0x0)
++#define MVEBU_NORTH_BRG_TBG_CTRL0		(MVEBU_NORTH_BRG_PLL_BASE + 0x4)
++#define MVEBU_NORTH_BRG_TBG_CTRL1		(MVEBU_NORTH_BRG_PLL_BASE + 0x8)
++#define MVEBU_NORTH_BRG_TBG_CTRL2		(MVEBU_NORTH_BRG_PLL_BASE + 0xC)
++#define MVEBU_NORTH_BRG_TBG_CTRL3		(MVEBU_NORTH_BRG_PLL_BASE + 0x10)
++#define MVEBU_NORTH_BRG_TBG_CTRL4		(MVEBU_NORTH_BRG_PLL_BASE + 0x14)
++#define MVEBU_NORTH_BRG_TBG_CTRL5		(MVEBU_NORTH_BRG_PLL_BASE + 0x18)
++#define MVEBU_NORTH_BRG_TBG_CTRL6		(MVEBU_NORTH_BRG_PLL_BASE + 0x1C)
++#define MVEBU_NORTH_BRG_TBG_CTRL7		(MVEBU_NORTH_BRG_PLL_BASE + 0x20)
++#define MVEBU_NORTH_BRG_TBG_CTRL8		(MVEBU_NORTH_BRG_PLL_BASE + 0x30)
++
++#define MVEBU_NORTH_CLOCK_TBG_SELECT_REG	(MVEBU_NORTH_CLOCK_REGS_BASE + 0x0)
++#define MVEBU_NORTH_CLOCK_DIVIDER_SELECT0_REG	(MVEBU_NORTH_CLOCK_REGS_BASE + 0x4)
++#define MVEBU_NORTH_CLOCK_DIVIDER_SELECT1_REG	(MVEBU_NORTH_CLOCK_REGS_BASE + 0x8)
++#define MVEBU_NORTH_CLOCK_DIVIDER_SELECT2_REG	(MVEBU_NORTH_CLOCK_REGS_BASE + 0xC)
++#define MVEBU_NORTH_CLOCK_SELECT_REG		(MVEBU_NORTH_CLOCK_REGS_BASE + 0x10)
++
++
++/* Reset sample */
++#define MVEBU_TEST_PIN_LATCH_N		(MVEBU_TESTPIN_NORTH_REG_BASE + 0x8)
++
++/* Mailbox */
++#define MAILBOX_START_ADDR		0x40000000
++
++/* Mailbox offsets 0x0 to 0x40 are WO by aplication CPU (0x44 - 0x7F are undefined)
++   and offsets 0x80 to 0xE0 are RO by application CPU (0xE4 - 0xFF are undefined) */
++#define MAILBOX_IN_ARG(n)		(MAILBOX_START_ADDR + n * 4)
++#define MAILBOX_IN_CMD			(MAILBOX_START_ADDR + 0x40)
++#define MAILBOX_OUT_STATUS		(MAILBOX_START_ADDR + 0x80)
++#define MAILBOX_OUT_ARG(n)		(MAILBOX_START_ADDR + 0x84 + n * 4)
++
++#define HOST_INT_SET			(MAILBOX_START_ADDR + 0x214)
++#define SP_INT_RESET			(MAILBOX_START_ADDR + 0x218)
++#define SP_CONTROL			(MAILBOX_START_ADDR + 0x220)
++
++
++#endif /* __REGS_H */
+diff --git a/tools/wtp/wtmi/start.S b/tools/wtp/wtmi/start.S
+new file mode 100644
+index 0000000..5b3d1b7
+--- /dev/null
++++ b/tools/wtp/wtmi/start.S
+@@ -0,0 +1,135 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++*/
++
++.section .text
++.thumb
++
++.global _start
++_start:
++	.word	reset				/*  1 */
++	.word	nmi_exception			/*  2 */
++	.word	hard_fault_exception		/*  3 */
++	.word	mem_manage_exception		/*  4 */
++	.word	bus_fault_exception		/*  5 */
++	.word	usage_fault_exception		/*  6 */
++	.word	reserved			/*  7 */
++	.word	reserved			/*  8 */
++	.word	reserved			/*  9 */
++	.word	reserved			/* 10 */
++	.word	svc				/* 11 */
++	.word	debug_monitor			/* 12 */
++	.word	reserved			/* 13 */
++	.word	pendable_service_request	/* 14 */
++	.word	sys_tick_handler		/* 15 */
++	.word	external_interrupt		/* 16 */
++	.word	external_interrupt		/* 17 */
++	.word	external_interrupt		/* 18 */
++	.word	external_interrupt		/* 19 */
++	.word	external_interrupt		/* 20 */
++	.word	external_interrupt		/* 21 */
++	.word	external_interrupt		/* 22 */
++	.word	external_interrupt		/* 23 */
++	.word	external_interrupt		/* 24 */
++	.word	external_interrupt		/* 25 */
++	.word	external_interrupt		/* 26 */
++	.word	external_interrupt		/* 27 */
++	.word	external_interrupt		/* 28 */
++	.word	external_interrupt		/* 29 */
++	.word	external_interrupt		/* 30 */
++	.word	external_interrupt		/* 31 */
++
++/***********************************************************/
++.global reset
++reset:
++	ldr	r2, =stack_top
++	msr	psp, r2				/* Init Process stack pointer */
++	msr	msp, r2				/* Init main stack pointer */
++	ldr	r0, =0x0
++	ldr	r1, =main
++	bx	r1
++
++
++/***********************************************************/
++.global nmi_exception
++nmi_exception:
++	ldr	r0, =0x2
++	ldr	r1, =main
++	bx	r1
++
++.global hard_fault_exception
++hard_fault_exception:
++	ldr	r0, =0x3
++	ldr	r1, =main
++	bx	r1
++
++.global mem_manage_exception
++mem_manage_exception:
++	ldr	r0, =0x4
++	ldr	r1, =main
++	bx	r1
++
++.global bus_fault_exception
++bus_fault_exception:
++	ldr	r0, =0x5
++	ldr	r1, =main
++	bx	r1
++
++.global usage_fault_exception
++usage_fault_exception:
++	ldr	r0, =0x6
++	ldr	r1, =main
++	bx	r1
++
++.global reserved
++reserved:
++	ldr	r0, =0x7
++	ldr	r1, =main
++	bx	r1
++
++.global svc
++svc:
++	ldr	r0, =0xB
++	ldr	r1, =main
++	bx	r1
++
++.global debug_monitor
++debug_monitor:
++	ldr	r0, =0xC
++	ldr	r1, =main
++	bx	r1
++
++.global pendable_service_request
++pendable_service_request:
++	ldr	r0, =0xE
++	ldr	r1, =main
++	bx	r1
++
++.global sys_tick_handler
++sys_tick_handler:
++	ldr	r0, =0xF
++	ldr	r1, =main
++	bx	r1
++
++.global external_interrupt
++external_interrupt:
++	ldr	r0, =0x10
++	ldr	r1, =main
++	bx	r1
++
++
++.end
+diff --git a/tools/wtp/wtmi/types.h b/tools/wtp/wtmi/types.h
+new file mode 100644
+index 0000000..20036a1
+--- /dev/null
++++ b/tools/wtp/wtmi/types.h
+@@ -0,0 +1,48 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++*/
++
++#ifndef __TYPES_H
++#define __TYPES_H
++
++typedef char               int_8;
++typedef unsigned char      uint_8;
++typedef short              int_16;
++typedef unsigned short     uint_16;
++typedef int                int_32;
++typedef unsigned int       uint_32;
++typedef long long          int_64;
++typedef unsigned long long uint_64;
++
++typedef unsigned long long u64;
++typedef unsigned int       u32;
++typedef unsigned short     u16;
++typedef unsigned char      u8;
++typedef long long          s64;
++typedef int                s32;
++typedef short              s16;
++typedef char               s8;
++typedef char               byte;
++
++
++/* Errors */
++#define NO_ERROR			0x0000
++#define ERR_INVALID_ARGUMENT		0x0001
++#define ERR_INVALID_COMMAND		0x0002
++#define ERR_BAD_CONFIGURATION		0x0003
++
++#endif /* __TYPES_H */
+diff --git a/tools/wtp/wtmi/wtmi.S b/tools/wtp/wtmi/wtmi.S
+deleted file mode 100644
+index 1f6177e..0000000
+--- a/tools/wtp/wtmi/wtmi.S
++++ /dev/null
+@@ -1,4 +0,0 @@
+-.global _Reset
+-_Reset:
+-    NOP
+-    B _Reset
+diff --git a/tools/wtp/wtmi/wtmi.dis b/tools/wtp/wtmi/wtmi.dis
+deleted file mode 100644
+index e23d024..0000000
+--- a/tools/wtp/wtmi/wtmi.dis
++++ /dev/null
+@@ -1,23 +0,0 @@
+-
+-wtmi.elf:     file format elf32-littlearm
+-
+-
+-Disassembly of section .ro:
+-
+-200040f0 <_Reset>:
+-200040f0:	46c0      	nop			; (mov r8, r8)
+-200040f2:	e7fd      	b.n	200040f0 <_Reset>
+-
+-Disassembly of section .ARM.attributes:
+-
+-00000000 <.ARM.attributes>:
+-   0:	00002041 	andeq	r2, r0, r1, asr #32
+-   4:	61656100 	cmnvs	r5, r0, lsl #2
+-   8:	01006962 	tsteq	r0, r2, ror #18
+-   c:	00000016 	andeq	r0, r0, r6, lsl r0
+-  10:	726f4305 	rsbvc	r4, pc, #335544320	; 0x14000000
+-  14:	2d786574 	cfldr64cs	mvdx6, [r8, #-464]!	; 0xfffffe30
+-  18:	0600334d 	streq	r3, [r0], -sp, asr #6
+-  1c:	094d070a 	stmdbeq	sp, {r1, r3, r8, r9, sl}^
+-  20:	Address 0x0000000000000020 is out of bounds.
+-
+diff --git a/tools/wtp/wtmi/wtmi.h b/tools/wtp/wtmi/wtmi.h
+new file mode 100644
+index 0000000..6ca6009
+--- /dev/null
++++ b/tools/wtp/wtmi/wtmi.h
+@@ -0,0 +1,26 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++*/
++
++#ifndef __WTMI_H
++#define __WTMI_H
++
++/* Commands */
++#define CMD_READ_EFUSE_ROW_BASE		(0x10)
++#define CMD_WRITE_EFUSE_ROW_BASE	(0x30)
++
++#endif /* __WTMI_H */
+diff --git a/tools/wtp/wtmi/wtmi.ld b/tools/wtp/wtmi/wtmi.ld
+index d2ad6d3..f7ff4a7 100644
+--- a/tools/wtp/wtmi/wtmi.ld
++++ b/tools/wtp/wtmi/wtmi.ld
+@@ -1,8 +1,12 @@
++OUTPUT_FORMAT ("elf32-littlearm", "elf32-bigarm", "elf32-littlearm")
++
++ENTRY(_start)
++
+ SECTIONS
+ {
+-  . = 0x200040F0;
++  . = 0x1FFF0000;
+   .ro : {
+-    wtmi.o (.text)
++    start.o (.text)
+     *(.text)
+     *(.rodata)
+   }
+@@ -11,5 +15,7 @@ SECTIONS
+     *(.bss)
+     *(COMMON)
+   }
+- . = ALIGN(8);
++  . = ALIGN(8);
++  . = . + 0x1000; /* 4kB of stack memory */
++  stack_top = .;
+ }
+-- 
+1.9.1
+

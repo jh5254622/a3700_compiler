@@ -1,0 +1,273 @@
+From a6c41233b6c82e2e8db753956b4e86e31269739e Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 13 Mar 2014 15:38:38 +0200
+Subject: [PATCH 0018/1240] mpp: Initial support for MPP infrastructure
+
+Change-Id: I0d2f72316fa1b5dcfb3583df7188f4bb3ac72e25
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/tables.c           | 11 ++++
+ arch/arm/cpu/mvebu-common/mpp.c                | 84 ++++++++++++++++++++++++++
+ arch/arm/cpu/mvebu-common/soc-init.c           |  6 ++
+ arch/arm/include/asm/arch-armada8k/regs-base.h |  2 +
+ arch/arm/include/asm/arch-armada8k/soc-info.h  | 32 ++++++++++
+ arch/arm/include/asm/arch-mvebu/mpp.h          | 30 +++++++++
+ arch/arm/include/asm/arch-mvebu/soc.h          |  3 +
+ 7 files changed, 168 insertions(+)
+ create mode 100644 arch/arm/cpu/mvebu-common/mpp.c
+ create mode 100644 arch/arm/include/asm/arch-armada8k/soc-info.h
+ create mode 100644 arch/arm/include/asm/arch-mvebu/mpp.h
+
+diff --git a/arch/arm/cpu/armv8/armada8k/tables.c b/arch/arm/cpu/armv8/armada8k/tables.c
+index 5e80a1f..9cc0a20 100644
+--- a/arch/arm/cpu/armv8/armada8k/tables.c
++++ b/arch/arm/cpu/armv8/armada8k/tables.c
+@@ -22,6 +22,7 @@
+ #include <asm/arch-mvebu/adec.h>
+ #include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/soc.h>
++#include <asm/arch-mvebu/mpp.h>
+ 
+ struct adec_win memory_map[] = {
+ 	{0x0,     0x40000000, DRAM_0_TID, 0},
+@@ -56,6 +57,15 @@ u16 armada8022_unit_disable[MAX_UNIT_ID] = {
+ 	[USB3_UNIT_ID]		= id_to_mask(1)
+ };
+ 
++/* MPP description table. Informative only */
++char a8k_mpp_desc[MAX_MPP_ID + 1][MAX_MPP_OPTS][MAX_MPP_NAME] = {
++	{"GPIO_0", "NF_IO_2", "SPI_0_CSn",	"SPI_1_CSn",	"NA",           "ND_IO_2", "NA"},	/* 0  */
++	{"GPIO_1", "NF_IO_3", "SPI_0_MOSI",	"SPI_1_MOSI",	"NA",	        "ND_IO_3", "NA"},	 /* 1  */
++	{"GPIO_2", "NF_IO_4", "PTP_EVENT_REQ",  "C0_LED",	"AU_I2S_DI",	"ND_IO_4", "SPI_1_MOSI"}, /* 2  */
++	{"GPIO_3", "NF_IO_5", "PTP_TRIG_GEN",	"P3_LED",	"AU_I2S_MCLK",	"ND_IO_5", "SPI_1_MISO"}, /* 1  */
++};
++
++
+ struct mvebu_soc_info a8k_soc_info[] = {
+ 	/* Armda 8021 */
+ 	{
+@@ -80,5 +90,6 @@ struct mvebu_soc_family a8k_family_info = {
+ 	.id   = 8000,
+ 	.base_unit_info = base_unit_mask_table,
+ 	.soc_table = a8k_soc_info,
++	.mpp_desc  = a8k_mpp_desc,
+ 	.adec_type = 0,
+ };
+diff --git a/arch/arm/cpu/mvebu-common/mpp.c b/arch/arm/cpu/mvebu-common/mpp.c
+new file mode 100644
+index 0000000..487dfbf
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/mpp.c
+@@ -0,0 +1,84 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#define DEBUG
++
++#include <config.h>
++#include <common.h>
++#include <asm/system.h>
++#include <asm/bitops.h>
++#include <asm/arch-mvebu/mpp.h>
++
++char *mpp_get_desc_table(void)
++{
++	return soc_get_mpp_desc_table();
++}
++
++void set_mpp(int mpp_id, int value)
++{
++	int reg_offset;
++	int field_offset;
++	u32 reg, mask;
++
++	if (value > MAX_MPP_OPTS)
++		printf("Warning: MPP value %d > max value %d\n", value, MAX_MPP_OPTS);
++
++	/* Calculate register address and bit in register */
++	reg_offset   = mpp_id >> (MPP_FIELD_BITS);
++	field_offset = (MPP_BIT_CNT) * (mpp_id & MPP_FIELD_MASK);
++	mask = (MPP_VAL_MASK << field_offset);
++
++	/* Clip value to bit resolution */
++	value &= MPP_VAL_MASK;
++
++	reg = readl(MPP_REGS_BASE + reg_offset);
++	reg = (reg & mask) | (value << field_offset);
++	writel(reg, MPP_REGS_BASE + reg_offset);
++}
++
++u8 get_mpp(int mpp_id)
++{
++	int reg_offset;
++	int field_offset;
++	u32 reg, mask;
++	u8 value;
++
++	/* Calculate register address and bit in register */
++	reg_offset   = mpp_id >> (MPP_FIELD_BITS);
++	field_offset = (MPP_BIT_CNT) * (mpp_id & MPP_FIELD_MASK);
++
++	reg = readl(MPP_REGS_BASE + reg_offset);
++	val = (reg >> field_offset) & MPP_VAL_MASK;
++
++	if (value > MAX_MPP_OPTS)
++		printf("Warning: MPP value %d > max value %d\n", val, MAX_MPP_OPTS);
++
++	return val;
++}
++
++void set_mpp_reg(u32 *mpp_reg, int first_reg, int last_reg)
++{
++	int reg_offset;
++	int field_offset;
++	int reg, mask;
++
++	while (reg = first_reg; reg < last_reg; reg++; mpp_reg++)
++		writel(*mpp_reg, MPP_REGS_BASE + reg);
++}
++
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index f80c0c6..41dbeab 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -58,6 +58,12 @@ u16 *soc_get_unit_mask_table(void)
+ 	return soc_family->base_unit_info;
+ }
+ 
++char *soc_get_mpp_desc_table(void)
++{
++	return soc_family->mpp_desc;
++}
++
++
+ static int update_soc_units(int soc_id)
+ {
+ 	struct mvebu_soc_info *soc = get_soc_info(soc_id);
+diff --git a/arch/arm/include/asm/arch-armada8k/regs-base.h b/arch/arm/include/asm/arch-armada8k/regs-base.h
+index 9b57e73..1f6fadf 100644
+--- a/arch/arm/include/asm/arch-armada8k/regs-base.h
++++ b/arch/arm/include/asm/arch-armada8k/regs-base.h
+@@ -22,6 +22,8 @@
+ 
+ #define MVEBU_REGS_BASE	(0x90000000)
+ 
++#define MPP_REGS_BASE	(MVEBU_REGS_BASE + 0x1000)
++
+ /* List of register base for all units */
+ #define MVEBU_ADEC_AP_BASE (MVEBU_REGS_BASE + 0x0)
+ 
+diff --git a/arch/arm/include/asm/arch-armada8k/soc-info.h b/arch/arm/include/asm/arch-armada8k/soc-info.h
+new file mode 100644
+index 0000000..d18ec25
+--- /dev/null
++++ b/arch/arm/include/asm/arch-armada8k/soc-info.h
+@@ -0,0 +1,32 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#ifndef _SOC_INFO_H_
++#define _SOC_INFO_H_
++
++/* General MPP definitions */
++#define MAX_MPP_OPTS		7
++#define MAX_MPP_ID		69
++
++#define MPP_BIT_CNT		4
++#define MPP_FIELD_MASK		0x7
++#define MPP_FIELD_BITS		3
++#define MPP_VAL_MASK		0xF
++
++#endif	/* _SOC_INFO_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/mpp.h b/arch/arm/include/asm/arch-mvebu/mpp.h
+new file mode 100644
+index 0000000..3944d20
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/mpp.h
+@@ -0,0 +1,30 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#ifndef _MPP_H_
++#define _MPP_H_
++
++#include  <asm/arch/soc-info.h>
++
++#define		MAX_MPP_NAME	32
++
++char *mpp_get_desc(void);
++
++
++#endif /* _MPP_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/soc.h b/arch/arm/include/asm/arch-mvebu/soc.h
+index aaf94df..dee18cd 100644
+--- a/arch/arm/include/asm/arch-mvebu/soc.h
++++ b/arch/arm/include/asm/arch-mvebu/soc.h
+@@ -22,6 +22,8 @@
+ 
+ #include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/adec.h>
++#include <asm/arch-mvebu/mpp.h>
++#include <asm/arch/soc-info.h>
+ 
+ #define MAX_SOC_NAME	   (32)
+ 
+@@ -29,6 +31,7 @@ struct mvebu_soc_family {
+ 	char name[MAX_SOC_NAME];
+ 	int	 id;
+ 	u16	*base_unit_info;
++	char	*mpp_desc[MAX_MPP_OPTS][MAX_MPP_NAME];
+ 	struct mvebu_soc_info *soc_table;
+ 	struct mvebu_soc_info *curr_soc;
+ 	int adec_type;
+-- 
+1.9.1
+

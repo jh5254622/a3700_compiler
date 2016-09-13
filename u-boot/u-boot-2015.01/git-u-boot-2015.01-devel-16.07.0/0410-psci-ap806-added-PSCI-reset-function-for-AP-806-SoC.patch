@@ -1,0 +1,83 @@
+From c9b29833798891b76f00599eee5f2a39ec743a31 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 8 Sep 2015 13:46:51 +0300
+Subject: [PATCH 0410/1240] psci: ap806: added PSCI reset function for AP-806
+ SoC
+
+- Added PSCI weak reset function
+- Implement reset function for AP-806 SoC
+
+Change-Id: I53901322bedf1b8577f2c64aa24243f48da4e202
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23470
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/psci.S | 9 +++++++++
+ arch/arm/cpu/armv8/psci.S          | 4 ++++
+ 2 files changed, 13 insertions(+)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/psci.S b/arch/arm/cpu/armv8/armada8k/psci.S
+index 202fdbf..31e6c34 100644
+--- a/arch/arm/cpu/armv8/armada8k/psci.S
++++ b/arch/arm/cpu/armv8/armada8k/psci.S
+@@ -27,6 +27,7 @@
+ #define MVEBU_CCU_HTC_ASET_REG	0x4264
+ #define MVEBU_PRIVATE_UID_REG	0x30
+ #define MVEBU_IO_AFFINITY	0xF00
++#define MVEBU_RFU_GLOBL_SW_RST	0x84
+ 
+ .pushsection ._secure.text, "ax"
+ 
+@@ -82,6 +83,14 @@ psci_build_stack:
+ 
+ 	ret
+ 
++.globl	psci_0_2_system_reset
++psci_0_2_system_reset:
++	mov	x0, #(MVEBU_RFU_BASE)
++	add	x3, x0, #(MVEBU_RFU_GLOBL_SW_RST)
++	mov	w0, #0
++	str	w0, [x3]
++	ret
++
+ 	/* x1 = target CPU */
+ 	/* x2 = target PC */
+ .globl	psci_0_2_cpu_on_64
+diff --git a/arch/arm/cpu/armv8/psci.S b/arch/arm/cpu/armv8/psci.S
+index 6fa8961..219bf4d 100755
+--- a/arch/arm/cpu/armv8/psci.S
++++ b/arch/arm/cpu/armv8/psci.S
+@@ -30,6 +30,7 @@ ENTRY(psci_0_2_cpu_on_64)
+ ENTRY(psci_0_2_affinity_info_64)
+ ENTRY(psci_0_2_migrate_64)
+ ENTRY(psci_0_2_migrate_info_up_cpu_64)
++ENTRY(psci_0_2_system_reset)
+ 	mov	x0, #ARM_PSCI_RET_NI	/* Return -1 (Not Implemented) */
+ 	ret
+ ENDPROC(psci_0_2_cpu_suspend_64)
+@@ -37,11 +38,13 @@ ENDPROC(psci_0_2_cpu_on_64)
+ ENDPROC(psci_0_2_affinity_info_64)
+ ENDPROC(psci_0_2_migrate_64)
+ ENDPROC(psci_0_2_migrate_info_up_cpu_64)
++ENDPROC(psci_0_2_system_reset)
+ .weak psci_0_2_cpu_suspend_64
+ .weak psci_0_2_cpu_on_64
+ .weak psci_0_2_affinity_info_64
+ .weak psci_0_2_migrate_64
+ .weak psci_0_2_migrate_info_up_cpu_64
++.weak psci_0_2_system_reset
+ 
+ ENTRY(psci_0_2_psci_version)
+ 	mov	x0, #2			/* Return Major = 0, Minor = 2*/
+@@ -51,6 +54,7 @@ ENDPROC(psci_0_2_psci_version)
+ .align 4
+ _psci_0_2_table:
+ 	PSCI_FN(PSCI_0_2_FN_PSCI_VERSION, psci_0_2_psci_version)
++	PSCI_FN(PSCI_0_2_FN_SYSTEM_RESET, psci_0_2_system_reset)
+ 	PSCI_FN(PSCI_0_2_FN64_CPU_SUSPEND, psci_0_2_cpu_suspend_64)
+ 	PSCI_FN(PSCI_0_2_FN64_CPU_ON, psci_0_2_cpu_on_64)
+ 	PSCI_FN(PSCI_0_2_FN64_AFFINITY_INFO, psci_0_2_affinity_info_64)
+-- 
+1.9.1
+

@@ -1,0 +1,126 @@
+From 15f02cfe038c787accb2f7f029b174f6f74f4728 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 10 Jun 2014 17:52:53 +0300
+Subject: [PATCH 0032/1240] a8k: remove clean (-c) option from build script
+
+Change-Id: If1ce339f9ed9b6e80fdf03b173702e2346d66d45
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/8455
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ build.pl | 87 +++++++++++++++++++++++++++++++---------------------------------
+ 1 file changed, 42 insertions(+), 45 deletions(-)
+
+diff --git a/build.pl b/build.pl
+index 8184661..27be557 100755
+--- a/build.pl
++++ b/build.pl
+@@ -63,7 +63,6 @@ sub usage
+ 	print "Options:\n";
+ 	print "\t-f\tBoot device. Accepts spi, nor, nand\n";
+ 	print "\t-b\tBoard type. Accepts: armada8k, armada8k-pxp, armada38x\n";
+-	print "\t-c\tClean build. calls \"make mrproper\"\n";
+ 	print "\t-o\tOutput directory. Build products will be copied to here\n";
+ 	print "\t-h\tPrints this help message\n";
+ 	print "\n";
+@@ -115,54 +114,52 @@ my $flash = $opt_f;
+ #}
+ 
+ # Handle clean build
+-if($opt_c eq 1)
+-{
+-	unless($board ~~ @supported_boards) {
+-		print "\nError: Unsupported board \"$opt_b\"\n\n";
+-		usage();
+-		exit 1;
+-	}
+ 
+-	unless($flash ~~ @supported_flash) {
+-		print "\nError: Unsupported flash \"$flash\"\n\n";
+-		usage();
+-		exit 1;
+-	}
++unless($board ~~ @supported_boards) {
++	print "\nError: Unsupported board \"$opt_b\"\n\n";
++	usage();
++	exit 1;
++}
+ 
+-	# Clean U-Boot
+-	print "\n**** [Cleaning U-Boot]\t*****\n\n";
+-	if (system("make mrproper")) {
+-		print "\nError: Failed calling make mrporer\n\n";
+-		exit 1;
+-	}
++unless($flash ~~ @supported_flash) {
++	print "\nError: Unsupported flash \"$flash\"\n\n";
++	usage();
++	exit 1;
++}
+ 
+-	# Clean tools folder
+-	#my $path = Cwd::cwd();
+-	#chdir  ("./tools/marvell");
+-	#system("make clean BOARD=$boardID -s");
+-	#chdir  ("$path");
+-	
+-	print "\n**** [Configuring U-boot]\t*****\n\n";
+-	if (system("make ${board}_config")) {
+-		print "\nError: Failed configuring u-boot to board $board\n\n";
+-		exit 1;
+-	}
++# Clean U-Boot
++print "\n**** [Cleaning U-Boot]\t*****\n\n";
++if (system("make mrproper")) {
++	print "\nError: Failed calling make mrporer\n\n";
++	exit 1;
++}
+ 
+-	if($flash eq "spi")      {
+-		$img_opts   = "";
+-		$flash_name = "spi";
+-		$img_type   = "flash";
+-	}
+-	elsif ($flash eq "nor")  {
+-		$img_opts   = "";
+-		$flash_name = "nor";
+-		$img_type   = "flash";
+-	}
+-	elsif  ($flash eq "nand"){
+-		$img_opts   = "-P 4096 -L 128 -N MLC";
+-		$flash_name = "nand";
+-		$img_type   = "nand";
+-	}
++# Clean tools folder
++#my $path = Cwd::cwd();
++#chdir  ("./tools/marvell");
++#system("make clean BOARD=$boardID -s");
++#chdir  ("$path");
++
++print "\n**** [Configuring U-boot]\t*****\n\n";
++if (system("make ${board}_config")) {
++	print "\nError: Failed configuring u-boot to board $board\n\n";
++	exit 1;
++}
++
++if($flash eq "spi") {
++	$img_opts   = "";
++	$flash_name = "spi";
++	$img_type   = "flash";
++}
++elsif ($flash eq "nor") {
++	$img_opts   = "";
++	$flash_name = "nor";
++	$img_type   = "flash";
++}
++elsif  ($flash eq "nand") {
++	$img_opts   = "-P 4096 -L 128 -N MLC";
++	$flash_name = "nand";
++	$img_type   = "nand";
+ }
+ 
+ #if(defined $opt_d)
+-- 
+1.9.1
+

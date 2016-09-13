@@ -1,0 +1,56 @@
+From f6e9f8b89c0836cb2a4b2b9a48bf2757a6e5cd37 Mon Sep 17 00:00:00 2001
+From: Ken Ma <make@marvell.com>
+Date: Wed, 20 Apr 2016 01:57:00 +0800
+Subject: [PATCH 1060/1240] fix: mvebu: remove early malloc base address
+ setting in board_early_init_f
+
+- Since now crt0_64.S has already set early malloc base address for
+  arm64, the early malloc base address setting in board_early_init_f
+  can be removed; CONFIG_MALLOC_F_ADDR has no use any more and is
+  removed also.
+- The early malloc memory is pre-allocated before GD_BASE. The base
+  address is GD_BASE - CONFIG_MALLOC_F_LEN.
+
+Change-Id: Ia3db82302db778ff35f2f685ffba5f3dfff3f3ec
+Signed-off-by: Ken Ma <make@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29187
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ board/mvebu/common/init.c      | 6 ------
+ include/configs/mvebu-common.h | 1 -
+ 2 files changed, 7 deletions(-)
+
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index 3e9d9ea..13ed8a1 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -57,12 +57,6 @@ int soc_early_init_f(void)
+ /* Do very basic stuff like board and soc detection */
+ int board_early_init_f(void)
+ {
+-/* fdt_config uses gunzip to decompress FDT when loading it from EEPROM.
+-   gunzip uses malloc, therefore it's necessary to enable malloc at this point */
+-#ifdef CONFIG_SYS_MALLOC_F_LEN
+-	gd->malloc_base = CONFIG_MALLOC_F_ADDR;
+-#endif
+-
+ #ifdef CONFIG_BOARD_CONFIG_EEPROM
+ 	/* set default FDT to work with:
+ 	 ** - customer/regular mode: point to the defined FDT by CONFIG_DEFAULT_DEVICE_TREE.
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index f434a38..845a38a 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -39,7 +39,6 @@
+ 
+ /* Global definitions */
+ #ifndef CONFIG_SPL_BUILD
+-#define CONFIG_MALLOC_F_ADDR		0x8000000
+ #define CONFIG_SYS_MALLOC_F_LEN		0x5000
+ #endif
+ #ifndef CONFIG_SYS_TEXT_BASE
+-- 
+1.9.1
+

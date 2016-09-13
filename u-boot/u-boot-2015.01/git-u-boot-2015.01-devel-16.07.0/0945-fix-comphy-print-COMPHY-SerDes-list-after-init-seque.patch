@@ -1,0 +1,48 @@
+From ba8694786de0b988802e7aa14e4d79b7ab1a864d Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 14 Mar 2016 14:45:27 +0200
+Subject: [PATCH 0945/1240] fix: comphy: print COMPHY SerDes list after init
+ sequence
+
+- Issue found in CP-110, when print the SerDes list and the init sequence
+  set the SerDes as unconnected (due to SoC configuration)
+- This patch will print the updated SerDes list after init sequence
+
+Change-Id: I28228fcafc08c4da8b82e257452ada79080b53a7
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28223
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/phy/comphy_core.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/phy/comphy_core.c b/drivers/phy/comphy_core.c
+index 77b1630..698c9a0 100644
+--- a/drivers/phy/comphy_core.c
++++ b/drivers/phy/comphy_core.c
+@@ -67,7 +67,7 @@ static char *get_speed_string(u32 speed)
+ 
+ static char *get_type_string(u32 type)
+ {
+-	char *type_strings[] = {"unconnected", "PEX0", "PEX1", "PEX2", "PEX3",
++	char *type_strings[] = {"UNCONNECTED", "PEX0", "PEX1", "PEX2", "PEX3",
+ 				"SATA0", "SATA1", "SATA2", "SATA3", "SGMII0",
+ 				"SGMII1", "SGMII2", "SGMII3", "QSGMII", "USB3_HOST0",
+ 				"USB3_HOST1", "USB3_DEVICE", "XAUI0", "XAUI1",
+@@ -194,10 +194,10 @@ u32 comphy_init(const void *blob)
+ 			lane++;
+ 		}
+ 
+-		/* PHY print SerDes status */
+-		comphy_print(ptr_chip_cfg, comphy_map_data);
+ 		/* PHY power UP sequence */
+ 		ptr_chip_cfg->ptr_comphy_chip_init(ptr_chip_cfg, comphy_map_data);
++		/* PHY print SerDes status */
++		comphy_print(ptr_chip_cfg, comphy_map_data);
+ 	}
+ 	debug_exit();
+ 
+-- 
+1.9.1
+

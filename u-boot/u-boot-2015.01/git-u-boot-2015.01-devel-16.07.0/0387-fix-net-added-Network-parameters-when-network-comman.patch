@@ -1,0 +1,57 @@
+From 1609186329831985141dd8760797bfa5b8e18fee Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 30 Aug 2015 03:16:24 +0300
+Subject: [PATCH 0387/1240] fix: net: added Network parameters when network
+ command is enabled
+
+Change-Id: Icc41b6f262f5c86217a3170312e48d8687f6dc27
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23310
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ include/configs/mvebu-common.h | 10 +++-------
+ 1 file changed, 3 insertions(+), 7 deletions(-)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 2a66e2b..091e164 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -286,7 +286,6 @@
+ 	#ifdef CONFIG_DEVEL_BOARD
+ 		#define CONFIG_EEPRO100
+ 		#define CONFIG_E1000
+-		#define CONFIG_MVEBU_NET
+ 	#endif
+ #endif
+ 
+@@ -294,23 +293,20 @@
+ 
+ /* Neta */
+ #ifdef CONFIG_MV_ETH_NETA
+-	#define CONFIG_MVEBU_NET
+ 	#define MV_INCLUDE_GIG_ETH
+ 	#define CONFIG_MV_INCLUDE_GIG_ETH
+ 	#define MV_ETH_NETA
+ #endif /* CONFIG_MV_ETH_NETA */
+ 
+-/* General Networking */
+-#ifdef CONFIG_MVEBU_NET
+-
++/* Add network parameters when network command is enabled */
++#ifdef CONFIG_CMD_NET
+ 	/* Environment */
+ 	#define CONFIG_IPADDR           10.4.50.154
+ 	#define CONFIG_SERVERIP         10.4.50.3
+ 	#define CONFIG_NETMASK          255.255.255.0
+ 	#define ETHADDR                 "00:00:00:00:51:81"
+ 	#define ENV_ETH_PRIME           "e1000#0"
+-
+-#endif /* CONFIG_MVEBU_NET */
++#endif /* CONFIG_CMD_NET */
+ 
+ /* SATA AHCI over PCIe */
+ #ifndef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+-- 
+1.9.1
+

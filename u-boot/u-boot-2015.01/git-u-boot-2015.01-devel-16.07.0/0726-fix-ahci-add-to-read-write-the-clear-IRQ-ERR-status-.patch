@@ -1,0 +1,37 @@
+From 71a3dce45fabe40eec8c0cbc9585ab1d85922d9f Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Sun, 24 Jan 2016 16:50:02 +0200
+Subject: [PATCH 0726/1240] fix: ahci: add to read/write the clear IRQ/ERR
+ status register and FIS address register
+
+- Without this fix the AHCI read/write command is failed.
+  It is required to clear all IRQs, errors and FIS return
+  address before issuing an AHCI command.
+
+Change-Id: I27e849a70122ff01a60c45bcf24d6203a9c7e41a
+Signed-off-by: Eli Nidam <elini@marvell.com>
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26986
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ drivers/block/ahci.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/block/ahci.c b/drivers/block/ahci.c
+index 3993af6..80c54a1 100644
+--- a/drivers/block/ahci.c
++++ b/drivers/block/ahci.c
+@@ -643,7 +643,9 @@ static int ahci_device_data_io(u8 port, u8 *fis, int fis_len, u8 *buf,
+ 	ahci_fill_cmd_slot(pp, opts);
+ 
+ 	/* clearing IRQ status register on Read/Write operations */
++	writel_with_flush(0x7FFFFFF, port_mmio + PORT_SCR_ERR);
+ 	writel_with_flush(0xffffffff, port_mmio + PORT_IRQ_STAT);
++	writel_with_flush(0, port_mmio + PORT_FIS_ADDR);
+ 
+ 	ahci_dcache_flush_sata_cmd(pp);
+ 	ahci_dcache_flush_range((unsigned long)buf, (unsigned long)buf_len);
+-- 
+1.9.1
+

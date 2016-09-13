@@ -1,0 +1,136 @@
+From b22fe533cdbf306fecf96b80acf57af7929cfd78 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 7 Apr 2014 16:24:26 +0300
+Subject: [PATCH 0029/1240] a8k: fixed compilation for A8K regular build
+
+Change-Id: I0f25a62e0e7e293d3d405fc1bd6491374e5ec9ea
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ board/mvebu/armada8k/armada8021-pxp.c | 45 +++--------------------------------
+ include/configs/armada8k.h            | 18 ++++++++------
+ include/configs/mvebu-common.h        |  2 ++
+ 3 files changed, 16 insertions(+), 49 deletions(-)
+
+diff --git a/board/mvebu/armada8k/armada8021-pxp.c b/board/mvebu/armada8k/armada8021-pxp.c
+index 1e97c1d..2d54a92 100644
+--- a/board/mvebu/armada8k/armada8021-pxp.c
++++ b/board/mvebu/armada8k/armada8021-pxp.c
+@@ -28,49 +28,10 @@
+ #include <linux/compiler.h>
+ #include "board-info.h"
+ 
+-DECLARE_GLOBAL_DATA_PTR;
+ 
+-int board_init(void)
++struct mvebu_board_family *board_init_family(void)
+ {
+-	debug("Start Armada8021-pxp board init\n");
++	/* Board family specific init goes here */
+ 
+-	a8k_init();
+-
+-	common_board_init(&a8k_board_family);
+-
+-	/* a8k specific board init goes here */
+-
+-	return 0;
+-}
+-
+-int dram_init(void)
+-{
+-	/*
+-	 * Clear spin table so that secondary processors
+-	 * observe the correct value after waken up from wfe.
+-	 */
+-	*(unsigned long *)CPU_RELEASE_ADDR = 0;
+-
+-	gd->ram_size = PHYS_SDRAM_1_SIZE;
+-	return 0;
+-}
+-
+-int timer_init(void)
+-{
+-	return 0;
+-}
+-
+-/*
+- * Board specific reset that is system reset.
+- */
+-void reset_cpu(ulong addr)
+-{
+-}
+-
+-/*
+- * Board specific ethernet initialization routine.
+- */
+-int board_eth_init(bd_t *bis)
+-{
+-	return 0;
++	return &a8k_board_family;
+ }
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index 2c0196b..9d9db93 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -17,11 +17,19 @@
+  * ***************************************************************************
+  */
+ 
+-#ifndef __ARMADA8021_PXP_H
+-#define __ARMADA8021_PXP_H
++#ifndef __ARMADA_8K_H
++#define __ARMADA_8K_H
+ 
+ #include "mvebu-common.h"
+ 
++#undef CONFIG_SYS_INIT_SP_ADDR
++#undef CONFIG_SYS_MALLOC_LEN
++#undef CONFIG_SYS_LOAD_ADDR
++#undef CONFIG_SYS_SDRAM_BASE
++#undef CONFIG_ENV_IS_NOWHERE
++
++#define CONFIG_AURORA_2_TIMER
++
+ #define DEBUG
+ 
+ #define CONFIG_REMAKE_ELF
+@@ -185,14 +193,11 @@
+ #define CONFIG_BOOTARGS			"console=ttyAMA0 root=/dev/ram0"
+ #define CONFIG_BOOTCOMMAND		"bootm $kernel_addr " \
+ 					"$initrd_addr:$initrd_size $fdt_addr"
+-#define CONFIG_BOOTDELAY		-1
+ 
+ /* Do not preserve environment */
+ #define CONFIG_ENV_IS_NOWHERE		1
+-#define CONFIG_ENV_SIZE			0x1000
+ 
+ /* Monitor Command Prompt */
+-#define CONFIG_SYS_CBSIZE		512	/* Console I/O Buffer Size */
+ #define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE + \
+ 					sizeof(CONFIG_SYS_PROMPT) + 16)
+ #define CONFIG_SYS_HUSH_PARSER
+@@ -200,6 +205,5 @@
+ #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
+ #define CONFIG_SYS_LONGHELP
+ #define CONFIG_CMDLINE_EDITING		1
+-#define CONFIG_SYS_MAXARGS		64	/* max command args */
+ 
+-#endif /* __ARMADA8021_PXP_H */
++#endif /* __ARMADA_8K_H */
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index ea35ac6..5fb2786 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -37,7 +37,9 @@
+ /* #define CONFIG_MV_DEBUG_PUTS */
+ 
+ /* Global definitions */
++#ifndef CONFIG_SYS_TEXT_BASE
+ #define CONFIG_SYS_TEXT_BASE            0x00000000
++#endif
+ #define CONFIG_SYS_SDRAM_BASE           0x00000000
+ #define CONFIG_SYS_RESET_ADDRESS        0xffff0000
+ #define CONFIG_SYS_MALLOC_BASE          (CONFIG_SYS_TEXT_BASE + (3 << 20))  /* TEXT_BASE + 3M */
+-- 
+1.9.1
+

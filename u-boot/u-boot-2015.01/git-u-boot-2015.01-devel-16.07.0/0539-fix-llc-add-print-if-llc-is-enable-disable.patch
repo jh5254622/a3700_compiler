@@ -1,0 +1,34 @@
+From a69c5bdbb758210ad65f9eebfcfd5353208e9f70 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Tue, 10 Nov 2015 13:01:31 +0200
+Subject: [PATCH 0539/1240] fix: llc: add print if llc is enable/disable
+
+	Add print if llc is enable/disable, according to compilation.
+	JIRA SYSTEMSW-2024.
+
+Change-Id: I4f31c9ae263e48c0b859340dc8b9b442ef96016f
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24710
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/soc.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/soc.c b/arch/arm/cpu/armv8/armada8k/soc.c
+index 1791bc5..1c40bcb 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc.c
++++ b/arch/arm/cpu/armv8/armada8k/soc.c
+@@ -119,4 +119,9 @@ void print_soc_specific_info(void)
+ #ifdef CONFIG_MVEBU_SYS_INFO
+ 	printf("\tDDR %d Bit width\n", get_info(DRAM_BUS_WIDTH));
+ #endif
++#ifdef CONFIG_MVEBU_LLC_ENABLE
++	printf("\tLLC cache is enabled\n");
++#else
++	printf("\tLLC cache is disabled\n");
++#endif
+ }
+-- 
+1.9.1
+

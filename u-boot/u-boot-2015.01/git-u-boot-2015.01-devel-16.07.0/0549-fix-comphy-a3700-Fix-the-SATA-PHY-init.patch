@@ -1,0 +1,99 @@
+From 45c86d130913a9dfd447ce70ec301920f1955be5 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Sat, 21 Nov 2015 03:48:23 +0200
+Subject: [PATCH 0549/1240] fix: comphy: a3700: Fix the SATA PHY init
+
+- Fix the mask in SATA COMPHY address register writes
+  for indirect access
+- Change address of vphy_reserve_reg from 0x20e to 0xe
+  (undocumented)
+
+Change-Id: I095ccc01e2de96386e7f57278afe62e3bc54efa2
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25110
+Reviewed-by: Hezi Shahmoon <hezi@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+(cherry picked from commit 62b75decfeff6d8a1a7516b1d09a1c24b2aaa39e)
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25360
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/phy/comphy_a3700.c | 16 ++++++++--------
+ drivers/phy/comphy_a3700.h |  2 +-
+ 2 files changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/phy/comphy_a3700.c b/drivers/phy/comphy_a3700.c
+index 2830cc5..73e3e67 100644
+--- a/drivers/phy/comphy_a3700.c
++++ b/drivers/phy/comphy_a3700.c
+@@ -249,19 +249,19 @@ static int comphy_sata_power_up(void)
+ 	/*
+ 	 * 0. Swap SATA TX lines
+ 	 */
+-	reg_set((void __iomem *)rh_vsreg_addr, vphy_sync_pattern_reg, 0);
++	reg_set((void __iomem *)rh_vsreg_addr, vphy_sync_pattern_reg, 0xFFFFFFFF);
+ 	reg_set((void __iomem *)rh_vsreg_data, bs_txd_inv, bs_txd_inv);
+ 
+ 	/*
+ 	 * 1. Select 40-bit data width width
+ 	 */
+-	reg_set((void __iomem *)rh_vsreg_addr, vphy_loopback_reg0, 0);
++	reg_set((void __iomem *)rh_vsreg_addr, vphy_loopback_reg0, 0xFFFFFFFF);
+ 	reg_set((void __iomem *)rh_vsreg_data, 0x800, bs_phyintf_40bit);
+ 
+ 	/*
+ 	 * 2. Select reference clock and PHY mode (SATA)
+ 	 */
+-	reg_set((void __iomem *)rh_vsreg_addr, vphy_power_reg0, 0);
++	reg_set((void __iomem *)rh_vsreg_addr, vphy_power_reg0, 0xFFFFFFFF);
+ 	if (comphy_get_ref_clk() == 40)
+ 		reg_set((void __iomem *)rh_vsreg_data, 0x3, 0x00FF); /* 40 MHz */
+ 	else
+@@ -270,26 +270,26 @@ static int comphy_sata_power_up(void)
+ 	/*
+ 	 * 3. Use maximum PLL rate (no power save)
+ 	 */
+-	reg_set((void __iomem *)rh_vsreg_addr, vphy_calctl_reg, 0);
++	reg_set((void __iomem *)rh_vsreg_addr, vphy_calctl_reg, 0xFFFFFFFF);
+ 	reg_set((void __iomem *)rh_vsreg_data, bs_max_pll_rate, bs_max_pll_rate);
+ 
+ 	/*
+ 	 * 4. Reset reserved bit (??)
+ 	 */
+-	reg_set((void __iomem *)rh_vsreg_addr, vphy_reserve_reg, 0);
++	reg_set((void __iomem *)rh_vsreg_addr, vphy_reserve_reg, 0xFFFFFFFF);
+ 	reg_set((void __iomem *)rh_vsreg_data, 0, bs_phyctrl_frm_pin);
+ 
+ 	/*
+ 	 * 5. Set vendor-specific configuration (??)
+ 	 */
+-	reg_set((void __iomem *)rh_vs0_a, vsata_ctrl_reg, 0);
+-	reg_set((void __iomem *)rh_vs0_d, bs_phy_pu_pll, 0);
++	reg_set((void __iomem *)rh_vs0_a, vsata_ctrl_reg, 0xFFFFFFFF);
++	reg_set((void __iomem *)rh_vs0_d, bs_phy_pu_pll, bs_phy_pu_pll);
+ 
+ 	/* Wait for > 55 us to allow PLL be enabled */
+ 	udelay(PLL_SET_DELAY_US);
+ 
+ 	/* Assert SATA PLL enabled */
+-	reg_set((void __iomem *)rh_vsreg_addr, vphy_loopback_reg0, 0);
++	reg_set((void __iomem *)rh_vsreg_addr, vphy_loopback_reg0, 0xFFFFFFFF);
+ 	ret = comphy_poll_reg((void *)rh_vsreg_data,	/* address */
+ 			      bs_pll_ready_tx,		/* value */
+ 			      bs_pll_ready_tx,		/* mask */
+diff --git a/drivers/phy/comphy_a3700.h b/drivers/phy/comphy_a3700.h
+index b4d5359..f16c888 100644
+--- a/drivers/phy/comphy_a3700.h
++++ b/drivers/phy/comphy_a3700.h
+@@ -190,7 +190,7 @@
+ #define vphy_calctl_reg			0x202
+ #define bs_max_pll_rate			BIT12
+ 
+-#define vphy_reserve_reg		0x20e
++#define vphy_reserve_reg		0x0e
+ #define bs_phyctrl_frm_pin		BIT13
+ 
+ #define vsata_ctrl_reg			0x00
+-- 
+1.9.1
+

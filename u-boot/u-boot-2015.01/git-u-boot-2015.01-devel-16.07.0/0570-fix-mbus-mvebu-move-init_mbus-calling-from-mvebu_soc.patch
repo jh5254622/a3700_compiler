@@ -1,0 +1,88 @@
+From c58bbc8b1a9635fde933121742c83fb3da9f8835 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Wed, 2 Dec 2015 14:15:38 +0800
+Subject: [PATCH 0570/1240] fix: mbus: mvebu: move init_mbus calling from
+ mvebu_soc_init to board_early_init_f
+
+    dram_init routine sets gd->ram_size value for u-boot,
+    in order to get DRAM size from MBUS driver, init_mbus
+    needs to be called before dram_init, so it could read
+    DRAM window configuration from FDT. And only after that
+    dram_init could use MBUS driver API to get the DRAM size.
+
+    To do this, init_mbus need to be called in board_early_init_f,
+    which is before dram_init.
+
+Change-Id: Ib493bcdeecf884a38f0c23c94b63b21415d5b3d9
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25510
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/soc-init.c |  3 ---
+ board/mvebu/common/init.c            | 13 +++++++++++++
+ include/configs/armadalp.h           |  3 +++
+ 3 files changed, 16 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index 6ebdc4d..825520e 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -96,9 +96,6 @@ int mvebu_soc_init()
+ #ifdef CONFIG_MVEBU_IOB
+ 	init_iob();
+ #endif
+-#ifdef CONFIG_MVEBU_MBUS
+-	init_mbus();
+-#endif
+ 
+ 	mvebu_thermal_sensor_probe();
+ 
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index eaa4a5e..1351119 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -27,6 +27,7 @@
+ #include <asm/arch-mvebu/pinctl.h>
+ #include <asm/arch-mvebu/mpp.h>
+ #include <asm/arch-mvebu/system_info.h>
++#include <asm/arch-mvebu/mbus.h>
+ #include "board.h"
+ #ifdef CONFIG_DEVEL_BOARD
+ #include "devel-board.h"
+@@ -58,6 +59,18 @@ int board_early_init_f(void)
+    into a global struct, before code relocation. */
+ 	sys_info_init();
+ #endif
++#ifdef CONFIG_MVEBU_MBUS
++	/* mbus driver must be inited before dram_init,
++	  * since mbus reads the DRAM window configuration
++	  * from FDT, and dram_init needs it to get the DRAM
++	  * size.
++	  *
++	  * the sequence of init_sequence_f is:
++	  * 1. board_early_init_f --> init_mubs
++	  * 2. dram_init
++	  */
++	init_mbus();
++#endif
+ 	return 0;
+ }
+ #endif
+diff --git a/include/configs/armadalp.h b/include/configs/armadalp.h
+index 54bf355..ceb3892 100644
+--- a/include/configs/armadalp.h
++++ b/include/configs/armadalp.h
+@@ -107,6 +107,9 @@ extern char __end_of_spl[];
+  */
+ #include "mvebu-common.h"
+ 
++/* need board_early_init_f to invoke init_mbus, before dram_init */
++#define CONFIG_BOARD_EARLY_INIT_F
++
+ #define CONFIG_SYS_PCI_64BIT	/* enable 64-bit PCI resources */
+ 
+ /*
+-- 
+1.9.1
+

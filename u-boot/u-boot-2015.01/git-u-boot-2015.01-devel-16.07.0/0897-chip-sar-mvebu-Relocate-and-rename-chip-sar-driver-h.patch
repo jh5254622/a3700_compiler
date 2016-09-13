@@ -1,0 +1,296 @@
+From 70e89d0ffe70c07beabaf14bbd51ae792d21f454 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 23 Feb 2016 11:38:32 +0200
+Subject: [PATCH 0897/1240] chip-sar: mvebu: Relocate and rename chip-sar
+ driver header file
+
+Change-Id: If011ac06b3356c9de6e429d49a1581a29e56a985
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27774
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/clock.c   |  2 +-
+ arch/arm/cpu/armv8/armada8k/soc.c     |  2 +-
+ arch/arm/cpu/armv8/armada8k/spl.c     |  2 +-
+ arch/arm/cpu/mvebu-common/soc-init.c  |  2 +-
+ arch/arm/include/asm/arch-mvebu/sar.h | 80 -----------------------------------
+ drivers/misc/mvebu_sar/ap806_sar.c    |  2 +-
+ drivers/misc/mvebu_sar/chip_sar.h     |  2 +-
+ drivers/misc/mvebu_sar/cp110_sar.c    |  2 +-
+ include/mvebu_chip_sar.h              | 80 +++++++++++++++++++++++++++++++++++
+ 9 files changed, 87 insertions(+), 87 deletions(-)
+ delete mode 100644 arch/arm/include/asm/arch-mvebu/sar.h
+ create mode 100644 include/mvebu_chip_sar.h
+
+diff --git a/arch/arm/cpu/armv8/armada8k/clock.c b/arch/arm/cpu/armv8/armada8k/clock.c
+index fc17ee93..38f7e4d 100644
+--- a/arch/arm/cpu/armv8/armada8k/clock.c
++++ b/arch/arm/cpu/armv8/armada8k/clock.c
+@@ -19,7 +19,7 @@
+ #include <common.h>
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/clock.h>
+-#include <asm/arch-mvebu/sar.h>
++#include <mvebu_chip_sar.h>
+ 
+ #define MSS_CLOCK_DIV	6
+ 
+diff --git a/arch/arm/cpu/armv8/armada8k/soc.c b/arch/arm/cpu/armv8/armada8k/soc.c
+index 05211ef..6a0e28e 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc.c
++++ b/arch/arm/cpu/armv8/armada8k/soc.c
+@@ -25,9 +25,9 @@
+ #include <asm/arch/regs-base.h>
+ #include <asm/arch-mvebu/pinctl.h>
+ #include <asm/arch-mvebu/fdt.h>
+-#include <asm/arch-mvebu/sar.h>
+ #include <linux/sizes.h>
+ #include <netdev.h>
++#include <mvebu_chip_sar.h>
+ 
+ #define RFU_GLOBAL_SW_RST		(MVEBU_RFU_BASE + 0x84)
+ #define RFU_SW_RESET_OFFSET		0
+diff --git a/arch/arm/cpu/armv8/armada8k/spl.c b/arch/arm/cpu/armv8/armada8k/spl.c
+index 6011219..a96f214 100644
+--- a/arch/arm/cpu/armv8/armada8k/spl.c
++++ b/arch/arm/cpu/armv8/armada8k/spl.c
+@@ -26,7 +26,7 @@
+ #include <asm/arch-mvebu/flc.h>
+ #include <asm/arch-mvebu/fdt.h>
+ #include <asm/arch-armada8k/misc-regs.h>
+-#include <asm/arch-mvebu/sar.h>
++#include <mvebu_chip_sar.h>
+ #include <spl.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index c4c7825..1725fc6 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -25,10 +25,10 @@
+ #include <asm/arch-mvebu/mvebu.h>
+ #include <asm/arch-mvebu/soc.h>
+ #include <asm/arch-mvebu/thermal.h>
+-#include <asm/arch-mvebu/sar.h>
+ #include <asm/arch-mvebu/mvebu_phy_indirect.h>
+ #include <ahci.h>
+ #include <scsi.h>
++#include <mvebu_chip_sar.h>
+ 
+ #ifdef CONFIG_MVEBU_CCU
+ #include <asm/arch-mvebu/ccu.h>
+diff --git a/arch/arm/include/asm/arch-mvebu/sar.h b/arch/arm/include/asm/arch-mvebu/sar.h
+deleted file mode 100644
+index 4c358fe..0000000
+--- a/arch/arm/include/asm/arch-mvebu/sar.h
++++ /dev/null
+@@ -1,80 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#ifndef _SAR_H_
+-#define _SAR_H_
+-
+-#include <asm/types.h>
+-/*
+-** List of boot source options.
+-** Return value for each of the options:
+-**  - SAR_CPU_FREQ: Frequency (Hz)
+-**  - SAR_DDR_FREQ: Frequency (Hz)
+-**  - SAR_AP_FABRIC_FREQ: Frequency (Hz)
+-**  - SAR_CP_FABRIC_FREQ: Frequency (Hz)
+-**  - SAR_BOOT_SRC: Boot source type (see mvebu_bootsrc_type)
+-*/
+-enum mvebu_sar_opts {
+-	SAR_CPU_FREQ = 0,
+-	SAR_DDR_FREQ,
+-	SAR_AP_FABRIC_FREQ,
+-	SAR_CP_FABRIC_FREQ,
+-	SAR_BOOT_SRC,
+-	SAR_MAX_IDX
+-};
+-
+-enum mvebu_bootsrc_type {
+-	BOOTSRC_NAND,
+-	BOOTSRC_SPI,
+-	BOOTSRC_AP_SPI,
+-	BOOTSRC_SD_EMMC,
+-	BOOTSRC_AP_SD_EMMC,
+-	BOOTSRC_NOR,
+-	BOOTSRC_MAX_IDX
+-};
+-
+-/*
+-** sample-at-reset information
+-**  raw_sar_val: Raw value out of the sample-at-reset register.
+-**		This is hw dependent and should not be used for comparison
+-**		purposes (useful for debug, or verbose information).
+-**  bootsrc (SAR_BOOT_SRC):
+-**	type: Boot source interface type.
+-**	index: When applicable, indicates the interface index (e.g. SPI #1,
+-**		NAND #0).
+-**	width: When applicable, indicates the interface bus width (e.g. NAND
+-**	8-bit).
+-**  freq: Frequency in Hz.
+-*/
+-struct sar_val {
+-	u32 raw_sar_val;
+-	union {
+-		struct {
+-			enum mvebu_bootsrc_type type;
+-			int index;
+-		} bootsrc;
+-		u32 freq;
+-	};
+-};
+-
+-
+-int mvebu_sar_init(const void *blob);
+-int mvebu_sar_value_get(enum mvebu_sar_opts opt, struct sar_val *val);
+-void mvebu_sar_dump(void);
+-
+-#endif	/* _SAR_H_ */
+diff --git a/drivers/misc/mvebu_sar/ap806_sar.c b/drivers/misc/mvebu_sar/ap806_sar.c
+index 95f475d..494cee0 100644
+--- a/drivers/misc/mvebu_sar/ap806_sar.c
++++ b/drivers/misc/mvebu_sar/ap806_sar.c
+@@ -23,7 +23,7 @@
+ #include <libfdt.h>
+ #include <asm/arch-mvebu/fdt.h>
+ #include <asm/arch-mvebu/clock.h>
+-#include <asm/arch-mvebu/sar.h>
++#include <mvebu_chip_sar.h>
+ 
+ #include "chip_sar.h"
+ 
+diff --git a/drivers/misc/mvebu_sar/chip_sar.h b/drivers/misc/mvebu_sar/chip_sar.h
+index 9827728..3daca54 100644
+--- a/drivers/misc/mvebu_sar/chip_sar.h
++++ b/drivers/misc/mvebu_sar/chip_sar.h
+@@ -19,7 +19,7 @@
+ #include <common.h>
+ #include <libfdt.h>
+ #include <asm/arch-mvebu/fdt.h>
+-#include <asm/arch-mvebu/sar.h>
++#include <mvebu_chip_sar.h>
+ 
+ struct sar_chip_info {
+ 	enum fdt_compat_id compat;
+diff --git a/drivers/misc/mvebu_sar/cp110_sar.c b/drivers/misc/mvebu_sar/cp110_sar.c
+index 2073c10..c538a42 100644
+--- a/drivers/misc/mvebu_sar/cp110_sar.c
++++ b/drivers/misc/mvebu_sar/cp110_sar.c
+@@ -23,7 +23,7 @@
+ #include <libfdt.h>
+ #include <asm/arch-mvebu/fdt.h>
+ #include <asm/arch-mvebu/clock.h>
+-#include <asm/arch-mvebu/sar.h>
++#include <mvebu_chip_sar.h>
+ 
+ #include "chip_sar.h"
+ 
+diff --git a/include/mvebu_chip_sar.h b/include/mvebu_chip_sar.h
+new file mode 100644
+index 0000000..9e2a2bc
+--- /dev/null
++++ b/include/mvebu_chip_sar.h
+@@ -0,0 +1,80 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _MVEBU_CHIP_SAR_H_
++#define _MVEBU_CHIP_SAR_H_
++
++#include <asm/types.h>
++/*
++** List of boot source options.
++** Return value for each of the options:
++**  - SAR_CPU_FREQ: Frequency (Hz)
++**  - SAR_DDR_FREQ: Frequency (Hz)
++**  - SAR_AP_FABRIC_FREQ: Frequency (Hz)
++**  - SAR_CP_FABRIC_FREQ: Frequency (Hz)
++**  - SAR_BOOT_SRC: Boot source type (see mvebu_bootsrc_type)
++*/
++enum mvebu_sar_opts {
++	SAR_CPU_FREQ = 0,
++	SAR_DDR_FREQ,
++	SAR_AP_FABRIC_FREQ,
++	SAR_CP_FABRIC_FREQ,
++	SAR_BOOT_SRC,
++	SAR_MAX_IDX
++};
++
++enum mvebu_bootsrc_type {
++	BOOTSRC_NAND,
++	BOOTSRC_SPI,
++	BOOTSRC_AP_SPI,
++	BOOTSRC_SD_EMMC,
++	BOOTSRC_AP_SD_EMMC,
++	BOOTSRC_NOR,
++	BOOTSRC_MAX_IDX
++};
++
++/*
++** sample-at-reset information
++**  raw_sar_val: Raw value out of the sample-at-reset register.
++**		This is hw dependent and should not be used for comparison
++**		purposes (useful for debug, or verbose information).
++**  bootsrc (SAR_BOOT_SRC):
++**	type: Boot source interface type.
++**	index: When applicable, indicates the interface index (e.g. SPI #1,
++**		NAND #0).
++**	width: When applicable, indicates the interface bus width (e.g. NAND
++**	8-bit).
++**  freq: Frequency in Hz.
++*/
++struct sar_val {
++	u32 raw_sar_val;
++	union {
++		struct {
++			enum mvebu_bootsrc_type type;
++			int index;
++		} bootsrc;
++		u32 freq;
++	};
++};
++
++
++int mvebu_sar_init(const void *blob);
++int mvebu_sar_value_get(enum mvebu_sar_opts opt, struct sar_val *val);
++void mvebu_sar_dump(void);
++
++#endif	/* _MVEBU_CHIP_SAR_H_ */
+-- 
+1.9.1
+

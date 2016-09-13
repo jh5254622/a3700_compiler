@@ -1,0 +1,43 @@
+From 1b09e304b99d561b0de86ff1c4a70a2b636b2e52 Mon Sep 17 00:00:00 2001
+From: kostap <kostap@marvell.com>
+Date: Wed, 8 Jul 2015 15:27:41 +0300
+Subject: [PATCH 0238/1240] tools: Add Armada LP XDB script for Palladium
+
+	- Ad UP debugger script for Alramda LP bring up on Palladium
+	  simulation platform (CA53 core)
+
+Change-Id: I7cfb068a96270f7afccc94b218102e9c59d99c8a
+Signed-off-by: kostap <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/21135
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ .../debugger_scripts/XDB/QT_Hyperion_ARMv8_UP.xsf        | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+ create mode 100644 tools/marvell/debugger_scripts/XDB/QT_Hyperion_ARMv8_UP.xsf
+
+diff --git a/tools/marvell/debugger_scripts/XDB/QT_Hyperion_ARMv8_UP.xsf b/tools/marvell/debugger_scripts/XDB/QT_Hyperion_ARMv8_UP.xsf
+new file mode 100644
+index 0000000..8996638
+--- /dev/null
++++ b/tools/marvell/debugger_scripts/XDB/QT_Hyperion_ARMv8_UP.xsf
+@@ -0,0 +1,16 @@
++-----------------------------------------------------------------------
++ MARVELL INTERNATIONAL LTD., ON BEHALF OF ITSELF AND ITS WORLDWIDE
++AFFILIATES(COLLECTIVELY, "MARVELL"), MAKES NO WARRANTY OF ANY KIND WITH
++REGARD TO THIS MATERIAL, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
++MARVELL ASSUMES NO RESPONSIBILITY FOR ANY ERRORS THAT MAY
++APPEAR IN THIS DOCUMENT. MARVELL MAKES NO COMMITMENT TO
++UPDATE NOR TO KEEP CURRENT THE INFORMATION CONTAINED IN THIS DOCUMENT.
++-----------------------------------------------------------------------
++[PROJECT]
++Target=JTAG CS
++Template=true
++Version=2:2
++[SETTINGS]
++Global=
++CS=-L "usb:" -target scanchain=FPGA_ARMV8_UP tckoverwrite=100kHz hotdebug device=mjc override=ap:1,debug:0x80030000,cti:0x80038000 option=0x20
+-- 
+1.9.1
+

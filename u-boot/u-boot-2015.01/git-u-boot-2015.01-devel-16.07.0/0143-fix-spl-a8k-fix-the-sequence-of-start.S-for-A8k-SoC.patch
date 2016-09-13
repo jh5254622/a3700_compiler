@@ -1,0 +1,135 @@
+From dc7a0bb95585735d32c2099c74f887ba256a5564 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 10 Mar 2015 13:25:08 +0200
+Subject: [PATCH 0143/1240] fix: spl: a8k: fix the sequence of start.S for A8k
+ SoC
+
+	- Fix the sequence of start.S for A8k SoC, to run the
+	  SPL code and return to BootRoom
+	- Disable the code of FDT and static DRAM init for Palladium
+	- Update the start address of SPL
+
+Change-Id: I326fefe60f5ad3d7146168e0fb2bb4a5107f0fd7
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17398
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv8/start.S      | 35 ++++++++++++++++++-----------------
+ arch/arm/cpu/mvebu-common/spl.c |  4 ++++
+ include/configs/armada8k.h      |  4 ++--
+ 3 files changed, 24 insertions(+), 19 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/start.S b/arch/arm/cpu/armv8/start.S
+index dc14d79..f6da2c7 100644
+--- a/arch/arm/cpu/armv8/start.S
++++ b/arch/arm/cpu/armv8/start.S
+@@ -20,6 +20,23 @@
+ 
+ .globl	_start
+ _start:
++#if defined(CONFIG_MVEBU) && defined(CONFIG_SPL_BUILD)
++	stp	x19, x20,[sp, #-16]!	/* @ save registers on stack */
++	stp	x21, x22,[sp, #-16]!
++	stp	x23, x24,[sp, #-16]!
++	stp	x25, x26,[sp, #-16]!
++	stp	x27, x28,[sp, #-16]!
++	stp	x29, x30,[sp, #-16]!
++
++	bl	board_init_f
++	ldp	x29, x30,[sp], #16	/* @ restore regs and return */
++	ldp	x27, x28,[sp], #16
++	ldp	x25, x26,[sp], #16
++	ldp	x23, x24,[sp], #16
++	ldp	x21, x22,[sp], #16
++	ldp	x19, x20,[sp], #16
++	ret
++#else
+ #ifdef CONFIG_PALLADIUM
+ 	bl	enable_wa
+ #endif
+@@ -47,7 +64,6 @@ _bss_end_ofs:
+ 	.quad	__bss_end - _start
+ 
+ reset:
+-#if defined(CONFIG_MVEBU) && !defined(CONFIG_SPL_BUILD)
+ 	/*
+ 	 * Could be EL3/EL2/EL1, Initial State:
+ 	 * Little Endian, MMU Disabled, i/dCache Disabled
+@@ -104,22 +120,6 @@ slave_cpu:
+ 	 */
+ master_cpu:
+ 	bl	_main
+-#else
+-	stp	x19, x20,[sp, #-16]!	/* @ save registers on stack */
+-	stp	x21, x22,[sp, #-16]!
+-	stp	x23, x24,[sp, #-16]!
+-	stp	x25, x26,[sp, #-16]!
+-	stp	x27, x28,[sp, #-16]!
+-	stp	x29, x30,[sp, #-16]!
+-
+-	bl	board_init_f
+-	ldp	x29, x30,[sp], #16	/* @ restore regs and return */
+-	ldp	x27, x28,[sp], #16
+-	ldp	x25, x26,[sp], #16
+-	ldp	x23, x24,[sp], #16
+-	ldp	x21, x22,[sp], #16
+-	ldp	x19, x20,[sp!, #16
+-#endif /* defined(CONFIG_MVEBU) && !defined(CONFIG_SPL_BUILD) */
+ 
+ /*-----------------------------------------------------------------------*/
+ 
+@@ -215,3 +215,4 @@ ENTRY(enable_wa)
+ 
+ ENDPROC(enable_wa)
+ #endif /* CONFIG_PALLADIUM */
++#endif /* defined(CONFIG_MVEBU) && defined(CONFIG_SPL_BUILD) */
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index 4123210..e7b05c6 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -25,6 +25,7 @@ DECLARE_GLOBAL_DATA_PTR;
+ 
+ extern void static_dram_init(void);
+ 
++#ifndef CONFIG_PALLADIUM
+ static int setup_fdt(void)
+ {
+ #ifdef CONFIG_OF_CONTROL
+@@ -37,13 +38,16 @@ static int setup_fdt(void)
+ #endif
+ 	return 0;
+ }
++#endif
+ 
+ void board_init_f(ulong bootflag)
+ {
+ 	gd = &gdata;
+ 	gd->baudrate = CONFIG_BAUDRATE;
+ 
++#ifndef CONFIG_PALLADIUM
+ 	setup_fdt();
+ 	static_dram_init();
++#endif
+ 	preloader_console_init();
+ }
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index 1073f5e..3e7352a 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -51,10 +51,10 @@
+ 
+ /* SPL */
+ /* Defines for SPL */
+-#define CONFIG_SPL_TEXT_BASE		0x0
++#define CONFIG_SPL_TEXT_BASE		0xFFE1C048
+ #define CONFIG_SPL_MAX_SIZE		(0x1ffc0)
+ 
+-#define CONFIG_SPL_BSS_START_ADDR	(0x20000)
++#define CONFIG_SPL_BSS_START_ADDR	(CONFIG_SPL_TEXT_BASE + 0x20000)
+ #define CONFIG_SPL_BSS_MAX_SIZE		(0x8000)
+ 
+ #define CONFIG_SYS_SPL_MALLOC_START	(CONFIG_SPL_BSS_START_ADDR + \
+-- 
+1.9.1
+

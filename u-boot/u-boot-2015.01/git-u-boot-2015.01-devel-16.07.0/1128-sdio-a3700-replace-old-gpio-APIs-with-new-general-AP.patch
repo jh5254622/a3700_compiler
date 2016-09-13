@@ -1,0 +1,268 @@
+From 8322abbfec3eb6684a359c82971d0a37c9807e9e Mon Sep 17 00:00:00 2001
+From: Ken Ma <make@marvell.com>
+Date: Fri, 19 Feb 2016 00:23:31 +0800
+Subject: [PATCH 1128/1240] sdio: a3700: replace old gpio APIs with new general
+ APIs
+
+- In armada3700 mmc fdt nodes of SD_SDIO mode, a new property
+  "sdio-vcc-gpio" node is added
+- The old gpio subroutines for SDIO are moved to the mmc driver,
+  the old pinctrl codes are kept and will be removed in future
+
+Change-Id: I01eb0216e87f50a6b378c108bd5c50769739d848
+Signed-off-by: Ken Ma <make@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27668
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/cpu/armv8/armada3700/mvebu_gpio.c  | 28 +-----------
+ arch/arm/dts/armada-3700-db.dts             |  1 +
+ arch/arm/include/asm/arch-armada3700/gpio.h |  4 --
+ drivers/mmc/xenon_mmc.c                     | 71 +++++++++++++++++++++++------
+ include/xenon_mmc.h                         |  1 +
+ 5 files changed, 61 insertions(+), 44 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada3700/mvebu_gpio.c b/arch/arm/cpu/armv8/armada3700/mvebu_gpio.c
+index 4811cc0..c23b745 100644
+--- a/arch/arm/cpu/armv8/armada3700/mvebu_gpio.c
++++ b/arch/arm/cpu/armv8/armada3700/mvebu_gpio.c
+@@ -58,16 +58,6 @@ void mvebu_init_sdio(void)
+ {
+ 	u32 reg_val;
+ 
+-	/* Set SDIO to 0 which is 3.3v */
+-	reg_val = readl(MVEBU_GPIO_SB_OUTPUT_VAL_REG);
+-	reg_val &= ~(1 << MVEBU_GPIO_SDIO_VOLTAGE_OFF);
+-	writel(reg_val, MVEBU_GPIO_SB_OUTPUT_VAL_REG);
+-
+-	/* Set to GPIO output mode */
+-	reg_val = readl(MVEBU_GPIO_SB_OUTPUT_EN_REG);
+-	reg_val |= (1 << MVEBU_GPIO_SDIO_VOLTAGE_OFF);
+-	writel(reg_val, MVEBU_GPIO_SB_OUTPUT_EN_REG);
+-
+ 	/* Set test pin to SDIO mode */
+ 	reg_val = readl(MVEBU_GPIO_SB_SEL_REG);
+ 	reg_val &= ~(1 << MVEBU_GPIO_SB_SDIO_EN_OFF);
+@@ -75,22 +65,6 @@ void mvebu_init_sdio(void)
+ }
+ 
+ /*
+- * set SB SDIO device
+- */
+-void mvebu_set_sdio(int voltage)
+-{
+-	u32 reg_val;
+-
+-	/* Set SDIO to 0 which is 3.3v */
+-	reg_val = readl(MVEBU_GPIO_SB_OUTPUT_VAL_REG);
+-	if (MVEBU_GPIO_SDIO_VOLTAGE_1_8V == voltage)
+-		reg_val |= (1 << MVEBU_GPIO_SDIO_VOLTAGE_OFF);
+-	else
+-		reg_val &= ~(1 << MVEBU_GPIO_SDIO_VOLTAGE_OFF);
+-	writel(reg_val, MVEBU_GPIO_SB_OUTPUT_VAL_REG);
+-}
+-
+-/*
+  * mvebu_init_gpio
+  *
+  * This function sets GPIO configuration for Armada3700
+@@ -139,7 +113,7 @@ void mvebu_init_gpio(void)
+ 	reg_val = reg_val | (1 << MVEBU_GPIO_NB_OUTPUT_SPI_EN_OFF);
+ 	writel(reg_val, MVEBU_GPIO_NB_OUTPUT_EN_HIGH_REG);
+ 
+-	/* set SB SDIO to 3.3v by default */
++	/* Set test pin to SDIO mode */
+ 	mvebu_init_sdio();
+ 
+ 	return;
+diff --git a/arch/arm/dts/armada-3700-db.dts b/arch/arm/dts/armada-3700-db.dts
+index 97c1469..aee047b 100644
+--- a/arch/arm/dts/armada-3700-db.dts
++++ b/arch/arm/dts/armada-3700-db.dts
+@@ -74,6 +74,7 @@
+ 				status = "okay";
+ 			};
+ 			mmc1: mmc@D0000 {
++				sdio-vcc-gpio = <&gpio1 ARMADA_3700_GPIO(BANK_1, 22) GPIO_ACTIVE_HIGH>;
+ 				status = "okay";
+ 			};
+ 			usb3: usb3@58000 {
+diff --git a/arch/arm/include/asm/arch-armada3700/gpio.h b/arch/arm/include/asm/arch-armada3700/gpio.h
+index e31f88d..8a33f0c 100644
+--- a/arch/arm/include/asm/arch-armada3700/gpio.h
++++ b/arch/arm/include/asm/arch-armada3700/gpio.h
+@@ -31,9 +31,6 @@
+ #define MVEBU_GPIO_SB_OUTPUT_EN_REG		(MVEBU_GPIO_SB_REG_BASE)
+ #define MVEBU_GPIO_SB_OUTPUT_VAL_REG		(MVEBU_GPIO_SB_REG_BASE + 0x18)
+ #define MVEBU_GPIO_PCIE_RESET_OFF		(3)
+-#define MVEBU_GPIO_SDIO_VOLTAGE_3_3V		(0)
+-#define MVEBU_GPIO_SDIO_VOLTAGE_1_8V		(1)
+-#define MVEBU_GPIO_SDIO_VOLTAGE_OFF		(22)
+ #define MVEBU_GPIO_SB_SEL_REG			(MVEBU_GPIO_SB_REG_BASE + 0x30)
+ #define MVEBU_GPIO_SB_SDIO_EN_OFF		(2)
+ #define MVEBU_GPIO_RGMII_GPIO_EN_OFF		(3)
+@@ -43,7 +40,6 @@
+ #define MVEBU_GPIO_BANKS	2	/* number of banks */
+ #define MVEBU_GPIOS_PER_PORT	32	/* number of gpios per port */
+ 
+-void mvebu_set_sdio(int voltage);
+ void mvebu_reset_pcie_dev(void);
+ void mvebu_init_gpio(void);
+ 
+diff --git a/drivers/mmc/xenon_mmc.c b/drivers/mmc/xenon_mmc.c
+index acfdb12..a0458e6 100644
+--- a/drivers/mmc/xenon_mmc.c
++++ b/drivers/mmc/xenon_mmc.c
+@@ -37,7 +37,7 @@
+ #include <xenon_mmc.h>
+ #include <linux/sizes.h>
+ #include <asm/arch-mvebu/mvebu.h>
+-#include <asm/arch/gpio.h>
++#include <asm/gpio.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+@@ -99,13 +99,6 @@ static void xenon_mmc_reset(struct xenon_mmc_cfg *mmc_cfg, u8 mask)
+ 	}
+ }
+ 
+-void __weak mvebu_set_sdio(int voltage)
+-{
+-	error("Voltage not changed to %x, need to implement %s in SOC code\n", voltage, __func__);
+-	printf("In addition need to define MVEBU_GPIO_SDIO_VOLTAGE_1_8V,\n");
+-	printf("and MVEBU_GPIO_SDIO_VOLTAGE_3_3V according to SOC configuration\n");
+-}
+-
+ int xenon_mmc_phy_init(struct xenon_mmc_cfg *mmc_cfg)
+ {
+ 	u32 var;
+@@ -332,6 +325,27 @@ static void xenon_mmc_set_tuning(struct xenon_mmc_cfg *mmc_cfg, u8 slot, bool en
+ 	xenon_mmc_writel(mmc_cfg, SDHCI_SIGNAL_ENABLE, var);
+ }
+ 
++static void xenon_mmc_set_sdio_voltage(struct xenon_mmc_cfg *mmc_cfg, int voltage)
++{
++#ifdef CONFIG_MVEBU_GPIO
++	if (!fdt_gpio_isvalid(&mmc_cfg->sdio_vcc_gpio)) {
++		printf("ERROR: SDID vcc gpio is not set!\n");
++		return;
++	}
++
++	if (MVEBU_GPIO_SDIO_VOLTAGE_1_8V == voltage)
++		/* Set SDIO gpio to 1 which is 1.8v */
++		fdtdec_set_gpio(&mmc_cfg->sdio_vcc_gpio, 1);
++	else
++		/* Set SDIO gpio to 0 which is 3.3v */
++		fdtdec_set_gpio(&mmc_cfg->sdio_vcc_gpio, 0);
++#else
++	printf("ERROR: voltage not changed to %x, need to implement gpio in SOC code\n", voltage);
++#endif
++
++	return;
++}
++
+ static void xenon_mmc_set_power(struct xenon_mmc_cfg *mmc_cfg, u32 vcc, u32 vccq)
+ {
+ 	u8 pwr = 0;
+@@ -342,19 +356,19 @@ static void xenon_mmc_set_power(struct xenon_mmc_cfg *mmc_cfg, u32 vcc, u32 vccq
+ 	case MMC_VDD_165_195:
+ 		pwr = SDHCI_POWER_180;
+ 		if (mmc_cfg->mmc_mode == XENON_MMC_MODE_SD_SDIO)
+-			mvebu_set_sdio(MVEBU_GPIO_SDIO_VOLTAGE_1_8V);
++			xenon_mmc_set_sdio_voltage(mmc_cfg, MVEBU_GPIO_SDIO_VOLTAGE_1_8V);
+ 		break;
+ 	case MMC_VDD_29_30:
+ 	case MMC_VDD_30_31:
+ 		pwr = SDHCI_POWER_300;
+ 		if (mmc_cfg->mmc_mode == XENON_MMC_MODE_SD_SDIO)
+-			mvebu_set_sdio(MVEBU_GPIO_SDIO_VOLTAGE_3_3V);
++			xenon_mmc_set_sdio_voltage(mmc_cfg, MVEBU_GPIO_SDIO_VOLTAGE_3_3V);
+ 		break;
+ 	case MMC_VDD_32_33:
+ 	case MMC_VDD_33_34:
+ 		pwr = SDHCI_POWER_330;
+ 		if (mmc_cfg->mmc_mode == XENON_MMC_MODE_SD_SDIO)
+-			mvebu_set_sdio(MVEBU_GPIO_SDIO_VOLTAGE_3_3V);
++			xenon_mmc_set_sdio_voltage(mmc_cfg, MVEBU_GPIO_SDIO_VOLTAGE_3_3V);
+ 		break;
+ 	default:
+ 		error("Does not support power mode(0x%X)\n", vcc);
+@@ -832,7 +846,8 @@ static const struct mmc_ops xenon_mmc_ops = {
+ 	.init		= xenon_mmc_init,
+ };
+ 
+-int xenon_mmc_create(int dev_idx, void __iomem *reg_base, u32 max_clk, u32 mmc_mode, u32 dt_mmc_host_cap)
++int xenon_mmc_create(int dev_idx, void __iomem *reg_base, u32 max_clk,
++				u32 mmc_mode, u32 dt_mmc_host_cap, struct fdt_gpio_state *gpio)
+ {
+ 	u32 caps;
+ 	struct xenon_mmc_cfg *mmc_cfg = NULL;
+@@ -856,6 +871,11 @@ int xenon_mmc_create(int dev_idx, void __iomem *reg_base, u32 max_clk, u32 mmc_m
+ 	mmc_cfg->version = xenon_mmc_readw(mmc_cfg, SDHCI_HOST_VERSION);
+ 	mmc_cfg->cfg.ops = &xenon_mmc_ops;
+ 
++#ifdef CONFIG_MVEBU_GPIO
++	/*Set sdio vcc gpio*/
++	memcpy(&mmc_cfg->sdio_vcc_gpio, gpio, sizeof(mmc_cfg->sdio_vcc_gpio));
++#endif
++
+ 	caps = xenon_mmc_readl(mmc_cfg, SDHCI_CAPABILITIES);
+ 
+ #ifdef CONFIG_MMC_SDMA
+@@ -957,6 +977,7 @@ int board_mmc_init(bd_t *bis)
+ 	u32 mmc_mode, dt_mmc_host_cap, bus_width;
+ 	void __iomem *reg_base;
+ 	const void *blob = gd->fdt_blob;
++	struct fdt_gpio_state sdio_vcc_gpio;
+ 
+ 	count = fdtdec_find_aliases_for_id(blob, "xenon-sdhci",
+ 			COMPAT_MVEBU_XENON_MMC, &node_list[0], XENON_MMC_PORTS_MAX);
+@@ -1004,7 +1025,31 @@ int board_mmc_init(bd_t *bis)
+ 			dt_mmc_host_cap |= MMC_MODE_8BIT;
+ 		}
+ 
+-		xenon_mmc_create(port_count, reg_base, XENON_MMC_MAX_CLK, mmc_mode, dt_mmc_host_cap);
++		/* Only SD/SDIO mode supports vcc setting through gpio and emmc mode does not support it. */
++		/* The vcc gpio should be in output mode, the output value 0 means SDIO is in 3.3v */
++		/* and value 1 means SDIO is in 1.8v. */
++		if (mmc_mode == XENON_MMC_MODE_SD_SDIO) {
++#ifdef CONFIG_MVEBU_GPIO
++			/* parse the sdio vcc gpio fdt attibute*/
++			fdtdec_decode_gpio(blob, node_list[port_count], "sdio-vcc-gpio", &sdio_vcc_gpio);
++			fdtdec_setup_gpio(&sdio_vcc_gpio);
++			if (fdt_gpio_isvalid(&sdio_vcc_gpio)) {
++				int val;
++
++				/* initialize SDIO GPIO in low level which is 3.3v by default*/
++				val = sdio_vcc_gpio.flags & FDT_GPIO_ACTIVE_LOW ? 1 : 0;
++
++				/* Set to SDIO GPIO output mode */
++				gpio_direction_output(sdio_vcc_gpio.gpio, val);
++			} else {
++				printf("ERROR: missing SDIO vcc gpio in XENON SDHCI node!\n");
++				continue;
++			}
++#else
++			printf("ERROR: vcc gpio is not initialized, need to implement gpio in SOC code\n");
++#endif
++		}
++		xenon_mmc_create(port_count, reg_base, XENON_MMC_MAX_CLK, mmc_mode, dt_mmc_host_cap, &sdio_vcc_gpio);
+ 	}
+ 
+ 	return err;
+diff --git a/include/xenon_mmc.h b/include/xenon_mmc.h
+index 4204054..254cdc8 100644
+--- a/include/xenon_mmc.h
++++ b/include/xenon_mmc.h
+@@ -192,6 +192,7 @@ struct xenon_mmc_cfg {
+ 	void *aligned_buffer;
+ 	struct mmc_config cfg;
+ 	struct mmc *mmc;
++	struct fdt_gpio_state sdio_vcc_gpio;
+ };
+ 
+ #endif /* _XENON_MMC_H_ */
+-- 
+1.9.1
+

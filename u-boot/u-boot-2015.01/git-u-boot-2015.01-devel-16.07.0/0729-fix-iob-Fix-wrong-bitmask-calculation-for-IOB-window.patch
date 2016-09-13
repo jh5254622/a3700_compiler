@@ -1,0 +1,35 @@
+From af2c7f6a71b55b01f2298399f5da821b479b4c70 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Mon, 25 Jan 2016 17:34:55 +0200
+Subject: [PATCH 0729/1240] fix: iob: Fix wrong bitmask calculation for IOB
+ windows secure access
+
+Change-Id: I9576a2b8d14edeef4b994e5de6dc2e0a30579980
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27012
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/mvebu_iob.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/mvebu_iob.c b/arch/arm/cpu/armv8/armada8k/mvebu_iob.c
+index b510170..5afeeb2 100644
+--- a/arch/arm/cpu/armv8/armada8k/mvebu_iob.c
++++ b/arch/arm/cpu/armv8/armada8k/mvebu_iob.c
+@@ -204,9 +204,9 @@ int init_iob(void)
+ 		writel(win_reg, IOB_WIN_CR_OFFSET(win_id));
+ 
+ 		win_reg = ~IOB_WIN_ENA_CTRL_WRITE_SECURE;
+-		win_reg |= ~IOB_WIN_ENA_CTRL_READ_SECURE;
+-		win_reg |= ~IOB_WIN_ENA_WRITE_SECURE;
+-		win_reg |= ~IOB_WIN_ENA_READ_SECURE;
++		win_reg &= ~IOB_WIN_ENA_CTRL_READ_SECURE;
++		win_reg &= ~IOB_WIN_ENA_WRITE_SECURE;
++		win_reg &= ~IOB_WIN_ENA_READ_SECURE;
+ 		writel(win_reg, IOB_WIN_SCR_OFFSET(win_id));
+ 	}
+ 
+-- 
+1.9.1
+

@@ -1,0 +1,29 @@
+From 887798c07c10420c49a8cde431b8b8c2f62ce875 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 6 Jan 2016 16:58:21 +0200
+Subject: [PATCH 0641/1240] log: a8k: clean new line before DDR info print
+
+Change-Id: I56e8b097b60ddb36bd8367d99ef0cf86c4b08883
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26591
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/soc.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/soc.c b/arch/arm/cpu/armv8/armada8k/soc.c
+index c74b52e..ef2c7dd 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc.c
++++ b/arch/arm/cpu/armv8/armada8k/soc.c
+@@ -116,7 +116,6 @@ void reset_cpu(ulong ignored)
+ 
+ void print_soc_specific_info(void)
+ {
+-	printf("\n");
+ #ifdef CONFIG_MVEBU_SYS_INFO
+ 	printf("\tDDR %d Bit width\n", get_info(DRAM_BUS_WIDTH));
+ #endif
+-- 
+1.9.1
+

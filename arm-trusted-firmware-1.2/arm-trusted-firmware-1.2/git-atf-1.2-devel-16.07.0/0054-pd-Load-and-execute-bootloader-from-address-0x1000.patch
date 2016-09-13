@@ -1,0 +1,36 @@
+From 1b0e4456f4d0f138b0f97621aedf135d72965280 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Sun, 13 Mar 2016 12:59:42 +0200
+Subject: [PATCH 054/239] pd: Load and execute bootloader from address 0x1000
+
+This is needed in order to overcome emulation issue of loading the image
+into address 0x0.
+
+Change-Id: I415e37b1344bd0146887031f643e00deab397628
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28191
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ plat/marvell/a8k/a7040_rz/include/platform_def.h | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/plat/marvell/a8k/a7040_rz/include/platform_def.h b/plat/marvell/a8k/a7040_rz/include/platform_def.h
+index c5d1ab2..3cbe36a 100644
+--- a/plat/marvell/a8k/a7040_rz/include/platform_def.h
++++ b/plat/marvell/a8k/a7040_rz/include/platform_def.h
+@@ -132,7 +132,11 @@ Trusted SRAM section 0x4000000..0x4200000:
+ /*
+  * Load address of BL3-3 for this platform port
+  */
++#if PALLADIUM
++#define PLAT_MARVELL_NS_IMAGE_OFFSET	0x1000
++#else
+ #define PLAT_MARVELL_NS_IMAGE_OFFSET	0x0
++#endif
+ 
+ /* System Reference Clock*/
+ #define PLAT_REF_CLK_IN_HZ				COUNTER_FREQUENCY
+-- 
+1.9.1
+

@@ -1,0 +1,24 @@
+From c8066309f908f6aa832624f93bd99785ced2d55b Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 2 Jun 2016 15:44:29 +0300
+Subject: [PATCH 196/239] Bump ATF v1.2 To release devel-16.05.1
+
+Change-Id: Iddd44de00b5e45f835059d53e2afce156399bcd6
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30298
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ version.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/version.mk b/version.mk
+index 4e31fe0..0507c0c 100644
+--- a/version.mk
++++ b/version.mk
+@@ -1 +1 @@
+-BUILD_STRING = devel-16.05.0
++BUILD_STRING = devel-16.05.1
+-- 
+1.9.1
+

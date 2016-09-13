@@ -1,0 +1,942 @@
+From 4c9f17855ad3245be9d600d29eea6aa7f2bb9965 Mon Sep 17 00:00:00 2001
+From: Peter Tyser <ptyser@xes-inc.com>
+Date: Tue, 3 Feb 2015 11:58:15 -0600
+Subject: [PATCH 0634/1240] nand: Remove CONFIG_MTD_NAND_VERIFY_WRITE
+
+The CONFIG_MTD_NAND_VERIFY_WRITE has been removed from Linux for some
+time and a more generic method of NAND verification now exists in U-Boot.
+
+Change-Id: Ie805c3c5c637f502bc9fe1733de32bcaf8659bce
+Signed-off-by: Peter Tyser <ptyser@xes-inc.com>
+Tested-by: Heiko Schocher <hs@denx.de>
+Acked-by: Heiko Schocher <hs@denx.de>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26563
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ README                              |  3 --
+ board/prodrive/alpr/nand.c          | 16 ---------
+ board/socrates/nand.c               | 25 --------------
+ drivers/mtd/nand/davinci_nand.c     | 12 -------
+ drivers/mtd/nand/fsl_elbc_nand.c    | 38 ----------------------
+ drivers/mtd/nand/fsl_ifc_nand.c     | 38 ----------------------
+ drivers/mtd/nand/fsl_upm.c          | 18 ----------
+ drivers/mtd/nand/mpc5121_nfc.c      | 26 ---------------
+ drivers/mtd/nand/mxc_nand.c         | 33 -------------------
+ drivers/mtd/nand/nand_base.c        | 65 -------------------------------------
+ drivers/mtd/nand/ndfc.c             | 18 ----------
+ include/configs/B4860QDS.h          |  1 -
+ include/configs/BSC9131RDB.h        |  1 -
+ include/configs/BSC9132QDS.h        |  1 -
+ include/configs/C29XPCIE.h          |  1 -
+ include/configs/MPC8313ERDB.h       |  1 -
+ include/configs/MPC8315ERDB.h       |  1 -
+ include/configs/MPC837XEMDS.h       |  1 -
+ include/configs/MPC8536DS.h         |  1 -
+ include/configs/MPC8569MDS.h        |  1 -
+ include/configs/MPC8572DS.h         |  1 -
+ include/configs/P1010RDB.h          |  1 -
+ include/configs/P1022DS.h           |  1 -
+ include/configs/P1023RDB.h          |  1 -
+ include/configs/P2041RDB.h          |  1 -
+ include/configs/T102xQDS.h          |  1 -
+ include/configs/T102xRDB.h          |  1 -
+ include/configs/T1040QDS.h          |  1 -
+ include/configs/T104xRDB.h          |  1 -
+ include/configs/T208xQDS.h          |  1 -
+ include/configs/T208xRDB.h          |  1 -
+ include/configs/T4240QDS.h          |  1 -
+ include/configs/T4240RDB.h          |  1 -
+ include/configs/corenet_ds.h        |  1 -
+ include/configs/ids8313.h           |  1 -
+ include/configs/km/kmp204x-common.h |  1 -
+ include/configs/ls1021aqds.h        |  1 -
+ include/configs/ls2085a_common.h    |  1 -
+ include/configs/p1_p2_rdb_pc.h      |  1 -
+ include/configs/ve8313.h            |  1 -
+ include/configs/xpedite537x.h       |  1 -
+ include/configs/xpedite550x.h       |  1 -
+ include/linux/mtd/nand.h            |  5 ---
+ 43 files changed, 328 deletions(-)
+
+diff --git a/README b/README
+index 0fec497..b490593 100644
+--- a/README
++++ b/README
+@@ -3494,9 +3494,6 @@ FIT uImage format:
+ 		Adds the MTD partitioning infrastructure from the Linux
+ 		kernel. Needed for UBI support.
+ 
+-		CONFIG_MTD_NAND_VERIFY_WRITE
+-		verify if the written data is correct reread.
+-
+ - UBI support
+ 		CONFIG_CMD_UBI
+ 
+diff --git a/board/prodrive/alpr/nand.c b/board/prodrive/alpr/nand.c
+index 5427de5..ca40cea 100644
+--- a/board/prodrive/alpr/nand.c
++++ b/board/prodrive/alpr/nand.c
+@@ -93,19 +93,6 @@ static void alpr_nand_read_buf(struct mtd_info *mtd, u_char *buf, int len)
+ 	}
+ }
+ 
+-#if defined(CONFIG_MTD_NAND_VERIFY_WRITE)
+-static int alpr_nand_verify_buf(struct mtd_info *mtd, const u_char *buf, int len)
+-{
+-	int i;
+-
+-	for (i = 0; i < len; i++)
+-		if (buf[i] != readb(&(alpr_ndfc->data)))
+-			return i;
+-
+-	return 0;
+-}
+-#endif
+-
+ static int alpr_nand_dev_ready(struct mtd_info *mtd)
+ {
+ 	/*
+@@ -130,9 +117,6 @@ int board_nand_init(struct nand_chip *nand)
+ 	nand->read_byte  = alpr_nand_read_byte;
+ 	nand->write_buf  = alpr_nand_write_buf;
+ 	nand->read_buf   = alpr_nand_read_buf;
+-#if defined(CONFIG_MTD_NAND_VERIFY_WRITE)
+-	nand->verify_buf = alpr_nand_verify_buf;
+-#endif
+ 	nand->dev_ready  = alpr_nand_dev_ready;
+ 
+ 	return 0;
+diff --git a/board/socrates/nand.c b/board/socrates/nand.c
+index 7394478..15e6ea6 100644
+--- a/board/socrates/nand.c
++++ b/board/socrates/nand.c
+@@ -18,9 +18,6 @@ static void sc_nand_write_buf(struct mtd_info *mtd, const u_char *buf, int len);
+ static u_char sc_nand_read_byte(struct mtd_info *mtd);
+ static u16 sc_nand_read_word(struct mtd_info *mtd);
+ static void sc_nand_read_buf(struct mtd_info *mtd, u_char *buf, int len);
+-#if defined(CONFIG_MTD_NAND_VERIFY_WRITE)
+-static int sc_nand_verify_buf(struct mtd_info *mtd, const u_char *buf, int len);
+-#endif
+ static int sc_nand_device_ready(struct mtd_info *mtdinfo);
+ 
+ #define FPGA_NAND_CMD_MASK		(0x7 << 28)
+@@ -102,25 +99,6 @@ static void sc_nand_read_buf(struct mtd_info *mtd, u_char *buf, int len)
+ 	}
+ }
+ 
+-#if defined(CONFIG_MTD_NAND_VERIFY_WRITE)
+-/**
+- * sc_nand_verify_buf -  Verify chip data against buffer
+- * @mtd:	MTD device structure
+- * @buf:	buffer containing the data to compare
+- * @len:	number of bytes to compare
+- */
+-static int sc_nand_verify_buf(struct mtd_info *mtd, const u_char *buf, int len)
+-{
+-	int i;
+-
+-	for (i = 0; i < len; i++) {
+-		if (buf[i] != sc_nand_read_byte(mtd));
+-			return -EFAULT;
+-	}
+-	return 0;
+-}
+-#endif
+-
+ /**
+  * sc_nand_device_ready - Check the NAND device is ready for next command.
+  * @mtd:	MTD device structure
+@@ -178,9 +156,6 @@ int board_nand_init(struct nand_chip *nand)
+ 	nand->read_word = sc_nand_read_word;
+ 	nand->write_buf = sc_nand_write_buf;
+ 	nand->read_buf = sc_nand_read_buf;
+-#if defined(CONFIG_MTD_NAND_VERIFY_WRITE)
+-	nand->verify_buf = sc_nand_verify_buf;
+-#endif
+ 
+ 	return 0;
+ }
+diff --git a/drivers/mtd/nand/davinci_nand.c b/drivers/mtd/nand/davinci_nand.c
+index 41689b5..a397074 100644
+--- a/drivers/mtd/nand/davinci_nand.c
++++ b/drivers/mtd/nand/davinci_nand.c
+@@ -405,18 +405,6 @@ static int nand_davinci_write_page(struct mtd_info *mtd, struct nand_chip *chip,
+ 		goto err;
+ 	}
+ 
+-#ifdef CONFIG_MTD_NAND_VERIFY_WRITE
+-	/* Send command to read back the data */
+-	chip->cmdfunc(mtd, NAND_CMD_READ0, 0, page);
+-
+-	if (chip->verify_buf(mtd, buf, mtd->writesize)) {
+-		ret = -EIO;
+-		goto err;
+-	}
+-
+-	/* Make sure the next page prog is preceded by a status read */
+-	chip->cmdfunc(mtd, NAND_CMD_STATUS, -1, -1);
+-#endif
+ err:
+ 	/* restore ECC layout */
+ 	if (page < CONFIG_KEYSTONE_NAND_MAX_RBL_PAGE) {
+diff --git a/drivers/mtd/nand/fsl_elbc_nand.c b/drivers/mtd/nand/fsl_elbc_nand.c
+index 3372b64..e85832d 100644
+--- a/drivers/mtd/nand/fsl_elbc_nand.c
++++ b/drivers/mtd/nand/fsl_elbc_nand.c
+@@ -561,41 +561,6 @@ static void fsl_elbc_read_buf(struct mtd_info *mtd, u8 *buf, int len)
+ 		       len, avail);
+ }
+ 
+-#if defined(CONFIG_MTD_NAND_VERIFY_WRITE)
+-/*
+- * Verify buffer against the FCM Controller Data Buffer
+- */
+-static int fsl_elbc_verify_buf(struct mtd_info *mtd,
+-			       const u_char *buf, int len)
+-{
+-	struct nand_chip *chip = mtd->priv;
+-	struct fsl_elbc_mtd *priv = chip->priv;
+-	struct fsl_elbc_ctrl *ctrl = priv->ctrl;
+-	int i;
+-
+-	if (len < 0) {
+-		printf("write_buf of %d bytes", len);
+-		return -EINVAL;
+-	}
+-
+-	if ((unsigned int)len > ctrl->read_bytes - ctrl->index) {
+-		printf("verify_buf beyond end of buffer "
+-		       "(%d requested, %u available)\n",
+-		       len, ctrl->read_bytes - ctrl->index);
+-
+-		ctrl->index = ctrl->read_bytes;
+-		return -EINVAL;
+-	}
+-
+-	for (i = 0; i < len; i++)
+-		if (in_8(&ctrl->addr[ctrl->index + i]) != buf[i])
+-			break;
+-
+-	ctrl->index += len;
+-	return i == len && ctrl->status == LTESR_CC ? 0 : -EIO;
+-}
+-#endif
+-
+ /* This function is called after Program and Erase Operations to
+  * check for success or failure.
+  */
+@@ -727,9 +692,6 @@ static int fsl_elbc_chip_init(int devnum, u8 *addr)
+ 	nand->read_byte = fsl_elbc_read_byte;
+ 	nand->write_buf = fsl_elbc_write_buf;
+ 	nand->read_buf = fsl_elbc_read_buf;
+-#if defined(CONFIG_MTD_NAND_VERIFY_WRITE)
+-	nand->verify_buf = fsl_elbc_verify_buf;
+-#endif
+ 	nand->select_chip = fsl_elbc_select_chip;
+ 	nand->cmdfunc = fsl_elbc_cmdfunc;
+ 	nand->waitfunc = fsl_elbc_wait;
+diff --git a/drivers/mtd/nand/fsl_ifc_nand.c b/drivers/mtd/nand/fsl_ifc_nand.c
+index b283eae..7903eeb 100644
+--- a/drivers/mtd/nand/fsl_ifc_nand.c
++++ b/drivers/mtd/nand/fsl_ifc_nand.c
+@@ -683,41 +683,6 @@ static void fsl_ifc_read_buf(struct mtd_info *mtd, u8 *buf, int len)
+ 		       __func__, len, avail);
+ }
+ 
+-#if defined(CONFIG_MTD_NAND_VERIFY_WRITE)
+-/*
+- * Verify buffer against the IFC Controller Data Buffer
+- */
+-static int fsl_ifc_verify_buf(struct mtd_info *mtd,
+-			       const u_char *buf, int len)
+-{
+-	struct nand_chip *chip = mtd->priv;
+-	struct fsl_ifc_mtd *priv = chip->priv;
+-	struct fsl_ifc_ctrl *ctrl = priv->ctrl;
+-	int i;
+-
+-	if (len < 0) {
+-		printf("%s of %d bytes", __func__, len);
+-		return -EINVAL;
+-	}
+-
+-	if ((unsigned int)len > ctrl->read_bytes - ctrl->index) {
+-		printf("%s beyond end of buffer "
+-		       "(%d requested, %u available)\n",
+-		       __func__, len, ctrl->read_bytes - ctrl->index);
+-
+-		ctrl->index = ctrl->read_bytes;
+-		return -EINVAL;
+-	}
+-
+-	for (i = 0; i < len; i++)
+-		if (in_8(&ctrl->addr[ctrl->index + i]) != buf[i])
+-			break;
+-
+-	ctrl->index += len;
+-	return i == len && ctrl->status == IFC_NAND_EVTER_STAT_OPC ? 0 : -EIO;
+-}
+-#endif
+-
+ /* This function is called after Program and Erase Operations to
+  * check for success or failure.
+  */
+@@ -940,9 +905,6 @@ static int fsl_ifc_chip_init(int devnum, u8 *addr)
+ 
+ 	nand->write_buf = fsl_ifc_write_buf;
+ 	nand->read_buf = fsl_ifc_read_buf;
+-#if defined(CONFIG_MTD_NAND_VERIFY_WRITE)
+-	nand->verify_buf = fsl_ifc_verify_buf;
+-#endif
+ 	nand->select_chip = fsl_ifc_select_chip;
+ 	nand->cmdfunc = fsl_ifc_cmdfunc;
+ 	nand->waitfunc = fsl_ifc_wait;
+diff --git a/drivers/mtd/nand/fsl_upm.c b/drivers/mtd/nand/fsl_upm.c
+index 65ce98a..5426c32 100644
+--- a/drivers/mtd/nand/fsl_upm.c
++++ b/drivers/mtd/nand/fsl_upm.c
+@@ -153,21 +153,6 @@ static void upm_nand_read_buf(struct mtd_info *mtd, u_char *buf, int len)
+ 		buf[i] = in_8(chip->IO_ADDR_R);
+ }
+ 
+-#if defined(CONFIG_MTD_NAND_VERIFY_WRITE)
+-static int upm_nand_verify_buf(struct mtd_info *mtd, const u_char *buf, int len)
+-{
+-	int i;
+-	struct nand_chip *chip = mtd->priv;
+-
+-	for (i = 0; i < len; i++) {
+-		if (buf[i] != in_8(chip->IO_ADDR_R))
+-			return -EFAULT;
+-	}
+-
+-	return 0;
+-}
+-#endif
+-
+ static int nand_dev_ready(struct mtd_info *mtd)
+ {
+ 	struct nand_chip *chip = mtd->priv;
+@@ -193,9 +178,6 @@ int fsl_upm_nand_init(struct nand_chip *chip, struct fsl_upm_nand *fun)
+ 	chip->read_byte = upm_nand_read_byte;
+ 	chip->read_buf = upm_nand_read_buf;
+ 	chip->write_buf = upm_nand_write_buf;
+-#if defined(CONFIG_MTD_NAND_VERIFY_WRITE)
+-	chip->verify_buf = upm_nand_verify_buf;
+-#endif
+ 	if (fun->dev_ready)
+ 		chip->dev_ready = nand_dev_ready;
+ 
+diff --git a/drivers/mtd/nand/mpc5121_nfc.c b/drivers/mtd/nand/mpc5121_nfc.c
+index 7233bfc..e621c36 100644
+--- a/drivers/mtd/nand/mpc5121_nfc.c
++++ b/drivers/mtd/nand/mpc5121_nfc.c
+@@ -459,29 +459,6 @@ static void mpc5121_nfc_write_buf(struct mtd_info *mtd,
+ 	mpc5121_nfc_buf_copy(mtd, (u_char *) buf, len, 1);
+ }
+ 
+-#if defined(CONFIG_MTD_NAND_VERIFY_WRITE)
+-/* Compare buffer with NAND flash */
+-static int mpc5121_nfc_verify_buf(struct mtd_info *mtd,
+-				  const u_char * buf, int len)
+-{
+-	u_char tmp[256];
+-	uint bsize;
+-
+-	while (len) {
+-		bsize = min(len, 256);
+-		mpc5121_nfc_read_buf(mtd, tmp, bsize);
+-
+-		if (memcmp(buf, tmp, bsize))
+-			return 1;
+-
+-		buf += bsize;
+-		len -= bsize;
+-	}
+-
+-	return 0;
+-}
+-#endif
+-
+ /* Read byte from NFC buffers */
+ static u8 mpc5121_nfc_read_byte(struct mtd_info *mtd)
+ {
+@@ -609,9 +586,6 @@ int board_nand_init(struct nand_chip *chip)
+ 	chip->read_word = mpc5121_nfc_read_word;
+ 	chip->read_buf = mpc5121_nfc_read_buf;
+ 	chip->write_buf = mpc5121_nfc_write_buf;
+-#if defined(CONFIG_MTD_NAND_VERIFY_WRITE)
+-	chip->verify_buf = mpc5121_nfc_verify_buf;
+-#endif
+ 	chip->select_chip = mpc5121_nfc_select_chip;
+ 	chip->bbt_options = NAND_BBT_USE_FLASH;
+ 	chip->ecc.mode = NAND_ECC_SOFT;
+diff --git a/drivers/mtd/nand/mxc_nand.c b/drivers/mtd/nand/mxc_nand.c
+index 2e5b5b9..f12b07e 100644
+--- a/drivers/mtd/nand/mxc_nand.c
++++ b/drivers/mtd/nand/mxc_nand.c
+@@ -949,34 +949,6 @@ static void mxc_nand_read_buf(struct mtd_info *mtd, u_char *buf, int len)
+ 	host->col_addr = col;
+ }
+ 
+-#ifdef __UBOOT__
+-#if defined(CONFIG_MTD_NAND_VERIFY_WRITE)
+-/*
+- * Used by the upper layer to verify the data in NAND Flash
+- * with the data in the buf.
+- */
+-static int mxc_nand_verify_buf(struct mtd_info *mtd,
+-				const u_char *buf, int len)
+-{
+-	u_char tmp[256];
+-	uint bsize;
+-
+-	while (len) {
+-		bsize = min(len, 256);
+-		mxc_nand_read_buf(mtd, tmp, bsize);
+-
+-		if (memcmp(buf, tmp, bsize))
+-			return 1;
+-
+-		buf += bsize;
+-		len -= bsize;
+-	}
+-
+-	return 0;
+-}
+-#endif
+-#endif
+-
+ /*
+  * This function is used by upper layer for select and
+  * deselect of the NAND chip
+@@ -1207,11 +1179,6 @@ int board_nand_init(struct nand_chip *this)
+ 	this->read_word = mxc_nand_read_word;
+ 	this->write_buf = mxc_nand_write_buf;
+ 	this->read_buf = mxc_nand_read_buf;
+-#ifdef __UBOOT__
+-#if defined(CONFIG_MTD_NAND_VERIFY_WRITE)
+-	this->verify_buf = mxc_nand_verify_buf;
+-#endif
+-#endif
+ 
+ 	host->regs = (struct mxc_nand_regs __iomem *)CONFIG_MXC_NAND_REGS_BASE;
+ #ifdef MXC_NFC_V3_2
+diff --git a/drivers/mtd/nand/nand_base.c b/drivers/mtd/nand/nand_base.c
+index 63bdf65..9bdae96 100644
+--- a/drivers/mtd/nand/nand_base.c
++++ b/drivers/mtd/nand/nand_base.c
+@@ -361,51 +361,6 @@ void nand_read_buf(struct mtd_info *mtd, uint8_t *buf, int len)
+ 	ioread8_rep(chip->IO_ADDR_R, buf, len);
+ }
+ 
+-#ifdef __UBOOT__
+-#if defined(CONFIG_MTD_NAND_VERIFY_WRITE)
+-/**
+- * nand_verify_buf - [DEFAULT] Verify chip data against buffer
+- * @mtd: MTD device structure
+- * @buf: buffer containing the data to compare
+- * @len: number of bytes to compare
+- *
+- * Default verify function for 8bit buswidth.
+- */
+-static int nand_verify_buf(struct mtd_info *mtd, const uint8_t *buf, int len)
+-{
+-	int i;
+-	struct nand_chip *chip = mtd->priv;
+-
+-	for (i = 0; i < len; i++)
+-		if (buf[i] != readb(chip->IO_ADDR_R))
+-			return -EFAULT;
+-	return 0;
+-}
+-
+-/**
+- * nand_verify_buf16 - [DEFAULT] Verify chip data against buffer
+- * @mtd: MTD device structure
+- * @buf: buffer containing the data to compare
+- * @len: number of bytes to compare
+- *
+- * Default verify function for 16bit buswidth.
+- */
+-static int nand_verify_buf16(struct mtd_info *mtd, const uint8_t *buf, int len)
+-{
+-	int i;
+-	struct nand_chip *chip = mtd->priv;
+-	u16 *p = (u16 *) buf;
+-	len >>= 1;
+-
+-	for (i = 0; i < len; i++)
+-		if (p[i] != readw(chip->IO_ADDR_R))
+-			return -EFAULT;
+-
+-	return 0;
+-}
+-#endif
+-#endif
+-
+ /**
+  * nand_write_buf16 - [DEFAULT] write buffer to chip
+  * @mtd: MTD device structure
+@@ -2440,20 +2395,6 @@ static int nand_write_page(struct mtd_info *mtd, struct nand_chip *chip,
+ 		status = chip->waitfunc(mtd, chip);
+ 	}
+ 
+-
+-#ifdef __UBOOT__
+-#if defined(CONFIG_MTD_NAND_VERIFY_WRITE)
+-	/* Send command to read back the data */
+-	chip->cmdfunc(mtd, NAND_CMD_READ0, 0, page);
+-
+-	if (chip->verify_buf(mtd, buf, mtd->writesize))
+-		return -EIO;
+-
+-	/* Make sure the next page prog is preceded by a status read */
+-	chip->cmdfunc(mtd, NAND_CMD_STATUS, -1, -1);
+-#endif
+-#endif
+-
+ 	return 0;
+ }
+ 
+@@ -3144,12 +3085,6 @@ static void nand_set_defaults(struct nand_chip *chip, int busw)
+ 		chip->read_buf = busw ? nand_read_buf16 : nand_read_buf;
+ 	if (!chip->scan_bbt)
+ 		chip->scan_bbt = nand_default_bbt;
+-#ifdef __UBOOT__
+-#if defined(CONFIG_MTD_NAND_VERIFY_WRITE)
+-	if (!chip->verify_buf)
+-		chip->verify_buf = busw ? nand_verify_buf16 : nand_verify_buf;
+-#endif
+-#endif
+ 
+ 	if (!chip->controller) {
+ 		chip->controller = &chip->hwcontrol;
+diff --git a/drivers/mtd/nand/ndfc.c b/drivers/mtd/nand/ndfc.c
+index 2659595..8a68cb0 100644
+--- a/drivers/mtd/nand/ndfc.c
++++ b/drivers/mtd/nand/ndfc.c
+@@ -118,21 +118,6 @@ static void ndfc_write_buf(struct mtd_info *mtdinfo, const uint8_t *buf, int len
+ 		out_be32((u32 *)(base + NDFC_DATA), *p++);
+ }
+ 
+-#if defined(CONFIG_MTD_NAND_VERIFY_WRITE)
+-static int ndfc_verify_buf(struct mtd_info *mtdinfo, const uint8_t *buf, int len)
+-{
+-	struct nand_chip *this = mtdinfo->priv;
+-	ulong base = (ulong) this->IO_ADDR_W & 0xffffff00;
+-	uint32_t *p = (uint32_t *) buf;
+-
+-	for (; len > 0; len -= 4)
+-		if (*p++ != in_be32((u32 *)(base + NDFC_DATA)))
+-			return -1;
+-
+-	return 0;
+-}
+-#endif
+-
+ /*
+  * Read a byte from the NDFC.
+  */
+@@ -207,9 +192,6 @@ int board_nand_init(struct nand_chip *nand)
+ #endif
+ 
+ 	nand->write_buf  = ndfc_write_buf;
+-#if defined(CONFIG_MTD_NAND_VERIFY_WRITE)
+-	nand->verify_buf = ndfc_verify_buf;
+-#endif
+ 	nand->read_byte = ndfc_read_byte;
+ 
+ 	chip++;
+diff --git a/include/configs/B4860QDS.h b/include/configs/B4860QDS.h
+index 838a0b1..dca1ca5 100644
+--- a/include/configs/B4860QDS.h
++++ b/include/configs/B4860QDS.h
+@@ -391,7 +391,6 @@ unsigned long get_board_ddr_clk(void);
+ 
+ #define CONFIG_SYS_NAND_BASE_LIST	{ CONFIG_SYS_NAND_BASE }
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND
+ 
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	(128 * 1024)
+diff --git a/include/configs/BSC9131RDB.h b/include/configs/BSC9131RDB.h
+index eeb0671..874c48d 100644
+--- a/include/configs/BSC9131RDB.h
++++ b/include/configs/BSC9131RDB.h
+@@ -198,7 +198,6 @@ extern unsigned long get_sdram_size(void);
+ 
+ #define CONFIG_SYS_NAND_BASE_LIST	{ CONFIG_SYS_NAND_BASE }
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	(128 * 1024)
+ 
+diff --git a/include/configs/BSC9132QDS.h b/include/configs/BSC9132QDS.h
+index e8a8d29..ac14d60 100644
+--- a/include/configs/BSC9132QDS.h
++++ b/include/configs/BSC9132QDS.h
+@@ -320,7 +320,6 @@ combinations. this should be removed later
+ /* NAND */
+ #define CONFIG_SYS_NAND_BASE_LIST	{ CONFIG_SYS_NAND_BASE }
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND
+ 
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	(128 * 1024)
+diff --git a/include/configs/C29XPCIE.h b/include/configs/C29XPCIE.h
+index ecb3d7b..b4a4252 100644
+--- a/include/configs/C29XPCIE.h
++++ b/include/configs/C29XPCIE.h
+@@ -234,7 +234,6 @@
+ #define CONFIG_SYS_NAND_BASE_LIST	{ CONFIG_SYS_NAND_BASE }
+ 
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	(1024 * 1024)
+ 
+diff --git a/include/configs/MPC8313ERDB.h b/include/configs/MPC8313ERDB.h
+index dd81229..e18ce2f 100644
+--- a/include/configs/MPC8313ERDB.h
++++ b/include/configs/MPC8313ERDB.h
+@@ -269,7 +269,6 @@
+ 	"mtdparts=e2800000.flash:512k(uboot),128k(env),3m@1m(kernel),-(fs)"
+ 
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND 1
+ #define CONFIG_NAND_FSL_ELBC 1
+ #define CONFIG_SYS_NAND_BLOCK_SIZE 16384
+diff --git a/include/configs/MPC8315ERDB.h b/include/configs/MPC8315ERDB.h
+index 98e9072..99c38d8 100644
+--- a/include/configs/MPC8315ERDB.h
++++ b/include/configs/MPC8315ERDB.h
+@@ -242,7 +242,6 @@
+ 	"mtdparts=e0600000.flash:512k(uboot),128k(env),3m@1m(kernel),-(fs)"
+ 
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE	1
+ #define CONFIG_CMD_NAND			1
+ #define CONFIG_NAND_FSL_ELBC		1
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	16384
+diff --git a/include/configs/MPC837XEMDS.h b/include/configs/MPC837XEMDS.h
+index 832c10f..ad42d1e 100644
+--- a/include/configs/MPC837XEMDS.h
++++ b/include/configs/MPC837XEMDS.h
+@@ -280,7 +280,6 @@
+  * NAND Flash on the Local Bus
+  */
+ #define CONFIG_CMD_NAND		1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE	1
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+ #define CONFIG_NAND_FSL_ELBC	1
+ 
+diff --git a/include/configs/MPC8536DS.h b/include/configs/MPC8536DS.h
+index 2722164..dc09b1f 100644
+--- a/include/configs/MPC8536DS.h
++++ b/include/configs/MPC8536DS.h
+@@ -308,7 +308,6 @@
+ 				CONFIG_SYS_NAND_BASE + 0x80000, \
+ 				CONFIG_SYS_NAND_BASE + 0xC0000}
+ #define CONFIG_SYS_MAX_NAND_DEVICE	4
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND		1
+ #define CONFIG_NAND_FSL_ELBC	1
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	(128 * 1024)
+diff --git a/include/configs/MPC8569MDS.h b/include/configs/MPC8569MDS.h
+index 4da247c..e624c71 100644
+--- a/include/configs/MPC8569MDS.h
++++ b/include/configs/MPC8569MDS.h
+@@ -194,7 +194,6 @@ extern unsigned long get_clock_freq(void);
+ #define CONFIG_SYS_NAND_BASE_PHYS	CONFIG_SYS_NAND_BASE
+ #define CONFIG_SYS_NAND_BASE_LIST	{ CONFIG_SYS_NAND_BASE, }
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE	1
+ #define CONFIG_CMD_NAND			1
+ #define CONFIG_NAND_FSL_ELBC		1
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	(128 * 1024)
+diff --git a/include/configs/MPC8572DS.h b/include/configs/MPC8572DS.h
+index 0b07876..5e7bc49 100644
+--- a/include/configs/MPC8572DS.h
++++ b/include/configs/MPC8572DS.h
+@@ -303,7 +303,6 @@
+ 				CONFIG_SYS_NAND_BASE + 0x80000,\
+ 				CONFIG_SYS_NAND_BASE + 0xC0000}
+ #define CONFIG_SYS_MAX_NAND_DEVICE    4
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND		1
+ #define CONFIG_NAND_FSL_ELBC	1
+ #define CONFIG_SYS_NAND_BLOCK_SIZE    (128 * 1024)
+diff --git a/include/configs/P1010RDB.h b/include/configs/P1010RDB.h
+index cd6a39c..ccf3ce3 100644
+--- a/include/configs/P1010RDB.h
++++ b/include/configs/P1010RDB.h
+@@ -444,7 +444,6 @@ extern unsigned long get_sdram_size(void);
+ 
+ #define CONFIG_SYS_NAND_BASE_LIST	{ CONFIG_SYS_NAND_BASE }
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND
+ 
+ #if defined(CONFIG_P1010RDB_PA)
+diff --git a/include/configs/P1022DS.h b/include/configs/P1022DS.h
+index 4371110..795e3b5 100644
+--- a/include/configs/P1022DS.h
++++ b/include/configs/P1022DS.h
+@@ -290,7 +290,6 @@
+ 
+ #define CONFIG_SYS_NAND_BASE_LIST	{CONFIG_SYS_NAND_BASE}
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND			1
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	(256 * 1024)
+ #define CONFIG_ELBC_NAND_SPL_STATIC_PGSIZE
+diff --git a/include/configs/P1023RDB.h b/include/configs/P1023RDB.h
+index a8b7817..d65c461 100644
+--- a/include/configs/P1023RDB.h
++++ b/include/configs/P1023RDB.h
+@@ -136,7 +136,6 @@ extern unsigned long get_clock_freq(void);
+ 
+ #define CONFIG_SYS_NAND_BASE_LIST	{ CONFIG_SYS_NAND_BASE }
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND
+ #define CONFIG_NAND_FSL_ELBC
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	(128 * 1024)
+diff --git a/include/configs/P2041RDB.h b/include/configs/P2041RDB.h
+index d8d30bb..f99da65 100644
+--- a/include/configs/P2041RDB.h
++++ b/include/configs/P2041RDB.h
+@@ -251,7 +251,6 @@ unsigned long get_board_sys_clk(unsigned long dummy);
+ 
+ #define CONFIG_SYS_NAND_BASE_LIST     {CONFIG_SYS_NAND_BASE}
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND
+ #define CONFIG_SYS_NAND_BLOCK_SIZE    (128 * 1024)
+ 
+diff --git a/include/configs/T102xQDS.h b/include/configs/T102xQDS.h
+index c2bdbb9..abf91be 100644
+--- a/include/configs/T102xQDS.h
++++ b/include/configs/T102xQDS.h
+@@ -395,7 +395,6 @@ unsigned long get_board_ddr_clk(void);
+ #define CONFIG_SYS_NAND_DDR_LAW		11
+ #define CONFIG_SYS_NAND_BASE_LIST	{ CONFIG_SYS_NAND_BASE }
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND
+ 
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	(128 * 1024)
+diff --git a/include/configs/T102xRDB.h b/include/configs/T102xRDB.h
+index 82b669b..c09c767 100644
+--- a/include/configs/T102xRDB.h
++++ b/include/configs/T102xRDB.h
+@@ -376,7 +376,6 @@ unsigned long get_board_ddr_clk(void);
+ #define CONFIG_SYS_NAND_DDR_LAW		11
+ #define CONFIG_SYS_NAND_BASE_LIST	{ CONFIG_SYS_NAND_BASE }
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND
+ 
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	(512 * 1024)
+diff --git a/include/configs/T1040QDS.h b/include/configs/T1040QDS.h
+index b70bdfe..0aef41a 100644
+--- a/include/configs/T1040QDS.h
++++ b/include/configs/T1040QDS.h
+@@ -305,7 +305,6 @@ unsigned long get_board_ddr_clk(void);
+ #define CONFIG_SYS_NAND_DDR_LAW		11
+ #define CONFIG_SYS_NAND_BASE_LIST	{ CONFIG_SYS_NAND_BASE }
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND
+ 
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	(128 * 1024)
+diff --git a/include/configs/T104xRDB.h b/include/configs/T104xRDB.h
+index 57cdf72..a349212 100644
+--- a/include/configs/T104xRDB.h
++++ b/include/configs/T104xRDB.h
+@@ -342,7 +342,6 @@
+ #define CONFIG_SYS_NAND_DDR_LAW		11
+ #define CONFIG_SYS_NAND_BASE_LIST	{ CONFIG_SYS_NAND_BASE }
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND
+ 
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	(512 * 1024)
+diff --git a/include/configs/T208xQDS.h b/include/configs/T208xQDS.h
+index ff6d2c1..046aa48 100644
+--- a/include/configs/T208xQDS.h
++++ b/include/configs/T208xQDS.h
+@@ -357,7 +357,6 @@ unsigned long get_board_ddr_clk(void);
+ #define CONFIG_SYS_NAND_DDR_LAW		11
+ #define CONFIG_SYS_NAND_BASE_LIST	{ CONFIG_SYS_NAND_BASE }
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	(128 * 1024)
+ 
+diff --git a/include/configs/T208xRDB.h b/include/configs/T208xRDB.h
+index db6b42e..faaf22c 100644
+--- a/include/configs/T208xRDB.h
++++ b/include/configs/T208xRDB.h
+@@ -328,7 +328,6 @@ unsigned long get_board_ddr_clk(void);
+ #define CONFIG_SYS_NAND_DDR_LAW		11
+ #define CONFIG_SYS_NAND_BASE_LIST	{ CONFIG_SYS_NAND_BASE }
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	(512 * 1024)
+ 
+diff --git a/include/configs/T4240QDS.h b/include/configs/T4240QDS.h
+index dd7d52f..cfe6557 100644
+--- a/include/configs/T4240QDS.h
++++ b/include/configs/T4240QDS.h
+@@ -281,7 +281,6 @@ unsigned long get_board_ddr_clk(void);
+ 
+ #define CONFIG_SYS_NAND_BASE_LIST	{ CONFIG_SYS_NAND_BASE }
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND
+ 
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	(128 * 1024)
+diff --git a/include/configs/T4240RDB.h b/include/configs/T4240RDB.h
+index b644a6c..c1ad35a 100644
+--- a/include/configs/T4240RDB.h
++++ b/include/configs/T4240RDB.h
+@@ -467,7 +467,6 @@ unsigned long get_board_ddr_clk(void);
+ #define CONFIG_SYS_NAND_DDR_LAW		11
+ #define CONFIG_SYS_NAND_BASE_LIST	{ CONFIG_SYS_NAND_BASE }
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND
+ 
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	(512 * 1024)
+diff --git a/include/configs/corenet_ds.h b/include/configs/corenet_ds.h
+index 225ffdd..8e27ae4 100644
+--- a/include/configs/corenet_ds.h
++++ b/include/configs/corenet_ds.h
+@@ -248,7 +248,6 @@
+ 
+ #define CONFIG_SYS_NAND_BASE_LIST     {CONFIG_SYS_NAND_BASE}
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND
+ #define CONFIG_SYS_NAND_BLOCK_SIZE    (128 * 1024)
+ 
+diff --git a/include/configs/ids8313.h b/include/configs/ids8313.h
+index f084834..67f724b 100644
+--- a/include/configs/ids8313.h
++++ b/include/configs/ids8313.h
+@@ -214,7 +214,6 @@
+ #define CONFIG_SYS_NAND_BASE		0xE1000000
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+ #define CONFIG_SYS_NAND_MAX_CHIPS	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_NAND_FSL_ELBC
+ #define CONFIG_SYS_NAND_PAGE_SIZE	(2048)
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	(128 << 10)
+diff --git a/include/configs/km/kmp204x-common.h b/include/configs/km/kmp204x-common.h
+index 949b3da..b70b5b1 100644
+--- a/include/configs/km/kmp204x-common.h
++++ b/include/configs/km/kmp204x-common.h
+@@ -167,7 +167,6 @@ unsigned long get_board_sys_clk(unsigned long dummy);
+ 
+ #define CONFIG_SYS_NAND_BASE_LIST     {CONFIG_SYS_NAND_BASE}
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND
+ #define CONFIG_SYS_NAND_BLOCK_SIZE    (128 * 1024)
+ 
+diff --git a/include/configs/ls1021aqds.h b/include/configs/ls1021aqds.h
+index 8dc04f2..c4a42d0 100644
+--- a/include/configs/ls1021aqds.h
++++ b/include/configs/ls1021aqds.h
+@@ -245,7 +245,6 @@ unsigned long get_board_ddr_clk(void);
+ 
+ #define CONFIG_SYS_NAND_BASE_LIST	{ CONFIG_SYS_NAND_BASE }
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND
+ 
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	(128 * 1024)
+diff --git a/include/configs/ls2085a_common.h b/include/configs/ls2085a_common.h
+index 6fe032c..7fc5735 100644
+--- a/include/configs/ls2085a_common.h
++++ b/include/configs/ls2085a_common.h
+@@ -189,7 +189,6 @@
+ 
+ #define CONFIG_SYS_NAND_BASE_LIST	{ CONFIG_SYS_NAND_BASE }
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND
+ 
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	(128 * 1024)
+diff --git a/include/configs/p1_p2_rdb_pc.h b/include/configs/p1_p2_rdb_pc.h
+index 5f27c2a..a5f9717 100644
+--- a/include/configs/p1_p2_rdb_pc.h
++++ b/include/configs/p1_p2_rdb_pc.h
+@@ -494,7 +494,6 @@
+ 
+ #define CONFIG_SYS_NAND_BASE_LIST	{ CONFIG_SYS_NAND_BASE }
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND
+ #if defined(CONFIG_P1020RDB_PD)
+ #define CONFIG_SYS_NAND_BLOCK_SIZE	(128 * 1024)
+diff --git a/include/configs/ve8313.h b/include/configs/ve8313.h
+index 00787bb..8a25783 100644
+--- a/include/configs/ve8313.h
++++ b/include/configs/ve8313.h
+@@ -183,7 +183,6 @@
+  */
+ #define CONFIG_SYS_NAND_BASE		0x61000000
+ #define CONFIG_SYS_MAX_NAND_DEVICE	1
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_CMD_NAND 1
+ #define CONFIG_NAND_FSL_ELBC 1
+ #define CONFIG_SYS_NAND_BLOCK_SIZE 16384
+diff --git a/include/configs/xpedite537x.h b/include/configs/xpedite537x.h
+index d6b6143..988a2e8 100644
+--- a/include/configs/xpedite537x.h
++++ b/include/configs/xpedite537x.h
+@@ -131,7 +131,6 @@ extern unsigned long get_board_ddr_clk(unsigned long dummy);
+ #define CONFIG_SYS_NAND_BASE_LIST	{CONFIG_SYS_NAND_BASE, \
+ 					 CONFIG_SYS_NAND_BASE2}
+ #define CONFIG_SYS_MAX_NAND_DEVICE	2
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_SYS_NAND_QUIET_TEST	/* 2nd NAND flash not always populated */
+ #define CONFIG_NAND_FSL_ELBC
+ 
+diff --git a/include/configs/xpedite550x.h b/include/configs/xpedite550x.h
+index 4536b94..ac3f4f1 100644
+--- a/include/configs/xpedite550x.h
++++ b/include/configs/xpedite550x.h
+@@ -122,7 +122,6 @@ extern unsigned long get_board_ddr_clk(unsigned long dummy);
+ #define CONFIG_SYS_NAND_BASE_LIST	{CONFIG_SYS_NAND_BASE, \
+ 					 CONFIG_SYS_NAND_BASE2}
+ #define CONFIG_SYS_MAX_NAND_DEVICE	2
+-#define CONFIG_MTD_NAND_VERIFY_WRITE
+ #define CONFIG_SYS_NAND_QUIET_TEST	/* 2nd NAND flash not always populated */
+ #define CONFIG_NAND_FSL_ELBC
+ 
+diff --git a/include/linux/mtd/nand.h b/include/linux/mtd/nand.h
+index 8438490..bc927ec 100644
+--- a/include/linux/mtd/nand.h
++++ b/include/linux/mtd/nand.h
+@@ -678,11 +678,6 @@ struct nand_chip {
+ 	void (*write_byte)(struct mtd_info *mtd, uint8_t byte);
+ 	void (*write_buf)(struct mtd_info *mtd, const uint8_t *buf, int len);
+ 	void (*read_buf)(struct mtd_info *mtd, uint8_t *buf, int len);
+-#ifdef __UBOOT__
+-#if defined(CONFIG_MTD_NAND_VERIFY_WRITE)
+-        int (*verify_buf)(struct mtd_info *mtd, const uint8_t *buf, int len);
+-#endif
+-#endif
+ 	void (*select_chip)(struct mtd_info *mtd, int chip);
+ 	int (*block_bad)(struct mtd_info *mtd, loff_t ofs, int getchip);
+ 	int (*block_markbad)(struct mtd_info *mtd, loff_t ofs);
+-- 
+1.9.1
+

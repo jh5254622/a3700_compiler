@@ -1,0 +1,44 @@
+From 6558dbbc717680623200d4a10e2a7a869e9d468a Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 16 Aug 2015 17:14:02 +0300
+Subject: [PATCH 0340/1240] dtc: enabled using device tree compiler in U-Boot
+
+Change-Id: I91b546f2361de0e48fa207eec5ad75a5e6d9812b
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22868
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ Makefile             | 2 +-
+ scripts/Makefile.lib | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index b9b1924..23b39c8 100644
+--- a/Makefile
++++ b/Makefile
+@@ -341,7 +341,7 @@ OBJDUMP		= $(CROSS_COMPILE)objdump
+ AWK		= awk
+ PERL		= perl
+ PYTHON		= python
+-DTC		= dtc
++DTC		= ./tools/marvell/dtc
+ CHECK		= sparse
+ 
+ CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
+diff --git a/scripts/Makefile.lib b/scripts/Makefile.lib
+index 13af604..8731fc6 100644
+--- a/scripts/Makefile.lib
++++ b/scripts/Makefile.lib
+@@ -275,7 +275,7 @@ $(obj)/%.dtb.S: $(obj)/%.dtb
+ quiet_cmd_dtc = DTC     $@
+ # Modified for U-Boot
+ cmd_dtc = $(CPP) $(dtc_cpp_flags) -x assembler-with-cpp -o $(dtc-tmp) $< ; \
+-	dtc -O dtb -o $@ -b 0 \
++	$(DTC) -O dtb -o $@ -b 0 \
+ 		-i $(dir $<) $(DTC_FLAGS) \
+ 		-d $(depfile).dtc.tmp $(dtc-tmp) ; \
+ 	cat $(depfile).pre.tmp $(depfile).dtc.tmp > $(depfile)
+-- 
+1.9.1
+

@@ -1,0 +1,32 @@
+From 108a1a8b96f37f90a23b57f9fb42dc907db87e15 Mon Sep 17 00:00:00 2001
+From: Ofer Heifetz <oferh@marvell.com>
+Date: Mon, 16 May 2016 11:37:02 +0300
+Subject: [PATCH 58/66] linux: config endiness based on BR2 config
+
+By default ARM is LE implicit configured in linux config, when BR2 is
+configured BE, modify the linux config to BE for ARM arch.
+
+Change-Id: Ib01b279943246b5c595dfcbe792924a786b6d8a5
+Signed-off-by: Ofer Heifetz <oferh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29725
+Tested-by: Star_Automation <star@marvell.com>
+---
+ linux/linux.mk | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/linux/linux.mk b/linux/linux.mk
+index 6919e86..161769c 100644
+--- a/linux/linux.mk
++++ b/linux/linux.mk
+@@ -183,6 +183,8 @@ LINUX_KCONFIG_OPTS = $(LINUX_MAKE_FLAGS)
+ define LINUX_KCONFIG_FIXUP_CMDS
+ 	$(if $(LINUX_NEEDS_MODULES),
+ 		$(call KCONFIG_ENABLE_OPT,CONFIG_MODULES,$(@D)/.config))
++        $(if $(BR2_armeb)$(BR2_aarch64_be),
++		$(call KCONFIG_ENABLE_OPT,CONFIG_CPU_BIG_ENDIAN,$(@D)/.config))
+ 	$(if $(BR2_arm)$(BR2_armeb),
+ 		$(call KCONFIG_ENABLE_OPT,CONFIG_AEABI,$(@D)/.config))
+ 	$(if $(BR2_TARGET_ROOTFS_CPIO),
+-- 
+1.9.1
+

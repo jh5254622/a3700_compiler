@@ -1,0 +1,68 @@
+From f059516eed3f3617e33c36597c7595565f5a84bf Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Thu, 26 Nov 2015 15:58:07 +0800
+Subject: [PATCH 0560/1240] fix: mmc, phy: a3700: fix emmc phy init by adding
+ missing masks
+
+issue: the emmc phy registers are wrongly set during common
+       phy init, since wrong mask were used.
+fix: set proper masks to fix emmc phy init flow correctly.
+
+Change-Id: I4c61203873d3bd8d03e59bd43a5204fc1088bd4e
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25461
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/phy/comphy_a3700.c | 14 ++++++--------
+ 1 file changed, 6 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/phy/comphy_a3700.c b/drivers/phy/comphy_a3700.c
+index ef4cde3..37198da 100644
+--- a/drivers/phy/comphy_a3700.c
++++ b/drivers/phy/comphy_a3700.c
+@@ -464,35 +464,33 @@ static int comphy_emmc_power_up(void)
+ 	/*
+ 	 * 1. Bus power ON, Bus voltage 1.8V
+ 	 */
+-	reg_set((void __iomem *)SDIO_HOST_CTRL1_ADDR, 0xB00, 0x100);
++	reg_set((void __iomem *)SDIO_HOST_CTRL1_ADDR, 0xB00, 0xF00);
+ 
+ 	/*
+ 	 * 2. Set FIFO parameters
+ 	 */
+-	reg_set((void __iomem *)SDIO_SDHC_FIFO_ADDR, 0x315, 0);
+-
++	reg_set((void __iomem *)SDIO_SDHC_FIFO_ADDR, 0x315, 0xFFFFFFFF);
+ 
+ 	/*
+ 	 * 3. Set Capabilities 1_2
+ 	 */
+-	reg_set((void __iomem *)SDIO_CAP_12_ADDR, 0x25FAC8B2, 0);
++	reg_set((void __iomem *)SDIO_CAP_12_ADDR, 0x25FAC8B2, 0xFFFFFFFF);
+ 
+ 	/*
+ 	 * 4. Set Endian
+ 	 */
+ 	reg_set((void __iomem *)SDIO_ENDIAN_ADDR, 0x00c00000, 0);
+ 
+-
+ 	/*
+ 	 * 4. Init PHY
+ 	 */
+-	reg_set((void __iomem *)SDIO_PHY_TIMING_ADDR, 0x80000000, 0);
+-	reg_set((void __iomem *)SDIO_PHY_PAD_CTRL0_ADDR, 0x50000000, 0);
++	reg_set((void __iomem *)SDIO_PHY_TIMING_ADDR, 0x80000000, 0x80000000);
++	reg_set((void __iomem *)SDIO_PHY_PAD_CTRL0_ADDR, 0x50000000, 0xF0000000);
+ 
+ 	/*
+ 	 * 5. DLL reset
+ 	 */
+-	reg_set((void __iomem *)SDIO_DLL_RST_ADDR, 0xFFFFFFFF, 0);
++	reg_set((void __iomem *)SDIO_DLL_RST_ADDR, 0xFFFEFFFF, 0);
+ 	reg_set((void __iomem *)SDIO_DLL_RST_ADDR, 0x00010000, 0);
+ 
+ 	debug_exit();
+-- 
+1.9.1
+

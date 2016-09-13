@@ -1,0 +1,115 @@
+From e63d1b27fd6858a5fecd1b40e087f3988ed71a59 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Thu, 12 Nov 2015 10:49:00 +0800
+Subject: [PATCH 0647/1240] ahci: mvebu: add simultaneous support for SATA over
+ PCIe and platform SATA controller
+
+    In u-boot 2015 ACHI mainline driver, it is either SATA over PCIe or over controller,
+    so in our u-boot-2013 code, we added this feature to support both simultaneously.
+    This fix uses the same idea as our u-boot-2013, creates new routine board_ahci_init,
+    which INIT the SATA over controller, and it would be invoked by scsi_init,
+    which INIT the SATA over PCIe.
+
+    NOTE:
+    this patch has not been fully tested, since on Palladium, there is no SATA over PCIe.
+    So only SATA over controller has been tested.
+
+Change-Id: Ied149f39812537c6a6f7812f13ee30f8b5619973
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24787
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/soc-init.c |  2 +-
+ common/cmd_scsi.c                    | 18 +++++-------------
+ drivers/block/ahci.c                 |  5 +++++
+ include/scsi.h                       |  4 ++++
+ 4 files changed, 15 insertions(+), 14 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index b190da9..666f1e4 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -43,7 +43,7 @@
+ #endif
+ 
+ #ifdef CONFIG_SCSI_AHCI_PLAT
+-void scsi_init(void)
++void board_ahci_init(void)
+ {
+ 	ahci_init();
+ 	/* use mode 1 for scsi_scan, so scsi device info will
+diff --git a/common/cmd_scsi.c b/common/cmd_scsi.c
+index 277a323..2530c28 100644
+--- a/common/cmd_scsi.c
++++ b/common/cmd_scsi.c
+@@ -69,7 +69,6 @@ static ulong scsi_read(int device, lbaint_t blknr, lbaint_t blkcnt,
+ static ulong scsi_write(int device, lbaint_t blknr,
+ 			lbaint_t blkcnt, const void *buffer);
+ 
+-
+ /*********************************************************************************
+  * (re)-scan the scsi bus and reports scsi device info
+  * to the user if mode = 1
+@@ -179,22 +178,15 @@ int scsi_get_disk_count(void)
+ 	return scsi_max_devs;
+ }
+ 
+-#if defined(CONFIG_PCI) && (!defined(CONFIG_SCSI_AHCI_PLAT))
+-/* This routine applies for SATA over PCI only, since it scans SATA device
+-  * with routine pci_find_device, and use scsi_device_list as input which
+-  * has PCI device ID in it.
+-  * So when SATA is over SATA controller, another scsi_init routine is needed.
+-  * which will be invoked by routine board_init_r.
+-  * But when a SoC has both SATA over controller and PCI (for other device),
+-  * there will be two routines scsi_init compiled, and that is a link error.
+-  *
+-  * That is the reason of not compiled this routine when SATA is on controller but
+-  * not over PCI.
+-*/
++#ifdef CONFIG_PCI
+ void scsi_init(void)
+ {
+ 	int busdevfunc;
+ 	int i;
++
++#ifdef CONFIG_SCSI_AHCI_PLAT
++	board_ahci_init();
++#endif
+ 	/*
+ 	 * Find a device from the list, this driver will support a single
+ 	 * controller.
+diff --git a/drivers/block/ahci.c b/drivers/block/ahci.c
+index d01a7b7..dcd3394 100644
+--- a/drivers/block/ahci.c
++++ b/drivers/block/ahci.c
+@@ -985,6 +985,11 @@ err_out:
+ 
+ void __weak scsi_init(void)
+ {
++	/* if PCI is not defined, and CONFIG_SCSI_AHCI_PLAT is,
++	  * which means that there is no SATA over PCI, but only
++	  * SATA over platform controller.
++	*/
++	board_ahci_init();
+ }
+ 
+ #ifdef CONFIG_OF_CONTROL
+diff --git a/include/scsi.h b/include/scsi.h
+index 73de7b7..cb24c49 100644
+--- a/include/scsi.h
++++ b/include/scsi.h
+@@ -174,6 +174,10 @@ void scsi_low_level_init(int busdevfunc);
+ void scsi_init(void);
+ void scsi_scan(int mode);
+ 
++#ifdef CONFIG_SCSI_AHCI_PLAT
++void board_ahci_init(void);
++#endif
++
+ /** @return the number of scsi disks */
+ int scsi_get_disk_count(void);
+ 
+-- 
+1.9.1
+

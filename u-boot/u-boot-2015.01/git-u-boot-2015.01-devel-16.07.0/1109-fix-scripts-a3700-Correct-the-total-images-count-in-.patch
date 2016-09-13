@@ -1,0 +1,45 @@
+From 7f890e66dc06d84758a0569563cc2e82560a7849 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Sun, 15 May 2016 16:56:35 +0300
+Subject: [PATCH 1109/1240] fix: scripts: a3700: Correct the total images count
+ in tim2img script
+
+- Correct the counter for total images number collected from
+  both TIM and TIMN files.
+  This number is used for building the final flash image.
+
+Change-Id: I0347b29206ab2dba5372b11864e843adb1fd8e16
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29713
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ scripts/tim2img.pl | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/scripts/tim2img.pl b/scripts/tim2img.pl
+index 2320cd1..6d5efca 100755
+--- a/scripts/tim2img.pl
++++ b/scripts/tim2img.pl
+@@ -47,8 +47,8 @@ sub tim2img
+ 			$value =~ s/^\s+|\s+$//g;
+ 
+ 			if ($name eq "Number of Images") {
+-					$img_num = $value;
+-					print ("Total number of images to process in file[$cfg_idx] - $img_num\n");
++					$img_num += $value;
++					print ("Total number of images to process in file[$cfg_idx] - $value\n");
+ 			} elsif ($name eq "Image Filename") {
+ 					$img_names[$index] = $value;
+ 					print ("is $img_names[$index]\n");
+@@ -67,6 +67,7 @@ sub tim2img
+ 		print ("The \"Number of Images\" field was not found in input files\n");
+ 		goto ERROR;
+ 	}
++	print ("Total number of images $img_num\n");
+ 
+ 	#--------------------------------------------------------------------------
+ 	# Create output from collected images data
+-- 
+1.9.1
+

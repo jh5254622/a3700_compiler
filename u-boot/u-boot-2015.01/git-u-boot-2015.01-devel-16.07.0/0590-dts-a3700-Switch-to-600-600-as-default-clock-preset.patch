@@ -1,0 +1,62 @@
+From ac0cc90423c944e1569932ce0e91fc07d94fa736 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Sun, 13 Dec 2015 16:26:16 +0200
+Subject: [PATCH 0590/1240] dts: a3700: Switch to 600/600 as default clock
+ preset
+
+- Change default preset in A3700 DT files to 600/600
+  It is more stable than 400/600 in Linux
+
+Change-Id: I08a07d1be6811da25ae48837a35b3098aa86cd00
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25839
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/armada-lp-customer0.dts | 2 +-
+ arch/arm/dts/armada-lp-db.dts        | 2 +-
+ arch/arm/dts/armada-lp.dtsi          | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/dts/armada-lp-customer0.dts b/arch/arm/dts/armada-lp-customer0.dts
+index 0b84ff8..46176ca 100644
+--- a/arch/arm/dts/armada-lp-customer0.dts
++++ b/arch/arm/dts/armada-lp-customer0.dts
+@@ -9,7 +9,7 @@
+ 
+ 	soc {
+ 		freq {
+-			preset = <PRESET_CPU_400_DDR_600>;
++			preset = <PRESET_CPU_600_DDR_600>;
+ 		};
+ 
+ 		internal-regs {
+diff --git a/arch/arm/dts/armada-lp-db.dts b/arch/arm/dts/armada-lp-db.dts
+index c08ab34..c82270d 100644
+--- a/arch/arm/dts/armada-lp-db.dts
++++ b/arch/arm/dts/armada-lp-db.dts
+@@ -9,7 +9,7 @@
+ 
+ 	soc {
+ 		freq {
+-			preset = <PRESET_CPU_400_DDR_600>;
++			preset = <PRESET_CPU_600_DDR_600>;
+ 		};
+ 
+ 		internal-regs {
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index 016b369..605c9f4 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -17,7 +17,7 @@
+ 
+ 		freq {
+ 			compatible = "marvell,a3700-freq";
+-			preset = <PRESET_CPU_400_DDR_600>;
++			preset = <PRESET_CPU_600_DDR_600>;
+ 		};
+ 
+ 		internal-regs {
+-- 
+1.9.1
+

@@ -1,0 +1,127 @@
+From 20dd3bf10ce516f951f90cb83807a9493943456c Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Wed, 20 Apr 2016 00:33:47 +0800
+Subject: [PATCH 165/239] a3700: disable building SPL image
+
+This patch removes the SPL image from ATF,
+the image number and offset are adjusted.
+After this modification, there are three images for boot loader
+in sequence, TIM header, WTMI image and OBMI image.
+
+Change-Id: Ifc21300c5c9590e65dd82a085e52b9f16d2c13e8
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29183
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ Makefile                      |  7 ++-----
+ tools/wtp/untrusted/img-1.txt | 10 +++++-----
+ tools/wtp/untrusted/img-2.txt | 10 +++++-----
+ tools/wtp/untrusted/img-3.txt |  8 --------
+ tools/wtp/untrusted/rsrvd.txt |  2 +-
+ tools/wtp/untrusted/tim.txt   |  2 +-
+ 6 files changed, 14 insertions(+), 25 deletions(-)
+ delete mode 100644 tools/wtp/untrusted/img-3.txt
+
+diff --git a/Makefile b/Makefile
+index ab9ed62..b7f5ef1 100644
+--- a/Makefile
++++ b/Makefile
+@@ -675,8 +675,6 @@ fip: ${BUILD_PLAT}/${FIP_NAME} ${DOIMAGETOOL}
+ 	@echo
+ 	@echo "Building uart images"
+ 	$(TIMBUILD) $(TIMBLDUARTARGS)
+-	@if [ -e "$(SPL_IMAGE)" ]; then cp -f $(SPL_IMAGE) $(BUILD_PLAT); fi
+-	@if [ -e "$(SPL_IMAGE)" ]; then sed -i 's|SPL_IMAGE|$(BUILD_PLAT)/$(SPL_BASENAME)|1' $(DOIMAGE_CFG); fi
+ 	@sed -i 's|WTMI_IMG|$(WTMI_IMG)|1' $(DOIMAGE_CFG)
+ 	@sed -i 's|BOOT_IMAGE|$(BUILD_PLAT)/$(BOOT_IMAGE)|1' $(DOIMAGE_CFG)
+ 	$(DOIMAGETOOL) $(DOIMAGE_FLAGS)
+@@ -688,9 +686,8 @@ fip: ${BUILD_PLAT}/${FIP_NAME} ${DOIMAGETOOL}
+ 	@echo
+ 	@echo "Building flash image"
+ 	$(TIMBUILD) $(TIMBLDARGS)
+-	@if [ -e "$(SPL_IMAGE)" ]; then sed -i 's|SPL_IMAGE|$(SPL_IMAGE)|1' $(DOIMAGE_CFG); fi
+-	@sed -i 's|WTMI_IMG|$(WTMI_IMG)|1' $(DOIMAGE_CFG)
+-	@sed -i 's|BOOT_IMAGE|$(BUILD_PLAT)/$(BOOT_IMAGE)|1' $(DOIMAGE_CFG)
++	sed -i 's|WTMI_IMG|$(WTMI_IMG)|1' $(DOIMAGE_CFG)
++	sed -i 's|BOOT_IMAGE|$(BUILD_PLAT)/$(BOOT_IMAGE)|1' $(DOIMAGE_CFG)
+ 	$(DOIMAGETOOL) $(DOIMAGE_FLAGS)
+ 	$(TIM2IMG) $(TIM2IMGARGS) -o $(BUILD_PLAT)/$(FLASH_IMAGE)
+ 	@mv -t $(BUILD_PLAT) $(TIM_IMAGE) $(DOIMAGE_CFG)
+diff --git a/tools/wtp/untrusted/img-1.txt b/tools/wtp/untrusted/img-1.txt
+index df6c123..9851972 100644
+--- a/tools/wtp/untrusted/img-1.txt
++++ b/tools/wtp/untrusted/img-1.txt
+@@ -1,8 +1,8 @@
+-Image ID:                       0x4F424d49		; OBMI (SPL) 64K code + 16K data
+-Next Image ID:                  0x57544d49		; WTMI next
+-Flash Entry Address:            0x00004000		; OBMI flash addr
+-Load Address:                   0x61000000		; OBMI RAM addr
++Image ID:                       0x57544d49		; WTMI
++Next Image ID:                  0x4F424d49		; OBMI next
++Flash Entry Address:            0x00004000		; WTMI flash addr
++Load Address:                   0x1FFF0000		; WTMI RAM addr
+ Image Size To CRC in bytes:     0x00000000
+ Hash Algorithm ID:              32			; SHA-256
+ Partition Number:               0x00000000
+-Image Filename: SPL_IMAGE
++Image Filename: WTMI_IMG
+diff --git a/tools/wtp/untrusted/img-2.txt b/tools/wtp/untrusted/img-2.txt
+index db0ce8b..ad022fc 100644
+--- a/tools/wtp/untrusted/img-2.txt
++++ b/tools/wtp/untrusted/img-2.txt
+@@ -1,8 +1,8 @@
+-Image ID:                       0x57544d49		; WTMI
+-Next Image ID:                  0x4F534C4F		; OSLO next
+-Flash Entry Address:            0x00024000		; WTMI flash addr
+-Load Address:                   0x1FFF0000		; WTMI RAM addr
++Image ID:                       0x4F424d49		; OBMI
++Next Image ID:                  0xFFFFFFFF		; NONE
++Flash Entry Address:            0x00015000		; OBMI flash addr
++Load Address:                   0x64100000		; OBMI RAM addr
+ Image Size To CRC in bytes:     0x00000000
+ Hash Algorithm ID:              32			; SHA-256
+ Partition Number:               0x00000000
+-Image Filename: WTMI_IMG
++Image Filename: BOOT_IMAGE
+diff --git a/tools/wtp/untrusted/img-3.txt b/tools/wtp/untrusted/img-3.txt
+deleted file mode 100644
+index 31dc1b5..0000000
+--- a/tools/wtp/untrusted/img-3.txt
++++ /dev/null
+@@ -1,8 +0,0 @@
+-Image ID:                       0x4F534C4F		; OSLO
+-Next Image ID:                  0xFFFFFFFF		; NONE
+-Flash Entry Address:            0x00026000		; OSLO flash addr
+-Load Address:                   0x64100000		; OSLO RAM addr
+-Image Size To CRC in bytes:     0x00000000
+-Hash Algorithm ID:              32			; SHA-256
+-Partition Number:               0x00000000
+-Image Filename: BOOT_IMAGE
+diff --git a/tools/wtp/untrusted/rsrvd.txt b/tools/wtp/untrusted/rsrvd.txt
+index 735f8b8..97fcb8e 100644
+--- a/tools/wtp/untrusted/rsrvd.txt
++++ b/tools/wtp/untrusted/rsrvd.txt
+@@ -4,7 +4,7 @@
+ 0x0000001C	; Size of CRV2 package in bytes
+ 0x00000002	; Number of cores to release
+ 0x00000000	; Core_ID: 0 - AP0, 1 - AP1, 2 - CM3
+-0x01000000	; PC address for Core_ID above
++0x04100000	; PC address for Core_ID above
+ 0x00000002	; Core_ID: 0 - AP0, 1 - AP1, 2 - CM3
+ 0x1FFF0000	; PC address for Core_ID above
+ 0x5465726D	;Term
+diff --git a/tools/wtp/untrusted/tim.txt b/tools/wtp/untrusted/tim.txt
+index cee7b60..cd16593 100644
+--- a/tools/wtp/untrusted/tim.txt
++++ b/tools/wtp/untrusted/tim.txt
+@@ -1,5 +1,5 @@
+ Image ID:                       0x54494D48		; TIMH
+-Next Image ID:                  0x4F424d49		; OBMI next
++Next Image ID:                  0x57544d49		; WTMI next
+ Flash Entry Address:            0x00000000		; TIM flash addr
+ Load Address:                   0x20006000		; TIM ISRAM addr
+ Image Size To CRC in bytes:     0x00000000
+-- 
+1.9.1
+

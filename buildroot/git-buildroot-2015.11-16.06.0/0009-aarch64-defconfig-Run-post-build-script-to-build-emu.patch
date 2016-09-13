@@ -1,0 +1,30 @@
+From 42924ce2b72c59fa8440f7034aa31e31348471b3 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Wed, 25 Mar 2015 14:53:57 +0200
+Subject: [PATCH 09/66] aarch64: defconfig: Run post build script to build
+ emulation platform image
+
+Change-Id: I21bdc641477968681ae72b4c339faa2b80d98295
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17834
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ configs/mvebu_armv8_tiny_le_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/configs/mvebu_armv8_tiny_le_defconfig b/configs/mvebu_armv8_tiny_le_defconfig
+index 7573a7f..dd650d6 100644
+--- a/configs/mvebu_armv8_tiny_le_defconfig
++++ b/configs/mvebu_armv8_tiny_le_defconfig
+@@ -2,6 +2,7 @@ BR2_aarch64=y
+ BR2_TOOLCHAIN_EXTERNAL=y
+ BR2_TARGET_GENERIC_GETTY_PORT="ttyS0"
+ BR2_ROOTFS_OVERLAY="user_files"
++BR2_ROOTFS_POST_IMAGE_SCRIPT="board/marvell/scripts/create_pxp_ramdisk.sh"
+ BR2_TARGET_ROOTFS_CPIO=y
+ BR2_TARGET_ROOTFS_EXT2=y
+ BR2_TARGET_ROOTFS_EXT2_2r1=y
+-- 
+1.9.1
+

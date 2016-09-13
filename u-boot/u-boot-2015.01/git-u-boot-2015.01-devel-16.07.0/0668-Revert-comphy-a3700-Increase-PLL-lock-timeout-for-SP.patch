@@ -1,0 +1,44 @@
+From 28e0a46531894ac05593fef07d57df5612654ef2 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Sun, 10 Jan 2016 22:01:14 +0800
+Subject: [PATCH 0668/1240] Revert "comphy: a3700: Increase PLL lock timeout
+ for SPL"
+
+	at the beginning, CPU frequency counter reg was not
+	set correctly for SPL, so the counters were increasing
+	very fast, and all the delay is not accurate
+	To make things work then, some delay was made longer than
+	it should be.
+
+	now since freq counter issue has been fixed, and delay is
+	working correctly in SPL, all the delays that were made bigger
+	need to be change back to normal value.
+
+	This reverts commit 436a98d1b56c90a69810cbfd500cc7ca29e6e63f.
+
+Change-Id: Ic570a6cf01e5b6cb5d68fadac085274a66d17e37
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26651
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/phy/comphy_a3700.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/phy/comphy_a3700.h b/drivers/phy/comphy_a3700.h
+index d0200fb..bff4ae6 100644
+--- a/drivers/phy/comphy_a3700.h
++++ b/drivers/phy/comphy_a3700.h
+@@ -22,8 +22,8 @@
+ #include <asm/arch-mvebu/comphy_hpipe.h>
+ 
+ #define DEFAULT_REFCLK_MHZ		25
+-#define PLL_SET_DELAY_US		1000
+-#define PLL_LOCK_TIMEOUT		2000
++#define PLL_SET_DELAY_US		600
++#define PLL_LOCK_TIMEOUT		1000
+ #define POLL_16B_REG			1
+ #define POLL_32B_REG			0
+ 
+-- 
+1.9.1
+

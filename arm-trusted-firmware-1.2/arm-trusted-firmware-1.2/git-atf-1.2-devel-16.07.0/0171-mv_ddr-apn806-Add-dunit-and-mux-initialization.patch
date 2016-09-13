@@ -1,0 +1,162 @@
+From 93f0f9bd2fbb2c42f581ab670a4a4808612b6bb6 Mon Sep 17 00:00:00 2001
+From: Ofir Fedida <ofedida@marvell.com>
+Date: Mon, 23 May 2016 12:25:39 +0300
+Subject: [PATCH 171/239] mv_ddr: apn806: Add dunit and mux initialization
+
+add mux setup and pre silicon init and pre soc init
+configurations.
+
+Change-Id: I65cc8c7fe49226b7fd75769efaa4dcb8691fc4da
+Signed-off-by: Ofir Fedida <ofedida@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29873
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c | 32 +++++++++++++++++----------
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h | 30 +++++++++++++++----------
+ 2 files changed, 38 insertions(+), 24 deletions(-)
+
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+index 5debee7..144b7ca 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+@@ -181,7 +181,7 @@ static int mv_ddr_tip_freq_config_get(u8 dev_num, enum hws_ddr_freq freq,
+ static int ddr3_tip_apn806_if_read(u8 dev_num, enum hws_access_type interface_access,
+ 			  u32 if_id, u32 reg_addr, u32 *data, u32 mask)
+ {
+-	reg_addr += TIP_BASE_ADDRESS;
++	reg_addr += DUNIT_BASE_ADDR;
+ 	*data = reg_read(reg_addr) & mask;
+ 
+ 	return MV_OK;
+@@ -207,7 +207,7 @@ static int ddr3_tip_apn806_if_write(u8 dev_num, enum hws_access_type interface_a
+ 		data_value = (ui_data_read & (~mask)) | (data_value & mask);
+ 	}
+ 
+-	reg_addr += TIP_BASE_ADDRESS;
++	reg_addr += DUNIT_BASE_ADDR;
+ 
+ 	reg_write(reg_addr, data_value);
+ 
+@@ -443,9 +443,9 @@ static int ddr3_tip_apn806_select_ddr_controller(u8 dev_num, int enable)
+ 	reg = reg_read(CS_ENABLE_REG);
+ 
+ 	if (enable)
+-		reg |= (1 << 6);
++		reg |= (1 << TUNING_ACTIVE_SEL_OFFS);
+ 	else
+-		reg &= ~(1 << 6);
++		reg &= ~(1 << TUNING_ACTIVE_SEL_OFFS);
+ 
+ 	reg_write(CS_ENABLE_REG, reg);
+ 
+@@ -591,7 +591,6 @@ int ddr3_silicon_pre_init(void)
+ 	ddr3_tip_init_apn806_silicon(dev_num, board_id);
+ 
+ 	init_done = 1;
+-
+ 	return MV_OK;
+ }
+ 
+@@ -607,10 +606,6 @@ int ddr3_silicon_post_init(void)
+ 
+ int mv_ddr_pre_training_soc_config(const char *ddr_type)
+ {
+-#if 0 /* FIXME */
+-	writel_clrset(DSS_CR0, DDR4_ON_BOARD << MUXING_MODE_OFFSET, MUXING_MODE_MASK);
+-#endif
+-
+ 	return MV_OK;
+ }
+ 
+@@ -630,6 +625,19 @@ u32 ddr3_tip_get_init_freq(void)
+ 
+ void mv_ddr_mc_config(void)
+ {
++	/* Memory controller initializations */
++	struct init_cntr_param init_param;
++	int status;
++
++	init_param.do_mrs_phy = 1;
++	init_param.is_ctrl64_bit = 0;
++	init_param.init_phy = 1;
++	init_param.msys_init = 1;
++
++	status = hws_ddr3_tip_init_controller(0, &init_param);
++	if (MV_OK != status)
++		printf("mv_ddr: mc init failed: err code 0x%x\n", status);
++
+ 	/* TODO: Add MC MUX setting */
+ 
+ 	/* TODO: Add McKinley6 init function */
+@@ -655,7 +663,7 @@ static void mk6_mac_init(void)
+ 	reg_write(0x841100, 0x80000000);
+ 
+ 	for (; mac_regs->offset != -1 ; mac_regs++) {
+-		reg_write(MK6_BASE_ADDRESS + mac_regs->offset, mac_regs->value);
++		reg_write(MC6_BASE_ADDR + mac_regs->offset, mac_regs->value);
+ 	}
+ }
+ #endif
+@@ -714,7 +722,7 @@ static void mk6_phy_init(void)
+ 	uint32_t reg, cs_mask;
+ 
+ 	for (; phy_regs->offset != -1 ; phy_regs++) {
+-		reg_write(MK6_BASE_ADDRESS + phy_regs->offset, phy_regs->value);
++		reg_write(MC6_BASE_ADDR + phy_regs->offset, phy_regs->value);
+ 	}
+ 
+ 	/* Trigger DDR init for Channel 0, all Chip-Selects */
+@@ -723,7 +731,7 @@ static void mk6_phy_init(void)
+ 	cs_mask = 0x1;
+ 
+ 	reg |= CMD_CS_MASK(cs_mask);
+-	reg_write(MK6_BASE_ADDRESS + MCK6_USER_COMMAND_0_REG, reg);
++	reg_write(MC6_BASE_ADDR + MCK6_USER_COMMAND_0_REG, reg);
+ }
+ #endif
+ 
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
+index 3e22088..c12a0d7 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
+@@ -107,18 +107,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+ #define MEM_TO_MC6_FREQ_RATIO		2
+ 
+-#define DSS_CR0				0x6f0100/*TODO - put this register in h file of ATF*/
+-#define MUXING_MODE_OFFSET		17
+-#define MUXING_MODE_MASK		0x7
+-#define LPDDR4_64_DIMM			0x0
+-#define LPDDR4_32_BRD			0x1
+-#define DDR3_DIMM			0x3
+-#define DDR4_DIMM			0x4
+-#define DDR3_ON_BOARD			0x5
+-#define DDR4_ON_BOARD			0x6
+-
+-#define TIP_BASE_ADDRESS		0x10000
+-#define MK6_BASE_ADDRESS		0x20000
++#define DSS_CR0_REG_ADDR		0x6f0100	/* TODO: put this register in ATF h file */
++#define IOMUX_SEL_OFFS			17
++#define IOMUX_SEL_MASK			0x7
++#define CONF_DCLK_CG_BYPASS_OFFS	1
++#define CONF_DCLK_CG_BYPASS_MASK	0x1
++#define CONF_DCLK_REG_CG_BYPASS_OFFS	0x2
++#define CONF_DCLK_REG_CG_BYPASS_MASK	0x1
++enum{
++	DSS_LPDDR4_64_DIMM = 0x0,
++	DSS_LPDDR4_32_BRD = 0x1,
++	DSS_DDR3_DIMM = 0x3,
++	DSS_DDR4_DIMM = 0x4,
++	DSS_DDR3_ON_BOARD = 0x5,
++	DSS_DDR4_ON_BOARD = 0x6
++};
++
++#define DUNIT_BASE_ADDR		0x10000
++#define MC6_BASE_ADDR		0x20000
+ 
+ #define SAR_REG_ADDR			0x6f4400
+ #define RST2_CLOCK_FREQ_MODE_OFFS	0
+-- 
+1.9.1
+

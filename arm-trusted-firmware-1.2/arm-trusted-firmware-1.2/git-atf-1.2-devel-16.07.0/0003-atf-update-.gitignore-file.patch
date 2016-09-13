@@ -1,0 +1,33 @@
+From b02a61cae97859aeedc32aa08075e64b5678266e Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Tue, 2 Feb 2016 12:34:27 +0200
+Subject: [PATCH 003/239] atf: update .gitignore file
+
+Change-Id: Ibd3de71a6a52b85894e2bd1ca9d6cee3df13623a
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27117
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ .gitignore | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/.gitignore b/.gitignore
+index cc5cbfb..bafa877 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -2,8 +2,11 @@
+ cscope.*
+ *.swp
+ *.patch
++*.elf
+ .project
+ .cproject
++.hx
++tags
+ 
+ # Ignore build directory
+ build/
+-- 
+1.9.1
+

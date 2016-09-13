@@ -1,0 +1,138 @@
+From 4b8dc2c82dcd6f51514671d7705f6fd069828e55 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Tue, 27 Jan 2015 10:17:45 +0200
+Subject: [PATCH 0105/1240] cmd: mvebu: add mvebu commands menu
+
+Change-Id: Ifbc39561e78b979ff2f65c1e06b992331a866232
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/16338
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ common/Kconfig                 |  2 ++
+ common/mvebu/Kconfig           | 37 +++++++++++++++++++++++++++++++++++++
+ common/mvebu/Makefile          |  2 +-
+ common/mvebu/cmd_misc.c        |  3 ---
+ include/configs/mvebu-common.h | 11 -----------
+ 5 files changed, 40 insertions(+), 15 deletions(-)
+ create mode 100644 common/mvebu/Kconfig
+
+diff --git a/common/Kconfig b/common/Kconfig
+index fd84fa0..d300d8d 100644
+--- a/common/Kconfig
++++ b/common/Kconfig
+@@ -313,4 +313,6 @@ config CMD_SETGETDCR
+ 
+ endmenu
+ 
++source "common/mvebu/Kconfig"
++
+ endmenu
+diff --git a/common/mvebu/Kconfig b/common/mvebu/Kconfig
+new file mode 100644
+index 0000000..a089c53
+--- /dev/null
++++ b/common/mvebu/Kconfig
+@@ -0,0 +1,37 @@
++menu "MVEBU commands"
++
++config CMD_MVEBU_MISC
++	bool "map, remap, units, ir"
++	default y
++	help
++	  map   - Display address decode windows
++	  remap - Remap the output address of a window
++	  units	- Display and modify active units
++	  ir    - Reading and changing internal register values
++
++config CMD_MVEBU_SAR
++	bool "SatR"
++	default n
++	help
++	  SatR - Modify SOC's sample at reset (SAR) values
++
++config CMD_MVEBU_CONFIG
++	bool "config"
++	default n
++	help
++	  config - Modify SOC and board configuration
++
++config CMD_MVEBU_MPP
++	bool "mpp, mppbus"
++	default y
++	help
++	  mpp - Display or modify MPP values
++	  mppbus - Display or modify MPP bus info
++
++config CMD_MVEBU_BUBT
++	bool "bubt"
++	default y
++	help
++	  bubt - Burn a u-boot image to flash
++
++endmenu
+diff --git a/common/mvebu/Makefile b/common/mvebu/Makefile
+index 5c9719d..cc4ea2e 100644
+--- a/common/mvebu/Makefile
++++ b/common/mvebu/Makefile
+@@ -17,7 +17,7 @@
+ # *****************************************************************************
+ #
+ 
+-obj-y += cmd_misc.o
++obj-$(CONFIG_CMD_MVEBU_MISC) += cmd_misc.o
+ obj-$(CONFIG_CMD_MVEBU_SAR) += cmd_sar.o
+ obj-$(CONFIG_CMD_MVEBU_CONFIG) += cmd_config.o
+ obj-$(CONFIG_CMD_MVEBU_MPP) += cmd_mpp.o
+diff --git a/common/mvebu/cmd_misc.c b/common/mvebu/cmd_misc.c
+index 3bbbbee..a3d274f 100644
+--- a/common/mvebu/cmd_misc.c
++++ b/common/mvebu/cmd_misc.c
+@@ -98,8 +98,6 @@ U_BOOT_CMD(
+ 	"\tlist - Display current active units\n"
+ );
+ 
+-
+-#ifdef CONFIG_CMD_MVEBU_IR
+ int ir_cmd(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+ {
+ 	u32 offset = 0x0;
+@@ -185,5 +183,4 @@ U_BOOT_CMD(
+ 	"\tor by writing 0 or 1 in the required place.\n"
+ 	"\tPressing enter without any value keeps the value unchanged.\n"
+ );
+-#endif
+ 
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 1d2eaf4..c360980 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -133,13 +133,6 @@
+ #define CONFIG_CMD_BOOTI
+ #endif
+ 
+-/* MVEBU Generic commands */
+-#define CONFIG_CMD_MVEBU_MAP
+-#define CONFIG_CMD_MVEBU_MPP
+-#define CONFIG_CMD_MVEBU_IR
+-#define CONFIG_CMD_MVEBU_BUBT
+-
+-
+ /* Flash env setup */
+ #if !defined(MV_INCLUDE_NOR) && !defined(CONFIG_MVEBU_NAND_BOOT) && !defined(CONFIG_MVEBU_SPI_BOOT)
+ 	#undef CONFIG_CMD_FLASH
+@@ -214,10 +207,6 @@
+ 
+ /* I2C */
+ #ifdef CONFIG_MVEBU_I2C
+-	#ifdef CONFIG_MVEBU_DEVEL_BOARD
+-		#define CONFIG_CMD_MVEBU_SAR
+-		#define CONFIG_CMD_MVEBU_CONFIG
+-	#endif
+ 	#define CONFIG_SYS_I2C
+ 	#define CONFIG_CMD_I2C
+ 	#define CONFIG_I2C_MULTI_BUS
+-- 
+1.9.1
+

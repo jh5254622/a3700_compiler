@@ -1,0 +1,205 @@
+From a8b1b0a1bac8b1d1ce4b990513c3a37f7d5cb072 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 12 Jul 2015 14:20:51 +0300
+Subject: [PATCH 0247/1240] sar: removed old sar code
+
+Change-Id: I0be17d8e87acec54af20033f6bc4821427890890
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/21203
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ board/mvebu/armada38x/db-88f6820-info.c  |  8 --------
+ board/mvebu/armada38x/rd-88f6820-info.c  |  9 ---------
+ board/mvebu/armada8k/db-8210-info.c      |  8 --------
+ board/mvebu/armada8k/rd-8210-info.c      |  9 ---------
+ board/mvebu/armadalp/db0-armadalp-info.c |  8 --------
+ board/mvebu/armadalp/db1-armadalp-info.c |  8 --------
+ board/mvebu/common/board.h               |  3 ---
+ board/mvebu/common/devel-board.c         | 10 ++--------
+ 8 files changed, 2 insertions(+), 61 deletions(-)
+
+diff --git a/board/mvebu/armada38x/db-88f6820-info.c b/board/mvebu/armada38x/db-88f6820-info.c
+index d4da8aa..64f4a15 100644
+--- a/board/mvebu/armada38x/db-88f6820-info.c
++++ b/board/mvebu/armada38x/db-88f6820-info.c
+@@ -21,13 +21,6 @@
+ #include <asm/arch-mvebu/mpp.h>
+ #include "board-info.h"
+ 
+-struct mvebu_board_config db_a38x_config = {
+-	.sar_cnt = 2,
+-	.active_sar = {BOOT_SRC_SAR, CPUS_NUM_SAR},
+-	.cfg_cnt = 2,
+-	.active_cfg = {BOARD_ID_CFG, SERDES_0_CFG}
+-};
+-
+ int board_get_id(void)
+ {
+ 	return ARMADA_38X_DB_ID;
+@@ -51,6 +44,5 @@ struct mvebu_board_info a38x_db_info = {
+ 	.id = ARMADA_38X_DB_ID,
+ 	.configure_mpp = &db_a38x_configure_mpp,
+ 	.configurable = 1,
+-	.config_data = &db_a38x_config,
+ };
+ 
+diff --git a/board/mvebu/armada38x/rd-88f6820-info.c b/board/mvebu/armada38x/rd-88f6820-info.c
+index 2a03975..a068313 100644
+--- a/board/mvebu/armada38x/rd-88f6820-info.c
++++ b/board/mvebu/armada38x/rd-88f6820-info.c
+@@ -21,14 +21,6 @@
+ #include <asm/arch-mvebu/mpp.h>
+ #include "board-info.h"
+ 
+-
+-struct mvebu_board_config rd_a38x_config = {
+-	.sar_cnt = 1,
+-	.active_sar = {CPUS_NUM_SAR},
+-	.cfg_cnt = 1,
+-	.active_cfg = {BOARD_ID_CFG}
+-};
+-
+ int rd_a38x_configure_mpp(void)
+ {
+ #ifdef CONFIG_MVEBU_MPP_BUS
+@@ -44,5 +36,4 @@ struct mvebu_board_info a38x_rd_info = {
+ 	.id = ARMADA_38X_RD_ID,
+ 	.configure_mpp = &rd_a38x_configure_mpp,
+ 	.configurable = 1,
+-	.config_data = &rd_a38x_config,
+ };
+diff --git a/board/mvebu/armada8k/db-8210-info.c b/board/mvebu/armada8k/db-8210-info.c
+index 2c38d8d..783e08a 100644
+--- a/board/mvebu/armada8k/db-8210-info.c
++++ b/board/mvebu/armada8k/db-8210-info.c
+@@ -20,17 +20,9 @@
+ #include <linux/compiler.h>
+ #include "board-info.h"
+ 
+-struct mvebu_board_config db_a8021_config = {
+-	.sar_cnt = 2,
+-	.active_sar = {BOOT_SRC_SAR, CPUS_NUM_SAR},
+-	.cfg_cnt = 2,
+-	.active_cfg = {BOARD_ID_CFG, SERDES_0_CFG}
+-};
+-
+ struct mvebu_board_info a8021_db_info = {
+ 	.name = "DB-MV8021",
+ 	.id = ARMADA_8021_DB_ID,
+ 	.configurable = 1,
+-	.config_data = &db_a8021_config,
+ };
+ 
+diff --git a/board/mvebu/armada8k/rd-8210-info.c b/board/mvebu/armada8k/rd-8210-info.c
+index cd5b87e..bcd8a43 100644
+--- a/board/mvebu/armada8k/rd-8210-info.c
++++ b/board/mvebu/armada8k/rd-8210-info.c
+@@ -20,18 +20,9 @@
+ #include <linux/compiler.h>
+ #include "board-info.h"
+ 
+-
+-struct mvebu_board_config rd_a8021_config = {
+-	.sar_cnt = 1,
+-	.active_sar = {CPUS_NUM_SAR},
+-	.cfg_cnt = 1,
+-	.active_cfg = {BOARD_ID_CFG}
+-};
+-
+ struct mvebu_board_info a8021_rd_info = {
+ 	.name = "RD-MV8021",
+ 	.id = ARMADA_8021_RD_ID,
+ 	.configurable = 1,
+-	.config_data = &rd_a8021_config,
+ };
+ 
+diff --git a/board/mvebu/armadalp/db0-armadalp-info.c b/board/mvebu/armadalp/db0-armadalp-info.c
+index 873ed77..60691c5 100644
+--- a/board/mvebu/armadalp/db0-armadalp-info.c
++++ b/board/mvebu/armadalp/db0-armadalp-info.c
+@@ -20,17 +20,9 @@
+ #include <linux/compiler.h>
+ #include "board-info.h"
+ 
+-struct mvebu_board_config db0_armadalp_config = {
+-	.sar_cnt = 2,
+-	.active_sar = {BOOT_SRC_SAR, CPUS_NUM_SAR},
+-	.cfg_cnt = 2,
+-	.active_cfg = {BOARD_ID_CFG, SERDES_0_CFG}
+-};
+-
+ struct mvebu_board_info db0_armadalp_info = {
+ 	.name = "DB0-MV-ARMADALP",
+ 	.id = ARMADA_LP_DB0_ID,
+ 	.configurable = 1,
+-	.config_data = &db0_armadalp_config,
+ };
+ 
+diff --git a/board/mvebu/armadalp/db1-armadalp-info.c b/board/mvebu/armadalp/db1-armadalp-info.c
+index 633a282..d81a93c 100644
+--- a/board/mvebu/armadalp/db1-armadalp-info.c
++++ b/board/mvebu/armadalp/db1-armadalp-info.c
+@@ -20,17 +20,9 @@
+ #include <linux/compiler.h>
+ #include "board-info.h"
+ 
+-struct mvebu_board_config db1_armadalp_config = {
+-	.sar_cnt = 2,
+-	.active_sar = {CPUS_NUM_SAR},
+-	.cfg_cnt = 2,
+-	.active_cfg = {BOARD_ID_CFG}
+-};
+-
+ struct mvebu_board_info db1_armadalp_info = {
+ 	.name = "DB1-MV-ARMADALP",
+ 	.id = ARMADA_LP_DB1_ID,
+ 	.configurable = 1,
+-	.config_data = &db1_armadalp_config,
+ };
+ 
+diff --git a/board/mvebu/common/board.h b/board/mvebu/common/board.h
+index d8d8fc4..26a4e41 100644
+--- a/board/mvebu/common/board.h
++++ b/board/mvebu/common/board.h
+@@ -36,9 +36,6 @@
+  * sar_override - table that overrides the default sar table
+  */
+ struct mvebu_board_config {
+-	int sar_cnt;
+-	enum sar_variables active_sar[MAX_SAR];
+-	struct sar_var *sar_override;
+ 	int cfg_cnt;
+ 	enum cfg_variables active_cfg[MAX_SAR];
+ };
+diff --git a/board/mvebu/common/devel-board.c b/board/mvebu/common/devel-board.c
+index 81c7bad..973200c 100644
+--- a/board/mvebu/common/devel-board.c
++++ b/board/mvebu/common/devel-board.c
+@@ -28,21 +28,15 @@
+ int mvebu_devel_board_init(struct mvebu_board_family *brd_fam)
+ {
+ 	struct mvebu_board_info *brd = brd_fam->curr_board;
+-	int cfg_id, idx;
++	int cfg_id;
+ 
+ 	/* Update SAR and CFG for board */
+ 	if (brd->configurable) {
+-		struct mvebu_board_config *brd_cfg = brd->config_data;
+-
+ 		/* Deactivate all CFG entries */
+ 		for (cfg_id = 0; cfg_id < MAX_CFG; cfg_id++)
+ 			brd_fam->cfg->cfg_lookup[cfg_id].active = 0;
+-		/* Activate board entries */
+-		for (idx = 0; idx < brd_cfg->sar_cnt; idx++)
+-			brd_fam->cfg->cfg_lookup[brd_cfg->active_sar[idx]].active = 1;
+-		/* Initialize sample at reset structs for the SatR command */
+-		sar_init();
+ 	}
++	sar_init();
+ 
+ 	/* Update MPP configurations */
+ 	if (brd->configure_mpp)
+-- 
+1.9.1
+

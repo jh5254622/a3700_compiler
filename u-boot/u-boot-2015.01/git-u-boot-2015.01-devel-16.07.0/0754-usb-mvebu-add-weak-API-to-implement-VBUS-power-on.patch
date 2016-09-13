@@ -1,0 +1,88 @@
+From b0ad3ce42a3aa30ac490b5ebe7d611f40031edfd Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Wed, 27 Jan 2016 17:08:31 +0200
+Subject: [PATCH 0754/1240] usb: mvebu: add weak API to implement VBUS power on
+
+USB VBUS signal must be enabled prior to USB enumeration.
+Added empty API for enabling USB VBUS signal on board, which
+is triggered as a part of mvebu_soc_init().
+
+This API must will imeplented per SoC according to specific board design.
+
+Change-Id: I28fdac16f6c526ffd6a6edf957df9a167cc1c798
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27072
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/soc.c      | 7 +++++++
+ arch/arm/cpu/armv8/armadalp/soc-init.c | 7 +++++++
+ arch/arm/cpu/mvebu-common/soc-init.c   | 5 +++++
+ arch/arm/include/asm/arch-mvebu/soc.h  | 3 +++
+ 4 files changed, 22 insertions(+)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/soc.c b/arch/arm/cpu/armv8/armada8k/soc.c
+index 45d7cda..7b996f8 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc.c
++++ b/arch/arm/cpu/armv8/armada8k/soc.c
+@@ -128,3 +128,10 @@ void print_soc_specific_info(void)
+ 	printf("\tLLC Disabled\n");
+ #endif
+ }
++
++#ifdef CONFIG_USB_XHCI
++void board_usb_vbus_set(void)
++{
++	/* TBD - implement VBUS cycle for here*/
++}
++#endif
+diff --git a/arch/arm/cpu/armv8/armadalp/soc-init.c b/arch/arm/cpu/armv8/armadalp/soc-init.c
+index 3646565..c5a9876 100644
+--- a/arch/arm/cpu/armv8/armadalp/soc-init.c
++++ b/arch/arm/cpu/armv8/armadalp/soc-init.c
+@@ -184,4 +184,11 @@ void board_ahci_power_on(void)
+ 		error("failed to set IO expander via I2C\n");
+ #endif /* CONFIG_DEVEL_BOARD */
+ }
++#endif /* CONFIG_SCSI_AHCI_PLAT */
++
++#ifdef CONFIG_USB_XHCI
++void board_usb_vbus_set(void)
++{
++	/* TBD - implement VBUS cycle for here*/
++}
+ #endif
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index cb671cf..27d0dd8 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -114,6 +114,11 @@ int mvebu_soc_init()
+ 
+ 	mvebu_thermal_sensor_probe();
+ 
++#ifdef CONFIG_USB_XHCI
++	/* Power on USB VBUS power */
++	board_usb_vbus_set();
++#endif
++
+ 	/* Soc specific init */
+ 	ret = soc_late_init();
+ 	if (ret)
+diff --git a/arch/arm/include/asm/arch-mvebu/soc.h b/arch/arm/include/asm/arch-mvebu/soc.h
+index fc89410..631529c 100644
+--- a/arch/arm/include/asm/arch-mvebu/soc.h
++++ b/arch/arm/include/asm/arch-mvebu/soc.h
+@@ -31,6 +31,9 @@ int soc_get_id(void);
+ void soc_init(void);
+ 
+ /* Common SOC API */
++#ifdef CONFIG_USB_XHCI
++void board_usb_vbus_set(void);
++#endif
+ int mvebu_soc_init(void);
+ void mvebu_print_soc_info(void);
+ 
+-- 
+1.9.1
+

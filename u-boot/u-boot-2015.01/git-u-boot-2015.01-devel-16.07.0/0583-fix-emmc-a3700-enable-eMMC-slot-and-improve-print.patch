@@ -1,0 +1,87 @@
+From 9f45c0700856ff71d7cee7c91dfd40235b675b9a Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Sat, 12 Dec 2015 16:50:08 +0800
+Subject: [PATCH 0583/1240] fix: emmc: a3700: enable eMMC slot and improve
+ print
+
+issue: the eMMC slot will be disabled after card detection
+fix: disable auto clock gating and enable the eMMC slot after
+      card detection.
+improve: change error to debug when fail to send SD/eMMC cmd
+      and data, since it is expected SD only support part of the
+      command and can not send the data.
+      Also change debug to print when detect card or not.
+
+Change-Id: I5b6c6f9c883fde9723c20a280d1bc1fc551a80ed
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25799
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+---
+ drivers/mmc/xenon_mmc.c | 21 ++++++++++-----------
+ 1 file changed, 10 insertions(+), 11 deletions(-)
+
+diff --git a/drivers/mmc/xenon_mmc.c b/drivers/mmc/xenon_mmc.c
+index 5b5cb53..1e45b61 100644
+--- a/drivers/mmc/xenon_mmc.c
++++ b/drivers/mmc/xenon_mmc.c
+@@ -374,7 +374,7 @@ static int xenon_mmc_transfer_data(struct xenon_mmc_cfg *mmc_cfg, struct mmc_dat
+ 	do {
+ 		stat = xenon_mmc_readl(mmc_cfg, SDHCI_INT_STATUS);
+ 		if (stat & SDHCI_INT_ERROR) {
+-			error("Error detected in status(0x%X)\n", stat);
++			debug("Error detected in status(0x%X)\n", stat);
+ 			return -1;
+ 		}
+ 		if (stat & rdy) {
+@@ -517,7 +517,7 @@ static int xenon_mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
+ 	do {
+ 		stat = xenon_mmc_readl(mmc_cfg, SDHCI_INT_STATUS);
+ 		if (stat & SDHCI_INT_ERROR) {
+-			error("SDHCI_INT_ERROR stat(%x)\n", stat);
++			debug("SDHCI_INT_ERROR stat(%x)\n", stat);
+ 			break;
+ 		}
+ 		udelay(100);
+@@ -711,7 +711,6 @@ static int xenon_mmc_init(struct mmc *mmc)
+ 	u32 status;
+ 	u8  var;
+ 	u32 timeout = 1000; /* Wait max 100ms */
+-
+ 	struct xenon_mmc_cfg *mmc_cfg = mmc->priv;
+ 
+ 	debug_enter();
+@@ -729,12 +728,6 @@ static int xenon_mmc_init(struct mmc *mmc)
+ 		}
+ 	}
+ 
+-	/* Disable auto clock gating during init */
+-	xenon_mmc_set_acg(mmc_cfg, false);
+-
+-	/* Enable slot */
+-	xenon_mmc_set_slot(mmc_cfg, XENON_MMC_SLOT_ID_HYPERION, true);
+-
+ 	/* Detect card */
+ 	if (mmc_cfg->quirks & SDHCI_QUIRK_NO_CD) {
+ 		var = xenon_mmc_readb(mmc_cfg, SDHCI_HOST_CONTROL);
+@@ -754,9 +747,15 @@ static int xenon_mmc_init(struct mmc *mmc)
+ 	}
+ 
+ 	if (timeout)
+-		debug("SD/eMMC card is detected\n");
++		printf("SD/eMMC card is detected\n");
+ 	else
+-		debug("NO SD/eMMC card detected\n");
++		printf("NO SD/eMMC card detected\n");
++
++	/* Disable auto clock gating during init */
++	xenon_mmc_set_acg(mmc_cfg, false);
++
++	/* Enable slot */
++	xenon_mmc_set_slot(mmc_cfg, XENON_MMC_SLOT_ID_HYPERION, true);
+ 
+ 	/*
+ 	 * Set default power
+-- 
+1.9.1
+

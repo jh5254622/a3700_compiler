@@ -1,0 +1,36 @@
+From 6e11d9564becf2f7d3b4e8a7412ddb85e8d8d751 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 7 Feb 2016 10:33:55 +0200
+Subject: [PATCH 0823/1240] config: disable LLC for armada-7040-rz
+
+The LLC is disabled to enable working with the AHCI unit.
+Due to HW bug, the AHCI unit cannot work in coherent mode so it
+must be operated in SW coherency mode requiring cache maintainance.
+Since in AP-806-Z1 the LLC doesn't respond to cache maintianance
+commands but must be maintained manually, we disable it to allow
+working with the AHCI unit in SW coherency mode
+
+Change-Id: Icab568fcf35b2fa63de69d677d9497cad6efda76
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27263
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ configs/mvebu_armada70x0_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/configs/mvebu_armada70x0_defconfig b/configs/mvebu_armada70x0_defconfig
+index 9b09239..aa75d02 100644
+--- a/configs/mvebu_armada70x0_defconfig
++++ b/configs/mvebu_armada70x0_defconfig
+@@ -2,6 +2,7 @@ CONFIG_SPL=y
+ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_ARMADA_8K=y
++# CONFIG_MVEBU_LLC_ENABLE is not set
+ CONFIG_MVEBU_CCU=y
+ CONFIG_MVEBU_IOB=y
+ CONFIG_MVEBU_RFU=y
+-- 
+1.9.1
+

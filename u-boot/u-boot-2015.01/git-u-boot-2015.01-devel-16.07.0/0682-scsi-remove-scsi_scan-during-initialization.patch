@@ -1,0 +1,51 @@
+From 7d7d23ab34b2573d8569783e3f57490c37fe4145 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Wed, 13 Jan 2016 23:44:10 +0800
+Subject: [PATCH 0682/1240] scsi: remove scsi_scan during initialization
+
+- If start scsi_scan during u-boot initialization, the
+  scan normally will fail since the HDD/SDD disks are
+  still not ready when the scan happen.
+- This patch remove the scsi_scan during init from two places.
+- The first scsi_scan in soc-init.c was added by mistake in previous
+  patch, the second one in cmd_scsi.c was left there originally.
+- The scan will be manually triggered later by scsi_reset
+  or scsi_scan commands.
+
+Change-Id: I94ddb8c991386f5e30fc8349428bd3138dabded1
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26752
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/soc-init.c | 1 -
+ common/cmd_scsi.c                    | 1 -
+ 2 files changed, 2 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index 666f1e4..3155fc1 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -49,7 +49,6 @@ void board_ahci_init(void)
+ 	/* use mode 1 for scsi_scan, so scsi device info will
+ 	  * be reported (print out) after scan the scsi bus.
+ 	 */
+-	scsi_scan(1);
+ }
+ #endif
+ 
+diff --git a/common/cmd_scsi.c b/common/cmd_scsi.c
+index 2530c28..9f6fabb 100644
+--- a/common/cmd_scsi.c
++++ b/common/cmd_scsi.c
+@@ -221,7 +221,6 @@ void scsi_init(void)
+ 	}
+ #endif
+ 	scsi_low_level_init(busdevfunc);
+-	scsi_scan(1);
+ }
+ #endif
+ 
+-- 
+1.9.1
+

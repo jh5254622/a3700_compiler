@@ -1,0 +1,151 @@
+From 22b0fee0761f3e5b2571e600c9e6e0a7608d4037 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Sun, 31 Jan 2016 13:29:42 +0200
+Subject: [PATCH 0781/1240] clock: a3700: Enable AVS for higher CPU clocks
+
+- Add AVS enable for CPU clocked 600MHz and higher
+- Implement this feature according to JIRA SYSTEMSW-2198:
+  Set LOW_VDD_LIMIT (register RD0011500h bits [27:22])
+  Set HIGH_VDD_LIMIT(register RD0011500h bits [21:16])
+  to the same VDD value calculated by formula
+  (1.05/0.9)*(640 + FieldValue*10)
+  In our case the VDD value for CPU >= 800MHz is 1150 mV
+  and for CPU == 600MHz is 1100 mV.
+  Release AVS reset AVS_SOFT_RST (RD0011500h bit[31])
+  Enable AVS operation AVS_ENABLE (RD0011500h bit[30])
+- Remove dummy write from TIM DDR initialization procedure
+  and enable AVS in TIM. The VDD is set here for 1150mV
+  as a start point and will be modified during clock
+  setup phase if needed.
+
+Change-Id: I041c67a945d6078c18a0ce2bbed100aebbbe33e3
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27080
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ arch/arm/cpu/armv8/armadalp/mvebu_clock.c      | 24 ++++++++++++++++++++++++
+ arch/arm/include/asm/arch-armadalp/clock.h     | 17 +++++++++++++++++
+ arch/arm/include/asm/arch-armadalp/regs-base.h |  3 +++
+ tools/wtp/u-boot-ntim.txt                      |  5 ++++-
+ tools/wtp/u-boot-tim.txt                       |  5 ++++-
+ 5 files changed, 52 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armadalp/mvebu_clock.c b/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
+index 316e517..dd9cac6 100644
+--- a/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
++++ b/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
+@@ -474,6 +474,7 @@ int init_clock(void)
+ 	int node, count, idx, ret;
+ 	const void *blob = gd->fdt_blob;
+ 	int tbl_sz = sizeof(a3700_clock_configs)/sizeof(a3700_clock_configs[0]);
++	u32 vdd_val;
+ 
+ 	debug_enter();
+ 
+@@ -499,6 +500,29 @@ int init_clock(void)
+ 	if (ret)
+ 		error("Failed to configure system clocks\n");
+ 
++	/* Enable AVS for high CPU clocks */
++	if (a3700_clock_configs[idx].cpu_freq_mhz >= 800)
++		vdd_val = AVS_VDD_VAL(AVS_VDD_800_MHZ_MV);
++	else if (a3700_clock_configs[idx].cpu_freq_mhz == 600)
++		vdd_val = AVS_VDD_VAL(AVS_VDD_600_MHZ_MV);
++	else
++		vdd_val = 0;
++
++	if (vdd_val != 0) {
++		u32 avs_reg = AVS_SOFT_RESET | AVS_SPEED_TARGET_MASK | AVS_SEL_VSENCE0 |
++				(vdd_val << AVS_LOW_VDD_LIMIT_OFFS) |
++				(vdd_val << AVS_HIGH_VDD_LIMIT_OFFS);
++
++		writel(avs_reg, MVEBU_AVS_CTRL_0);
++		avs_reg &= ~AVS_SOFT_RESET;
++		writel(avs_reg, MVEBU_AVS_CTRL_0);
++		avs_reg |= AVS_ENABLE;
++		writel(avs_reg, MVEBU_AVS_CTRL_0);
++		printf("AVS enabled (%d mV)\n",
++			a3700_clock_configs[idx].cpu_freq_mhz == 600 ?
++			AVS_VDD_600_MHZ_MV : AVS_VDD_800_MHZ_MV);
++	}
++
+ 	debug_exit();
+ 	return ret;
+ }
+diff --git a/arch/arm/include/asm/arch-armadalp/clock.h b/arch/arm/include/asm/arch-armadalp/clock.h
+index 03ead95..e68d226 100644
+--- a/arch/arm/include/asm/arch-armadalp/clock.h
++++ b/arch/arm/include/asm/arch-armadalp/clock.h
+@@ -120,6 +120,23 @@
+ /* (GBE0 and GBE1 have reversed logic) */
+ #define SB_ALL_CLK_ENABLE			(BIT19 | BIT20)
+ 
++/* AVS */
++#define MVEBU_AVS_CTRL_0			(MVEBU_AVS_REGS_BASE)
++#define AVS_SOFT_RESET				(BIT31)
++#define AVS_ENABLE				(BIT30)
++#define AVS_SEL_VSENCE0				(BIT28)
++#define AVS_SPEED_TARGET_MASK			(0x0000FFFF)
++#define AVS_HIGH_VDD_LIMIT_OFFS			(16)
++#define AVS_LOW_VDD_LIMIT_OFFS			(22)
++#define AVS_VDD_LIMIT_MASK			(0x3F)
++#define AVS_VDD_MIN				(0x0)	/* 640 mV */
++#define AVS_VDD_MAX				(0x33)	/* 1342 mV */
++
++/* The AVS voltage formula:  AVSmv = (1.05/0.9)*(640 + field_val * 10) */
++#define AVS_VDD_VAL(mv)				((((mv) * 90)/105 - 640)/10)
++#define AVS_VDD_800_MHZ_MV			(1150)	/* mV for CPU >= 800 MHz */
++#define AVS_VDD_600_MHZ_MV			(1100)	/* mV for CPU 600 MHz */
++
+ 
+ enum a3700_clock_src {
+ 	TBG_A,
+diff --git a/arch/arm/include/asm/arch-armadalp/regs-base.h b/arch/arm/include/asm/arch-armadalp/regs-base.h
+index 81ba05d..b001e20 100644
+--- a/arch/arm/include/asm/arch-armadalp/regs-base.h
++++ b/arch/arm/include/asm/arch-armadalp/regs-base.h
+@@ -62,4 +62,7 @@
+ /* AXI DCTRL */
+ #define MVEBU_AXI_DCTRL_REGS_BASE	(MVEBU_REGS_BASE + 0x2000)
+ 
++/* AVS */
++#define MVEBU_AVS_REGS_BASE		(MVEBU_REGS_BASE + 0x11500)
++
+ #endif	/* _REGS_BASE_H_ */
+diff --git a/tools/wtp/u-boot-ntim.txt b/tools/wtp/u-boot-ntim.txt
+index 20ace46..ee6143f 100644
+--- a/tools/wtp/u-boot-ntim.txt
++++ b/tools/wtp/u-boot-ntim.txt
+@@ -152,7 +152,10 @@ WRITE: 0xC0001020 0x40000000
+ WRITE: 0xC0001020 0x80000000
+ WRITE: 0xC0000020 0x11000001
+ WAIT_FOR_BIT_SET: 0xC0000008 0x00000001 0x00001000
+-WRITE: 0x60030000 0x01234567
++; AVS enable
++WRITE: 0xC0011500 0x98A2FFFF	;# Set VDD to 1150mV and soft reset AVS
++WRITE: 0xC0011500 0x18A2FFFF	;# release AVS reset
++WRITE: 0xC0011500 0x58A2FFFF	;# Enable AVS
+ End Instructions:
+ End DDR Initialization:
+ End Extended Reserved Data:
+diff --git a/tools/wtp/u-boot-tim.txt b/tools/wtp/u-boot-tim.txt
+index b2559b0..a741296 100644
+--- a/tools/wtp/u-boot-tim.txt
++++ b/tools/wtp/u-boot-tim.txt
+@@ -775,7 +775,10 @@ WRITE: 0xC0001020 0x40000000
+ WRITE: 0xC0001020 0x80000000
+ WRITE: 0xC0000020 0x11000001
+ WAIT_FOR_BIT_SET: 0xC0000008 0x00000001 0x00001000
+-WRITE: 0x60030000 0x01234567
++; AVS enable
++WRITE: 0xC0011500 0x98A2FFFF	;# Set VDD to 1150mV and soft reset AVS
++WRITE: 0xC0011500 0x18A2FFFF	;# release AVS reset
++WRITE: 0xC0011500 0x58A2FFFF	;# Enable AVS
+ End Instructions:
+ End DDR Initialization:
+ End Extended Reserved Data:
+-- 
+1.9.1
+

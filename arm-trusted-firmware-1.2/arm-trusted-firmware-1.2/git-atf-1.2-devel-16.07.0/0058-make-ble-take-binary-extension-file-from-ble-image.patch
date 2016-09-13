@@ -1,0 +1,56 @@
+From edfd36f041e1e4f6f4b91f650e418104c507c0e3 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 13 Mar 2016 12:41:53 +0200
+Subject: [PATCH 058/239] make: ble: take binary extension file from ble image
+
+In case the environment variable BIN_EXT is defined,
+ATF will use that file instead of ble. This allows
+using legacy or external binary extension like the
+u-boot SPL.
+
+Change-Id: Ifa96f482191a40c58973af7d885583d21003bef6
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28188
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ Makefile | 9 ++-------
+ 1 file changed, 2 insertions(+), 7 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index aaec5f1..2ba8e7d 100644
+--- a/Makefile
++++ b/Makefile
+@@ -407,7 +407,8 @@ DOIMAGE_LIBS_CHECK =
+ DOIMAGE_SEC_FLAGS =
+ endif #MARVELL_SECURE_BOOT
+ 
+-DOIMAGE_FLAGS   += -b $(SPL_IMAGE) $(NAND_DOIMAGE_FLAGS) $(DOIMAGE_SEC_FLAGS)
++BIN_EXT ?= $(BUILD_PLAT)/ble.bin
++DOIMAGE_FLAGS	+= -b $(BIN_EXT) $(NAND_DOIMAGE_FLAGS) $(DOIMAGE_SEC_FLAGS)
+ 
+ endif
+ ################################################################################
+@@ -632,7 +633,6 @@ ${BUILD_PLAT}/${FWU_FIP_NAME}: ${FWU_FIP_DEPS} ${FIPTOOL}
+ 
+ fiptool: ${FIPTOOL}
+ ifeq (${CALL_DOIMAGE}, y)
+-ifneq (${SPL_IMAGE},)
+ ifeq (${PLAT},a3700_z)
+ fip: ${BUILD_PLAT}/${FIP_NAME} ${DOIMAGETOOL}
+ 	$(shell truncate -s %128K ${BUILD_PLAT}/bl1.bin)
+@@ -650,11 +650,6 @@ fip: ${BUILD_PLAT}/${FIP_NAME} ${DOIMAGETOOL}
+ 	${DOIMAGETOOL} ${DOIMAGE_FLAGS} ${BUILD_PLAT}/${BOOT_IMAGE} ${BUILD_PLAT}/${FLASH_IMAGE}
+ endif
+ else
+-fip:
+-	$(error "Platform '${PLAT}' requires SPL_IMAGE. Please set SPL_IMAGE to point to the right file")
+-endif
+-
+-else
+ fip: ${BUILD_PLAT}/${FIP_NAME}
+ endif
+ fwu_fip: ${BUILD_PLAT}/${FWU_FIP_NAME}
+-- 
+1.9.1
+

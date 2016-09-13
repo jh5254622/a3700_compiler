@@ -1,0 +1,76 @@
+From 6f54c98d7a81dd605d5e567bc8a393b29f6a0bb2 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 9 Mar 2016 13:22:50 +0200
+Subject: [PATCH 0939/1240] comphy: move comphy execution from SPL to main
+ u-boot image
+
+Change-Id: If179ffc027d6520d7a1a30c9cd378ec74aca45de
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28141
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/soc.c | 5 +++++
+ arch/arm/cpu/armv8/armada8k/spl.c | 9 +--------
+ 2 files changed, 6 insertions(+), 8 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/soc.c b/arch/arm/cpu/armv8/armada8k/soc.c
+index 6a0e28e..85b7c55 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc.c
++++ b/arch/arm/cpu/armv8/armada8k/soc.c
+@@ -21,6 +21,7 @@
+ #include <common.h>
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/soc.h>
++#include <asm/arch-mvebu/comphy.h>
+ #include <asm/arch-mvebu/system_info.h>
+ #include <asm/arch/regs-base.h>
+ #include <asm/arch-mvebu/pinctl.h>
+@@ -58,6 +59,10 @@ int soc_get_id(void)
+ 
+ void soc_init(void)
+ {
++#ifdef CONFIG_MVEBU_COMPHY_SUPPORT
++	if (comphy_init(gd->fdt_blob))
++		error("COMPHY initialization failed\n");
++#endif
+ 	return;
+ }
+ 
+diff --git a/arch/arm/cpu/armv8/armada8k/spl.c b/arch/arm/cpu/armv8/armada8k/spl.c
+index 12d7719..7717d23 100644
+--- a/arch/arm/cpu/armv8/armada8k/spl.c
++++ b/arch/arm/cpu/armv8/armada8k/spl.c
+@@ -17,7 +17,6 @@
+  */
+ 
+ #include <common.h>
+-#include <asm/arch-mvebu/comphy.h>
+ #include <asm/arch-mvebu/tools.h>
+ #include <asm/arch-mvebu/ddr.h>
+ #include <asm/arch-mvebu/dram_over_pci.h>
+@@ -25,6 +24,7 @@
+ #include <asm/arch-mvebu/flc.h>
+ #include <asm/arch-mvebu/fdt.h>
+ #include <asm/arch-armada8k/misc-regs.h>
++#include <asm/arch-mvebu/comphy.h>
+ #include <mvebu_chip_sar.h>
+ #include <spl.h>
+ 
+@@ -78,13 +78,6 @@ void board_init_f(ulong silent)
+ 
+ 	/* Init all relevant drivers (e.g. DDR, comphy...) */
+ #ifndef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+-	/* when DDR over PCIE is enabled, add delay before and after the comphy_init
+-	   to verify that the PCIE card init done, before setting the comphy to avoid
+-	   collisions. and no ddr init require */
+-#ifdef CONFIG_MVEBU_COMPHY_SUPPORT
+-	if (comphy_init(gd->fdt_blob))
+-		error("COMPHY initialization failed\n");
+-#endif
+ #ifdef CONFIG_MVEBU_SPL_DDR_SUPPORT
+ 	mvebu_dram_init(gd->fdt_blob);
+ #endif
+-- 
+1.9.1
+

@@ -1,0 +1,57 @@
+From cec6fc398385ec587e93a4ba86be350ce240fffd Mon Sep 17 00:00:00 2001
+From: Terry Zhou <bjzhou@marvell.com>
+Date: Tue, 15 Mar 2016 15:07:45 +0800
+Subject: [PATCH 1077/1240] comphy: a3700: move comphy execution from SPL to
+ main u-boot image
+
+Change-Id: Id12f8ba478f200683cd51143718220c187e6c8c1
+Signed-off-by: Terry Zhou <bjzhou@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28243
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/cpu/armv8/armada3700/soc-init.c | 7 +++++++
+ configs/mvebu_armada3700_defconfig       | 2 +-
+ 2 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/armv8/armada3700/soc-init.c b/arch/arm/cpu/armv8/armada3700/soc-init.c
+index 2155afe..49c79e9 100644
+--- a/arch/arm/cpu/armv8/armada3700/soc-init.c
++++ b/arch/arm/cpu/armv8/armada3700/soc-init.c
+@@ -21,6 +21,7 @@
+ #include <common.h>
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/soc.h>
++#include <asm/arch-mvebu/comphy.h>
+ #include <netdev.h>
+ #include <asm/arch/mbus_reg.h>
+ #include <asm/arch-mvebu/mbus.h>
+@@ -84,6 +85,12 @@ void soc_init(void)
+ #endif /* CONFIG_I2C_MV */
+ 
+ #endif /* CONFIG_PALLADIUM */
++
++#ifdef CONFIG_MVEBU_COMPHY_SUPPORT
++	if (comphy_init(gd->fdt_blob))
++		error("COMPHY initialization failed\n");
++#endif
++
+ 	return;
+ }
+ 
+diff --git a/configs/mvebu_armada3700_defconfig b/configs/mvebu_armada3700_defconfig
+index 0164f80..74a26a5 100644
+--- a/configs/mvebu_armada3700_defconfig
++++ b/configs/mvebu_armada3700_defconfig
+@@ -41,7 +41,7 @@ CONFIG_MVEBU_SPI=y
+ CONFIG_MVEBU_PINCTL=y
+ CONFIG_USB=y
+ CONFIG_USB_XHCI_HCD=y
+-+S:CONFIG_MVEBU_COMPHY_SUPPORT=y
++CONFIG_MVEBU_COMPHY_SUPPORT=y
+ +S:CONFIG_MVEBU_MK6_SUPPORT=y
+ CONFIG_SHA256=y
+ CONFIG_SHA1=y
+-- 
+1.9.1
+

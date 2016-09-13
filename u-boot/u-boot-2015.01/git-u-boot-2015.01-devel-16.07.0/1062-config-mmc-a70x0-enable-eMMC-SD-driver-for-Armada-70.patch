@@ -1,0 +1,30 @@
+From c431dc957b34ad76c1b9a46038a3271be88572ae Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 19 Apr 2016 15:25:14 +0300
+Subject: [PATCH 1062/1240] config: mmc: a70x0: enable eMMC/SD driver for
+ Armada-70x0
+
+Change-Id: I0822f7f7fc283b18ec249dd9a9aaf0bfa7a588da
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29195
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ configs/mvebu_armada70x0_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/configs/mvebu_armada70x0_defconfig b/configs/mvebu_armada70x0_defconfig
+index 62fced8..9bdf789 100644
+--- a/configs/mvebu_armada70x0_defconfig
++++ b/configs/mvebu_armada70x0_defconfig
+@@ -45,6 +45,7 @@ CONFIG_MVEBU_PINCTL=y
+ CONFIG_MVEBU_MPP_BUS=y
+ CONFIG_USB=y
+ CONFIG_USB_XHCI_HCD=y
++CONFIG_XENON_MMC=y
+ CONFIG_MVEBU_RTC=y
+ CONFIG_MVEBU_COMPHY_SUPPORT=y
+ CONFIG_MVEBU_THERMAL_SENSOR=y
+-- 
+1.9.1
+

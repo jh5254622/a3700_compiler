@@ -1,0 +1,189 @@
+From 5bf925b34f271a15cc308b3e1372f4547c935a29 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 17 Nov 2015 12:43:14 +0200
+Subject: [PATCH 0504/1240] ddr: Pass DDR configuration parameters from FDT
+
+	- Use FDT to pass cs-count, width and size of DDR.
+	- This is the framework to which additional DDR porting parameters will
+	  be added later on.
+
+Change-Id: If78484d139d30a5c5bca2c49417c365890481e3f
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24954
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/apn-806-db.dtsi               | 13 ++++++++++
+ doc/device-tree-bindings/ddr/mvebu_ddr.txt | 39 ++++++++++++++++++++++++++++++
+ drivers/ddr/mvebu_ddr.c                    | 31 +++++++++++++++++++-----
+ include/dt-bindings/ddr/ddr_data.h         | 27 +++++++++++++++++++++
+ 4 files changed, 104 insertions(+), 6 deletions(-)
+ create mode 100644 doc/device-tree-bindings/ddr/mvebu_ddr.txt
+ create mode 100644 include/dt-bindings/ddr/ddr_data.h
+
+diff --git a/arch/arm/dts/apn-806-db.dtsi b/arch/arm/dts/apn-806-db.dtsi
+index 17d8ebf..66652ed 100644
+--- a/arch/arm/dts/apn-806-db.dtsi
++++ b/arch/arm/dts/apn-806-db.dtsi
+@@ -16,9 +16,22 @@
+  * ***************************************************************************
+  */
+ 
++#include <dt-bindings/ddr/ddr_data.h>
+ #include "apn-806-z1.dtsi"
+ 
+ / {
++	soc {
++		internal-regs {
++
++			ddr-mac {
++				cs_count = <1>;
++				bus_width = <DDR_BUS_WIDTH_32>;
++				cs0 {
++					size = <0x00000001 0x00000000>;
++				};
++			};
++		};
++	};
+ 	/* This should go only into devel boards */
+ 	sar {
+ 		compatible = "marvell,sample-at-reset";
+diff --git a/doc/device-tree-bindings/ddr/mvebu_ddr.txt b/doc/device-tree-bindings/ddr/mvebu_ddr.txt
+new file mode 100644
+index 0000000..e1a372d
+--- /dev/null
++++ b/doc/device-tree-bindings/ddr/mvebu_ddr.txt
+@@ -0,0 +1,39 @@
++Marvell DDR bindings
++====================
++
++The DDR node includes description about the DDR controller and PHY configuration.
++The driver runs in SPL mode, and is responsible to initial the DDR PHY and controller
++according to user define paramters.
++
++The DDR PHY node requires the following properties:
++	- compatible: "marvell,mvebu-ddr-phy"
++	- reg: Base address of the DDR PHY registers.
++
++The DDR MAC node requires the following properties:
++	- compatible: "marvell,mvebu-ddr-mac"
++	- reg: Base address of the DDR MAC registers.
++	- cs_count: Number of DDR Chip-Selects on board.
++	- bus_width: DDR bus width
++	  One out of DDR_BUS_WIDTH_16, DDR_BUS_WIDTH_32, DDR_BUS_WIDTH_64
++	- cs#i: Holds porting information for each of the connected chip-selects.
++		+ size: Size of DDR connected to Chip-Select (As 64-bit value).
++
++Example:
++	ddr-phy {
++		compatible = "marvell,mvebu-ddr-phy";
++		reg = <0x20000 0x10>;
++		status = "okay";
++	};
++
++	ddr-mac {
++		compatible = "marvell,mvebu-ddr-mac";
++		reg = <0x20000 0x20>;
++		status = "okay";
++
++		cs_count = <1>;
++		bus_width = <DDR_BUS_WIDTH_32>;
++		cs0 {
++			size = <0x00000000 0x20000000>;
++		};
++	};
++
+diff --git a/drivers/ddr/mvebu_ddr.c b/drivers/ddr/mvebu_ddr.c
+index 072f90c..8f5a648 100644
+--- a/drivers/ddr/mvebu_ddr.c
++++ b/drivers/ddr/mvebu_ddr.c
+@@ -40,8 +40,11 @@ static void static_dram_init(struct mvebu_dram_config *config)
+ void mvebu_dram_init(const void *blob)
+ {
+ 	u32 node;
++	int sub_node, cs_cnt;
+ 	struct mvebu_dram_config dram_config;
+ 	struct mvebu_dram_config *config = &dram_config;
++	u64 size_64;
++
+ 	debug_enter();
+ 
+ 	/* Get DDR MAC node from the FDT blob */
+@@ -57,7 +60,28 @@ void mvebu_dram_init(const void *blob)
+ 		return;
+ 	}
+ 
+-	/* Get DDR MAC node from the FDT blob */
++	config->cs_count = fdtdec_get_int(blob, node, "cs_count", 0);
++	config->bus_width = fdtdec_get_int(blob, node, "bus_width", 0);
++	config->size_mb = 0x0;
++
++	/* Get configuration info for each of the DRAM CS's */
++	sub_node = fdt_first_subnode(blob, node);
++	cs_cnt = 0;
++	if (sub_node >= 0) {
++		do {
++			cs_cnt++;
++			size_64 = fdtdec_get_uint64(blob, sub_node, "size", 0x0);
++			/* Convert to MB, and accumulate */
++			config->size_mb += (size_64 >> 20);
++			sub_node = fdt_next_subnode(blob, sub_node);
++		} while (sub_node > 0);
++		if (cs_cnt < config->cs_count)
++			error("Missing configuration for DRAM CS %d to %d.\n", cs_cnt + 1, config->cs_count);
++	} else {
++		error("No configuration per DRAM CS was found\n");
++	}
++
++	/* Get DDR PHY node from the FDT blob */
+ 	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_DDR_PHY));
+ 	if (node == -1) {
+ 		error("No DDR PHY node found in FDT blob\n");
+@@ -70,11 +94,6 @@ void mvebu_dram_init(const void *blob)
+ 		return;
+ 	}
+ 
+-	/* Use default DRAM params, till we get the values from DT. */
+-	config->cs_count = 0;
+-	config->bus_width = 0;
+-	config->size_mb = 0;
+-
+ #ifdef CONFIG_MVEBU_STATIC_SUPPORT
+ 	static_dram_init(config);
+ #elif CONFIG_MVEBU_DYNAMIC_SUPPORT
+diff --git a/include/dt-bindings/ddr/ddr_data.h b/include/dt-bindings/ddr/ddr_data.h
+new file mode 100644
+index 0000000..000c294
+--- /dev/null
++++ b/include/dt-bindings/ddr/ddr_data.h
+@@ -0,0 +1,27 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _DDR_DATA_H_
++#define _DDR_DATA_H
++
++#define DDR_BUS_WIDTH_16	16
++#define DDR_BUS_WIDTH_32	32
++#define DDR_BUS_WIDTH_64	64
++
++#endif /* _iDDR_DATA_H_ */
++
+-- 
+1.9.1
+

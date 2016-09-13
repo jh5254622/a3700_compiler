@@ -1,0 +1,84 @@
+From 3e766966db8da74551f8a837f81c42446b93993f Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Tue, 31 May 2016 14:13:39 +0300
+Subject: [PATCH 198/239] iob: a8k: Remove NAND window from IOB mappings
+
+- Remove unneeded and unsupported NAND window from A7K and A8K
+  platforms IOB mappings.
+
+Change-Id: I97b24f3a70461e409cfe55ced8858d08c1901ed3
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30216
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c   | 1 -
+ plat/marvell/a8k/a70x0/board/marvell_plat_config.c      | 1 -
+ plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c | 1 -
+ plat/marvell/a8k/a80x0/board/marvell_plat_config.c      | 1 -
+ plat/marvell/a8k/apn806/board/marvell_plat_config.c     | 1 -
+ 5 files changed, 5 deletions(-)
+
+diff --git a/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c b/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c
+index c098844..29e31f8 100644
+--- a/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c
+@@ -87,7 +87,6 @@ struct iob_win iob_memory_map[] = {
+ 	{0x0,	0xf7000000,	0x0,	0x1000000,	PEX1_TID}, /* PEX1_X1 window */
+ 	{0x0,	0xf8000000,	0x0,	0x1000000,	PEX2_TID}, /* PEX2_X1 window */
+ 	{0x0,	0xf6000000,	0x0,	0x1000000,	PEX0_TID}, /* PEX0_X4 window */
+-	{0x0,	0xf9000000,	0x0,	0x1000000,	NAND_TID}  /* NAND window */
+ };
+ 
+ uintptr_t marvell_get_iob_reg_offs(int cp_index)
+diff --git a/plat/marvell/a8k/a70x0/board/marvell_plat_config.c b/plat/marvell/a8k/a70x0/board/marvell_plat_config.c
+index b6a355d..a0bfb22 100644
+--- a/plat/marvell/a8k/a70x0/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a70x0/board/marvell_plat_config.c
+@@ -91,7 +91,6 @@ struct iob_win iob_memory_map[] = {
+ 	{0x0,	0xf7000000,	0x0,	0x1000000,	PEX1_TID}, /* PEX1_X1 window */
+ 	{0x0,	0xf8000000,	0x0,	0x1000000,	PEX2_TID}, /* PEX2_X1 window */
+ 	{0x0,	0xf6000000,	0x0,	0x1000000,	PEX0_TID}, /* PEX0_X4 window */
+-	{0x0,	0xf9000000,	0x0,	0x1000000,	NAND_TID}  /* NAND window */
+ };
+ 
+ uintptr_t marvell_get_iob_reg_offs(int cp_index)
+diff --git a/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c b/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c
+index d9c4644..1b02039 100644
+--- a/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c
+@@ -93,7 +93,6 @@ struct iob_win iob_memory_map[] = {
+ 	{0x0,	0xf7000000,	0x0,	0x1000000,	PEX1_TID}, /* PEX1_X1 window */
+ 	{0x0,	0xf8000000,	0x0,	0x1000000,	PEX2_TID}, /* PEX2_X1 window */
+ 	{0x0,	0xf6000000,	0x0,	0x1000000,	PEX0_TID}, /* PEX0_X4 window */
+-	{0x0,	0xf9000000,	0x0,	0x1000000,	NAND_TID}  /* NAND window */
+ };
+ 
+ uintptr_t marvell_get_iob_reg_offs(int cp_index)
+diff --git a/plat/marvell/a8k/a80x0/board/marvell_plat_config.c b/plat/marvell/a8k/a80x0/board/marvell_plat_config.c
+index 524a123..5945c97 100644
+--- a/plat/marvell/a8k/a80x0/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a80x0/board/marvell_plat_config.c
+@@ -91,7 +91,6 @@ struct iob_win iob_memory_map[] = {
+ 	{0x0,	0xf7000000,	0x0,	0x1000000,	PEX1_TID}, /* PEX1_X1 window */
+ 	{0x0,	0xf8000000,	0x0,	0x1000000,	PEX2_TID}, /* PEX2_X1 window */
+ 	{0x0,	0xf6000000,	0x0,	0x1000000,	PEX0_TID}, /* PEX0_X4 window */
+-	{0x0,	0xf9000000,	0x0,	0x1000000,	NAND_TID}  /* NAND window */
+ };
+ 
+ uintptr_t marvell_get_iob_reg_offs(int cp_index)
+diff --git a/plat/marvell/a8k/apn806/board/marvell_plat_config.c b/plat/marvell/a8k/apn806/board/marvell_plat_config.c
+index 29626ae..69034ef 100644
+--- a/plat/marvell/a8k/apn806/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/apn806/board/marvell_plat_config.c
+@@ -67,7 +67,6 @@ struct iob_win iob_memory_map[] = {
+ 	{0x0,	0xf7000000,	0x0,	0x1000000,	PEX1_TID}, /* PEX1_X1 window */
+ 	{0x0,	0xf8000000,	0x0,	0x1000000,	PEX2_TID}, /* PEX2_X1 window */
+ 	{0x0,	0xf6000000,	0x0,	0x1000000,	PEX0_TID}, /* PEX0_X4 window */
+-	{0x0,	0xf9000000,	0x0,	0x1000000,	NAND_TID}  /* NAND window */
+ };
+ 
+ uintptr_t marvell_get_iob_reg_offs(int cp_index)
+-- 
+1.9.1
+

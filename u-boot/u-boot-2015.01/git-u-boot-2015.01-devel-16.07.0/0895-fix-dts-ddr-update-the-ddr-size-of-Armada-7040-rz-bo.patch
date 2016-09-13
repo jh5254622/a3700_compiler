@@ -1,0 +1,33 @@
+From 8bee23191b8547da7b644f56f64bd650d13337cb Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 24 Feb 2016 11:28:52 +0200
+Subject: [PATCH 0895/1240] fix: dts: ddr: update the ddr size of
+ Armada-7040-rz board to be 4 GiB
+
+Change-Id: I16b0c568b9ac060524189c361101e7a3035b9963
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27844
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ arch/arm/dts/armada-70x0-dev-info.dtsi | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/dts/armada-70x0-dev-info.dtsi b/arch/arm/dts/armada-70x0-dev-info.dtsi
+index cf4ed67..fdd6da7 100644
+--- a/arch/arm/dts/armada-70x0-dev-info.dtsi
++++ b/arch/arm/dts/armada-70x0-dev-info.dtsi
+@@ -28,8 +28,8 @@
+ 			ddr-mac {
+ 				cs_count = <1>;
+ 				bus_width = <DDR_BUS_WIDTH_32>;
+-				cs0 {
+-					size = <0x00000002 0x00000000>;
++				cs0 { /* 4GiB */
++					size = <0x00000001 0x00000000>;
+ 				};
+ 			};
+ 			pinctl@6F008C {
+-- 
+1.9.1
+

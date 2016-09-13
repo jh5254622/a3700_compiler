@@ -1,0 +1,41 @@
+From 60812e983923ee8648770a2e8c48bf09cc10e57d Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Sun, 10 Jan 2016 23:41:39 +0800
+Subject: [PATCH 0673/1240] fix: clock: a3700: fix incorrect delay for TBG
+ clock setting
+
+	the dely after configuring TBG clock should be 40us as
+	suggested, bug due to uncorrect freq counter reg in SPL,
+	it was put as 5000us.
+	now we have fixed freq counter reg issue in SPL, TBG clock
+	delay need to be changed back to 40us.
+
+Change-Id: I87f82e0102892982826fe8172a3d1cb83c04ce03
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26658
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv8/armadalp/mvebu_clock.c | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armadalp/mvebu_clock.c b/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
+index 413b9d2..c66bd25 100644
+--- a/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
++++ b/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
+@@ -415,9 +415,8 @@ static u32 set_tbg_clock(u32 kvco_mhz,
+ 	/* 15. Switch all North/South Bridge clock sources to clock divider
+ 	       Will be done by function caller when required */
+ 
+-	/* Wait for stable clock output. The suggested 40us delay has increased
+-	   due to wrong couter clock configration in SPL */
+-	udelay(5000);
++	/* Wait for stable clock output, suggested 40us */
++	udelay(40);
+ 
+ 	debug_exit();
+ 	return 0;
+-- 
+1.9.1
+

@@ -1,0 +1,329 @@
+From 7b3c64b1cc39c7af835ccf37ac374d81ade03741 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Wed, 28 Jan 2015 07:44:33 +0200
+Subject: [PATCH 0121/1240] ARMv8: PSCI: a8k: add Armada8K PSCI support
+
+- Add CPU ON implementation for A8k
+- Add PSCI arch init function
+- Update enable_wa function - update coherency for CPU 0 only
+- Add WA for AP-810 - Reset Vector Base Address must be aligned to
+  0x10000, the WA aligned the PSCI code to 0x10000, and store the
+  Linux start address at reserved register
+
+Change-Id: Ie4cdebb27b527082a3267f90ff9909af5f65b1e9
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/16555
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/Kconfig  |   4 +
+ arch/arm/cpu/armv8/armada8k/Makefile |   1 +
+ arch/arm/cpu/armv8/armada8k/psci.S   | 176 +++++++++++++++++++++++++++++++++++
+ arch/arm/cpu/armv8/psci.S            |  16 +++-
+ arch/arm/cpu/armv8/start.S           |   2 +-
+ arch/arm/cpu/armv8/u-boot.lds        |   2 +-
+ configs/mvebu_armada8k_defconfig     |   1 +
+ 7 files changed, 195 insertions(+), 7 deletions(-)
+ create mode 100644 arch/arm/cpu/armv8/armada8k/psci.S
+ mode change 100644 => 100755 arch/arm/cpu/armv8/psci.S
+
+diff --git a/arch/arm/cpu/armv8/armada8k/Kconfig b/arch/arm/cpu/armv8/armada8k/Kconfig
+index 9792366..5fcb0a6 100644
+--- a/arch/arm/cpu/armv8/armada8k/Kconfig
++++ b/arch/arm/cpu/armv8/armada8k/Kconfig
+@@ -20,6 +20,10 @@ config SYS_CONFIG_NAME
+ 	string
+ 	default "armada8k"
+ 
++config ARMV8_PSCI
++	bool
++	default y
++
+ config PALLADIUM
+ 	bool "Support palladium emulation"
+ 	default y
+diff --git a/arch/arm/cpu/armv8/armada8k/Makefile b/arch/arm/cpu/armv8/armada8k/Makefile
+index 6530bf5..4c6cf31 100644
+--- a/arch/arm/cpu/armv8/armada8k/Makefile
++++ b/arch/arm/cpu/armv8/armada8k/Makefile
+@@ -20,3 +20,4 @@
+ obj-y += soc-init.o
+ obj-y += tables.o
+ obj-y += clock.o
++obj-$(CONFIG_ARMV8_PSCI)	+= psci.o
+diff --git a/arch/arm/cpu/armv8/armada8k/psci.S b/arch/arm/cpu/armv8/armada8k/psci.S
+new file mode 100644
+index 0000000..8db9811
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armada8k/psci.S
+@@ -0,0 +1,176 @@
++/*
++ * Copyright (C) 2013 - ARM Ltd
++ * Author: Marc Zyngier <marc.zyngier@arm.com>
++ *
++ * Based on code by Carl van Schaik <carl@ok-labs.com>.
++ *
++ * Copyright (C) 2015 Marvell International Ltd.
++ *
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++*/
++
++#include <config.h>
++#include <asm/psci.h>
++#include <asm/macro.h>
++
++.pushsection ._secure.text, "ax"
++
++.globl	psci_arch_init
++psci_arch_init:
++	mrs     x5, SCR_EL3
++	bic	x5, x5, #1	/* Secure mode */
++	msr	SCR_EL3, x5
++	isb
++
++	mrs 	x4, MPIDR_EL1	/* get current CPU - Use affinity level 1 */
++	asr 	x4, x4, #8
++	and 	x4, x4, #0xff
++
++	mov	x5, #400		/* 1kB of stack per CPU */
++	mul	x4, x4, x5
++
++	adr	x5, text_end		/* end of text */
++	add	x5, x5, #0x2000		/* Skip two pages */
++	lsr	x5, x5, #12		/* Align to start of page */
++	lsl	x5, x5, #12
++	sub	sp, x5, x4		/* here's our stack! */
++
++	 ret
++
++	/* x1 = target CPU */
++	/* x2 = target PC */
++.globl	psci_0_2_cpu_on_64
++psci_0_2_cpu_on_64:
++
++	adr	x0, _target_pc
++	str	x2, [x0]
++
++	dsb     sy
++
++	/* get cpu number - use affinity level 2 */
++	asr 	x1, x1, #8
++	and 	x1, x1, #0xff
++
++	/* set CPU private UID */
++	mov	x0, #(MVEBU_REGS_BASE)
++	add	x3, x0, #0x30
++	add     x2, x1, #0x4
++	str 	w2, [x3]
++
++	/* set the cpu start address */
++	add	x3, x0, #0x640
++	mov	x2, #2 /* WA reset adderrs - CPU reset vector address - must be alined to 0x10000 -
++			    use PSCI first address at 0x20000
++			    first instruction - jump to _armada8k_cpu_entry */
++	str 	w2, [x3]
++
++	/* save the Linux out of reset address */
++	adr	x1, _target_pc
++	ldr	x1, [x1]
++	add	x3, x0, #0x644 /* WA reset adderrs - use reserved register */
++	str     w1, [x3]
++
++	/* get the cpu out of reset */
++	add	x3, x0, #0x650
++	movz 	x2, #0x1, LSL #16
++	add	x2, x2, #0x1
++	str 	w2, [x3]
++
++	/* return success */
++	mov	x0, #ARM_PSCI_RET_SUCCESS	/* Return PSCI_RET_SUCCESS */
++	ret
++
++.global _armada8k_cpu_entry
++_armada8k_cpu_entry:
++
++	/* get current CPU */
++	mrs 	x2, MPIDR_EL1   	/* get current CPU - Use affinity level 1 */
++	asr 	x2, x2, #8
++	and 	x2, x2, #0xff
++
++	/* set CPU private UID */
++	mov	x0, #(MVEBU_REGS_BASE)
++	add	x3, x0, #0x30
++	add     x1, x2, #0x4
++	str 	w1, [x3]
++
++	/* Activate Affinity between cpu0 and cpu1 */
++	mov     x3, #0x4264
++	orr     x0, x3, x0
++	mov	x3, #0x1
++	lsl     x1, x3, x2
++	str     w1, [x0]
++
++	/* Activate Affinity in CA-57 configuration
++	 * Enable the SMPEN bit in CPUECTLR_EL1 */
++	mrs x0, S3_1_c15_c2_1
++	orr x0, x0, #0x40
++	msr S3_1_c15_c2_1, x0
++
++	isb
++
++	/*
++	 * Could be EL3/EL2/EL1, Initial State:
++	 * Little Endian, MMU Disabled, i/dCache Disabled
++	 */
++	adr	x0, vectors
++	switch_el x1, 3f, 2f, 1f
++3:	msr	vbar_el3, x0
++	mrs	x0, scr_el3
++	orr	x0, x0, #0xf			/* SCR_EL3.NS|IRQ|FIQ|EA */
++	msr	scr_el3, x0
++	msr	cptr_el3, xzr			/* Enable FP/SIMD */
++	ldr	x0, =COUNTER_FREQUENCY
++	msr	cntfrq_el0, x0			/* Initialize CNTFRQ */
++	b	0f
++2:	msr	vbar_el2, x0
++	mov	x0, #0x33ff
++	msr	cptr_el2, x0			/* Enable FP/SIMD */
++	b	0f
++1:	msr	vbar_el1, x0
++	mov	x0, #3 << 20
++	msr	cpacr_el1, x0			/* Enable FP/SIMD */
++0:
++
++#if defined(CONFIG_GICV3)
++	ldr	x0, =GICR_BASE
++	bl	gic_init_secure_percpu
++#elif defined(CONFIG_GICV2)
++	ldr	x0, =GICD_BASE
++	ldr	x1, =GICC_BASE
++	bl	gic_init_secure_percpu
++#endif
++
++	bl	psci_arch_init
++
++	bl	armv8_switch_to_el2
++#ifdef CONFIG_ARMV8_SWITCH_TO_EL1
++	bl	armv8_switch_to_el1
++#endif
++
++	/* set linux start address - WA reset adderrs - use reserved register */
++	mov	x0, #(MVEBU_REGS_BASE)
++	mov     x2, #0x644
++	orr     x2, x2, x0
++	ldr     w0, [x2]
++
++	br	x0
++
++	/* 64 bit alignment for elements accessed as data */
++	.align 4
++_target_pc:
++	.quad 0x0
++
++text_end:
++	.popsection
+diff --git a/arch/arm/cpu/armv8/psci.S b/arch/arm/cpu/armv8/psci.S
+old mode 100644
+new mode 100755
+index 508e6eb..6fa8961
+--- a/arch/arm/cpu/armv8/psci.S
++++ b/arch/arm/cpu/armv8/psci.S
+@@ -19,6 +19,12 @@
+ 
+ .pushsection ._secure.text, "ax"
+ 
++/* WA reset adderrs - CPU reset vector address - must be alined to 0x10000 */
++ENTRY(armv8_psci_reset_addr)
++	b _armada8k_cpu_entry
++ENDPROC(armv8_psci_reset_addr)
++
++
+ ENTRY(psci_0_2_cpu_suspend_64)
+ ENTRY(psci_0_2_cpu_on_64)
+ ENTRY(psci_0_2_affinity_info_64)
+@@ -59,7 +65,7 @@ _psci_0_2_table:
+ 	stp	x23, x24, [sp, #-16]!
+ 	stp	x21, x22, [sp, #-16]!
+ 	stp	x19, x20, [sp, #-16]!
+-        str     x18, [sp, #-8]!
++        str     x18, [sp, #-16]!
+         mrs     x16, sp_el0
+         mrs     x15, elr_el3
+ 	stp	x15, x16, [sp, #-16]!
+@@ -79,7 +85,7 @@ _psci_0_2_table:
+         ldp     x15, x16, [sp], #16
+         msr     elr_el3, x15
+         msr     sp_el0, x16
+-        ldr     x18, [sp], #8
++        ldr     x18, [sp], #16
+ 	ldp	x19, x20, [sp], #16
+ 	ldp	x21, x22, [sp], #16
+ 	ldp	x23, x24, [sp], #16
+@@ -117,15 +123,15 @@ ENTRY(unhandled_exception)
+ ENDPROC(unhandled_exception)
+ 
+ __handle_sync:
+-	str 	x4, [sp, #-8]!
++	str 	x4, [sp, #-16]!
+ 	mrs	x4, esr_el3
+ 	ubfx	x4, x4, #26, #6
+ 	cmp	x4, #ESR_EC_SMC64
+ 	b.eq	smc_found
+-	ldr	x4, [sp], #8
++	ldr	x4, [sp], #16
+ 	b	unhandled_exception
+ smc_found:
+-	ldr     x4, [sp], #8
++	ldr     x4, [sp], #16
+ 	b	_smc_psci
+ 
+ /*
+diff --git a/arch/arm/cpu/armv8/start.S b/arch/arm/cpu/armv8/start.S
+index d669943..8fbcf50 100644
+--- a/arch/arm/cpu/armv8/start.S
++++ b/arch/arm/cpu/armv8/start.S
+@@ -185,7 +185,7 @@ ENTRY(enable_wa)
+ 
+ 	/* Activate Affinity between cpu0 and cpu1 */
+ 	ldr     x0, =0xf0004264
+-	ldr     w1, =0x3
++	ldr     w1, =0x1
+ 	str     w1, [x0]
+ 
+ 	/* Activate Affinity in CA-57 configuration
+diff --git a/arch/arm/cpu/armv8/u-boot.lds b/arch/arm/cpu/armv8/u-boot.lds
+index bd95fff..50b3291 100644
+--- a/arch/arm/cpu/armv8/u-boot.lds
++++ b/arch/arm/cpu/armv8/u-boot.lds
+@@ -32,7 +32,7 @@ SECTIONS
+ #endif
+ 
+ 	.__secure_start : {
+-		. = ALIGN(0x1000);
++		. = ALIGN(0x10000);
+ 		*(.__secure_start)
+ 	}
+ 
+diff --git a/configs/mvebu_armada8k_defconfig b/configs/mvebu_armada8k_defconfig
+index a99d6dc..7335545 100644
+--- a/configs/mvebu_armada8k_defconfig
++++ b/configs/mvebu_armada8k_defconfig
+@@ -2,3 +2,4 @@ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ CONFIG_ARM=y
+ CONFIG_TARGET_ARMADA_8K=y
+ CONFIG_MVEBU_UART=y
++CONFIG_ARMV8_PSCI=y
+-- 
+1.9.1
+

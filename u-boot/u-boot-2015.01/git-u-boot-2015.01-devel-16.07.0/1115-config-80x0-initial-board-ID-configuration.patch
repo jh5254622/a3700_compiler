@@ -1,0 +1,51 @@
+From 7dda87d6b4ab207eb84b54b4d854a6b180a28f5f Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Mon, 18 Apr 2016 14:42:50 +0300
+Subject: [PATCH 1115/1240] config: 80x0: initial board ID configuration
+
+added board ID definitions and default FDT selection
+- A8040-db board ID = 0x13
+- Defulat FDT selection = 0x1 (armada-80x0-db-10G.dts)
+
+Change-Id: I782bc55b170dd789cf664d8d9ec4935acbb7071a
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29148
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29288
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/include/asm/arch-armada8k/board-info.h | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/include/asm/arch-armada8k/board-info.h b/arch/arm/include/asm/arch-armada8k/board-info.h
+index 00bcdac..c5570ca 100644
+--- a/arch/arm/include/asm/arch-armada8k/board-info.h
++++ b/arch/arm/include/asm/arch-armada8k/board-info.h
+@@ -21,7 +21,8 @@
+ #define A8K_APN_806_DB					(A8K_MARVELL_BOARD_ID_BASE + 0)
+ #define A8K_7040_RZ					(A8K_MARVELL_BOARD_ID_BASE + 1)
+ #define A8K_7040					(A8K_MARVELL_BOARD_ID_BASE + 2)
+-#define A8K_MARVELL_MAX_BOARD_ID			(A8K_MARVELL_BOARD_ID_BASE + 3)
++#define A8K_8040					(A8K_MARVELL_BOARD_ID_BASE + 3)
++#define A8K_MARVELL_MAX_BOARD_ID			(A8K_MARVELL_BOARD_ID_BASE + 4)
+ #define A8K_MARVELL_BOARD_NUM				(A8K_MARVELL_MAX_BOARD_ID - A8K_MARVELL_BOARD_ID_BASE)
+ 
+ #define MARVELL_BOARD_ID_BASE				A8K_MARVELL_BOARD_ID_BASE
+@@ -31,8 +32,11 @@
+ 
+ #define BOARD_DEV_TWSI_INIT_EEPROM 0x57
+ #define MULTI_FDT_EEPROM_ADDR_LEN 2
++
++/* default FDT selection for each board */
+ #define DEFAULT_FDT_PER_BOARD { \
+-				0x04,	/* default fdt configuration for apn-806-db board */		  \
+-				0x01,	/* default fdt configuration for armada-7040-rz-db board */      \
+-				0x01,	/* default fdt configuration for armada-7040-db board */      \
++				0x04,	/* APN_806_DB	*/ \
++				0x01,	/* 7040_RZ_DB	*/ \
++				0x01,	/* 7040_DB	*/ \
++				0x01,	/* 8040_DB	*/ \
+ }
+-- 
+1.9.1
+

@@ -1,0 +1,142 @@
+From ccc1efc2d8a37453e87db0d5ea397fabf61ac883 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 22 Nov 2015 20:03:10 +0200
+Subject: [PATCH 0527/1240] a70x0: added support for Armada-70x0 board
+
+- Added board structre and config for A-80x0 board
+
+Change-Id: I465f197327395fe7b0082e1dbe95246de7013c93
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25148
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ board/mvebu/armada8k/Kconfig         |  9 +++++++++
+ board/mvebu/armada8k/Makefile        |  1 +
+ board/mvebu/armada8k/armada8k.c      |  4 ++++
+ board/mvebu/armada8k/board-info.h    |  3 ++-
+ board/mvebu/armada8k/db-a70x0-info.c | 26 ++++++++++++++++++++++++++
+ include/fdtdec.h                     |  1 +
+ lib/fdtdec.c                         |  1 +
+ 7 files changed, 44 insertions(+), 1 deletion(-)
+ create mode 100644 board/mvebu/armada8k/db-a70x0-info.c
+
+diff --git a/board/mvebu/armada8k/Kconfig b/board/mvebu/armada8k/Kconfig
+index 61d55044..383b8e5 100644
+--- a/board/mvebu/armada8k/Kconfig
++++ b/board/mvebu/armada8k/Kconfig
+@@ -11,4 +11,13 @@ config APN_806_DB
+ 	  DB board. Say N unless you really
+ 	  work on this board
+ 
++config ARMADA_70X0_DB
++	bool "Support Marvell Armada-70x0 board"
++	depends on DEVEL_BOARD
++	help
++	  Choose this option to add
++	  support for Marvell Armada-70x0
++	  DB board. Say N unless you really
++	  work on this board
++
+ endmenu
+diff --git a/board/mvebu/armada8k/Makefile b/board/mvebu/armada8k/Makefile
+index 78c6af5..1b05ae0 100644
+--- a/board/mvebu/armada8k/Makefile
++++ b/board/mvebu/armada8k/Makefile
+@@ -18,3 +18,4 @@
+ 
+ obj-y	+= armada8k.o
+ obj-$(CONFIG_APN_806_DB)	+= db-apn806-info.o
++obj-$(CONFIG_ARMADA_70X0_DB)	+= db-a70x0-info.o
+diff --git a/board/mvebu/armada8k/armada8k.c b/board/mvebu/armada8k/armada8k.c
+index fd7ad29..befe40c 100644
+--- a/board/mvebu/armada8k/armada8k.c
++++ b/board/mvebu/armada8k/armada8k.c
+@@ -34,6 +34,10 @@ struct mvebu_board_info *mvebu_board_info_get(enum fdt_compat_id compat_id)
+ 	case COMPAT_MVEBU_APN_806_DB:
+ 		return &a8021_db_info;
+ #endif
++#ifdef CONFIG_ARMADA_70X0_DB
++	case COMPAT_MVEBU_ARMADA_70X0_DB:
++		return &a70x0_db_info;
++#endif
+ 	case COMPAT_MVEBU_APN_806_CUSTOMER:
+ 	default:
+ 		error("Missing board information for compatible string = %d\n", compat_id);
+diff --git a/board/mvebu/armada8k/board-info.h b/board/mvebu/armada8k/board-info.h
+index 0b20f50..7536e88 100644
+--- a/board/mvebu/armada8k/board-info.h
++++ b/board/mvebu/armada8k/board-info.h
+@@ -27,11 +27,12 @@ enum a8k_board_types {
+ 	ARMADA_8021_RD_ID,
+ 	ARMADA_8022_DB_ID,
+ 	ARMADA_8022_RD_ID,
++	ARMADA_70x0_DB_ID,
+ 	MAX_BOARD_ID
+ };
+ 
+ extern struct mvebu_board_info a8021_db_info;
+-extern struct mvebu_board_info a8021_rd_info;
++extern struct mvebu_board_info a70x0_db_info;
+ extern struct mvebu_board_family a8k_board_family;
+ 
+ #endif /* _BOARD_INFO_H_ */
+diff --git a/board/mvebu/armada8k/db-a70x0-info.c b/board/mvebu/armada8k/db-a70x0-info.c
+new file mode 100644
+index 0000000..c666e9a
+--- /dev/null
++++ b/board/mvebu/armada8k/db-a70x0-info.c
+@@ -0,0 +1,26 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <linux/compiler.h>
++#include "board-info.h"
++
++struct mvebu_board_info a70x0_db_info = {
++	.id = ARMADA_70x0_DB_ID,
++};
++
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 52e630b..1d7fef1 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -156,6 +156,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_ARMADA_38X_CUSTOMER,
+ 	COMPAT_MVEBU_APN_806_DB,
+ 	COMPAT_MVEBU_APN_806_CUSTOMER,
++	COMPAT_MVEBU_ARMADA_70X0_DB,
+ 	COMPAT_MVEBU_ARMADA_LP_DB0,
+ 	COMPAT_MVEBU_ARMADA_LP_DB1,
+ 	COMPAT_MVEBU_ARMADA_LP_CUSTOMER,
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 26b3fa4..ce2031c 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -118,6 +118,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_ARMADA_38X_CUSTOMER, "marvell,armada-38x-customer"),
+ 	COMPAT(MVEBU_APN_806_DB, "marvell,apn-806-db"),
+ 	COMPAT(MVEBU_APN_806_CUSTOMER, "marvell,apn-806-customer"),
++	COMPAT(MVEBU_ARMADA_70X0_DB, "marvell,armada-70x0-db"),
+ 	COMPAT(MVEBU_ARMADA_LP_DB0, "marvell,armada-lp-db0"),
+ 	COMPAT(MVEBU_ARMADA_LP_DB1, "marvell,armada-lp-db1"),
+ 	COMPAT(MVEBU_ARMADA_LP_CUSTOMER, "marvell,armada-lp-customer"),
+-- 
+1.9.1
+

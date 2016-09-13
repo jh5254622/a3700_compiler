@@ -1,0 +1,34 @@
+From ac4040407e92f8b88210fc1957d2f6bd22b14cf3 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 7 Feb 2016 10:23:59 +0200
+Subject: [PATCH 0825/1240] config: mvebu: enabled SATA defines also for AHCI
+
+limited the commands only for development boards to reduced image size
+
+Change-Id: Ia25ada9394048ae544dd3b610a6daf01fd6a473b
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27261
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/mvebu-common.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index ccea16c..c018631 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -372,8 +372,8 @@
+ #endif /* CONFIG_CMD_NET */
+ 
+ /* SATA AHCI via controller or over PCIe */
+-#if defined(CONFIG_DEVEL_BOARD) && \
+-	(defined(CONFIG_MVEBU_PCI) || defined(CONFIG_MVEBU_DW_PCIE_) || defined(CONFIG_MV_INCLUDE_SATA))
++#if     defined(CONFIG_MVEBU_PCI) || defined(CONFIG_MVEBU_DW_PCIE_) || \
++	defined(CONFIG_MV_INCLUDE_SATA) || defined(CONFIG_SCSI_AHCI_PLAT)
+ 
+ 	#define CONFIG_CMD_SCSI
+ 	#define CONFIG_CMD_EXT2
+-- 
+1.9.1
+

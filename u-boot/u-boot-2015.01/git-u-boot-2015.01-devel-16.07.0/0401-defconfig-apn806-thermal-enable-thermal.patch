@@ -1,0 +1,38 @@
+From 2981399df2c11c65ae85783edc4de7f3c710a0e9 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Thu, 3 Sep 2015 13:04:03 +0300
+Subject: [PATCH 0401/1240] defconfig: apn806: thermal: enable thermal
+
+Enable thermal sensor 28nm version 2.
+Enable tsen command
+
+Change-Id: Id2ed166ceb360472b814bfb960397403029afe22
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23408
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ configs/mvebu_apn806_defconfig | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/configs/mvebu_apn806_defconfig b/configs/mvebu_apn806_defconfig
+index e0546d5..b5de79d 100644
+--- a/configs/mvebu_apn806_defconfig
++++ b/configs/mvebu_apn806_defconfig
+@@ -25,6 +25,7 @@ CONFIG_CMD_TIMER=y
+ CONFIG_CMD_MVEBU_SAR=y
+ CONFIG_CMD_MVEBU_MPP=y
+ CONFIG_CMD_MVEBU_BUBT=y
++CONFIG_CMD_MVEBU_TSEN=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="apn-806-db"
+@@ -33,3 +34,5 @@ CONFIG_ENC28J60=y
+ CONFIG_MVEBU_PINCTL=y
+ +S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+ +S:CONFIG_MVEBU_MK6_SUPPORT=y
++CONFIG_MVEBU_THERMAL_SENSOR=y
++CONFIG_MVEBU_THERMAL_SENSOR_28NM_V2=y
+-- 
+1.9.1
+

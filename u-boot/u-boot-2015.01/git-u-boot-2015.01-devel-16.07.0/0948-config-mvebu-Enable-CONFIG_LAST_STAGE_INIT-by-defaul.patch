@@ -1,0 +1,84 @@
+From 94abba8a65fce4abe71b367fd32b6da93902b125 Mon Sep 17 00:00:00 2001
+From: Terry Zhou <bjzhou@marvell.com>
+Date: Mon, 14 Mar 2016 10:16:02 +0800
+Subject: [PATCH 0948/1240] config: mvebu: Enable CONFIG_LAST_STAGE_INIT by
+ default.
+
+Some of the features like "auto-recovery" needs to add
+some callback in the last_stage_init function.
+
+Change-Id: I6055c23df0b1f99d7063c56a19d6c378e802ef3f
+Signed-off-by: Terry Zhou <bjzhou@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28213
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/cpu/armv7/armada38x/soc-init.c  | 7 +++++++
+ arch/arm/cpu/armv8/armada3700/soc-init.c | 8 ++++++++
+ arch/arm/cpu/armv8/armada8k/soc.c        | 8 ++++++++
+ include/configs/mvebu-common.h           | 1 +
+ 4 files changed, 24 insertions(+)
+
+diff --git a/arch/arm/cpu/armv7/armada38x/soc-init.c b/arch/arm/cpu/armv7/armada38x/soc-init.c
+index 541762d..4d0ee40 100644
+--- a/arch/arm/cpu/armv7/armada38x/soc-init.c
++++ b/arch/arm/cpu/armv7/armada38x/soc-init.c
+@@ -108,3 +108,10 @@ int dram_init(void)
+ 	return 0;
+ }
+ 
++#ifdef CONFIG_LAST_STAGE_INIT
++int last_stage_init(void)
++{
++	return 0;
++}
++#endif
++
+diff --git a/arch/arm/cpu/armv8/armada3700/soc-init.c b/arch/arm/cpu/armv8/armada3700/soc-init.c
+index 4500d27..dcdd937 100644
+--- a/arch/arm/cpu/armv8/armada3700/soc-init.c
++++ b/arch/arm/cpu/armv8/armada3700/soc-init.c
+@@ -254,3 +254,11 @@ bool mvebu_is_in_recovery_mode(void)
+ 	regval = (readl(MVEBU_TEST_PIN_LATCH_N) & MVEBU_BOOTMODE_MASK) >> MVEBU_BOOTMODE_OFFS;
+ 	return regval == MVEBU_BOOTMODE_UART;
+ }
++
++#ifdef CONFIG_LAST_STAGE_INIT
++int last_stage_init(void)
++{
++	return 0;
++}
++#endif
++
+diff --git a/arch/arm/cpu/armv8/armada8k/soc.c b/arch/arm/cpu/armv8/armada8k/soc.c
+index 85b7c55..710db29 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc.c
++++ b/arch/arm/cpu/armv8/armada8k/soc.c
+@@ -216,3 +216,11 @@ bool mvebu_is_in_recovery_mode(void)
+ 	return get_info(RECOVERY_MODE);
+ #endif
+ }
++
++#ifdef CONFIG_LAST_STAGE_INIT
++int last_stage_init(void)
++{
++	return 0;
++}
++#endif
++
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 22e2c17..9061d8c 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -85,6 +85,7 @@
+ #define CONFIG_DISPLAY_CPUINFO
+ #define CONFIG_ENV_OVERWRITE            /* allow to change env parameters */
+ #undef  CONFIG_WATCHDOG                 /* watchdog disabled */
++#define CONFIG_LAST_STAGE_INIT	1	    /* call last_stage_init()	*/
+ 
+ /* SPL */
+ /* Common defines for SPL */
+-- 
+1.9.1
+

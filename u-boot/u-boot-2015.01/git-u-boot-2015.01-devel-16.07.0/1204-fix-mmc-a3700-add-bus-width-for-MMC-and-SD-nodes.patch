@@ -1,0 +1,39 @@
+From 460ecd5e65718802c2251638940a99315cef0cb8 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Wed, 1 Jun 2016 01:02:44 +0800
+Subject: [PATCH 1204/1240] fix: mmc: a3700: add bus width for MMC and SD nodes
+
+The Xenon MMC driver is updated to parse mmc bus width
+from DT file, need to update the A3700 DTS to set
+proper mmc bus width for mmc and SD nodes.
+
+Change-Id: I262f5d77a5df822e15962ff90920a52049fa5808
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30213
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/dts/armada-3700-db.dts | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/arm/dts/armada-3700-db.dts b/arch/arm/dts/armada-3700-db.dts
+index d4f352d..ac9ea9a 100644
+--- a/arch/arm/dts/armada-3700-db.dts
++++ b/arch/arm/dts/armada-3700-db.dts
+@@ -76,10 +76,12 @@
+ 			};
+ 			mmc0: mmc@D8000 {
+ 				xenon,emmc;
++				bus-width = <8>;
+ 				status = "okay";
+ 			};
+ 			mmc1: mmc@D0000 {
+ 				sdio-vcc-gpio = <&gpio1 ARMADA_3700_GPIO(BANK_1, 22) GPIO_ACTIVE_HIGH>;
++				bus-width = <4>;
+ 				status = "okay";
+ 			};
+ 			usb3: usb3@58000 {
+-- 
+1.9.1
+

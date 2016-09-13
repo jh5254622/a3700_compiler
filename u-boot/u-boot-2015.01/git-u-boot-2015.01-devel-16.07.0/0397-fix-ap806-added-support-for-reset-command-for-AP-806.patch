@@ -1,0 +1,246 @@
+From f55098c9ebe1c7372423924c1ce7bc450d84dc54 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 2 Sep 2015 17:26:00 +0300
+Subject: [PATCH 0397/1240] fix: ap806: added support for reset command for
+ AP-806
+
+Change-Id: Ieea46cf54306ac6553f6c5f2e6c041974aa332a6
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23377
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/Makefile           |  2 +-
+ arch/arm/cpu/armv8/armada8k/soc-init.c         | 87 -----------------------
+ arch/arm/cpu/armv8/armada8k/soc.c              | 98 ++++++++++++++++++++++++++
+ arch/arm/include/asm/arch-armada8k/regs-base.h |  2 +-
+ 4 files changed, 100 insertions(+), 89 deletions(-)
+ delete mode 100644 arch/arm/cpu/armv8/armada8k/soc-init.c
+ create mode 100644 arch/arm/cpu/armv8/armada8k/soc.c
+
+diff --git a/arch/arm/cpu/armv8/armada8k/Makefile b/arch/arm/cpu/armv8/armada8k/Makefile
+index 5533f20..9e9701f 100644
+--- a/arch/arm/cpu/armv8/armada8k/Makefile
++++ b/arch/arm/cpu/armv8/armada8k/Makefile
+@@ -16,7 +16,7 @@
+ # ***************************************************************************
+ #
+ 
+-obj-y += soc-init.o
++obj-y += soc.o
+ obj-y += clock.o
+ obj-$(CONFIG_ARMV8_PSCI)	+= psci.o
+ obj-$(CONFIG_ARMV8_PSCI)	+= cache_llc.o
+diff --git a/arch/arm/cpu/armv8/armada8k/soc-init.c b/arch/arm/cpu/armv8/armada8k/soc-init.c
+deleted file mode 100644
+index 967053f..0000000
+--- a/arch/arm/cpu/armv8/armada8k/soc-init.c
++++ /dev/null
+@@ -1,87 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#define DEBUG
+-
+-#include <common.h>
+-#include <asm/io.h>
+-#include <asm/arch-mvebu/soc.h>
+-#include <asm/arch-armada8k/armada8k.h>
+-#include <asm/arch/regs-base.h>
+-
+-#define ADDRESS_SHIFT			(20)
+-#define MAX_CCU_WINDOWS			(8)
+-#define DRAM_0_TID			0x03
+-#define CCU_WIN_CR_OFFSET(win)		(MVEBU_ADEC_AP_BASE + 0x0 + (0x10 * win))
+-#define CCU_TARGET_ID_OFFSET		(8)
+-#define CCU_TARGET_ID_MASK		(0x7F)
+-#define CCU_WIN_ALR_OFFSET(win)		(MVEBU_ADEC_AP_BASE + 0x8 + (0x10 * win))
+-#define CCU_WIN_AHR_OFFSET(win)		(MVEBU_ADEC_AP_BASE + 0xC + (0x10 * win))
+-
+-int soc_early_init_f(void)
+-{
+-	return 0;
+-}
+-
+-int soc_get_rev(void)
+-{
+-	/* This should read the soc rev from some register*/
+-	return 0;
+-}
+-
+-int soc_get_id(void)
+-{
+-	/* This should read the soc id from some register*/
+-	return CONFIG_ARMADA_8K_SOC_ID;
+-}
+-
+-void soc_init(void)
+-{
+-	return;
+-}
+-
+-int dram_init(void)
+-{
+-#ifdef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+-	/* set static dram size 256MB*/
+-	gd->ram_size = 0x10000000;
+-#elif defined(CONFIG_PALLADIUM)
+-	gd->ram_size = 0x20000000;
+-#else
+-	u32 alr, ahr;
+-	u32 target_id, ctrl;
+-	u32 win;
+-
+-	for (win = 0; win < MAX_CCU_WINDOWS; win++) {
+-		ctrl = readl(CCU_WIN_CR_OFFSET(win));
+-		target_id = (ctrl >> CCU_TARGET_ID_OFFSET) & CCU_TARGET_ID_MASK;
+-
+-		if (target_id == DRAM_0_TID) {
+-			alr = readl(CCU_WIN_ALR_OFFSET(win)) << ADDRESS_SHIFT;
+-			ahr = readl(CCU_WIN_AHR_OFFSET(win)) << ADDRESS_SHIFT;
+-			gd->ram_size = ahr - alr + 1;
+-			gd->bd->bi_dram[0].size = gd->ram_size;
+-			gd->bd->bi_dram[0].start = alr;
+-
+-			debug("DRAM base 0x%08x size 0x%x\n", alr, (uint)gd->ram_size);
+-		}
+-	}
+-#endif
+-
+-	return 0;
+-}
+diff --git a/arch/arm/cpu/armv8/armada8k/soc.c b/arch/arm/cpu/armv8/armada8k/soc.c
+new file mode 100644
+index 0000000..77cacb8
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armada8k/soc.c
+@@ -0,0 +1,98 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#define DEBUG
++
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch-mvebu/soc.h>
++#include <asm/arch-armada8k/armada8k.h>
++#include <asm/arch/regs-base.h>
++
++#define ADDRESS_SHIFT			(20)
++#define MAX_CCU_WINDOWS			(8)
++#define DRAM_0_TID			0x03
++#define CCU_WIN_CR_OFFSET(win)		(MVEBU_ADEC_AP_BASE + 0x0 + (0x10 * win))
++#define CCU_TARGET_ID_OFFSET		(8)
++#define CCU_TARGET_ID_MASK		(0x7F)
++#define CCU_WIN_ALR_OFFSET(win)		(MVEBU_ADEC_AP_BASE + 0x8 + (0x10 * win))
++#define CCU_WIN_AHR_OFFSET(win)		(MVEBU_ADEC_AP_BASE + 0xC + (0x10 * win))
++
++#define RFU_GLOBAL_SW_RST		(MVEBU_RFU_BASE + 0x84)
++#define RFU_SW_RESET_OFFSET		0
++
++int soc_early_init_f(void)
++{
++	return 0;
++}
++
++int soc_get_rev(void)
++{
++	/* This should read the soc rev from some register*/
++	return 0;
++}
++
++int soc_get_id(void)
++{
++	/* This should read the soc id from some register*/
++	return CONFIG_ARMADA_8K_SOC_ID;
++}
++
++void soc_init(void)
++{
++	return;
++}
++
++int dram_init(void)
++{
++#ifdef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
++	/* set static dram size 256MB*/
++	gd->ram_size = 0x10000000;
++#elif defined(CONFIG_PALLADIUM)
++	gd->ram_size = 0x20000000;
++#else
++	u32 alr, ahr;
++	u32 target_id, ctrl;
++	u32 win;
++
++	for (win = 0; win < MAX_CCU_WINDOWS; win++) {
++		ctrl = readl(CCU_WIN_CR_OFFSET(win));
++		target_id = (ctrl >> CCU_TARGET_ID_OFFSET) & CCU_TARGET_ID_MASK;
++
++		if (target_id == DRAM_0_TID) {
++			alr = readl(CCU_WIN_ALR_OFFSET(win)) << ADDRESS_SHIFT;
++			ahr = readl(CCU_WIN_AHR_OFFSET(win)) << ADDRESS_SHIFT;
++			gd->ram_size = ahr - alr + 1;
++			gd->bd->bi_dram[0].size = gd->ram_size;
++			gd->bd->bi_dram[0].start = alr;
++
++			debug("DRAM base 0x%08x size 0x%x\n", alr, (uint)gd->ram_size);
++		}
++	}
++#endif
++
++	return 0;
++}
++
++void reset_cpu(ulong ignored)
++{
++	u32 reg;
++	reg = readl(RFU_GLOBAL_SW_RST);
++	reg &= ~(1 << RFU_SW_RESET_OFFSET);
++	writel(reg, RFU_GLOBAL_SW_RST);
++}
+diff --git a/arch/arm/include/asm/arch-armada8k/regs-base.h b/arch/arm/include/asm/arch-armada8k/regs-base.h
+index 2e1f87b..dc78723 100644
+--- a/arch/arm/include/asm/arch-armada8k/regs-base.h
++++ b/arch/arm/include/asm/arch-armada8k/regs-base.h
+@@ -28,7 +28,7 @@
+ #define MVEBU_ADEC_RFU_BASE 	(MVEBU_REGS_BASE + 0x680000)
+ #define MVEBU_ADEC_IOB_BASE 	(MVEBU_REGS_BASE + 0x2810000)
+ 
+-#define MVEBU_SPI_REGS_BASE(x)	(MVEBU_REGS_BASE + 0x510600)
++#define MVEBU_RFU_BASE		(MVEBU_REGS_BASE + 0x6F0000)
+ #define MVEBU_UART_BASE(x)	(MVEBU_REGS_BASE + 0x512000 + (0x100 * x))
+ #define MVEBU_MISC_REGS_BASE	(MVEBU_REGS_BASE + 0x18200)
+ #define MVEBU_DEVICE_ID_REG	(MVEBU_MISC_REGS_BASE + 0x38)
+-- 
+1.9.1
+

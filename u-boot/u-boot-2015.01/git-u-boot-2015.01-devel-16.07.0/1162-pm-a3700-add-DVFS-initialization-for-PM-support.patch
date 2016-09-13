@@ -1,0 +1,455 @@
+From 8e53aa7fc0f0966c95e021e43c473f8ec132219a Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Wed, 9 Mar 2016 02:56:19 +0800
+Subject: [PATCH 1162/1240] pm: a3700: add DVFS initialization for PM support
+
+This patch adds a PM module which is used to support
+the power management for DVFS.
+- initialize the PM module and get base register address
+  from DT file
+- set below DVFS parameters according to clock setting:
+  CPU clock source
+  CPU clock TBG selection
+  CPU clock TBG prescaler value
+  CPU VDD selection
+- add clock relevant enum in clock header file
+- define compatible string in fdtdec
+
+Change-Id: I79f087b57cdb1583162e71fd56a4a70dc98f17e2
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28114
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+---
+ arch/arm/cpu/armv8/armada3700/Makefile       |   1 +
+ arch/arm/cpu/armv8/armada3700/pm.c           | 257 +++++++++++++++++++++++++++
+ arch/arm/cpu/armv8/armada3700/soc-init.c     |   4 +
+ arch/arm/include/asm/arch-armada3700/clock.h |  17 ++
+ arch/arm/include/asm/arch-armada3700/pm.h    |  23 +++
+ board/mvebu/Kconfig                          |  10 ++
+ doc/device-tree-bindings/power/mvebu-pm.txt  |  11 ++
+ include/fdtdec.h                             |   1 +
+ lib/fdtdec.c                                 |   2 +-
+ 9 files changed, 325 insertions(+), 1 deletion(-)
+ create mode 100644 arch/arm/cpu/armv8/armada3700/pm.c
+ create mode 100644 arch/arm/include/asm/arch-armada3700/pm.h
+ create mode 100644 doc/device-tree-bindings/power/mvebu-pm.txt
+
+diff --git a/arch/arm/cpu/armv8/armada3700/Makefile b/arch/arm/cpu/armv8/armada3700/Makefile
+index 9f8a989..ea7babc 100644
+--- a/arch/arm/cpu/armv8/armada3700/Makefile
++++ b/arch/arm/cpu/armv8/armada3700/Makefile
+@@ -26,3 +26,4 @@ obj-$(CONFIG_MVEBU_A3700_MISC_INIT) += mvebu_misc_init.o
+ obj-$(CONFIG_MVEBU_A3700_CLOCK) += mvebu_clock.o
+ obj-$(CONFIG_MVEBU_BOOTMODE_SWITCH_SUPPORT) += mvebu_bootmode.o
+ obj-$(CONFIG_MVEBU_EFUSE_SUPPORT) += a3700_mbox.o
++obj-$(CONFIG_MVEBU_A3700_PM) += pm.o
+diff --git a/arch/arm/cpu/armv8/armada3700/pm.c b/arch/arm/cpu/armv8/armada3700/pm.c
+new file mode 100644
+index 0000000..9a7ebe3
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armada3700/pm.c
+@@ -0,0 +1,257 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++/*#define DEBUG*/
++#include <common.h>
++#include <fdtdec.h>
++#include <asm/io.h>
++#include <asm/arch-mvebu/fdt.h>
++#include <asm/arch-mvebu/mvebu.h>
++#include <asm/arch/clock.h>
++#include <asm/io.h>
++#include <asm/errno.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++/* North bridge PM configuration registers */
++#define PM_NB_L0_L1_CONFIG_REG	(0x18)
++#define PM_NB_L2_L3_CONFIG_REG	(0x1C)
++#define  PM_NB_TBG_DIV_LX_OFF	(13)
++#define  PM_NB_TBG_DIV_LX_MASK	(0x7)
++#define  PM_NB_CLK_SEL_LX_OFF	(11)
++#define  PM_NB_CLK_SEL_LX_MASK	(0x1)
++#define  PM_NB_TBG_SEL_LX_OFF	(9)
++#define  PM_NB_TBG_SEL_LX_MASK	(0x3)
++#define  PM_NB_VDD_SEL_LX_OFF	(6)
++#define  PM_NB_VDD_SEL_LX_MASK	(0x3)
++#define  PM_NB_LX_CONFIG_SHIFT	(16)
++
++/* VDD level selection */
++enum vdd_select {
++	VDD_SEL_HIGH = 0,
++	VDD_SEL_MEDIUM,
++	VDD_SEL_LOW,
++	VDD_SEL_LOWEST,
++};
++
++/* DVFS parameters per load */
++struct dvfs_load {
++	u32 clk_sel;
++	u32 tbg_sel;
++	u32 tbg_div;
++	u32 vdd_sel;
++};
++
++struct pm_config {
++	u8 *reg_base;
++	struct dvfs_load dvfs_load;
++};
++
++/* DVFS LOAD index */
++enum dvfs_load_index {
++	DVFS_LOAD_0 = 0,
++	DVFS_LOAD_1,
++	DVFS_LOAD_2,
++	DVFS_LOAD_3,
++	DVFS_LOAD_MAX_NUM
++};
++
++/* There is only one PM node in Armada-3700 */
++#define PM_MAX_DT_NUM	1
++struct pm_config __attribute__((section(".data"))) g_pm_config;
++
++/* CPU clock TBG divider array
++ * TBG divider 0 and 7 mean active-high for clock output,
++ * thus default divider 2 are kept for them for all the four levels.
++ * For other divider values from 1 to 6, proper divider values should be set
++ * for each level from small to big.
++ */
++enum a3700_tbg_divider tbg_div_arr[TBG_DIVIDER_NUM][DVFS_LOAD_MAX_NUM] = {
++	{TBG_DIVIDER_1, TBG_DIVIDER_2, TBG_DIVIDER_4, TBG_DIVIDER_6},
++	{TBG_DIVIDER_2, TBG_DIVIDER_3, TBG_DIVIDER_4, TBG_DIVIDER_6},
++	{TBG_DIVIDER_3, TBG_DIVIDER_4, TBG_DIVIDER_5, TBG_DIVIDER_6},
++	{TBG_DIVIDER_4, TBG_DIVIDER_4, TBG_DIVIDER_5, TBG_DIVIDER_6},
++	{TBG_DIVIDER_5, TBG_DIVIDER_5, TBG_DIVIDER_6, TBG_DIVIDER_6},
++	{TBG_DIVIDER_6, TBG_DIVIDER_6, TBG_DIVIDER_6, TBG_DIVIDER_6},
++};
++
++/* CPU VDD selection array */
++enum vdd_select vdd_sel_arr[DVFS_LOAD_MAX_NUM] = {
++	VDD_SEL_HIGH, VDD_SEL_MEDIUM, VDD_SEL_LOW, VDD_SEL_LOWEST
++};
++
++/******************************************************************************
++* Name: set_dvfs_param
++*
++* Description: Set DVFS parameters for dedicated LOAD level
++*
++* Input:	load_level: CPU LOAD level from 0 to 3
++*		pm_load: CPU LOAD parameters
++* Output:	None
++* Return:	Non-zero if the requested settings are not supported
++******************************************************************************/
++int set_dvfs_param(u32 load_level, struct dvfs_load *dvfs_load)
++{
++	u8 *reg_addr;
++	u32 reg_val;
++	u32 shift;
++
++	/* Acquire register address */
++	reg_addr = g_pm_config.reg_base;
++	if (load_level <= DVFS_LOAD_1)
++		reg_addr += PM_NB_L0_L1_CONFIG_REG;
++	else
++		reg_addr += PM_NB_L2_L3_CONFIG_REG;
++
++	/* Acquire shift within register */
++	if (load_level == DVFS_LOAD_0 || load_level == DVFS_LOAD_2)
++		shift = PM_NB_LX_CONFIG_SHIFT;
++	else
++		shift = 0;
++
++	reg_val = readl(reg_addr);
++
++	/* Set clock source */
++	reg_val &= ~(PM_NB_CLK_SEL_LX_MASK << (shift + PM_NB_CLK_SEL_LX_OFF));
++	reg_val |= (dvfs_load->clk_sel & PM_NB_CLK_SEL_LX_MASK) << (shift + PM_NB_CLK_SEL_LX_OFF);
++
++	/* Set TBG source */
++	reg_val &= ~(PM_NB_TBG_SEL_LX_MASK << (shift + PM_NB_TBG_SEL_LX_OFF));
++	reg_val |= (dvfs_load->tbg_sel & PM_NB_TBG_SEL_LX_MASK) << (shift + PM_NB_TBG_SEL_LX_OFF);
++
++	/* Set clock divider */
++	reg_val &= ~(PM_NB_TBG_DIV_LX_MASK << (shift + PM_NB_TBG_DIV_LX_OFF));
++	reg_val |= (dvfs_load->tbg_div & PM_NB_TBG_DIV_LX_MASK) << (shift + PM_NB_TBG_DIV_LX_OFF);
++
++	/* Set VDD divider */
++	reg_val &= ~(PM_NB_VDD_SEL_LX_MASK << (shift + PM_NB_VDD_SEL_LX_OFF));
++	reg_val |= (dvfs_load->vdd_sel & PM_NB_VDD_SEL_LX_MASK) << (shift + PM_NB_VDD_SEL_LX_OFF);
++
++	writel(reg_val, reg_addr);
++
++	return 0;
++}
++
++/******************************************************************************
++* Name: set_dvfs
++*
++* Description: Configure entire clock tree according to CPU and DDR frequency
++*
++* Input:	cpu_clk_sel: TBG source selection for CPU clock
++*		cpu_clk_prscl: prescaling for CPU clock
++* Output:	None
++* Return:	Non-zero if the requested settings are not supported
++******************************************************************************/
++int set_dvfs(u32 cpu_clk_sel, u32 cpu_clk_prscl)
++{
++	int ret = 0;
++	int i;
++	struct dvfs_load *p_dvfs_load;
++
++	debug_enter();
++
++	/* Check input parameters */
++	if (cpu_clk_sel > TBG_B_S) {
++		error("CPU TBG CLK selection %d is out of range\n", cpu_clk_sel);
++		return -EINVAL;
++	}
++
++	if (cpu_clk_prscl < TBG_DIVIDER_1 || cpu_clk_prscl > TBG_DIVIDER_6) {
++		error("CPU CLK divider %d is out of range\n", cpu_clk_prscl);
++		return -EINVAL;
++	}
++
++	/* set CPU clk divider */
++	p_dvfs_load = &g_pm_config.dvfs_load;
++	for (i = DVFS_LOAD_0; i <= DVFS_LOAD_3; i++) {
++		/* Always select TBG */
++		p_dvfs_load->clk_sel = CLK_SEL_TBG;
++
++		/* set TBG selection */
++		p_dvfs_load->tbg_sel = cpu_clk_sel;
++
++		/* set CPU clock TBG divider */
++		p_dvfs_load->tbg_div = tbg_div_arr[cpu_clk_prscl - TBG_DIVIDER_1][i];
++
++		/* set VDD selection */
++		p_dvfs_load->vdd_sel = vdd_sel_arr[i];
++
++		ret = set_dvfs_param(i, p_dvfs_load);
++		if (ret) {
++			error("Failed to set DVFS parameter for LOAD%d\n", i);
++			break;
++		}
++	}
++
++	debug_exit();
++
++	return ret;
++}
++
++/******************************************************************************
++* Name: init_pm
++*
++* Description: Initialize power management according to DT node
++*
++* Input:	None
++* Output:	None
++* Return:	Non-zero if the initialization failed
++******************************************************************************/
++int init_pm(void)
++{
++	int ret = 0;
++	int node_list[PM_MAX_DT_NUM];
++	int node;
++	u32 count;
++	u32 clk_sel;
++	u32 clk_prscl;
++
++	debug_enter();
++
++	count = fdtdec_find_aliases_for_id(gd->fdt_blob, "pm",
++			COMPAT_MVEBU_A3700_PM, node_list, PM_MAX_DT_NUM);
++	if (count <= 0)
++		return -ENODEV;
++
++	/* There should be only one "pm" DT node */
++	node = node_list[0];
++
++	if (node <= 0)
++		return -ENODEV;
++
++	/* Get reg_base from FDT */
++	g_pm_config.reg_base = (u8 *)fdt_get_regs_offs(gd->fdt_blob, node, "reg");
++
++	ret = get_cpu_clk_src_div(&clk_sel, &clk_prscl);
++	if (ret) {
++		error("Failed to get CPU clock source and prescaling divider\n");
++		return -EINVAL;
++	}
++	if (clk_prscl == 0 || clk_prscl == 7) {
++		error("CPU clk output is always high!!\n");
++		return -EINVAL;
++	}
++
++	ret = set_dvfs(clk_sel, clk_prscl);
++	if (ret) {
++		error("Failed to set DVFS parameters\n");
++		return -EINVAL;
++	}
++
++	debug_exit();
++	return ret;
++}
+diff --git a/arch/arm/cpu/armv8/armada3700/soc-init.c b/arch/arm/cpu/armv8/armada3700/soc-init.c
+index d457879..80d717f 100644
+--- a/arch/arm/cpu/armv8/armada3700/soc-init.c
++++ b/arch/arm/cpu/armv8/armada3700/soc-init.c
+@@ -31,6 +31,7 @@
+ #include <libfdt.h>
+ #include <asm/arch/boot_mode.h>
+ #include <fdt_support.h>
++#include <asm/arch/pm.h>
+ 
+ /* NB warm reset */
+ #define MVEBU_NB_WARM_RST_REG	(MVEBU_GPIO_NB_REG_BASE + 0x40)
+@@ -88,6 +89,9 @@ void soc_init(void)
+ 		error("COMPHY initialization failed\n");
+ #endif
+ 
++#ifdef CONFIG_MVEBU_A3700_PM
++	init_pm();
++#endif
+ 	return;
+ }
+ 
+diff --git a/arch/arm/include/asm/arch-armada3700/clock.h b/arch/arm/include/asm/arch-armada3700/clock.h
+index f68e26a..0a1b5ee 100644
+--- a/arch/arm/include/asm/arch-armada3700/clock.h
++++ b/arch/arm/include/asm/arch-armada3700/clock.h
+@@ -141,6 +141,23 @@ enum a3700_clock_line {
+ 	TBG_B_S = 3
+ };
+ 
++/* Clock source selection */
++enum a3700_clk_select {
++	CLK_SEL_OSC = 0,
++	CLK_SEL_TBG,
++};
++
++/* TBG divider */
++enum a3700_tbg_divider {
++	TBG_DIVIDER_1 = 1,
++	TBG_DIVIDER_2,
++	TBG_DIVIDER_3,
++	TBG_DIVIDER_4,
++	TBG_DIVIDER_5,
++	TBG_DIVIDER_6,
++	TBG_DIVIDER_NUM
++};
++
+ /*
+  * North Bridge Clocks
+  */
+diff --git a/arch/arm/include/asm/arch-armada3700/pm.h b/arch/arm/include/asm/arch-armada3700/pm.h
+new file mode 100644
+index 0000000..1b21d8e
+--- /dev/null
++++ b/arch/arm/include/asm/arch-armada3700/pm.h
+@@ -0,0 +1,23 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _MVEBU_PM_H_
++#define _MVEBU_PM_H_
++
++int init_pm(void);
++#endif /* _MVEBU_PM_H_ */
+diff --git a/board/mvebu/Kconfig b/board/mvebu/Kconfig
+index 0322a95..d60e07e 100644
+--- a/board/mvebu/Kconfig
++++ b/board/mvebu/Kconfig
+@@ -56,6 +56,16 @@ config MVEBU_A3700_CLOCK
+ 	  For the first stage all clocks will be enabled
+ 	  by default.
+ 
++config MVEBU_A3700_PM
++	bool "Armada-3700 PM support"
++	depends on TARGET_ARMADA_3700
++	default n
++	help
++	  Choose this option to support
++	  Marvell Armada-3700 power management.
++	  This configuration set default PM settings
++	  according to current DT and clock configuration.
++
+ endmenu
+ 
+ config PALLADIUM
+diff --git a/doc/device-tree-bindings/power/mvebu-pm.txt b/doc/device-tree-bindings/power/mvebu-pm.txt
+new file mode 100644
+index 0000000..c2bfde6
+--- /dev/null
++++ b/doc/device-tree-bindings/power/mvebu-pm.txt
+@@ -0,0 +1,11 @@
++The PMU support inside of Marvell EBU Armada-3700 SoC
++
++Required Properties:
++-compatible: "marvell,armada-3700-pm"
++-reg: PM internal register offset and size
++
++Example:
++	pm@14000 {
++		compatible = "marvell,armada-3700-pm";
++		reg = <0x14000 0x100>;
++	};
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 3b78edc..e4b9f00 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -165,6 +165,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_SAR_REG_CP110,
+ 	COMPAT_MVEBU_RTC_REG,
+ 	COMPAT_MVEBU_GPIO,
++	COMPAT_MVEBU_A3700_PM,
+ 
+ 	COMPAT_COUNT,
+ };
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index b1e484e..ea14aed 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -127,7 +127,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_SAR_REG_CP110, "marvell,sample-at-reset-cp110"),
+ 	COMPAT(MVEBU_RTC_REG, "marvell,real-time-clock"),
+ 	COMPAT(MVEBU_GPIO, "marvell,mvebu-gpio"),
+-
++	COMPAT(MVEBU_A3700_PM, "marvell,armada-3700-pm"),
+ };
+ 
+ const char *fdtdec_get_compatible(enum fdt_compat_id id)
+-- 
+1.9.1
+

@@ -1,0 +1,32 @@
+From 0372e8a8babef4e8702a14a7b43dee2aee6f25a7 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Thu, 19 Nov 2015 10:38:25 +0800
+Subject: [PATCH 0546/1240] fix: comphy: a3700: disabled comm-phy for Palladium
+
+- issue: COMPHY is enabled by default for Palladium,
+         but Palladium for Armada-3700 does not have common phy,
+         which leads to issues during init.
+- fix: disable comphy in palladium default config
+
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Change-Id: I7e92585a49cf36ba0133989803238c60da4a3464
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25041
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ configs/mvebu_armadalp_palladium_defconfig | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/configs/mvebu_armadalp_palladium_defconfig b/configs/mvebu_armadalp_palladium_defconfig
+index d58289d..2ff6faf 100644
+--- a/configs/mvebu_armadalp_palladium_defconfig
++++ b/configs/mvebu_armadalp_palladium_defconfig
+@@ -33,5 +33,4 @@ CONFIG_CMD_PING=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-lp-palladium"
+-+S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+ +S:# CONFIG_MVEBU_SPL_DDR_SUPPORT is not set
+-- 
+1.9.1
+

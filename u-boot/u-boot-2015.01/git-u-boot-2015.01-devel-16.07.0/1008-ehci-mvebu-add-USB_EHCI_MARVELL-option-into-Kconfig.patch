@@ -1,0 +1,40 @@
+From 92a7023238624e03113938bfbcb3466018725e99 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Fri, 18 Mar 2016 16:51:06 +0800
+Subject: [PATCH 1008/1240] ehci: mvebu: add USB_EHCI_MARVELL option into
+ Kconfig
+
+Change-Id: Ieccb34b1cc61cfbeabf51359a9459184cc63c36c
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28344
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/usb/host/Kconfig | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/drivers/usb/host/Kconfig b/drivers/usb/host/Kconfig
+index 77e523e..0455bc6 100644
+--- a/drivers/usb/host/Kconfig
++++ b/drivers/usb/host/Kconfig
+@@ -55,6 +55,16 @@ config USB_EHCI
+ 
+ if USB_EHCI_HCD
+ 
++config USB_EHCI_MARVELL
++	bool "MARVELL USB 2.0 support"
++	default y
++	depends on MVEBU
++	---help---
++	  Choose this option to add support
++	  for USB 2.0 driver on mvebu SoCs,
++	  which includes Armada3700 and
++	  other Armada family SoCs.
++
+ config USB_EHCI_UNIPHIER
+ 	bool "Support for Panasonic UniPhier on-chip EHCI USB controller"
+ 	depends on ARCH_UNIPHIER
+-- 
+1.9.1
+

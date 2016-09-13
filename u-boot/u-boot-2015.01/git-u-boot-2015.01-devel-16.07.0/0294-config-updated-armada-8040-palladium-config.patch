@@ -1,0 +1,34 @@
+From 5b2115130c49d280d20cdc249dd4955350e66ba2 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 30 Jul 2015 16:16:10 +0300
+Subject: [PATCH 0294/1240] config: updated armada-8040 palladium config
+
+- added IOB driver
+- added designware PCIe driver
+
+Change-Id: I8c9d423bbb5870b84d2df448ac4e600414050c51
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22364
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ configs/mvebu_armada8040_pd_defconfig | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/configs/mvebu_armada8040_pd_defconfig b/configs/mvebu_armada8040_pd_defconfig
+index f300841..083dc37 100644
+--- a/configs/mvebu_armada8040_pd_defconfig
++++ b/configs/mvebu_armada8040_pd_defconfig
+@@ -23,7 +23,9 @@ CONFIG_CMD_MVEBU_MPP=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="apn-806-db"
++CONFIG_MVEBU_DW_PCIE=y
+ CONFIG_MVEBU_CCU=y
++CONFIG_MVEBU_IOB=y
+ CONFIG_MVEBU_RFU=y
+ +S:CONFIG_SYS_NS16550=y
+ CONFIG_MVEBU_PINCTL=y
+-- 
+1.9.1
+

@@ -1,0 +1,124 @@
+From 325048fa6bb38985685030f0406f38f1975cbf11 Mon Sep 17 00:00:00 2001
+From: Ken Ma <make@marvell.com>
+Date: Mon, 11 Apr 2016 22:08:13 +0800
+Subject: [PATCH 156/239] a3700: move boot mode switch feature from spl to atf
+
+- Armada3700-Z chip doesn't support escape string to enter the uart mode.
+  So that the u-boot cannot be recovered via uart on a boot failure. For
+  Marvell board, it supports to switch the boot_src by modifying the
+  sample at reset value in PCA9560.
+- In ATF BL31, the boot_src is always set to uart mode. In the last u-boot
+  booting stage, boot_src will be changed back to orignal value.
+
+Change-Id: Ibfef5ee7c57437ff960be12f17b6e6e348119f2e
+Signed-off-by: Ken Ma <make@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28915
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ include/plat/marvell/common/sys_info.h       |  1 +
+ plat/marvell/a3700/a3700_z/plat_bl31_setup.c | 62 ++++++++++++++++++++++++++++
+ 2 files changed, 63 insertions(+)
+
+diff --git a/include/plat/marvell/common/sys_info.h b/include/plat/marvell/common/sys_info.h
+index 3efc7ae..9498df6 100644
+--- a/include/plat/marvell/common/sys_info.h
++++ b/include/plat/marvell/common/sys_info.h
+@@ -50,6 +50,7 @@ enum sys_info_type {
+ 	DRAM_CS2,
+ 	DRAM_CS3,
+ 	RECOVERY_MODE,
++	BOOT_MODE,
+ 	MAX_OPTION,
+ };
+ 
+diff --git a/plat/marvell/a3700/a3700_z/plat_bl31_setup.c b/plat/marvell/a3700/a3700_z/plat_bl31_setup.c
+index eae71f7..5d8537c 100644
+--- a/plat/marvell/a3700/a3700_z/plat_bl31_setup.c
++++ b/plat/marvell/a3700/a3700_z/plat_bl31_setup.c
+@@ -37,6 +37,25 @@
+ #include <mmio.h>
+ #include <i2c.h>
+ 
++/*******************************************************************************
++ * EEPROM for boot mode
++ ******************************************************************************/
++#define BOOT_MODE_I2C_CHIP			0x4c
++#define BOOT_MODE_I2C_ADDR			0
++#define BOOT_MODE_I2C_ADDR_LEN			1
++
++/* BOOT MODE */
++enum boot_mode_ids {
++	BOOT_MODE_AUTO_SCAN = 0,
++	BOOT_MODE_SPI,
++	BOOT_MODE_EMMC,
++	BOOT_MODE_EMMC_ALTERNATE,
++	BOOT_MODE_SATA,
++	BOOT_MODE_NAND,
++	BOOT_MODE_UART,
++	BOOT_MODE_MAX,
++};
++
+ /* This function passes hard coded DRAM in ATF to sys info */
+ static void pass_dram_sys_info(void)
+ {
+@@ -59,6 +78,46 @@ static void marvell_bl31_mpp_init(void)
+ 	mmio_write_32(MVEBU_GPIO_NB_SEL_REG, reg_val);
+ }
+ 
++static void marvell_boot_mode_set(uint8_t boot_mode)
++{
++	i2c_write(BOOT_MODE_I2C_CHIP, BOOT_MODE_I2C_ADDR, BOOT_MODE_I2C_ADDR_LEN, &boot_mode, sizeof(boot_mode));
++}
++
++static void marvell_boot_mode_get(uint8_t *boot_mode)
++{
++	i2c_read(BOOT_MODE_I2C_CHIP, BOOT_MODE_I2C_ADDR, BOOT_MODE_I2C_ADDR_LEN, boot_mode, sizeof(*boot_mode));
++}
++
++/* Armada3700-Z chip doesn't support escape string to enter the uart mode.
++ * So that the u-boot cannot be recovered via uart on a boot failure. For Marvell
++ * board, it supports to switch the boot_src by modifying the sample at reset
++ * value in PCA9560.
++ *
++ * 1. in atf bl31, boot mode from SatR device will be read, kept
++ *    the original value, I2C mem will be written to boot from UART, so if
++ *    atf/u-boot crashed, board stays in boot from UART mode.
++ * 2. in the last stage of u-boot, boot mode will be written back to
++ *    oringal value.
++ */
++static void marvell_boot_mode_switch(void)
++{
++	uint8_t boot_mode;
++
++	/* get boot mode */
++	marvell_boot_mode_get(&boot_mode);
++
++	/* in case boot mode is set to uart mode by spl already */
++	/* atf needn't to save boot mode again*/
++	if (BOOT_MODE_UART == boot_mode)
++		return;
++
++	/* Pass BOOT_MODE from atf to u-boot */
++	set_info(BOOT_MODE, boot_mode);
++
++	/* switch to uart boot mode */
++	marvell_boot_mode_set(BOOT_MODE_UART);
++}
++
+ /* This function overruns the same function in marvell_bl31_setup.c */
+ void bl31_plat_arch_setup(void)
+ {
+@@ -73,6 +132,9 @@ void bl31_plat_arch_setup(void)
+ 	/* i2c initialization */
+ 	i2c_init();
+ 
++	/* save current boot mode and switch to UART boot mode */
++	marvell_boot_mode_switch();
++
+ 	/* Pass DRAM size value so that u-boot could get it later */
+ 	pass_dram_sys_info();
+ }
+-- 
+1.9.1
+

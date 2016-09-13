@@ -1,0 +1,96 @@
+From cc3800625050a87219a162e6386983fb00369589 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Tue, 31 May 2016 15:49:57 +0300
+Subject: [PATCH 1180/1240] fix: dts: a8k: set utmi & mdio status in
+ cp110-master & cp110-slave dts
+
+- utmi and mdio nodes were mistakenely enabled in cp110.dtsi (lowest level)
+- this patch relocate the utmi & mdio status to be set per master/slave files
+- set UTMI1 on CP1 as disabled (CP1 supports only single UTMI0)
+
+Change-Id: Id71c858cfd803006a77a7f6fc294b72cca343082
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30218
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/cp110-master.dtsi | 9 +++++++++
+ arch/arm/dts/cp110-slave.dtsi  | 9 +--------
+ arch/arm/dts/cp110.dtsi        | 6 +++---
+ 3 files changed, 13 insertions(+), 11 deletions(-)
+
+diff --git a/arch/arm/dts/cp110-master.dtsi b/arch/arm/dts/cp110-master.dtsi
+index 0f17b28..19cbe21 100644
+--- a/arch/arm/dts/cp110-master.dtsi
++++ b/arch/arm/dts/cp110-master.dtsi
+@@ -67,6 +67,15 @@
+ 			sar-reg {
+ 				status = "okay";
+ 			};
++			utmi0@580000 {
++				status = "okay";
++			};
++			utmi1@581000 {
++				status = "okay";
++			};
++			mdio0@12A200 {
++				status = "okay";
++			};
+ 			gpio1: gpio@440100 {
+ 			};
+ 			gpio2: gpio@440140 {
+diff --git a/arch/arm/dts/cp110-slave.dtsi b/arch/arm/dts/cp110-slave.dtsi
+index ccc482e..b11c8ed 100644
+--- a/arch/arm/dts/cp110-slave.dtsi
++++ b/arch/arm/dts/cp110-slave.dtsi
+@@ -63,15 +63,8 @@
+ 		internal-regs {
+ 			refclk1: refclk {
+ 			};
+-			/* TODO: disable utmi0,utmi1,mdio in cp110.dtsi; enable in board dtsi */
+ 			utmi0@580000 {
+-				status = "disabled";
+-			};
+-			utmi1@581000 {
+-				status = "disabled";
+-			};
+-			mdio0@12A200 {
+-				status = "disabled";
++				status = "okay";
+ 			};
+ 			sar-reg {
+ 				status = "disabled";
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index 7d878bf..e26ca49 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -91,7 +91,7 @@ utmi0@580000 {
+ 	reg-usb-cfg = <0x440420 0x4>;
+ 	reg-utmi-cfg = <0x440440 0x4>;
+ 	utmi-port = <UTMI_PHY_TO_USB_HOST0>;
+-	status = "okay";
++	status = "disabled";
+ };
+ utmi1@581000 {
+ 	compatible = "marvell,mvebu-utmi-2.6.0";
+@@ -99,7 +99,7 @@ utmi1@581000 {
+ 	reg-usb-cfg = <0x440420 0x4>;
+ 	reg-utmi-cfg = <0x440444 0x4>;
+ 	utmi-port = <UTMI_PHY_TO_USB_HOST1>;
+-	status = "okay";
++	status = "disabled";
+ };
+ usb3@500000 { /* USB3_H0 */
+ 	compatible = "marvell,mvebu-usb3";
+@@ -152,7 +152,7 @@ mdio0@12A200 {
+ 	compatible = "marvell,mvebu-mdio";
+ 	reg_xsmi = <0x12A600 0x20>;
+ 	reg_smi = <0x12A200 0x4>;
+-	status = "okay";
++	status = "disabled";
+ };
+ 
+ sar-reg {
+-- 
+1.9.1
+

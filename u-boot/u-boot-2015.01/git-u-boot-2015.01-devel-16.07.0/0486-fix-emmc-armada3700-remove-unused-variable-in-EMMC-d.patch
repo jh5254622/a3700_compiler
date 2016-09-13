@@ -1,0 +1,33 @@
+From ac81b861824e14dc9d83f66d3143c54f5ca0cac7 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Tue, 10 Nov 2015 21:48:53 +0800
+Subject: [PATCH 0486/1240] fix: emmc: armada3700: remove unused variable in
+ EMMC driver
+
+- Fixed compilation issue
+
+Change-Id: I81e5ed8a2144de49e25064c4a658acdb41539abe
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24713
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ drivers/mmc/xenon_mmc.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/drivers/mmc/xenon_mmc.c b/drivers/mmc/xenon_mmc.c
+index 3e39a0f..b006343 100644
+--- a/drivers/mmc/xenon_mmc.c
++++ b/drivers/mmc/xenon_mmc.c
+@@ -725,7 +725,6 @@ static void xenon_mmc_set_ios(struct mmc *mmc)
+ static int xenon_mmc_init(struct mmc *mmc)
+ {
+ 	u32 status;
+-	u32 ctrl;
+ 	u8  var;
+ 	u32 timeout = 1000; /* Wait max 1s */
+ 
+-- 
+1.9.1
+

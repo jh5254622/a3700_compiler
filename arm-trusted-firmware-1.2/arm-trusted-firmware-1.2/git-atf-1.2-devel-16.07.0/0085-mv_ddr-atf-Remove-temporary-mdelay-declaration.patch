@@ -1,0 +1,33 @@
+From 925dca77c55c6a4180956d54937716c7906e0412 Mon Sep 17 00:00:00 2001
+From: Victor Axelrod <victora@marvell.com>
+Date: Tue, 5 Apr 2016 15:11:35 +0300
+Subject: [PATCH 085/239] mv_ddr: atf: Remove temporary mdelay() declaration
+
+Change-Id: I05c45fd26edf3536459c934bc6b0957cc4817131
+Signed-off-by: Victor Axelrod <victora@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28791
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/mv_ddr_atf_wrapper.h | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/drivers/marvell/mv_ddr/mv_ddr_atf_wrapper.h b/drivers/marvell/mv_ddr/mv_ddr_atf_wrapper.h
+index 8c6fea2..fe3ef50 100644
+--- a/drivers/marvell/mv_ddr/mv_ddr_atf_wrapper.h
++++ b/drivers/marvell/mv_ddr/mv_ddr_atf_wrapper.h
+@@ -227,11 +227,7 @@ typedef unsigned int u32;
+ #include <string.h>
+ 
+ /* mdelay function */
+-#if 0 /* TODO: temporary excluded until enabled in ATF */
+ #include "../../../include/drivers/delay_timer.h"
+-#endif
+-/* TODO: meantime, temporary implementation used */
+-void mdelay(unsigned long msec);
+ 
+ /* memcpy function */
+ #include "../../../include/lib/mmio.h"
+-- 
+1.9.1
+

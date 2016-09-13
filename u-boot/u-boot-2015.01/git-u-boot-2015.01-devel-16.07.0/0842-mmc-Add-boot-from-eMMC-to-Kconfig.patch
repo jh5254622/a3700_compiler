@@ -1,0 +1,37 @@
+From b1fa138f12639d5ec86422054f7e01ded37783a2 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Sun, 7 Feb 2016 11:06:45 +0200
+Subject: [PATCH 0842/1240] mmc: Add boot from eMMC to Kconfig
+
+- Add MVEBU_MMC_BOOT to Kconfig
+
+Change-Id: I10cc55ca3acd1bcc9e70ba6e4cf9cd0155bb3fdb
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27264
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Kconfig | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index 565f584..7baa1b2 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -114,6 +114,12 @@ config MVEBU_NOR_BOOT
+ 	bool "NOR flash boot"
+ 	depends on MVEBU_NOR
+ 	help
++	  Enable boot from NOR boot partition
++
++config MVEBU_MMC_BOOT
++	bool "eMMC flash boot"
++	depends on (MVEBU_MMC || XENON_MMC)
++	help
+ 	  Enable boot from eMMC boot partition
+ 
+ endchoice
+-- 
+1.9.1
+

@@ -1,0 +1,435 @@
+From efa2c202f1bf9a326707c4089ccbe1b4652a8a49 Mon Sep 17 00:00:00 2001
+From: Joe Zhou <shjzhou@marvell.com>
+Date: Wed, 22 Jul 2015 18:11:42 +0800
+Subject: [PATCH 0414/1240] mbus: arlp: added support for Armada-LP decode
+ window
+
+ArLP uses the same MBUS, but register definitions are different:
+ 1. register offset calculation method is different
+ 2. window size is a separate register
+ 3. the bit offset of window base/remap registers is different
+ 4. ArLP has no remap high register
+In order to reuse the MBUS driver as much as possible, move the
+register definitions to a dedicate file (per SoC). mbus driver will
+include this header file by macro. To adapt to this approach, MBUS
+driver is slightly modified.
+
+Change-Id: I6645710fb69603b06273f24ef14c6fe562a5ad5a
+Signed-off-by: Joe Zhou <shjzhou@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22066
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/armada-lp.dtsi                    | 17 +++++-
+ arch/arm/include/asm/arch-armada38x/mbus_reg.h | 72 ++++++++++++++++++++++
+ arch/arm/include/asm/arch-armadalp/mbus_reg.h  | 49 +++++++++++++++
+ configs/mvebu_armadalp_defconfig               |  2 +
+ configs/mvebu_armadalp_palladium_defconfig     |  2 +
+ drivers/misc/Kconfig                           | 11 ++++
+ drivers/misc/mvebu_mbus.c                      | 82 ++++++++++++--------------
+ 7 files changed, 191 insertions(+), 44 deletions(-)
+ create mode 100644 arch/arm/include/asm/arch-armada38x/mbus_reg.h
+ create mode 100644 arch/arm/include/asm/arch-armadalp/mbus_reg.h
+
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index 21b16b5..8441710 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -25,6 +25,7 @@
+ 				baudrate = <115200>;
+ 				status = "disabled";
+ 			};
++
+ 			spi0: spi@10600 {
+ 				compatible = "marvell,armadalp-spi";
+ 				reg = <0x10600 0x50>;
+@@ -33,6 +34,20 @@
+ 				spi-max-frequency = <40000>;
+ 				status = "disabled";
+ 			};
+-};
++
++			mbus {
++				compatible = "marvell,mvebu-mbus";
++				reg = <0xcf00 0xf0>;
++				max-win = <5>;
++				max-remap = <5>;
++				remap-size = <32>;
++				internal-win = <6>;
++				windows = <0x0 0x80000000 ATTR(0x1, 0x0, 0x0)
++					0xE0000000 0x8000000 ATTR(0x1, 0x5, 0x0)
++					0xE8000000 0x8000000 ATTR(0x1, 0x2, 0x0)
++					0xF0000000 0x20000 ATTR(0x1, 0x7, 0x0)
++					0x80000000 0x10000000 ATTR(0x1, 0x3, 0x0)>;
++			};
++		};
+ 	};
+ };
+diff --git a/arch/arm/include/asm/arch-armada38x/mbus_reg.h b/arch/arm/include/asm/arch-armada38x/mbus_reg.h
+new file mode 100644
+index 0000000..1e8e631
+--- /dev/null
++++ b/arch/arm/include/asm/arch-armada38x/mbus_reg.h
+@@ -0,0 +1,72 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2015 Marvell International Ltd.
++* ***************************************************************************
++* This program is free software: you can redistribute it and/or modify it
++* under the terms of the GNU General Public License as published by the Free
++* Software Foundation, either version 2 of the License, or any later version.
++*
++* This program is distributed in the hope that it will be useful,
++* but WITHOUT ANY WARRANTY; without even the implied warranty of
++* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++* GNU General Public License for more details.
++*
++* You should have received a copy of the GNU General Public License
++* along with this program.  If not, see <http://www.gnu.org/licenses/>.
++* ***************************************************************************
++*/
++
++#ifndef _MBUS_A38X_H_
++#define _MBUS_A38X_H_
++
++/* to config MBUS, usually there are severl regs:
++  * size_reg: window size
++  * ctrl_reg: enable/disable, target, attribute
++  * base_reg: window base
++  * remap_low_reg & remap_high_reg
++  *
++  * But not all Soc have the same reg define, some
++  * might put size_reg as part of ctrl_reg, some might
++  * not have remap_high_reg.
++  * To have a unified driver,
++  *   - we define all the regs,
++  *   - some regs might have the same address, like size_reg
++  *      and ctrl_reg, when size information is put into ctrl_reg.
++  *   - if some Soc does not have it, we use a Dummy
++  *      and make sure it will not be configured.
++  */
++
++#define MBUS_WIN_CTRL_REG(win_num)		((win_num < 8) ? \
++		(win_num * 0x10) : (0x90 + (win_num-8)*0x08))
++#define MBUS_CR_WIN_ENABLE			0x1
++#define MBUS_CR_WIN_TARGET_OFFS			4
++#define MBUS_CR_WIN_TARGET_MASK			(0xf << MBUS_CR_WIN_TARGET_OFFS)
++#define MBUS_CR_WIN_ATTR_OFFS			8
++#define MBUS_CR_WIN_ATTR_MASK			(0xff << MBUS_CR_WIN_ATTR_OFFS)
++
++#define MBUS_WIN_SIZE_REG(win_num)		((win_num < 8) ? \
++		(win_num * 0x10) : (0x90 + (win_num-8)*0x08))
++#define MBUS_CR_WIN_SIZE_OFFS			16
++#define MBUS_CR_WIN_SIZE_MASK			(0xffff << MBUS_CR_WIN_SIZE_OFFS)
++#define MBUS_CR_WIN_SIZE_ALIGNMENT		0x10000
++
++#define MBUS_WIN_BASE_REG(win_num)		((win_num < 8) ? \
++		(0x4 + win_num*0x10) :	(0x94 + (win_num-8)*0x08))
++#define MBUS_BR_BASE_OFFS			16
++#define MBUS_BR_BASE_MASK			(0xffff <<  MBUS_BR_BASE_OFFS)
++
++#define MBUS_WIN_REMAP_LOW_REG(win_num)		((win_num < 8) ? \
++		(0x8 + win_num*0x10) : (0))
++#define MBUS_RLR_REMAP_LOW_OFFS			16
++#define MBUS_RLR_REMAP_LOW_MASK			(0xffff << MBUS_RLR_REMAP_LOW_OFFS)
++
++#define MBUS_WIN_REMAP_HIGH_REG(win_num)	((win_num < 8) ? \
++		(0xC + win_num*0x10) : (0))
++#define MBUS_RHR_REMAP_HIGH_OFFS		0
++#define MBUS_RHR_REMAP_HIGH_MASK		(0xffffffff << MBUS_RHR_REMAP_HIGH_OFFS)
++
++#define MBUS_WIN_INTEREG_REG			(0x80)
++
++#endif	/* _MBUS_A38X_H_ */
++
++
+diff --git a/arch/arm/include/asm/arch-armadalp/mbus_reg.h b/arch/arm/include/asm/arch-armadalp/mbus_reg.h
+new file mode 100644
+index 0000000..03e29c2
+--- /dev/null
++++ b/arch/arm/include/asm/arch-armadalp/mbus_reg.h
+@@ -0,0 +1,49 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2015 Marvell International Ltd.
++* ***************************************************************************
++* This program is free software: you can redistribute it and/or modify it
++* under the terms of the GNU General Public License as published by the Free
++* Software Foundation, either version 2 of the License, or any later version.
++*
++* This program is distributed in the hope that it will be useful,
++* but WITHOUT ANY WARRANTY; without even the implied warranty of
++* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++* GNU General Public License for more details.
++*
++* You should have received a copy of the GNU General Public License
++* along with this program.  If not, see <http://www.gnu.org/licenses/>.
++* ***************************************************************************
++*/
++
++#ifndef _MBUS_ARLP_H_
++#define _MBUS_ARLP_H_
++
++#define MBUS_WIN_CTRL_REG(win_num)		(win_num * 0x10)
++#define MBUS_CR_WIN_ENABLE				0x1
++#define MBUS_CR_WIN_TARGET_OFFS			4
++#define MBUS_CR_WIN_TARGET_MASK			(0xf << MBUS_CR_WIN_TARGET_OFFS)
++#define MBUS_CR_WIN_ATTR_OFFS			8
++#define MBUS_CR_WIN_ATTR_MASK			(0xff << MBUS_CR_WIN_ATTR_OFFS)
++
++#define MBUS_WIN_SIZE_REG(win_num)		(0x4 + win_num * 0x10)
++#define MBUS_CR_WIN_SIZE_OFFS			0
++#define MBUS_CR_WIN_SIZE_MASK			(0xffffff << MBUS_CR_WIN_SIZE_OFFS)
++#define MBUS_CR_WIN_SIZE_ALIGNMENT		0x10000
++
++
++#define MBUS_WIN_BASE_REG(win_num)		(0x8 + win_num * 0x10)
++#define MBUS_BR_BASE_OFFS				0
++#define MBUS_BR_BASE_MASK				(0xffffff <<  MBUS_BR_BASE_OFFS)
++
++#define MBUS_WIN_REMAP_LOW_REG(win_num)	(0xc + win_num * 0x10)
++#define MBUS_RLR_REMAP_LOW_OFFS			0
++#define MBUS_RLR_REMAP_LOW_MASK			(0xffffff << MBUS_RLR_REMAP_LOW_OFFS)
++
++/* there is no remap_high reg in ArmadaLP, just define here to pass compilation */
++#define MBUS_WIN_REMAP_HIGH_REG(win_num)	(0xc + win_num * 0x10)
++
++#define MBUS_WIN_INTEREG_REG			(0xF0)
++
++#endif	/* _MBUS_ARLP_H_ */
++
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index 4ddb8bf..1152dbe 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -6,6 +6,8 @@ CONFIG_MVEBU_SPI=y
+ +S:CONFIG_MVEBU_UART_ARLP=y
+ +S:CONFIG_DEVEL_BOARD=y
+ CONFIG_CUSTOMER_BOARD=y
++CONFIG_MVEBU_MBUS=y
++CONFIG_MVEBU_MBUS_SKIP_DRAM_WIN=y
+ CONFIG_CMD_BDI=y
+ CONFIG_CMD_SPI=y
+ CONFIG_CMD_BOOTD=y
+diff --git a/configs/mvebu_armadalp_palladium_defconfig b/configs/mvebu_armadalp_palladium_defconfig
+index 9c1636d..aa0ce46 100644
+--- a/configs/mvebu_armadalp_palladium_defconfig
++++ b/configs/mvebu_armadalp_palladium_defconfig
+@@ -5,6 +5,8 @@ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ CONFIG_MVEBU_SPI=y
+ +S:CONFIG_MVEBU_UART_ARLP=y
+ +S:CONFIG_DEVEL_BOARD=y
++CONFIG_MVEBU_MBUS=y
++CONFIG_MVEBU_MBUS_SKIP_DRAM_WIN=y
+ CONFIG_CMD_BDI=y
+ CONFIG_CMD_SPI=y
+ CONFIG_CMD_BOOTD=y
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index cbd95ab..a6f2dea 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -39,6 +39,17 @@ config MVEBU_MBUS
+ 	  This driver initialize the MBUS windows
+ 	  only.
+ 
++config MVEBU_MBUS_SKIP_DRAM_WIN
++	bool "skip DRAM window configuration in MBUS driver"
++	depends on MVEBU_MBUS
++	default n
++	help
++	  Choose this option to skip DRAM window
++	  configuration in MBUS driver.
++	  For some Soc, DRAM MBUS window has to
++	  be at the beginning, and could not be
++	  configured by anyway (keep the default value).
++
+ config MVEBU_FLC
+ 	bool "MBUS Final Level Cache driver"
+ 	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+diff --git a/drivers/misc/mvebu_mbus.c b/drivers/misc/mvebu_mbus.c
+index d64e224..dec1893 100644
+--- a/drivers/misc/mvebu_mbus.c
++++ b/drivers/misc/mvebu_mbus.c
+@@ -25,13 +25,18 @@
+ #include <asm/arch-mvebu/mvebu.h>
+ #include <asm/arch-mvebu/mbus.h>
+ #include <asm/arch-mvebu/fdt.h>
++#include <asm/arch/mbus_reg.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
++#define MBUS_REMAP_SIZE_64	64
++#define MBUS_TARGET_DRAM_NUM	0
++
+ struct mbus_configuration {
+ 	void __iomem *mbus_base;
+ 	u32 max_win;
+ 	u32 max_remap;
++	u32 remap_size;
+ 	u32 internal_win;
+ };
+ struct mbus_configuration __attribute__((section(".data")))mbus_config;
+@@ -52,34 +57,6 @@ struct mbus_win {
+ 	u32 enabled;
+ };
+ 
+-#define MBUS_WIN_CTRL_REG(win_num)		((win_num < mbus_info->max_remap) ? \
+-		(win_num * 0x10) : (0x90 + (win_num-8)*0x08))
+-#define MBUS_CR_WIN_ENABLE			0x1
+-#define MBUS_CR_WIN_TARGET_OFFS			4
+-#define MBUS_CR_WIN_TARGET_MASK			(0xf << MBUS_CR_WIN_TARGET_OFFS)
+-#define MBUS_CR_WIN_ATTR_OFFS			8
+-#define MBUS_CR_WIN_ATTR_MASK			(0xff << MBUS_CR_WIN_ATTR_OFFS)
+-#define MBUS_CR_WIN_SIZE_OFFS			16
+-#define MBUS_CR_WIN_SIZE_MASK			(0xffff << MBUS_CR_WIN_SIZE_OFFS)
+-#define MBUS_CR_WIN_SIZE_ALIGNMENT		0x10000
+-
+-#define MBUS_WIN_BASE_REG(win_num)		((win_num < mbus_info->max_remap) ? \
+-		(0x4 + win_num*0x10) :	(0x94 + (win_num-8)*0x08))
+-#define MBUS_BR_BASE_OFFS			16
+-#define MBUS_BR_BASE_MASK			(0xffff <<  MBUS_BR_BASE_OFFS)
+-
+-#define MBUS_WIN_REMAP_LOW_REG(win_num)		((win_num < mbus_info->max_remap) ? \
+-		(0x8 + win_num*0x10) : (0))
+-#define MBUS_RLR_REMAP_LOW_OFFS			16
+-#define MBUS_RLR_REMAP_LOW_MASK			(0xffff << MBUS_RLR_REMAP_LOW_OFFS)
+-
+-#define MBUS_WIN_REMAP_HIGH_REG(win_num)	((win_num < mbus_info->max_remap) ? \
+-		(0xC + win_num*0x10) : (0))
+-#define MBUS_RHR_REMAP_HIGH_OFFS		0
+-#define MBUS_RHR_REMAP_HIGH_MASK		(0xffffffff << MBUS_RHR_REMAP_HIGH_OFFS)
+-
+-#define MBUS_WIN_INTEREG_REG			(0x80)
+-
+ static void mbus_win_check(struct mbus_win *win, u32 win_num)
+ {
+ 	/* check if address is aligned to the size */
+@@ -98,23 +75,29 @@ static void mbus_win_check(struct mbus_win *win, u32 win_num)
+ 
+ static void mbus_win_set(struct mbus_win *win, u32 win_num)
+ {
+-	u32 base_reg, ctrl_reg, size_to_reg, remap_low;
++	u32 base_reg, ctrl_reg, size_reg, win_size, remap_low;
+ 
+ 	base_reg = (win->base_addr & MBUS_BR_BASE_MASK);
+-	size_to_reg = (win->win_size / MBUS_CR_WIN_SIZE_ALIGNMENT) - 1;
++	win_size = (win->win_size / MBUS_CR_WIN_SIZE_ALIGNMENT) - 1;
++
++	size_reg = (win_size << MBUS_CR_WIN_SIZE_OFFS);
++	writel(size_reg, mbus_info->mbus_base + MBUS_WIN_SIZE_REG(win_num));
+ 
+-	ctrl_reg = (size_to_reg << MBUS_CR_WIN_SIZE_OFFS);
++	ctrl_reg = readl(mbus_info->mbus_base + MBUS_WIN_CTRL_REG(win_num));
++	ctrl_reg &= ~(MBUS_CR_WIN_TARGET_MASK & MBUS_CR_WIN_ATTR_MASK);
+ 	ctrl_reg |= MBUS_CR_WIN_ENABLE;
+ 	ctrl_reg |= win->attribute << MBUS_CR_WIN_ATTR_OFFS;
+ 	ctrl_reg |= win->target << MBUS_CR_WIN_TARGET_OFFS;
+-
+ 	writel(ctrl_reg, mbus_info->mbus_base + MBUS_WIN_CTRL_REG(win_num));
++
+ 	writel(base_reg, mbus_info->mbus_base + MBUS_WIN_BASE_REG(win_num));
+ 
+ 	if (win->remapped) {
+ 		remap_low = win->base_addr & MBUS_RLR_REMAP_LOW_MASK;
+ 		writel(remap_low, mbus_info->mbus_base + MBUS_WIN_REMAP_LOW_REG(win_num));
+-		writel(0x0, mbus_info->mbus_base + MBUS_WIN_REMAP_HIGH_REG(win_num));
++
++		if (MBUS_REMAP_SIZE_64 == mbus_info->remap_size)
++			writel(0x0, mbus_info->mbus_base + MBUS_WIN_REMAP_HIGH_REG(win_num));
+ 	}
+ 	return;
+ }
+@@ -134,6 +117,7 @@ void dump_mbus(void)
+ 		if (mbus_win_cr & MBUS_CR_WIN_ENABLE) {
+ 			target_id = (mbus_win_cr & MBUS_CR_WIN_TARGET_MASK) >> MBUS_CR_WIN_TARGET_OFFS;
+ 			attribute = (mbus_win_cr & MBUS_CR_WIN_ATTR_MASK) >> MBUS_CR_WIN_ATTR_OFFS;
++			mbus_win_cr = readl(mbus_info->mbus_base + MBUS_WIN_SIZE_REG(win_id));
+ 			size = (mbus_win_cr & MBUS_CR_WIN_SIZE_MASK) >> MBUS_CR_WIN_SIZE_OFFS;
+ 			mbus_win_br = readl(mbus_info->mbus_base + MBUS_WIN_BASE_REG(win_id));
+ 			size = (size + 1) * MBUS_CR_WIN_SIZE_ALIGNMENT;
+@@ -164,7 +148,9 @@ int remap_mbus(phys_addr_t input, phys_addr_t output)
+ 				return 1;
+ 			}
+ 			writel(output & MBUS_RLR_REMAP_LOW_MASK, mbus_info->mbus_base + MBUS_WIN_REMAP_LOW_REG(win));
+-			writel(0x0, mbus_info->mbus_base + MBUS_WIN_REMAP_HIGH_REG(win));
++
++			if (MBUS_REMAP_SIZE_64 == mbus_info->remap_size)
++				writel(0x0, mbus_info->mbus_base + MBUS_WIN_REMAP_HIGH_REG(win));
+ 			return 0;
+ 		}
+ 	}
+@@ -175,7 +161,7 @@ int remap_mbus(phys_addr_t input, phys_addr_t output)
+ 
+ int init_mbus(void)
+ {
+-	u32 win_id, index, mbus_win, count, node;
++	u32 win_id, index, mbus_win, count, node, start_win_id = 0;
+ 	struct mbus_fdt_info *fdt_info;
+ 	struct mbus_win *memory_map, *win;
+ 	const void *blob = gd->fdt_blob;
+@@ -202,6 +188,11 @@ int init_mbus(void)
+ 	if (mbus_info->max_remap == 0)
+ 		error("failed reading max remap windows number\n");
+ 
++	/* Get the MBUS remap size */
++	mbus_info->remap_size = fdtdec_get_int(blob, node, "remap-size", 0);
++	if (mbus_info->remap_size == 0)
++		error("failed reading MBUS remap size\n");
++
+ 	/* Get the internal register window number */
+ 	mbus_info->internal_win = fdtdec_get_int(blob, node, "internal-win", 0);
+ 	if (mbus_info->internal_win == 0)
+@@ -233,37 +224,42 @@ int init_mbus(void)
+ 	}
+ 	win->enabled = -1;
+ 
++#ifdef CONFIG_MVEBU_MBUS_SKIP_DRAM_WIN
++	/* for some Soc, like ArmadaLP, DRAM window has to be at the begining,
++	     and could not be configured by anyway (keep the default value),
++	     In this case, need to skip DRAM window configuration */
++	for (start_win_id = 0, win = memory_map; start_win_id < count; start_win_id++, win++)
++		if (MBUS_TARGET_DRAM_NUM != win->target)
++			break;
++#endif
+ 	/* disable all windows */
+-	for (win_id = 0; win_id < mbus_info->max_win; win_id++) {
++	for (win_id = start_win_id; win_id < mbus_info->max_win; win_id++) {
+ 		mbus_win = readl(mbus_info->mbus_base + MBUS_WIN_CTRL_REG(win_id));
+ 		mbus_win &= ~MBUS_CR_WIN_ENABLE;
+ 		writel(mbus_win, mbus_info->mbus_base + MBUS_WIN_CTRL_REG(win_id));
+ 	}
+ 
+ 	/* enable the remapped windows first, the remap windows is at the first 8 windows */
+-	for (win_id = 0, win = memory_map; win->enabled != -1; win++) {
++	for (win_id = start_win_id, win = ++memory_map; win_id < mbus_info->max_win; win_id++, win++) {
+ 		if ((win->win_size == 0) || (win->enabled == 0) || (win->remapped == 0))
+ 			continue;
+-
+ 		mbus_win_check(win, win_id);
+ 		debug("set window %d: target %d, base = 0x%lx, size = 0x%lx, attribute = 0x%x, remapped\n",
+-		      win_id, win->target, win->base_addr, win->win_size, win->attribute);
++			win_id, win->target, win->base_addr, win->win_size, win->attribute);
+ 
+ 		mbus_win_set(win, win_id);
+-		win_id++;
+ 	}
+ 
+ 	/* enable the rest of the windows */
+-	for (win = memory_map; win->enabled != -1; win++) {
++	for (win_id = start_win_id, win = memory_map; win_id < mbus_info->max_win; win_id++, win++) {
+ 		if ((win->win_size == 0) || (win->enabled == 0) || (win->remapped))
+ 			continue;
+ 
+ 		mbus_win_check(win, win_id);
+ 		debug("set window %d: target = %d, base = 0x%lx, size = 0x%lx, attribute = 0x%x\n",
+-		      win_id, win->target, win->base_addr, win->win_size, win->attribute);
++			win_id, win->target, win->base_addr, win->win_size, win->attribute);
+ 
+ 		mbus_win_set(win, win_id);
+-		win_id++;
+ 	}
+ 
+ 	debug("Done MBUS address decoding initializing\n");
+-- 
+1.9.1
+

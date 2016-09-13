@@ -1,0 +1,30 @@
+From de722a941701707388d9c791b45c299e4021cb42 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 5 Nov 2015 19:45:44 +0200
+Subject: [PATCH 0464/1240] Bump U-Boot 2015.01 To release
+ 2015_T3.0.eng_drop_v5
+
+Change-Id: Ic533bab0ddb53cd51bc19a3e449fee96dd3414c5
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24605
+Tested-by: Star_Automation <star@marvell.com>
+---
+ include/configs/mvebu-common.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 1dc389b..4f36b92 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -22,7 +22,7 @@
+ #include <asm/arch/regs-base.h>
+ 
+ /* Version */
+-#define CONFIG_IDENT_STRING             "  Marvell version: 2015_T3.0.eng_drop_v4"
++#define CONFIG_IDENT_STRING             "  Marvell version: 2015_T3.0.eng_drop_v5"
+ 
+ /* Temp */
+ #define CONFIG_ADEC
+-- 
+1.9.1
+

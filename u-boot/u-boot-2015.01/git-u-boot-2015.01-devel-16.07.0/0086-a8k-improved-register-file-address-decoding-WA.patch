@@ -1,0 +1,38 @@
+From ca56a5607fa84d0760478d11abd07f01d7f9f010 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 6 Oct 2014 16:30:44 +0300
+Subject: [PATCH 0086/1240] a8k: improved register file address decoding WA
+
+Change-Id: I0f5b018c8bd5558659c606f2581fb6a89bb764c6
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/13509
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/soc-init.c | 10 +---------
+ 1 file changed, 1 insertion(+), 9 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/soc-init.c b/arch/arm/cpu/armv8/armada8k/soc-init.c
+index 13ca416..8f4946e 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc-init.c
++++ b/arch/arm/cpu/armv8/armada8k/soc-init.c
+@@ -31,15 +31,7 @@ int soc_early_init_f(void)
+ 	/* Temporary configs. remove in future models */
+ 
+ 	/* Define the mapping inside register space */
+-	writel(0xf0500201, 0xf00040a0);
+-	writel(0xf0100201, 0xf00040a4);
+-	writel(0xf0400201, 0xf00040a8);
+-	writel(0xf0600201, 0xf00040ac);
+-
+-	/* Define the address of RFU within MSS */
+-	writel(0x0, 0xf0513f00);
+-	writel(0x910000, 0xf0513f04);
+-	writel(0x11, 0xf0513f00);
++	writel(0xf0100201, 0xf00040b0);
+ #endif
+ 	return 0;
+ }
+-- 
+1.9.1
+

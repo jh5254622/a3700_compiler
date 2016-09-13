@@ -1,0 +1,37 @@
+From ccc6f578fb5cee9cb5e6866935aedc735f161742 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Fri, 3 Jun 2016 21:41:39 +0800
+Subject: [PATCH 225/239] fix: scripts: a3700: Correct the total images count
+ in tim2img script
+
+- Correct the counter for total images number collected from
+  both TIM and TIMN files.
+  This number is used for building the final flash image.
+
+Change-Id: I9ec7b08df165f50885f2d2101d683dfc72a21e13
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30317
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Reviewed-by: Victor Gu <xigu@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ tools/wtp/tim2img.pl | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/wtp/tim2img.pl b/tools/wtp/tim2img.pl
+index 2320cd1..304d88e 100755
+--- a/tools/wtp/tim2img.pl
++++ b/tools/wtp/tim2img.pl
+@@ -47,7 +47,7 @@ sub tim2img
+ 			$value =~ s/^\s+|\s+$//g;
+ 
+ 			if ($name eq "Number of Images") {
+-					$img_num = $value;
++					$img_num += $value;
+ 					print ("Total number of images to process in file[$cfg_idx] - $img_num\n");
+ 			} elsif ($name eq "Image Filename") {
+ 					$img_names[$index] = $value;
+-- 
+1.9.1
+

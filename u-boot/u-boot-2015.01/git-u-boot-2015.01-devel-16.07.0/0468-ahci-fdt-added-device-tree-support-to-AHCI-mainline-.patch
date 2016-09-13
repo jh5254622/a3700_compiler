@@ -1,0 +1,178 @@
+From fd5ca756eceecf6033d93edf8a05d831eb367626 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Mon, 9 Nov 2015 10:26:38 +0800
+Subject: [PATCH 0468/1240] ahci: fdt: added device tree support to AHCI
+ mainline driver
+
+    Added FDT support for AHCI mainline driver.
+    - When CONTROL_OF is defined, SATA driver takes the base register from FDT node.
+      Otherwise the driver got the base register as parameter.
+
+Change-Id: I02f732db20ce4a2bd92cbb4cc44c0670dd983839
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24665
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ doc/device-tree-bindings/sata/mvebu-sata.txt | 17 ++++++++
+ drivers/block/ahci.c                         | 62 +++++++++++++++++++++++++++-
+ include/ahci.h                               |  4 ++
+ include/fdtdec.h                             |  1 +
+ lib/fdtdec.c                                 |  1 +
+ 5 files changed, 83 insertions(+), 2 deletions(-)
+ create mode 100644 doc/device-tree-bindings/sata/mvebu-sata.txt
+
+diff --git a/doc/device-tree-bindings/sata/mvebu-sata.txt b/doc/device-tree-bindings/sata/mvebu-sata.txt
+new file mode 100644
+index 0000000..0c1a34d
+--- /dev/null
++++ b/doc/device-tree-bindings/sata/mvebu-sata.txt
+@@ -0,0 +1,17 @@
++Marvell EBU SATA bindings
++====================
++
++This SATA driver supports Marvell EBU SoC, which implements the SATA core operations.
++The node name is sata0 to show that it's SATA-0, for SATA-1 should be sata1.
++
++The SATA node requires the following properties:
++	- compatible
++		should be "marvell,mvebu-sata".
++	- reg: the base address of the SATA unit.
++
++Example for SATA-0 node:
++	sata: sata@e0000 {
++		compatible = "marvell,mvebu-sata";
++		reg = <0xe0000 0x20>;
++		status = "disabled";
++	};
+diff --git a/drivers/block/ahci.c b/drivers/block/ahci.c
+index 7708e1a..d01a7b7 100644
+--- a/drivers/block/ahci.c
++++ b/drivers/block/ahci.c
+@@ -19,6 +19,8 @@
+ #include <libata.h>
+ #include <linux/ctype.h>
+ #include <ahci.h>
++#include <fdtdec.h>
++#include <asm/arch-mvebu/fdt.h>
+ 
+ static int ata_io_flush(u8 port);
+ 
+@@ -934,7 +936,7 @@ void scsi_low_level_init(int busdevfunc)
+ }
+ 
+ #ifdef CONFIG_SCSI_AHCI_PLAT
+-int ahci_init(void __iomem *base)
++int ahci_init_dev(void __iomem *base)
+ {
+ 	int i, rc = 0;
+ 	u32 linkmap;
+@@ -985,7 +987,63 @@ void __weak scsi_init(void)
+ {
+ }
+ 
+-#endif
++#ifdef CONFIG_OF_CONTROL
++
++DECLARE_GLOBAL_DATA_PTR;
++
++#define MAX_SATA_PORT_NUM 4
++
++int ahci_init(void)
++{
++	int node_list[MAX_SATA_PORT_NUM], node;
++	int i, count;
++	unsigned long sata_reg_base;
++	int err;
++
++	/* in dts file, go through all the 'sata' nodes.
++	 */
++	count = fdtdec_find_aliases_for_id(gd->fdt_blob, "sata",
++			COMPAT_MVEBU_SATA, node_list, MAX_SATA_PORT_NUM);
++	if (count == 0) {
++		error("could not find sata node in FDT, initialization skipped!\n");
++		return -ENXIO;
++	}
++	for (i = 0; i < count ; i++) {
++		node = node_list[i];
++
++		if (node <= 0)
++			continue;
++
++		/* in dts file, there should be several "sata" nodes that are enabled, and in
++		 * dtsi file there are the 'reg' attribute for register base of each SATA unit.
++		 */
++		/* fetch 'reg' propertiy from 'sata' node */
++		sata_reg_base = (unsigned long)fdt_get_regs_offs(gd->fdt_blob, node, "reg");
++		if (sata_reg_base == FDT_ADDR_T_NONE) {
++			error("could not find reg in sata node, initialization skipped!\n");
++			return -ENXIO;
++		}
++
++		/* call 'real' ahci init routine */
++		err = ahci_init_dev((void __iomem *)sata_reg_base);
++		if (err) {
++			error("ahci_init_dev failed, initialization skipped!\n");
++			return err;
++		}
++	}
++
++	return 0;
++}
++
++#else
++int ahci_init(void __iomem *base)
++{
++	return ahci_init_dev(base);
++}
++
++#endif /* CONFIG_OF_CONTROL */
++
++#endif /* CONFIG_SCSI_AHCI_PLAT */
+ 
+ /*
+  * In the general case of generic rotating media it makes sense to have a
+diff --git a/include/ahci.h b/include/ahci.h
+index 0bdedac..84f0984 100644
+--- a/include/ahci.h
++++ b/include/ahci.h
+@@ -160,7 +160,11 @@ struct ahci_probe_ent {
+ 	u32	link_port_map; /*linkup port map*/
+ };
+ 
++#ifdef CONFIG_OF_CONTROL
++int ahci_init(void);
++#else
+ int ahci_init(void __iomem *base);
++#endif
+ int ahci_reset(void __iomem *base);
+ 
+ #endif
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 7985128..6196fb6 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -128,6 +128,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_TCLOCK,
+ 	COMPAT_MVEBU_I2C,
+ 	COMPAT_MVEBU_ARLP_I2C,
++	COMPAT_MVEBU_SATA,
+ 	COMPAT_MVEBU_SAR,
+ 	COMPAT_MVEBU_PINCTL,
+ 	COMPAT_MVEBU_MPP_BUS,
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index dec3895..b182c4a 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -90,6 +90,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_TCLOCK, "marvell,tclk"),
+ 	COMPAT(MVEBU_I2C, "marvell,mvebu-i2c"),
+ 	COMPAT(MVEBU_ARLP_I2C, "marvell,armadalp-i2c"),
++	COMPAT(MVEBU_SATA, "marvell,mvebu-sata"),
+ 	COMPAT(MVEBU_SAR, "marvell,sample-at-reset"),
+ 	COMPAT(MVEBU_PINCTL, "marvell,mvebu-pinctl"),
+ 	COMPAT(MVEBU_MPP_BUS, "marvell,mvebu-mpp-bus"),
+-- 
+1.9.1
+

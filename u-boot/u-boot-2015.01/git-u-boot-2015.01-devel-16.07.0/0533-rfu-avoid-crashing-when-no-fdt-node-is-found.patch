@@ -1,0 +1,49 @@
+From 29bc141d0384b0122997f4a5e0512d8e50e7af19 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 25 Nov 2015 10:29:13 +0200
+Subject: [PATCH 0533/1240] rfu: avoid crashing when no fdt node is found
+
+since node was defined unsigned the driver did not
+detect when a DT node was missing and just when crazy.
+also we don't want to report an error if the DT is missing
+so we just exit the driver
+
+Change-Id: Id2bcd92885877783928880a72df4d2d9d82c52de
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25256
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/misc/mvebu_rfu.c | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/misc/mvebu_rfu.c b/drivers/misc/mvebu_rfu.c
+index 053129b..ba6522d 100644
+--- a/drivers/misc/mvebu_rfu.c
++++ b/drivers/misc/mvebu_rfu.c
+@@ -163,7 +163,8 @@ int init_rfu(bool sw_init)
+ 	struct rfu_win memory_map[RFU_MAX_TID], *win;
+ 	const void *blob = gd->fdt_blob;
+ 	u32 win_id, win_reg, trgt_id;
+-	u32 node, win_count;
++	u32 win_count;
++	int node;
+ 
+ 	debug_enter();
+ 	debug("Initializing RFU Address decoding\n");
+@@ -171,9 +172,10 @@ int init_rfu(bool sw_init)
+ 	/* Get address decoding node from the FDT blob */
+ 	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_RFU));
+ 	if (node < 0) {
+-		error("No RFU address decoding node found in FDT blob\n");
+-		return -1;
++		debug("No RFU address decoding node found in FDT blob\n");
++		return 0;
+ 	}
++
+ 	/* Get the base address of the address decoding MBUS */
+ 	rfu_base = (void *)fdt_get_regs_offs(blob, node, "reg");
+ 
+-- 
+1.9.1
+

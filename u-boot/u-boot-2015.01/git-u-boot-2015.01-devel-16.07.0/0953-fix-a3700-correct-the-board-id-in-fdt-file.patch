@@ -1,0 +1,43 @@
+From 061ff1f0c78ec436447809e6fb1aba7e3492cf02 Mon Sep 17 00:00:00 2001
+From: Wilson Ding <dingwei@marvell.com>
+Date: Thu, 18 Feb 2016 21:07:35 +0800
+Subject: [PATCH 0953/1240] fix: a3700: correct the board-id in fdt file
+
+- All the Marvell boards (Armada3700, Armada70x0/80x0,
+  etc) are supposed to use the board-id starting from
+  0x10. Since EHM already closed the ECO cycle with
+  the wrong board-id (0x20), we don't have a chance
+  to correct it for the Armada3700 DB already shipped
+  to the customers.
+- And we found the board-id in fdt is not aligned to
+  MI, which lead into the failure of listing fdts.
+- By this patch, the Armada3700 board-id will start
+  from 0x20 while armada7K/8K continues to use 0x10
+  as the board-id base.
+
+Change-Id: Iec69a1259091e519ab92804da346c46e5efd3de9
+Signed-off-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27642
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ include/dt-bindings/multi-fdt/multi-fdt.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/dt-bindings/multi-fdt/multi-fdt.h b/include/dt-bindings/multi-fdt/multi-fdt.h
+index 74aab4d..93ee4fb 100644
+--- a/include/dt-bindings/multi-fdt/multi-fdt.h
++++ b/include/dt-bindings/multi-fdt/multi-fdt.h
+@@ -19,7 +19,7 @@
+ #ifndef _MULTI_FDT_H_
+ #define _MULTI_FDT_H_
+ 
+-#define A3700_DB_ID			0x10
++#define A3700_DB_ID			0x20
+ /*
+  * There are two main presets for Armada3700 DB, between
+  * these two presets, most of the configurations are the same:
+-- 
+1.9.1
+

@@ -1,0 +1,292 @@
+From 762ebe3b71c0765fb9baeaa00c89f1e134b30257 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Tue, 16 Feb 2016 10:08:31 +0200
+Subject: [PATCH 0863/1240] doc: mvebu: Armada-8k SoC family - TW review
+
+Change-Id: I7e7bdd80d4e8a55917a8d0b6fdce3bb5e2d91381
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27535
+Reviewed-by: Ilan Dahan <iland@marvell.com>
+Reviewed-by: Gina Tadmore <gina@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ doc/device-tree-bindings/misc/mvebu-ccu.txt        | 14 ++++++-----
+ doc/device-tree-bindings/misc/mvebu-iob.txt        | 16 ++++++------
+ doc/device-tree-bindings/misc/mvebu-rfu.txt        | 15 +++++------
+ .../nand/marvell-pxa3xx-nand.txt                   | 25 +++++++++++--------
+ doc/device-tree-bindings/spi/mvebu-spi.txt         | 29 ++++++++++++----------
+ .../thermal/mvebu-thermal-v2.txt                   | 18 ++++++++------
+ 6 files changed, 65 insertions(+), 52 deletions(-)
+
+diff --git a/doc/device-tree-bindings/misc/mvebu-ccu.txt b/doc/device-tree-bindings/misc/mvebu-ccu.txt
+index 6de2da3..6eb2d46 100644
+--- a/doc/device-tree-bindings/misc/mvebu-ccu.txt
++++ b/doc/device-tree-bindings/misc/mvebu-ccu.txt
+@@ -1,25 +1,26 @@
+ Marvell CCU address decoding bindings
+ =====================================
+ 
+-The CCU node include describtion about the address decoding configuration.
++The CCU node includes descriptions of the address decoding configuration.
+ 
+ Mandatory properties:
++SoC specific:
+ 	- compatible
+ 		should be "marvell,mvebu-ccu"
+ 	- reg: the base address of the CCU unit
+ 	- max-win: number of the max mbus windows
+-	- windows: entry that include the configuration of the windows
+-	  every window should have 5 parameters:
++	- windows: entry that includes the configuration of the windows
++	  every window has 5 parameters:
+ 	  - high base address of the window
+ 	  - low base address of the window
+ 	  - high size of the window
+ 	  - low size of the window
+ 	  - target-id of the window
+ 
+-Note: if the base address is more than 32bit, it should be divided into high and low,
+-	same for size field, if it more that 32bit, it divided for high and low.
++Note: if the base address is more than 32bits, it should be divided into high and low,
++	the same applies to the size field, if it more that 32bits, it should be divided into high and low.
+ 	Base example:
+-		base address: 0x10f0000000 should divided into:
++		base address: 0x10f0000000 should be divided into:
+ 		base address high: 0x10
+ 		base address low: 0xf0000000
+ 	Size example:
+@@ -35,3 +36,4 @@ Example:
+ 		windows = <0x0 0xf8000000 0x0 0x2000000 0x00 /* IO window */>;
+ 	};
+ 
++
+diff --git a/doc/device-tree-bindings/misc/mvebu-iob.txt b/doc/device-tree-bindings/misc/mvebu-iob.txt
+index 6f6a326..837d6b6 100644
+--- a/doc/device-tree-bindings/misc/mvebu-iob.txt
++++ b/doc/device-tree-bindings/misc/mvebu-iob.txt
+@@ -1,20 +1,21 @@
+ Marvell IOB address decoding bindings
+ =====================================
+ 
+-The IOB node include describtion about the address decoding configuration.
++The IOB node includes descriptions of the address decoding configuration.
+ 
+ IOB supports up to n (in CP110 n=24) windows for external memory transaction.
+ When a transaction passes through the IOB, its address is compared to each of
+ the enabled windows. If there is a hit and it passes the security checks it is
+-advances to the target port.
++advanced to the target port.
+ 
+ Mandatory properties:
++SoC specific:
+ 	- compatible
+ 		should be "marvell,mvebu-iob"
+ 	- reg: the base address of the IOB unit
+-	- max-win: number of the max iob windows
+-	- windows: entry that include the configuration of the windows
+-	  every window should have 5 parameters:
++	- max-win: number of the max IOB windows
++	- windows: entry that includes the configuration of the windows
++	  every window has 5 parameters:
+ 	  - high base address of the window
+ 	  - low base address of the window
+ 	  - high size of the window
+@@ -31,8 +32,8 @@ Target ID options:
+ 	- 0x6 = RUNIT (NOR/SPI/BootRoom)
+ 	- 0x7 = IHB1
+ 
+-Note: if the base address is more than 32bit, it divided into high and low,
+-	same for size field, if it more that 32bit, it divided for high and low.
++Note: if the base address is more than 32bits, it should be divided into high and low,
++	the same applies to the size field, if it more than 32 bits, it should be divided into high and low.
+ 	Base example:
+ 		base address: 0x10f0000000 should divided into:
+ 		base address high: 0x10
+@@ -51,3 +52,4 @@ Example:
+ 			0x0 0xf9000000 0x0 0x1000000 0x5 /* NAND window */>;
+ 	};
+ 
++
+diff --git a/doc/device-tree-bindings/misc/mvebu-rfu.txt b/doc/device-tree-bindings/misc/mvebu-rfu.txt
+index 81149d1..916e99b 100644
+--- a/doc/device-tree-bindings/misc/mvebu-rfu.txt
++++ b/doc/device-tree-bindings/misc/mvebu-rfu.txt
+@@ -1,10 +1,9 @@
+ Marvell RFU address decoding bindings
+ =====================================
+ 
+-The RFU node include describtion about the address decoding configuration.
+-Transactions that are decoded by CCU windows as IO peripheral, have an additional
+-layer of decoding, this additional address decoding layer defines one of the
+-following targets:
++The RFU node includes descriptions of the address decoding configuration.
++Transactions that are decoded by CCU windows as IO peripherals, have an additional
++layer of decoding, which defines one of the following targets:
+ 	0x0 = BootRom
+ 	0x1 = STM (Serial Trace Macro-cell, a programmer's port into trace stream)
+ 	0x2 = SPI direct access
+@@ -13,20 +12,21 @@ following targets:
+ 	0x5 = PCIe port
+ 
+ Mandatory properties:
++SoC specific:
+ 	- compatible
+ 		should be "marvell,mvebu-rfu"
+ 	- reg: the base address of the RFU window
+ 	- max-win: number of the max mbus windows
+ 	- windows: entry that include the configuration of the windows
+-	  every window should have 5 parameters:
++	  every window has 5 parameters:
+ 	  - high base address of the window
+ 	  - low base address of the window
+ 	  - high size of the window
+ 	  - low size of the window
+ 	  - target-id of the window
+ 
+-Note: if the base address is more than 32bit, it divided into high and low,
+-	same for size field, if it more that 32bit, it divided for high and low.
++Note: if the base address is more than 32bits, it divided into high and low,
++	the same applies to the size field, if it more than 32 bits, it should be divided into high and low.
+ 	Base example:
+ 		base address: 0x10f0000000 should divided into:
+ 		base address high: 0x10
+@@ -43,3 +43,4 @@ Example:
+ 		windows = <0x0 0xf2000000 0x0 0x40000000 0x05 /* PCIe window */
+ 			0x0 0xf6000000 0x0 0x20000000 0x02 /* SPI window */>;
+ 	};
++
+diff --git a/doc/device-tree-bindings/nand/marvell-pxa3xx-nand.txt b/doc/device-tree-bindings/nand/marvell-pxa3xx-nand.txt
+index 08526a9..276347d 100644
+--- a/doc/device-tree-bindings/nand/marvell-pxa3xx-nand.txt
++++ b/doc/device-tree-bindings/nand/marvell-pxa3xx-nand.txt
+@@ -1,31 +1,34 @@
+ PXA3xx NAND DT bindings
+ =======================
+ 
+-Implementation of NAND controller device driver for Marvell SoC's
++Implementation of the NAND controller device driver for Marvell SoCs
+ 
+ Mandatory properties:
++SoC specific:
+ - compatible:          Should be set to: marvell,mvebu-pxa3xx-nand
+ - reg:                 The register base for the controller
+ - #address-cells:      Set to <1> if the node includes partitions
+ 
+ Optional properties:
+-- nand-enable-arbiter: Set to enable the bus arbiter
+-- nand-keep-config:    Set to keep the NAND controller config as set by the bootrom.
+-- num-cs:              Number of chipselect lines to use
+-- nand-ecc-strength:   Number of bits to correct per ECC step
+-- nand-ecc-step-size:  Number of data bytes covered by a single ECC step
++SoC specific:
++	- nand-enable-arbiter: Set to enable the bus arbiter
++	- nand-keep-config:    Set to keep the NAND controller config as set by the bootrom.
++Board specific:
++	- nand-ecc-strength:   Number of bits to correct per ECC step
++	- nand-ecc-step-size:  Number of data bytes covered by a single ECC step
++	- num-cs:              Number of chipselect lines to use
+ 
+-The following ECC strength and step size are currently supported:
++The following ECC strength and step sizes are currently supported:
+ - nand-ecc-strength = <1>, nand-ecc-step-size = <512>
+ - nand-ecc-strength = <4>, nand-ecc-step-size = <512>
+ - nand-ecc-strength = <8>, nand-ecc-step-size = <512>
+ 
+ Example:
+-	nand0: nand@43100000 {
+-		compatible = "marvell,mvebu-nand";
+-		reg = <0x43100000 90>;
++	nand@720000 {
++		compatible = "marvell,mvebu-pxa3xx-nand";
++		reg = <0x720000 0x100>;
+ 		#address-cells = <1>;
+-		marvell,nand-enable-arbiter;
++		nand-enable-arbiter;
+ 		num-cs = <1>;
+ 
+ 		/* partitions (optional) */
+diff --git a/doc/device-tree-bindings/spi/mvebu-spi.txt b/doc/device-tree-bindings/spi/mvebu-spi.txt
+index 3114969..02aa153 100644
+--- a/doc/device-tree-bindings/spi/mvebu-spi.txt
++++ b/doc/device-tree-bindings/spi/mvebu-spi.txt
+@@ -4,21 +4,24 @@ Marvell SPI bindings
+ Driver for SPI bus in Marvell's Armada-8K SoCs
+ 
+ Mandatory properties:
+-	- compatible = "marvell,orion-spi";
+-	- reg = <0x510600 0x50>;
+-		base address of SPI-0
+-	- spi-max-frequency = <51200>;
+-		This property used to calculate the SPI max bus frequency.
+-		The value in Byte
+-	- clock = <&tclk>;
++SoC specific:
++	- compatible
++		Should be "marvell,orion-spi".
++	- reg
++		Base address of SPI-0.
++	- clock
+ 		This property points to the used clock for the SPI interface.
+-		in this example the node point to the t-clock.
+-	- cpol-cs-bitmap = <1>;
+-		This property is bitmap that defined if SCK idles high for chip-select i by enable bit i.
+-	- status = "okay";
+-		Set if the SPI interface is enabled/disabled
++		In the following example the node points to the t-clock.
++Board specific:
++	- spi-max-frequency
++		This property is used to calculate the SPI max bus frequency.
++		The value is in Bytes.
++	- cpol-cs-bitmap
++		This property is bitmap that defines whether the SCK idles high for chip-select i by enabling bit i.
++	- status
++		Set if the SPI interface is enabled/disabled.
+ 
+-Example for SPI-0 node:
++Example: For SPI-0 node:
+ 	spi0: spi@10600 {
+ 		compatible = "marvell,orion-spi";
+ 		reg = <0x10600 0x50>;
+diff --git a/doc/device-tree-bindings/thermal/mvebu-thermal-v2.txt b/doc/device-tree-bindings/thermal/mvebu-thermal-v2.txt
+index ff3c15d..7b15858 100644
+--- a/doc/device-tree-bindings/thermal/mvebu-thermal-v2.txt
++++ b/doc/device-tree-bindings/thermal/mvebu-thermal-v2.txt
+@@ -1,21 +1,22 @@
+ Marvell Thermal Sensor V2 bindings
+ =====================================
+ 
+-The thermal node v2 include description about the Thermal Sensor External Unit.
+-The thernal sensor v2 is an on chip temprature sensor that read the temprature of
+-every core and return the average or the maximum between them.
++The thermal node v2 includes a description of the Thermal Sensor External Unit.
++The thernal sensor v2 is an on-chip temperature sensor that reads the temperature of
++every core and returns the average or the maximum between them.
+ 
+ Mandatory properties:
++SoC specific:
+ 	- compatible
+ 		should be "marvell,thermal-sensor-v2"
+ 	- reg: the base address of thermal unit
+ 	- gain, offset: parameters of the temperature equation
+-		the equation:
++		which is:
+ 		T(in celsius) = T(read value) * gain + offset
+-	Note: in Tsen SPEC the default value of gain equal to 0.425
+-		In the u-boot we can't calculate real number (no floating point)
+-		need to set the gain and offset by multiply them by 1000
+-		this will help for calculate the equation, see example below.
++	Note: in the Tsen spec the default value of gain equals 0.425
++		In the u-boot we cannot calculate a real number (no floating point).
++		For this reason, set the gain and offset by multiplying them by 1000.
++		This helps to calculate the equation; see example below.
+ 
+ Example of equation:
+ T(in celsius) = T(read value) * 0.425 + 153.4
+@@ -32,3 +33,4 @@ Example:
+ 		status = "okay";
+ 	};
+ 
++
+-- 
+1.9.1
+

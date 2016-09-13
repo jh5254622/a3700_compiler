@@ -1,0 +1,36 @@
+From d6d7fa90e6392d35be0b1624430e64b0527e3657 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 2 Jun 2015 14:14:06 +0300
+Subject: [PATCH 0188/1240] make: Pass NFC-NAND device paramters to doimage
+ options
+
+	Pass NAND block-size and cell-technology to doimage header options.
+
+Change-Id: I55afd0f1040f31adefaa4059e77034224cfa2618
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/19702
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ Makefile | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index c17e1b5..89e5a69 100644
+--- a/Makefile
++++ b/Makefile
+@@ -842,7 +842,10 @@ SPLIMAGE	:= $(srctree)/spl/u-boot-spl.bin
+ ifneq ($(CONFIG_TARGET_ARMADA_8K), $(CONFIG_TARGET_ARMADA_LP))
+ DOIMAGE		:=  $(srctree)/tools/doimage
+ BIN2PHEX	:= $(srctree)/scripts/bin2phex.pl
+-DOIMAGE_FLAGS	:= -b $(SPLIMAGE)
++ifdef CONFIG_MVEBU_NAND_BLOCK_SIZE
++NAND_DOIMAGE_FLAGS := -t $(CONFIG_MVEBU_NAND_CELL_TYPE) -n $(CONFIG_MVEBU_NAND_BLOCK_SIZE)
++endif
++DOIMAGE_FLAGS	:= -b $(SPLIMAGE) $(NAND_DOIMAGE_FLAGS)
+ 
+ doimage: $(obj)/u-boot.bin $(DOIMAGE) $(SPLIMAGE)
+ 		$(DOIMAGE) $(DOIMAGE_FLAGS) u-boot.bin u-boot-$(CONFIG_SYS_SOC).bin
+-- 
+1.9.1
+

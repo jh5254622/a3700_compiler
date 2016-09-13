@@ -1,0 +1,37 @@
+From 382a9d4d95400693eb7d3e932f0b15d6cf953858 Mon Sep 17 00:00:00 2001
+From: Zachary Zhang <zhangzg@marvell.com>
+Date: Mon, 4 Jan 2016 14:37:54 +0800
+Subject: [PATCH 0674/1240] fix: phy: mvebu: fix u-boot mii command giving
+ uncorrect speed and duplex issue
+
+	- Add CFG_GE_PHY define for cmd_mii info
+	- MII_PHY speed/duple will check CFG_GE_PHY defination
+	  to get correct 1000 speed & duplex
+	- <SYSTEMSW-2080> - mii info - not an indication that we are connected to 1G port
+
+Change-Id: I8b7e0c8c7a144dbdfe9ecf6fb241ce302be956c9
+Signed-off-by: Zachary Zhang <zhangzg@marvell.com>
+Signed-off-by: zachary <zhangzg@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26252
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/mvebu-common.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 66f5491..b7860ae 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -356,6 +356,8 @@
+ 	#define CONFIG_HAS_ETH1
+ 	#define CONFIG_ETH1ADDR		00:00:00:00:51:82
+ 	#define ENV_ETH_PRIME           "e1000#0"
++	#define CONFIG_PHY_GIGE			/* Include GbE speed/duplex detection */
++
+ #endif /* CONFIG_CMD_NET */
+ 
+ /* SATA AHCI via controller or over PCIe */
+-- 
+1.9.1
+

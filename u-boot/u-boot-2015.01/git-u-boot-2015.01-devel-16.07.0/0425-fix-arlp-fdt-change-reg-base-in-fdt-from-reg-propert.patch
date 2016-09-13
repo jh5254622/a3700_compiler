@@ -1,0 +1,37 @@
+From a7377140997d5601b60c99cd44ea5030ae282e06 Mon Sep 17 00:00:00 2001
+From: Jing Hua <jinghua@marvell.com>
+Date: Tue, 22 Sep 2015 08:52:37 +0800
+Subject: [PATCH 0425/1240] fix: arlp: fdt: change reg base in fdt from reg
+ property to ranges
+
+	Changed the register base address calculation method in u-boot-2015,
+	to support base address calculation for each AP or CP, using the FDT
+	hierarchy.
+	In armada-lp.dtsi file, change reg base from reg property to ranges.
+
+Change-Id: I6ca5122b9eadcfd16157df550acfba63a1fe3ec8
+Signed-off-by: Jing Hua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23728
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/armada-lp.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index c8990b9..684ce20 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -16,7 +16,7 @@
+ 			compatible = "marvell,internal-regs";
+ 			#address-cells = <1>;
+ 			#size-cells = <1>;
+-			reg = <0xd0000000 0x4>;
++			ranges = <0x0000 0xd0000000 0x2000000>;
+ 
+ 			serial: serial@12000 {
+ 				compatible = "marvell,armadalp-uart";
+-- 
+1.9.1
+

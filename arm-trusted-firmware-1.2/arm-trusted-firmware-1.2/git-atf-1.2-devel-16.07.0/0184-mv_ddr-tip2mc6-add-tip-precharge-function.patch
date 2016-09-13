@@ -1,0 +1,111 @@
+From a4a5f8b0367dfdcc0c54a844c1b7edc10158f3fd Mon Sep 17 00:00:00 2001
+From: Ofir Fedida <ofedida@marvell.com>
+Date: Tue, 24 May 2016 16:51:47 +0300
+Subject: [PATCH 184/239] mv_ddr: tip2mc6 add tip precharge function
+
+add precharge function called from post alg function
+this function precharges all memory banks before
+moving the control to mc6
+this function is called in 70x0 and 80x0 platforms
+
+Change-Id: Ic3ed5c5616c457a4b42ddd04245cdbea7eae4e93
+Signed-off-by: Ofir Fedida <ofedida@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29942
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c     | 37 +++++++++++++++++++++++
+ drivers/marvell/mv_ddr/ddr3_hws_hw_training_def.h | 25 ++++++++++++++-
+ 2 files changed, 61 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+index ee6e534..1c922c9 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+@@ -673,10 +673,47 @@ static void mv_ddr_convert_read_params_from_tip2mc6(void)
+ }
+ #endif
+ 
++#if defined(a70x0) || defined(a70x0_cust) || defined(a80x0) || defined(a80x0_cust)
++/*
++ * Name:     mv_ddr3_tip_pre_charge.
++ * Desc:     precharges the ddr banks before moving to mc6 controller
++ * Args:
++ * Notes:
++ * Returns:
++ */
++static void mv_ddr3_tip_pre_charge(void)
++{
++	u32 if_id;
++
++	struct hws_topology_map *tm = ddr3_get_topology_map();
++	for (if_id = 0; if_id < MAX_INTERFACE_NUM; if_id++) {
++		VALIDATE_IF_ACTIVE(tm->if_act_mask, if_id);
++
++		for (if_id = 0; if_id < MAX_INTERFACE_NUM; if_id++) {
++			VALIDATE_IF_ACTIVE(tm->if_act_mask, if_id)
++			ddr3_tip_apn806_if_write(DEV_NUM_0, ACCESS_TYPE_MULTICAST, if_id, REG_SDRAM_OPERATION_ADDR,
++						 (~tm->interface_params[if_id].as_bus_params[0].cs_bitmask) <<
++						  REG_SDRAM_OPERATION_CS_OFFS |
++						  CMD_PRECHARGE << REG_SDRAM_CMD_OFFS,
++						  REG_SDRAM_CMD_MASK << REG_SDRAM_CMD_OFFS |
++						  REG_SDRAM_OPERATION_CMD_MASK << REG_SDRAM_OPERATION_CS_OFFS);
++		}
++
++		for (if_id = 0; if_id < MAX_INTERFACE_NUM; if_id++) {
++			VALIDATE_IF_ACTIVE(tm->if_act_mask, if_id)
++			if (ddr3_tip_if_polling(DEV_NUM_0, ACCESS_TYPE_UNICAST, if_id, 0, REG_SDRAM_CMD_MASK,
++						REG_SDRAM_OPERATION_ADDR, MAX_POLLING_ITERATIONS) != MV_OK)
++				printf("Pre-charge: Poll fail");
++		}
++	}
++}
++#endif
++
+ int ddr3_post_run_alg(void)
+ {
+ #if defined(a70x0) || defined(a70x0_cust) || defined(a80x0) || defined(a80x0_cust)
+ 	mv_ddr_convert_read_params_from_tip2mc6();
++	mv_ddr3_tip_pre_charge();
+ #endif
+ 
+ 	return MV_OK;
+diff --git a/drivers/marvell/mv_ddr/ddr3_hws_hw_training_def.h b/drivers/marvell/mv_ddr/ddr3_hws_hw_training_def.h
+index c2e47f9..dcfa772 100644
+--- a/drivers/marvell/mv_ddr/ddr3_hws_hw_training_def.h
++++ b/drivers/marvell/mv_ddr/ddr3_hws_hw_training_def.h
+@@ -195,7 +195,30 @@ enum {
+ #define REG_SDRAM_OPERATION_CMD_RFRS_DONE	0xf
+ #define REG_SDRAM_OPERATION_CMD_MASK		0xf
+ #define REG_SDRAM_OPERATION_CS_OFFS		8
+-
++#define REG_SDRAM_CMD_OFFS			0
++#define REG_SDRAM_CMD_MASK			0x1f
++enum {
++	CMD_NORMAL,
++	CMD_PRECHARGE,
++	CMD_REFRESH,
++	CMD_DDR3_DDR4_MR0,
++	CMD_DDR3_DDR4_MR1,
++	CMD_NOP,
++	CMD_RES_0X6,
++	CMD_SELFREFRESH,
++	CMD_DDR3_DDR4_MR2,
++	CMD_DDR3_DDR4_MR3,
++	CMD_ACT_PDE,
++	CMD_PRE_PDE,
++	CMD_ZQCL,
++	CMD_ZQCS,
++	CMD_CWA,
++	CMD_RES_0XF,
++	CMD_DDR4_MR4,
++	CMD_DDR4_MR5,
++	CMD_DDR4_MR6,
++	DDR4_MPR_WR
++};
+ #define REG_OUDDR3_TIMING_ADDR			0x142c
+ 
+ #define REG_SDRAM_MODE_ADDR			0x141c
+-- 
+1.9.1
+

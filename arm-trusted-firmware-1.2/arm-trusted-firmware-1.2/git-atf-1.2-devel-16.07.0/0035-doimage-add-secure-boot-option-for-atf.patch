@@ -1,0 +1,325 @@
+From 4837f202e3b797246ae4794fbbb85a43ed03c6df Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Sun, 28 Feb 2016 21:01:18 +0200
+Subject: [PATCH 035/239] doimage: add secure boot option for atf
+
+add the option to use secure boot build when setting
+MARVELL_SECURE_BOOT=1 at the build command
+
+Change-Id: I8b119278f0cc6d6e3e469ed3fb13329ddc780c94
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27921
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+---
+ Makefile                       | 34 +++++++++++++++++++++++++++++++++-
+ tools/doimage/Makefile         |  9 ++++++++-
+ tools/secure/aes_key.txt       |  1 +
+ tools/secure/csk_priv_pem0.key | 27 +++++++++++++++++++++++++++
+ tools/secure/csk_priv_pem1.key | 27 +++++++++++++++++++++++++++
+ tools/secure/csk_priv_pem2.key | 27 +++++++++++++++++++++++++++
+ tools/secure/csk_priv_pem3.key | 27 +++++++++++++++++++++++++++
+ tools/secure/kak_priv_pem.key  | 27 +++++++++++++++++++++++++++
+ tools/secure/sec_img.cfg       | 25 +++++++++++++++++++++++++
+ 9 files changed, 202 insertions(+), 2 deletions(-)
+ create mode 100644 tools/secure/aes_key.txt
+ create mode 100644 tools/secure/csk_priv_pem0.key
+ create mode 100644 tools/secure/csk_priv_pem1.key
+ create mode 100644 tools/secure/csk_priv_pem2.key
+ create mode 100644 tools/secure/csk_priv_pem3.key
+ create mode 100644 tools/secure/kak_priv_pem.key
+ create mode 100644 tools/secure/sec_img.cfg
+
+diff --git a/Makefile b/Makefile
+index 9a407c3..1cbb749 100644
+--- a/Makefile
++++ b/Makefile
+@@ -376,6 +376,37 @@ DOIMAGE_FLAGS		:= -r $(DOIMAGE_CFG)
+ else
+ DOIMAGEPATH		?=	tools/doimage
+ DOIMAGETOOL		?=	${DOIMAGEPATH}/doimage
++DOIMAGE_SEC     	:= 	tools/secure/sec_img.cfg
++
++ifeq (${MARVELL_SECURE_BOOT},1)
++DOIMAGE_SEC_FLAGS := -c $(DOIMAGE_SEC)
++DOIMAGE_LIBS_CHECK = \
++        if ! [ -d "/usr/include/polarssl" ]; then \
++                        echo "****************************************" >&2; \
++                        echo "Missing PolarSSL installation! " >&2; \
++                        echo "Please download it from \"tls.mbed.org\"" >&2; \
++			echo "Alternatively on Debian/Ubuntu system install" >&2; \
++			echo "\"libpolarssl-dev\" package" >&2; \
++                        echo "Make sure to use version 1.3.11 or later" >&2; \
++                        echo "****************************************" >&2; \
++                exit 1; \
++        else if ! [ -f "/usr/include/libconfig.h" ]; then \
++                        echo "********************************************************" >&2; \
++                        echo "Missing Libconfig installation!" >&2; \
++                        echo "Please download it from \"www.hyperrealm.com/libconfig/\"" >&2; \
++                        echo "Alternatively on Debian/Ubuntu system install packages" >&2; \
++                        echo "\"libconfig8\" and \"libconfig8-dev\"" >&2; \
++                        echo "********************************************************" >&2; \
++                exit 1; \
++        fi \
++        fi
++else #MARVELL_SECURE_BOOT
++DOIMAGE_LIBS_CHECK =
++DOIMAGE_SEC_FLAGS =
++endif #MARVELL_SECURE_BOOT
++
++DOIMAGE_FLAGS   += -b $(SPL_IMAGE) $(NAND_DOIMAGE_FLAGS) $(DOIMAGE_SEC_FLAGS)
++
+ endif
+ ################################################################################
+ # Build options checks
+@@ -604,7 +635,7 @@ else
+ fip: ${BUILD_PLAT}/${FIP_NAME} ${DOIMAGETOOL}
+ 	$(shell truncate -s %128K ${BUILD_PLAT}/bl1.bin)
+ 	$(shell cat ${BUILD_PLAT}/bl1.bin ${BUILD_PLAT}/${FIP_NAME} > ${BUILD_PLAT}/${BOOT_IMAGE})
+-	${DOIMAGETOOL} -b ${SPL_IMAGE} ${NAND_DOIMAGE_FLAGS} ${DOIMAGE_FLAGS} ${BUILD_PLAT}/${BOOT_IMAGE} ${BUILD_PLAT}/${FLASH_IMAGE}
++	${DOIMAGETOOL} ${DOIMAGE_FLAGS} ${BUILD_PLAT}/${BOOT_IMAGE} ${BUILD_PLAT}/${FLASH_IMAGE}
+ endif
+ else
+ fip:
+@@ -622,6 +653,7 @@ ${FIPTOOL}:
+ 
+ .PHONY: ${DOIMAGETOOL}
+ ${DOIMAGETOOL}:
++	@$(DOIMAGE_LIBS_CHECK)
+ 	${Q}${MAKE} --no-print-directory -C ${DOIMAGEPATH}
+ 
+ cscope:
+diff --git a/tools/doimage/Makefile b/tools/doimage/Makefile
+index 64a04b1..81009cf 100644
+--- a/tools/doimage/Makefile
++++ b/tools/doimage/Makefile
+@@ -38,6 +38,13 @@ else
+   CFLAGS += -O2
+ endif
+ 
++ifeq (${MARVELL_SECURE_BOOT},1)
++DOIMAGE_CC_FLAGS := -DCONFIG_MVEBU_SECURE_BOOT
++DOIMAGE_LD_FLAGS := -lconfig -lpolarssl
++endif
++
++CFLAGS += ${DOIMAGE_CC_FLAGS}
++
+ # Make soft links and include from local directory otherwise wrong headers
+ # could get pulled in from firmware tree.
+ INCLUDE_PATHS = -I.
+@@ -51,7 +58,7 @@ all: ${PROJECT}
+ 
+ ${PROJECT}: ${OBJECTS} Makefile
+ 	@echo "  LD      $@"
+-	${Q}${CC} ${OBJECTS} -o $@
++	${Q}${CC} ${OBJECTS} ${DOIMAGE_LD_FLAGS} -o $@
+ 	@echo
+ 	@echo "Built $@ successfully"
+ 	@echo
+diff --git a/tools/secure/aes_key.txt b/tools/secure/aes_key.txt
+new file mode 100644
+index 0000000..3e8a888
+--- /dev/null
++++ b/tools/secure/aes_key.txt
+@@ -0,0 +1 @@
++ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890
+diff --git a/tools/secure/csk_priv_pem0.key b/tools/secure/csk_priv_pem0.key
+new file mode 100644
+index 0000000..0840c2a
+--- /dev/null
++++ b/tools/secure/csk_priv_pem0.key
+@@ -0,0 +1,27 @@
++-----BEGIN RSA PRIVATE KEY-----
++MIIEogIBAAKCAQEAm6jN6o2zQmtyUlvfkfDbSjPJ7Vlpp/KgK/eznoVBBsDIZakX
++cIgf8TSLpNVkc+ZE0f/n8X7mEZIyjuSBObLOm9vbkoZcR7DlKUL7RNNOUCv55Ozl
++hQwrzpH/uIyIJTvmek29G5wroi0wGbPoxzhelIRTjVCibleBWhYCmZQ6SIRmTY8L
++JT8VkX8I/Mhu62DjvxF3BnV6pXuh/FdgDN7MbldzM8Y+GOxVGi5Kcm5WHY7eyMxl
++4Y0Yko31Xv7T1PcXahVBIciT+11w+fLc4wQuCJ6GUf9JbzQ0ZllY/FdRG0AhuRMH
++zN0jAc/sKrIFoAErED6qlcoQg0vl7gmWN5x+2wIDAQABAoIBACtnPFOkw1FH6I6y
++c3qcMGlWW33FKsLb0nGwFfOjsGgTpU1Dgver3UxCnJWPsvzmPlZYBvK9saVAoLxb
++VvUhuJ6ZBXar5FtRJfUFak7cpL+SI5IDxFP++tAUwbtR5DyNoUyFFK/4Mep8sybX
++lZbHTwgWhb2nuEMQP09BR+RPAplpcitkIoPkhmbGfbt9Hsd25I3bb5Z9R4S/2Rcf
++7tmaxndQamij7/pUI7xtd8L6cMESJGIWrgEt/MaT2z8nNPE3EDctDSlH9yKqA2O7
++/LTfrxNDnw5gGRtOgahloThKljVM6pQa4mi91FufD67pHwnKn8urNbt8/3AWg6uU
++x4FzZdECgYEA0k2UYzBM+dU6T1bZZ176YI0cZrP1tbf/JwnZGHicQYS7lPLAqgfO
++u5oRQzuDimOXaV4xCPBO2nadd6aBxbZTXaglR7GG2uCHX6w2DnOr8/d66YTErTVV
++u7/Bf8gMKT9mM4rWPrOEXfXfF0fvcpkBQ+QDynIB37tx/mj2lXRkLx0CgYEAvXuX
++Dbe2QgSK0ajrcH7YJyx3RVx9RonOqL4yjCVCELmaDQd307Ef3j+gkd59XIewm+HA
++mPyeWEUd8EzH+UvjckfKFuF2I4lEUUWtVZTa7me7mvsFqeEOu5KusD4+Hs+B9Kqd
++3Evqcpj2lcMBI519Hvr9BTKfDBcH1EUos6A9rFcCgYAxsyPeTQvj/wBIv72hMFD7
++gF2159GpoFIsZ6dmoRpMYZHzIWtmw3GX5FEwEmCD1AV0YU41TpVUC7QrEq6Yiv4o
++pBQrXUkBcQ6NDaW4xJ1eip4Bkd7pEDGyrR6NlDlLhjAg/i6joskla3XNirKL4pzp
++7nj23vqSZToLZcLgjyEeAQKBgD5EvDo80j9VwMzvpxecB6qv+S4pG94vcWOQxYm6
++wMBATjjT6HP/9EoUPM9S/32F9er0QFfGRL8bT6Blix4I62Dl6KqmQy2gcXwH2tOS
++DHRmUIe40H6oQDAyHwg6HC4B4WInI6N+qzgnvnku0VQD8FdbAgVQQmY1t1PxulN1
++aG8XAoGAPWAr4i8KkVAx4wLlMF8E/ecKcsX1J0+UuKket7Dvk7xJfwtkSLPeV8Bp
++HuoHXMM3KYoZ93Hlto5rAT1VQhYuj7heU10v+9UtYTFHgaitptYmxovoCKKiZICl
++48aPUI377e5jQ6RhhGYy8ltKsJ80K1T9DIkThJPSS+9NAI+jrmg=
++-----END RSA PRIVATE KEY-----
+diff --git a/tools/secure/csk_priv_pem1.key b/tools/secure/csk_priv_pem1.key
+new file mode 100644
+index 0000000..91d1aeb
+--- /dev/null
++++ b/tools/secure/csk_priv_pem1.key
+@@ -0,0 +1,27 @@
++-----BEGIN RSA PRIVATE KEY-----
++MIIEogIBAAKCAQEAgwHXB0AaIhT15Z9lHpQ2YT1W8i4oMvvRiLGQCrba5l7BJ03E
++ct0x3zagNKZEnpNndT4EAy98ihkhwVlUhxZCparJ2L3JsTs5RgV0wyQkQzwMLM8g
++QI5EMmJCgFAVRHmVICOsisGGfNVUHjGdGwPOipyQCsX2MAm3E139VpB7NYj+Q4IR
++4kvcb+59LZxKuRJTFKRDIqMGJu98P/ga70+YLXPCBPKSfnZnUppuaI86jF1E6xt8
++o7YtfEPCHDd2LXxKPZ670OapVqwo0t7ZSzEG63NkLp56FXc1OpfC69C8VPiZ8JqW
++wxvS/vL8MMCxsBnjSuqnmOAbcNR2GFtUwJOGwwIDAQABAoIBAFcfoiDwQHDp/531
++ownzBzcj0+67Q4Ckd3SwoVp+wJTz7wB0d3DsKX6IlYJuELRk0yjlVUXJDsnIbOpo
++vg4Yf7otGo9JqBh1imFGv6AHKRaNmIs0M/66nh/juNYcbAhd0w7MqrKcgRQDyy1J
++UXHl1jXYaPLBNDg+PcJjf1dSPp4axzmW2Pk2rXnJCsPcZXL/0YmEvqhfOze0GdjR
++hOkbbr6MPPVM66tA00xSwg9XEYJvHtwH6oB0rnANM8ieNK1mtcWkTU5di17CCrjS
++ohIhXQrdVpxt549EJoUqEFSgo8OOMm2npDbFrjlukb5euakvMacwoT1te79blSKf
++hrTvjgECgYEA0VqoFL0Vqe1qleikYDJ7S5xcv1oruEV31TeuBhDuf0c4PADCnBrV
++/RnCEYuXs6wCk60chHg5s0jxg+nGbiY6jRTHkJLRU3ZhDtrtfidEZ78GRzFF3shl
++Uzt7dHkKK1ZdiMH4sWzyRLom91TKWMrNKC1AD7v4/zjEXy6phall3ZcCgYEAoDJa
++0dIKvVCS6dM2E2kMqi/45mJqsJzFvYL1s4mbma/BAC47bBju/YEse90x+iIi3Gg/
++NoXmNfGPrtgdl+/J/Y6Pohxf/e7gGN71tYVETzgc2Jv09wqmzmTjCmo3wyepyWf+
++pIAE39kdhwnqXVw5xwOG1N3xrQ9TomOO+1QiXbUCgYAF84TJqiJehUA9aLKbhXPZ
++z2UXj3GkuFzSs9V/mKWe+qBPnFnr5BtnKX9JzmUOl3ovRoGEBoLlZNJwxIl+ghmx
++/wA5TOMkcz4JFRIhPu6D4HtGNNFepuWyewNkaThvyPG5vIHcUVOFvqDy8PcblRBF
++7xteFyLZ5nw2lHX/NbSOmwKBgFxLZqPIPcPArkPlGhyow1Ex/lbNkOZcDFkZIHHl
++8C3lYm62NCodW2PWjkh2shqInEkcDn9dObsOh1eWz8X/swJQplQhwPROMfJiUnHY
++a/iwPX5WrBXAn0X+Pgh8FdBsA5g0QDOKRkSplCd/APX08pzEXWQ60siAMhE3BuOq
++H3qZAoGAVnzFidlXuyn+fbNaNVepK9hbuoxHHbzYYWSkpi+73EchN8kXktC+AdEf
++owr9TPILbwWWJyisa3wW4xdbMifCgVLTedWZpZ09BENVqC+7g7ksX0pNMGYuFLOh
++Td7mFAgmclxG5UiKexajOLjjdnAsJyrDaNKhHn8NQNN6L93N0sE=
++-----END RSA PRIVATE KEY-----
+diff --git a/tools/secure/csk_priv_pem2.key b/tools/secure/csk_priv_pem2.key
+new file mode 100644
+index 0000000..ea47ac5
+--- /dev/null
++++ b/tools/secure/csk_priv_pem2.key
+@@ -0,0 +1,27 @@
++-----BEGIN RSA PRIVATE KEY-----
++MIIEogIBAAKCAQEAjxTSTh57/5njUpE200+Qb3ySAn8lKeufgaa0K2Xc6Ri7lDZR
++ZJ2BPuQZV4lYGqgWUf0IOzNf2WnE2lPfVnLMx08h7NhBqJ83yJVajpr+itnOmW+r
++M7h76TFyuna1xz2kw1uhgI5Y4FRnJ4Cg4AexCSyViXSzEN/7LQwxa5z5WGDiNX5N
++3/tgjGu+dzSMOiIQhXwIcK/XaiQNm3WHqqnAhPb5Q9IBuuqBfpZoFfH4XmbFWrC8
++neSMMMxX5Ti9pKhLd1EsiaP0aUNQlF8gNWuC/tNaf+OCtwVelVa3sGSRjRFe06VQ
++sAE9oyXKri11yD5Dwp1xXivbpOrf7xjUe5gILwIDAQABAoIBABTr94CCxqDucKYP
++I9QsSzNyJKuGyfliQdWkea3q3C2ddzhJ5QbwXQjEM8xwAdkMAQ+GD2EQtxBEfgtq
++vjqW2MjAEnbefGNavL5w0GgP0+6bwLEA+ii67iuAFoWbfCMhKWmDiY8RwX8z+E13
++ao63sTRlN4x86v4pskG5CbTxpCg+8m7KklLns4SwRGf5gGQcgKRtNSR5nE4g2UNl
++dghbDdNlvUncm4zxUcTh0kquhF5Tef5w+6L7W8Hv9Pky3b1c2OK1BMhJlxYrtt69
++/zhIJs89CLx5ACfam+DT/xs0uUiuRQq/e1CCQLCnUO02JqpeN/schtDCd0ZWhbtB
++nT7fwTECgYEAx+COhys+7AZI0U+PeuTkI86GUsWHoBislXThxbxyGvMFjgyADZD+
++q/XEGAcxd4eTA1fr0Q9cLuuHZubjGQ7+OIXMZ6arXUsrmMrjRu3kHO+y6K6r4s8j
++5bxN/iQ0bymUtJRfJSLI172plszusiPWhCL5+yhYlNoh4mNZJuJnzXkCgYEAt0Gz
++07P19YPsxk5ow7ZnSNOMOkkEPP0SuHHWekMIK9KMjiRUSygOAk07zTL7MUoFn9Gy
++Prfi0ybFArNhIa4Xio3Fbjfig7rGgaApK4Y3d9A/CGPv/Nj7C2OTepqlEzRLmU9e
++Xw5yhbccCydXLyAYFAET2XHsmbewpvHyeYUSoOcCgYBRMJEUrOdhPmhDxZqVo/Zb
++6R887gnaaUtpZlHzXUnIUqEWA1PcruIT/b/KttlMIWEBQayDfkbGtFuK3AyxeBqh
++4Q+XpucC/W7XIMrTW/yGGIPG6nTdq6B8SFIyAojeArjp5T8Eua11nRAPNm1bJR2V
++DRQYBlp9FGIhMJPdLKhXmQKBgGeywSyR0COfBHPu2K+u3uFB/D7bJI/ScS54FHLY
++zZ3mpeylOCHTR6IbzDRAng31Ihue0KtW6P6tGJx/nv4tAltAADFvZDlAjqW5WLKt
++X2PoLlL0IlBFBEIclc6yBalJVWIqnG9TwJBT3oWdPGOJWLaxKWdJZSZS4J6HmLsV
++B0aPAoGAduLsOt8C5z48jPqmJxyPwsmT0Q424FccPMcvGOJ13yxq3xNsfAsbmg9l
++L2i/ktE0wCMA+Pm7cuFgxwD7xTr67POZgt9022KsOSonjPsIn24UQeP46vAX/Qtx
++Qf3sfvzf57vNy2Hybe38T8RsVOZla+v/QctfSfmb8Y95XL/SZzA=
++-----END RSA PRIVATE KEY-----
+diff --git a/tools/secure/csk_priv_pem3.key b/tools/secure/csk_priv_pem3.key
+new file mode 100644
+index 0000000..e40a864
+--- /dev/null
++++ b/tools/secure/csk_priv_pem3.key
+@@ -0,0 +1,27 @@
++-----BEGIN RSA PRIVATE KEY-----
++MIIEowIBAAKCAQEAlA/T/5IMTPTu+k5PeesB2oeP80Y6nq0ls8vXLul0TVEJoJ+O
++InbPYNqYPu4dbQQg/u8qp8BeXm2ujtJbBTcdn0jKIiDTKYEnlsGfUt9GHnuuzvFh
++rORSKuAolUqvo/zcSCo1uykaFvSuyTovSPlwllzSixD9XBbHfn3kXneiIUa45vsJ
++AyjTn2qCJt0WgvX42NTxH6Q/OWLeOuKTyRHf25eabucIv77KYy0mlEPq5jjiV5AJ
++gl5F1h5G8n07JCIWjkZ2QV4wr+Hv9uGNaSb0WGppBp4CbdQa0eUI75cKzz4WXqds
++HZaYiX/a8YC+EUfvqDD02vKREIKFL/1zL53P/wIDAQABAoIBAGzBj5w7oBNrGpr7
++qL9KEyt8xg0Q+gAR+Q6vXRlVXBtquiKk8Jd6I+vlxUz8RNsN3FrGPNPJpse/0yeP
++dlJHYNfedLNK3zCucPD4uln6LRw5B3d0sKV5dK2Px9+ZY5iWJQxRDPS0RTi1dCnV
++NmRo7P1Vo0WJLkFVbiYIvRVy1MGRfF9ejN41G6U4MoBAQ9WqLp+JasUMTspZI49a
++z8tOiJPT94MHBwbKnz8Mcq8sy02LR7U5h82+0T7JoRVix/OXiOoiQExNjZ9yGar0
++wBnl0SL1UW5UUaYzbyNH0mlMXLD+qowbDZM2pBWPfqXK+CMOsL6STIwnns7lY+ZJ
++ILbaVmECgYEA2kQXE1PZ25A87a81wCEld402WJ2KegrZC719EWv+xeoS72Ji8uv7
++V0PxVGJQOcG1N+dzJ5tN59SQ/NvVTrjwqNUxQqsygmWq/TcfGb9ONZRmyzcehYLb
++m4xTjqJKQ6Kwm5SoaCYmzEb/xaeLwLS9HmR9MdB1dxtDOLpjaK/8qPECgYEArait
++QhgaknlxG8pcAimPsEUrLHYWSFRE/MUk4+YvZg/5+YJ8csvY0SO2h0tF/ARwUrdI
++DaLEifHm4vqgN03K/0gqj7TKxcNlV16PvVx7Vz97xejdqdHZLDfAo4lcotsgvFQW
++zIqoQGGPLf6WhFixZ8mEYj8xnmzLGPvHQmf1h+8CgYEA0LDl917nIN4qw4ARPqDy
++t/pXCienrcUNfgIxwSSnNwj2DdjejzI+4VNfPbW6y16BLPCp1CbUOGOwNXTj4R9H
++S8Z8ESirZK5c7Tt1CyM1XlmEZ61OC43w+CsWAXz+0OiPQFLFKr+/vPXtvEjUgO7P
++HG4sniKZDccNYQIl5oTOaaECgYAPU4u3AZmWw9EPutRT/IcJ75DX47Qjvgw4os2W
++r4IPZ+mP88w39XW1P4mkdyg+DcY8BqD9Uxg1dHwEHEp3lw4LabsX48Thn1UaWOYm
++uDrKgHfUB7FIg5S/Kkx+ImliliRVerZoZvRiejnAvW9bTtiZaFeetCUU7lUeZ1o2
++qiYpUQKBgHQDfdDhguBGPKpkJ7pVwHkJA/lyRWaN1hwplw4TvX2oH14NsHg5Q5Fd
++lHqHFs2Ry/6X3bKgF0E6q4cx0V1Xnnj9sGsemlrHdiSxplDYRQql7X5OeYPGF/Bg
++ZTTG8rDwy+ey6EP9BZUb03hISx/LyMynOzjGl6uOcdAcy2d9Vno0
++-----END RSA PRIVATE KEY-----
+diff --git a/tools/secure/kak_priv_pem.key b/tools/secure/kak_priv_pem.key
+new file mode 100644
+index 0000000..dfceaba
+--- /dev/null
++++ b/tools/secure/kak_priv_pem.key
+@@ -0,0 +1,27 @@
++-----BEGIN RSA PRIVATE KEY-----
++MIIEowIBAAKCAQEAsj2cHcrE2pdyCqNr+oVcQULiRx6RivkrhLl2DTqWXpP33BPm
++MP0W0X0z98X7E3kZO+JIGRZ8q+6AWmUpL+53aOGItNeUgT7jQKViPJIo9ZcEnv/n
++PJqdgDd4xFhnwYMgq8uVYN9IPfaKDwB3EoOqjNox2JholUVxvLw6W8DAC8La3zwb
++0hiqtIlirQOQ/KaTHxC6dPYkrai+jSK5uAX7Vt8RKYg5qfDxSdZckmC2xVKYURhV
++bZAlyKki4h6f8CwYCJMQDpHL6mVYCuJ1Ju/OJEXvthDKD0CD2hwILhksdey3qMOC
++I5lHSO1b+sTvnVHGs65wI7A+ZYwnadMNvS9e2QIDAQABAoIBAH2uu9q2FEEe8SdX
++PNiWGQtbojsL7wzTzj/0lq2VVlqyc+AXmAWLMP/fDTn1vKlqhsSXNseZ96c0sgUL
++uBM4T7MA9WivauQH+C6pb6/OUFt8daG4SNGPJOg4NUweGmt1jyAUmeyJBWPL6GXT
++qiK//Q78/JECRxyaryyqfWwdak3flzfwONBJ03tQ9EO+L7hf9gAP7OYnAsuNp+Bz
++tj1xzNMumYYYiHvsEXx8UTe8HGrmYuO53ZY5fBLGB6Jj7hRlAHNfcdVDvvoBU5cI
++Zwi+5YsBuSP2Hr9Gt2Odu+KitH3gFdS0HIiDh44AT+Trj29NMANFDfkDbVHUmE0q
++YBL75NECgYEA2E+fJzdaYyyPIcvQgVM8g52hltR5IRgJICND3NOdB/Zb2teBGZh+
++1XJ6ZqQMDcOQZo0CMbX9UNRnf3NU55k48/EEITxCgUJTx/WdfJeTVlWGspt5+U/r
++hDnQmkePdU1en63+u9eqsla9+VhLwU3fl/pIOpsBAnoEzs3hMQZ1G0cCgYEA0vHH
++ilm3AztIoZlH3wgDAl2Gu5/YopqEofKA8G4Jp89rlkk919P/GNjEc6575wjgztDB
++0Xab+H7Nqxjs3HqQX/DTTuAxzAggBg3j/ijpHnmjrCHLeMT5ciyH+EH5Bg///cLq
+++Cwn7aOWuSK1hGdDYxUycHylAYZXXFJzmEIEhN8CgYEA1qTrwPZkctTckyS0GiCG
++g/P/TLQ6HmTDaWiVBqPVxvjn3RjLuqJf+V5Hp2JRs7bDq39xFfMJExQyP34qWkbp
++BOe8uV4agDlY+ar4Q5IFWj40EzfEqWhsxCC6pt0rtbK4mqsFg1BWyfDZQnwjcAXe
++QejRk5YMQnDiJHSXaRaHTjECgYAv6ecvD624ODEJM63VhRZZ5TCDUY19caeKuXB8
++LCJZUY3Ydw5rBaY92I7Wz90o3yVhFJ3RnCVVTkgdAu5aLiS5BhSZJ+dntri/Z0xQ
++IK7C01JP+OUkq2kVe/Pued28eMnms+13LWBsY+oKZ03foyz1Ro1Ma6N3MzKIr9m9
++zdEE9QKBgECfoh0xE2T/cbJrtH0mwMCUM6eMVGq+yQBKNvuuPg6kaQUsah1n1rp6
++OyvjwRAXdhshszEzNTX1WTT6/i+vZX277Ax50pPo9UhQ9kVteVt1frN6+u5sy07V
++fg1f2+m0iFx4BD/irU0fzSyfGE+QkBnmXFBUNSYjp2PSqYIdufmW
++-----END RSA PRIVATE KEY-----
+diff --git a/tools/secure/sec_img.cfg b/tools/secure/sec_img.cfg
+new file mode 100644
+index 0000000..f232377
+--- /dev/null
++++ b/tools/secure/sec_img.cfg
+@@ -0,0 +1,25 @@
++# Trusted boot image extention definitions
++
++kak_key_file = "tools/secure/kak_priv_pem.key";
++
++# CSK keys array - 16 entries total.
++# Only a key with csk_key_index will be used for signing the image
++# use "*" string instead of file name for specifying an empty key
++csk_key_file = ["tools/secure/csk_priv_pem0.key", "tools/secure/csk_priv_pem1.key",
++                "tools/secure/csk_priv_pem2.key", "tools/secure/csk_priv_pem3.key",
++                "*", "*", "*", "*", "*", "*", "*", "*", "*", "*", "*", "*"];
++
++# index of CSK key in the array. Valid range is 0 to 15
++csk_key_index = 3;
++
++# AES-256 symmetric key for image encryption
++aes_key_file = "tools/secure/aes_key.txt";
++
++efuse_disable = false;
++jtag = { enable = true; delay = 20; };
++
++box_id = 0xdeadbeef;
++flash_id = 0xbaddf00d;
++
++# Secure Boot Control addresses array (this example uses scratchpad)
++control = [0x006f00a0, 0x006f00a4, 0x006f00a8, 0x006f00ac];
+-- 
+1.9.1
+

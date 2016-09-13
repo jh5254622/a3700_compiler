@@ -1,0 +1,672 @@
+From 973d3b7d0c05b91f860af51ead47f1ba9caae5ab Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 20 Aug 2014 16:16:48 +0300
+Subject: [PATCH 0060/1240] pcie: Added support for pcie driver
+
+	- Added a driver under drivers/pci
+	- Added a common init wrapper in board code
+	- Added API to get active unit mask
+	- Changed PEX to PCIE all around code
+
+Change-Id: I2f5beb354e05d0e2d98b57e549bd7f53396f68e4
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/11264
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv7/armada38x/tables.c              |  16 +-
+ arch/arm/cpu/armv8/armada8k/tables.c               |   4 +-
+ arch/arm/cpu/mvebu-common/unit-info.c              |  16 +-
+ arch/arm/include/asm/arch-armada38x/memory-map.h   |   4 +-
+ arch/arm/include/asm/arch-armada38x/regs-base.h    |   2 +
+ arch/arm/include/asm/arch-mvebu/driver_interface.h |   1 +
+ arch/arm/include/asm/arch-mvebu/unit-info.h        |   6 +-
+ board/mvebu/common/Makefile                        |   1 +
+ board/mvebu/common/pcie_init.c                     |  32 ++
+ drivers/pci/Makefile                               |   1 +
+ drivers/pci/pci_mvebu.c                            | 351 +++++++++++++++++++++
+ include/configs/armada38x.h                        |   1 +
+ include/configs/mvebu-common.h                     |   6 +-
+ 13 files changed, 415 insertions(+), 26 deletions(-)
+ create mode 100644 board/mvebu/common/pcie_init.c
+ mode change 100644 => 100755 drivers/pci/Makefile
+ create mode 100644 drivers/pci/pci_mvebu.c
+
+diff --git a/arch/arm/cpu/armv7/armada38x/tables.c b/arch/arm/cpu/armv7/armada38x/tables.c
+index fa5c445..bd4df4a 100644
+--- a/arch/arm/cpu/armv7/armada38x/tables.c
++++ b/arch/arm/cpu/armv7/armada38x/tables.c
+@@ -26,18 +26,17 @@
+ #include <asm/arch-mvebu/mpp.h>
+ 
+ struct adec_win memory_map[] = {
+-	/* target		base			size			attribute	remapped	enable */
+-	{PEX_0_TARGET_ID,	PEX_MEM_BASE(0),	PEX_MEM_SIZE(0),	PCI_0_MEM_ATTR,	1,		1},
+-	{PEX_1_3_TARGET_ID,	PEX_MEM_BASE(1),	PEX_MEM_SIZE(1),	PCI_1_MEM_ATTR,	0,		1},
+-	{PEX_1_3_TARGET_ID,	PEX_MEM_BASE(2),	PEX_MEM_SIZE(2),	PCI_2_MEM_ATTR,	0,		1},
+-	{PEX_1_3_TARGET_ID,	PEX_MEM_BASE(3),	PEX_MEM_SIZE(3),	PCI_3_MEM_ATTR,	1,		1},
+-	{DEV_TARGET_ID,		NOR_CS_BASE,		NOR_CS_SIZE,		BOOT_CS_ATTR,	0,		1},
+-	{TBL_TERM,		TBL_TERM,		TBL_TERM,		TBL_TERM,	TBL_TERM,	TBL_TERM},
++	{PEX_0_TARGET_ID,	MVEBU_PCIE_MEM_BASE(0),	MVEBU_PCIE_MEM_SIZE(0), PCI_0_MEM_ATTR, 1, 1},
++	{PEX_1_3_TARGET_ID,	MVEBU_PCIE_MEM_BASE(1),	MVEBU_PCIE_MEM_SIZE(1), PCI_1_MEM_ATTR, 1, 1},
++	{PEX_1_3_TARGET_ID,	MVEBU_PCIE_MEM_BASE(2),	MVEBU_PCIE_MEM_SIZE(2), PCI_2_MEM_ATTR, 1, 1},
++	{PEX_1_3_TARGET_ID,	MVEBU_PCIE_MEM_BASE(3),	MVEBU_PCIE_MEM_SIZE(3), PCI_3_MEM_ATTR, 1, 1},
++	{DEV_TARGET_ID,		NOR_CS_BASE,		NOR_CS_SIZE,	 BOOT_CS_ATTR,   0, 1},
++	{TBL_TERM, TBL_TERM, TBL_TERM, TBL_TERM, TBL_TERM, TBL_TERM},
+ };
+ 
+ /* List the maximum amount of units for all devices and boards */
+ u16 base_unit_mask_table[MAX_UNIT_ID] = {
+-	[PEX_UNIT_ID]		=  cnt_to_mask(3),
++	[PCIE_UNIT_ID]		=  cnt_to_mask(4),
+ 	[SATA_UNIT_ID]		=  cnt_to_mask(4),
+ 	[ETH_GIG_UNIT_ID]	=  cnt_to_mask(4),
+ 	[UART_UNIT_ID]		=  cnt_to_mask(2),
+@@ -52,7 +51,6 @@ u16 base_unit_mask_table[MAX_UNIT_ID] = {
+ 
+ /* Per device unit info. List which units are disabled for this device */
+ u16 armada6280_unit_disable[MAX_UNIT_ID] = {
+-	[PEX_UNIT_ID]		=  id_to_mask(0) | id_to_mask(2),
+ 	[SATA_UNIT_ID]		=  id_to_mask(2) | id_to_mask(3)
+ };
+ 
+diff --git a/arch/arm/cpu/armv8/armada8k/tables.c b/arch/arm/cpu/armv8/armada8k/tables.c
+index 67f4f1a..86137e3 100644
+--- a/arch/arm/cpu/armv8/armada8k/tables.c
++++ b/arch/arm/cpu/armv8/armada8k/tables.c
+@@ -38,7 +38,7 @@ struct adec_win memory_map[] = {
+ 
+ /* List the maximum amount of units for all devices and boards */
+ u16 base_unit_mask_table[MAX_UNIT_ID] = {
+-	[PEX_UNIT_ID]		=  cnt_to_mask(3),
++	[PCIE_UNIT_ID]		=  cnt_to_mask(3),
+ 	[SATA_UNIT_ID]		=  cnt_to_mask(4),
+ 	[ETH_GIG_UNIT_ID]	=  cnt_to_mask(4),
+ 	[UART_UNIT_ID]		=  cnt_to_mask(2),
+@@ -53,7 +53,7 @@ u16 base_unit_mask_table[MAX_UNIT_ID] = {
+ 
+ /* Per device unit info. List which units are disabled for this device */
+ u16 armada8021_unit_disable[MAX_UNIT_ID] = {
+-	[PEX_UNIT_ID]		=  id_to_mask(0) | id_to_mask(2),
++	[PCIE_UNIT_ID]		=  id_to_mask(0) | id_to_mask(2),
+ 	[SATA_UNIT_ID]		=  id_to_mask(2) | id_to_mask(3)
+ };
+ 
+diff --git a/arch/arm/cpu/mvebu-common/unit-info.c b/arch/arm/cpu/mvebu-common/unit-info.c
+index 1f9eb6d..0ead035 100644
+--- a/arch/arm/cpu/mvebu-common/unit-info.c
++++ b/arch/arm/cpu/mvebu-common/unit-info.c
+@@ -30,8 +30,7 @@
+ const char *mvebu_unit_names[MAX_UNIT_ID + 1] = {
+ 	[DRAM_UNIT_ID] =	"dram",
+ 	[CPU_UNIT_ID] =		"cpu",
+-	[PEX_UNIT_ID] =		"pex",
+-	[PCI_UNIT_ID] =		"pci",
++	[PCIE_UNIT_ID] =	"pcie",
+ 	[ETH_GIG_UNIT_ID] =	"eth",
+ 	[USB_UNIT_ID] =		"usb2",
+ 	[USB3_UNIT_ID] =	"usb3",
+@@ -63,7 +62,7 @@ const char *unit_info_get_name(enum mvebu_unit_id id)
+ 	return mvebu_unit_names[id];
+ }
+ 
+-static u16 *unit_info_get_mask(enum mvebu_unit_id id)
++static u16 *unit_info_get_mask_ref(enum mvebu_unit_id id)
+ {
+ 	u16 *unit_mask;
+ 
+@@ -78,11 +77,16 @@ static u16 *unit_info_get_mask(enum mvebu_unit_id id)
+ 	return unit_mask;
+ }
+ 
++u16 unit_info_get_mask(enum mvebu_unit_id id)
++{
++	return *unit_info_get_mask_ref(id);
++}
++
+ void unit_info_disable_units(enum mvebu_unit_id id, u16 mask)
+ {
+ 	u16 *unit_mask;
+ 
+-	unit_mask = unit_info_get_mask(id);
++	unit_mask = unit_info_get_mask_ref(id);
+ 	if (!unit_mask)
+ 		return;
+ 
+@@ -99,7 +103,7 @@ bool unit_info_is_active(enum mvebu_unit_id id, int index)
+ 	u16 *unit_mask;
+ 	bool active;
+ 
+-	unit_mask = unit_info_get_mask(id);
++	unit_mask = unit_info_get_mask_ref(id);
+ 	if (!unit_mask)
+ 		return -1;
+ 
+@@ -112,7 +116,7 @@ int unit_info_get_count(enum mvebu_unit_id id)
+ {
+ 	u16 *unit_mask;
+ 
+-	unit_mask = unit_info_get_mask(id);
++	unit_mask = unit_info_get_mask_ref(id);
+ 	if (!unit_mask)
+ 		return -1;
+ 
+diff --git a/arch/arm/include/asm/arch-armada38x/memory-map.h b/arch/arm/include/asm/arch-armada38x/memory-map.h
+index dcf9e1e..28a7d14 100644
+--- a/arch/arm/include/asm/arch-armada38x/memory-map.h
++++ b/arch/arm/include/asm/arch-armada38x/memory-map.h
+@@ -29,8 +29,8 @@
+ #define MVEBU_REGS_BASE			(0xF1000000)
+ #define MVEBU_REGS_SIZE			(0x100000)
+ 
+-#define PEX_MEM_BASE(id)		(0xE0000000 + (id * 0x2000000))
+-#define PEX_MEM_SIZE(id)		(0x2000000)
++#define MVEBU_PCIE_MEM_BASE(id)		(0xE0000000 + (id * 0x2000000))
++#define MVEBU_PCIE_MEM_SIZE(id)		(0x2000000)
+ 
+ #define NOR_CS_BASE				(0xfd000000)
+ #define NOR_CS_SIZE				(0x1000000)
+diff --git a/arch/arm/include/asm/arch-armada38x/regs-base.h b/arch/arm/include/asm/arch-armada38x/regs-base.h
+index 8900b96..4537b17 100644
+--- a/arch/arm/include/asm/arch-armada38x/regs-base.h
++++ b/arch/arm/include/asm/arch-armada38x/regs-base.h
+@@ -28,6 +28,8 @@
+ #define MVEBU_UART_BASE(x)	(MVEBU_REGS_BASE + 0x12000 + (0x100 * x))
+ #define MVEBU_GLOBAL_TIMER_BASE	(MVEBU_REGS_BASE + 0x20300)
+ #define MVEBU_SPI_REGS_BASE(x)	(MVEBU_REGS_BASE + 0x10600 + (x * 0x80))
++#define MVEBU_PCIE_BASE(x)	((x == 0) ? (MVEBU_REGS_BASE + 0x80000) : \
++				(MVEBU_REGS_BASE + 0x40000 + (0x4000 * (x - 1))))
+ 
+ #define MVEBU_MISC_REGS_BASE	(MVEBU_REGS_BASE + 0x18200)
+ #define MVEBU_DEVICE_ID_REG	(MVEBU_MISC_REGS_BASE + 0x38)
+diff --git a/arch/arm/include/asm/arch-mvebu/driver_interface.h b/arch/arm/include/asm/arch-mvebu/driver_interface.h
+index 0a115ab..cbffe72 100644
+--- a/arch/arm/include/asm/arch-mvebu/driver_interface.h
++++ b/arch/arm/include/asm/arch-mvebu/driver_interface.h
+@@ -19,3 +19,4 @@
+ 
+ struct spi_slave *mvebu_spi_setup_slave(unsigned int bus, unsigned int cs,
+ 		unsigned int max_hz, unsigned int mode, u32 cpu_clk);
++void mvebu_pcie_init_board(int max_hosts, u16 active_mask);
+diff --git a/arch/arm/include/asm/arch-mvebu/unit-info.h b/arch/arm/include/asm/arch-mvebu/unit-info.h
+index 851663f..b663a25 100644
+--- a/arch/arm/include/asm/arch-mvebu/unit-info.h
++++ b/arch/arm/include/asm/arch-mvebu/unit-info.h
+@@ -23,10 +23,7 @@
+ enum mvebu_unit_id {
+ 	DRAM_UNIT_ID,
+ 	CPU_UNIT_ID,
+-	PEX_UNIT_ID,
+-	PEX_IF_UNIT_ID,
+-	PCI_UNIT_ID,
+-	PCI_IF_UNIT_ID,
++	PCIE_UNIT_ID,
+ 	ETH_GIG_UNIT_ID,
+ 	USB_UNIT_ID,
+ 	USB3_UNIT_ID,
+@@ -67,6 +64,7 @@ void dump_unit_info(void);
+ void update_unit_info(u16 *unit_mask, u16 *new_mask, enum unit_update_mode);
+ int  unit_info_get_count(enum mvebu_unit_id id);
+ bool unit_info_is_active(enum mvebu_unit_id id, int index);
++u16  unit_info_get_mask(enum mvebu_unit_id id);
+ void unit_info_disable_units(enum mvebu_unit_id id, u16 mask);
+ void unit_info_disable_unit_instance(enum mvebu_unit_id id, int index);
+ 
+diff --git a/board/mvebu/common/Makefile b/board/mvebu/common/Makefile
+index 7afa27f..29f0a32 100644
+--- a/board/mvebu/common/Makefile
++++ b/board/mvebu/common/Makefile
+@@ -21,6 +21,7 @@ obj-y	+= board-common.o
+ obj-y	+= entry.o
+ obj-y	+= init.o
+ obj-$(CONFIG_MVEBU_SPI) += spi_init.o
++obj-$(CONFIG_MVEBU_PCI)	+= pcie_init.o
+ 
+ ifdef CONFIG_MVEBU_DEVEL_BOARD
+ obj-y	+= sar.o
+diff --git a/board/mvebu/common/pcie_init.c b/board/mvebu/common/pcie_init.c
+new file mode 100644
+index 0000000..194a7eb
+--- /dev/null
++++ b/board/mvebu/common/pcie_init.c
+@@ -0,0 +1,32 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <errno.h>
++#include <pci.h>
++#include <asm/arch-mvebu/unit-info.h>
++#include <asm/arch-mvebu/driver_interface.h>
++
++void pci_init_board(void)
++{
++	int host_cnt = unit_info_get_count(PCIE_UNIT_ID);
++	u16 active_mask = unit_info_get_mask(PCIE_UNIT_ID);
++
++	mvebu_pcie_init_board(host_cnt, active_mask);
++}
+diff --git a/drivers/pci/Makefile b/drivers/pci/Makefile
+old mode 100644
+new mode 100755
+index 50b7be5..118c590
+--- a/drivers/pci/Makefile
++++ b/drivers/pci/Makefile
+@@ -19,3 +19,4 @@ obj-$(CONFIG_PCI_TEGRA) += pci_tegra.o
+ obj-$(CONFIG_TSI108_PCI) += tsi108_pci.o
+ obj-$(CONFIG_WINBOND_83C553) += w83c553f.o
+ obj-$(CONFIG_PCIE_LAYERSCAPE) += pcie_layerscape.o
++obj-$(CONFIG_MVEBU_PCI) += pci_mvebu.o
+\ No newline at end of file
+diff --git a/drivers/pci/pci_mvebu.c b/drivers/pci/pci_mvebu.c
+new file mode 100644
+index 0000000..2d4f756
+--- /dev/null
++++ b/drivers/pci/pci_mvebu.c
+@@ -0,0 +1,351 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <pci.h>
++#include <asm/io.h>
++#include <asm/arch/regs-base.h>
++#include <asm/arch/memory-map.h>
++#include <errno.h>
++
++/* #define DEBUG */
++
++/*
++ * PCIe unit register offsets.
++ */
++
++/* Standard PCI-E header reigsters */
++#define PCIE_DEV_ID_OFF(x)		(MVEBU_PCIE_BASE(x) + 0x0)
++#define PCIE_CMD_OFF(x)			(MVEBU_PCIE_BASE(x) + 0x4)
++#define PCIE_DEV_REV_OFF(x)		(MVEBU_PCIE_BASE(x) + 0x8)
++#define PCIE_BAR_LO_OFF(x, n)		(MVEBU_PCIE_BASE(x) + (0x10 + (0x8 * n)))
++#define PCIE_BAR_HI_OFF(x, n)		(MVEBU_PCIE_BASE(x) + (0x14 + (0x8 * n)))
++#define PCIE_BAR_CTRL_OFF(x, n)		(MVEBU_PCIE_BASE(x) + (0x1800 + (0x4 * n)))
++#define PCIE_BAR_TYPE_MEM		(0xC)
++#define PCIE_BAR_ENABLE			(0x1)
++#define PCIE_BAR_CNT			(3)
++
++/* Memory access control */
++#define PCIE_WIN_OFF(n)			((n < 5) ? (0x0) : (0x10))
++#define PCIE_WIN_CTRL_OFF(x, n)		(MVEBU_PCIE_BASE(x) + 0x1820 + PCIE_WIN_OFF(n) + (0x10 * n))
++#define PCIE_WIN_BASE_OFF(x, n)		(MVEBU_PCIE_BASE(x) + 0x1824 + PCIE_WIN_OFF(n) + (0x10 * n))
++#define PCIE_WIN_REMAP_OFF(x, n)	(MVEBU_PCIE_BASE(x) + 0x182C + PCIE_WIN_OFF(n) + (0x10 * n))
++#define PCIE_DDR_TARGET_ID		(0)
++#define PCIE_XBAR_WIN_CNT		(6)
++
++/* Configuration access */
++#define PCIE_CONF_ADDR_OFF(x)		(MVEBU_PCIE_BASE(x) + 0x18f8)
++#define PCIE_CONF_DATA_OFF(x)		(MVEBU_PCIE_BASE(x) + 0x18fc)
++#define PCIE_CONF_ADDR_EN		0x80000000
++#define PCIE_CONF_REG(r)		((((r) & 0xf00) << 16) | ((r) & 0xfc))
++#define PCIE_CONF_BUS(b)		(((b) & 0xff) << 16)
++#define PCIE_CONF_DEV(d)		(((d) & 0x1f) << 11)
++#define PCIE_CONF_FUNC(f)		(((f) & 0x7) << 8)
++#define PCIE_CONF_ADDR(bdf, where)	(bdf | PCIE_CONF_REG(where) | PCIE_CONF_ADDR_EN)
++
++/* Controler status */
++#define PCIE_STAT_OFF(x)	(MVEBU_PCIE_BASE(x) + 0x1a04)
++#define PCIE_STAT_BUS_OFF	(8)
++#define PCIE_STAT_BUS_MASK	(0xFF << PCIE_STAT_BUS_OFF)
++#define PCIE_STAT_DEV_OFF	(16)
++#define PCIE_STAT_DEV_MASK	(0x1F << PCIE_STAT_DEV_OFF)
++#define PCIE_STAT_LINK		(1)
++
++/* Link status */
++#define PCIE_DBG_STATUS_OFF(x)	(MVEBU_PCIE_BASE(x) + 0x1a64)
++#define PCIE_LTSSM_LINK_UP	0x7E
++#define PCIE_LTSSM_MASK		0x7F
++#define PCIE_LINK_CTL_OFF(x)	(MVEBU_PCIE_BASE(x) + 0x70)
++
++DECLARE_GLOBAL_DATA_PTR;
++
++static int mvebu_pcie_addr_valid(pci_dev_t d, int first_busno)
++{
++	/*
++	 * In PCIE-E only a single device (0) can exist
++	 * on the local bus. Beyound the local bus, there might be
++	 * a Switch and everyting is possible.
++	 */
++	if ((PCI_BUS(d) == first_busno) && (PCI_DEV(d) > 0))
++		return 0;
++
++	return 1;
++}
++
++static int mvebu_pcie_read_config(struct pci_controller *hose, pci_dev_t bdf,
++				  int where, u32 *val)
++{
++	if (!mvebu_pcie_addr_valid(bdf, hose->first_busno)) {
++		debug("CFG address out of range (%d,%d,%d)\n",
++		      PCI_BUS(bdf), PCI_DEV(bdf), PCI_FUNC(bdf));
++		*val = 0xFFFFFFFF;
++		return 1;
++	}
++	writel(PCIE_CONF_ADDR(bdf, where), hose->cfg_addr);
++
++	*val = readl(hose->cfg_data);
++
++	debug("PCIE CFG read:  (b,d,f)=(%2d,%2d,%2d) (addr,val)=(0x%04x, 0x%08x)\n",
++	      PCI_BUS(bdf), PCI_DEV(bdf), PCI_FUNC(bdf), where, (*val));
++
++	return 0;
++}
++
++static int mvebu_pcie_write_config(struct pci_controller *hose, pci_dev_t bdf,
++				   int where, u32 val)
++{
++	if (!mvebu_pcie_addr_valid(bdf, hose->first_busno)) {
++		debug("CFG address out of range (%d,%d,%d)\n",
++		      PCI_BUS(bdf), PCI_DEV(bdf), PCI_FUNC(bdf));
++		return 1;
++	}
++
++	writel(PCIE_CONF_ADDR(bdf, where), hose->cfg_addr);
++	writel(val, hose->cfg_data);
++
++	debug("PCIE CFG write: (b,d,f)=(%2d,%2d,%2d) (addr,val)=(0x%04x, 0x%08x)\n",
++	      PCI_BUS(bdf), PCI_DEV(bdf), PCI_FUNC(bdf), where, val);
++
++	return 0;
++}
++
++static void mvebu_pcie_set_local_bus_nr(int hid, int nr)
++{
++	u32 stat;
++
++	stat = readl(PCIE_STAT_OFF(hid));
++	stat &= ~PCIE_STAT_BUS_MASK;
++	stat |= nr << PCIE_STAT_BUS_OFF;
++	writel(stat, PCIE_STAT_OFF(hid));
++}
++
++static void mvebu_pcie_set_local_dev_nr(int hid, int nr)
++{
++	u32 stat;
++
++	stat = readl(PCIE_STAT_OFF(hid));
++	stat &= ~PCIE_STAT_DEV_MASK;
++	stat |= nr << PCIE_STAT_DEV_OFF;
++	writel(stat, PCIE_STAT_OFF(hid));
++}
++
++/*
++ * Setup PCIE BARs and Address Decode Wins:
++ * BAR[0,2] -> disabled, BAR[1] -> covers all DRAM banks
++ * WIN[0-3] -> DRAM bank[0-3]
++ */
++static void mvebu_pcie_setup_mapping(int hid)
++{
++	u32 size;
++	int i;
++
++	/*
++	 * First, disable and clear BARs and windows except
++	 * BAR0 which is fixed to internal registers
++	 */
++	for (i = 1; i < PCIE_BAR_CNT; i++) {
++		writel(0, PCIE_BAR_CTRL_OFF(hid, i));
++		writel(0, PCIE_BAR_LO_OFF(hid, i));
++		writel(0, PCIE_BAR_HI_OFF(hid, i));
++	}
++
++	for (i = 0; i < PCIE_XBAR_WIN_CNT; i++) {
++		writel(0, PCIE_WIN_CTRL_OFF(hid, i));
++		writel(0, PCIE_WIN_BASE_OFF(hid, i));
++		writel(0, PCIE_WIN_REMAP_OFF(hid, i));
++	}
++
++	/* Setup XBAR windows for DDR banks. */
++	for (i = 0; i < CONFIG_NR_DRAM_BANKS; i++) {
++		u32 size, base, attr, ctrl;
++
++		if (gd->bd->bi_dram[i].size == 0)
++			continue;
++
++		base = gd->bd->bi_dram[i].start & 0xFFFF0000;
++		size = (gd->bd->bi_dram[i].size - 1) & 0xFFFF0000;
++		attr = ~(1 << i) & 0xF; /* Zero bit indicates the CS */
++		ctrl = size | (attr << 8) | (PCIE_DDR_TARGET_ID << 4) | 1;
++
++		writel(base, PCIE_WIN_BASE_OFF(hid, i));
++		writel(ctrl, PCIE_WIN_CTRL_OFF(hid, i));
++		writel(0, PCIE_WIN_REMAP_OFF(hid, i));
++		debug("PCIE WIN-%d base = 0x%08x ctrl = 0x%08x\n", i, base, ctrl);
++	}
++
++	/* Round up 'size' to the nearest power of two. */
++	size = gd->ram_size;
++	if ((size & (size - 1)) != 0)
++		size = 1 << fls(size);
++
++	/* Setup BAR[1] to all DRAM banks. */
++	writel(gd->bd->bi_dram[0].start | PCIE_BAR_TYPE_MEM, PCIE_BAR_LO_OFF(hid, 1));
++	writel(0, PCIE_BAR_HI_OFF(hid, 1));
++	writel(((size - 1) & 0xffff0000) | PCIE_BAR_ENABLE, PCIE_BAR_CTRL_OFF(hid, 1));
++}
++
++static void mvebu_pcie_hw_init(int host_id, int first_busno)
++{
++	u32 cmd;
++
++	/*
++	 * Set our controller as device No 1 to avoid
++	 * Answering CFG cycle by our host (memory controller)
++	 */
++	mvebu_pcie_set_local_dev_nr(host_id, 1);
++	mvebu_pcie_set_local_bus_nr(host_id, first_busno);
++
++	mvebu_pcie_setup_mapping(host_id);
++
++	/* Master + slave enable. */
++	cmd = readw(PCIE_CMD_OFF(host_id));
++	cmd |= PCI_COMMAND_IO;
++	cmd |= PCI_COMMAND_MEMORY;
++	cmd |= PCI_COMMAND_MASTER;
++	writew(cmd, PCIE_CMD_OFF(host_id));
++}
++
++/* TODO - consider removing this when testing IDE */
++#if CONFIG_CMD_IDE
++static void mvebu_setup_ide(struct pci_controller *hose,
++			 pci_dev_t dev, struct pci_config_table *entry)
++{
++	static const int ide_bar[] = { 8, 4, 8, 4, 16, 1024 };
++	u32 bar_response, bar_value;
++	int bar;
++
++	for (bar = 0; bar < 6; bar++) {
++		unsigned int offset = (bar < 2) ? bar * 8 : 0x100 + (bar - 2) * 8;
++
++		pci_write_config_dword(dev, PCI_BASE_ADDRESS_0 + offset, 0x0);
++		pci_read_config_dword(dev, PCI_BASE_ADDRESS_0 + offset, &bar_response);
++
++		pciauto_region_allocate(bar_response & PCI_BASE_ADDRESS_SPACE_IO ?
++					hose->pci_io : hose->pci_mem, ide_bar[bar], &bar_value);
++
++		pci_write_config_dword(dev, PCI_BASE_ADDRESS_0 + bar * 4, bar_value);
++	}
++}
++
++static void mvebu_setup_host(struct pci_controller *hose,
++			  pci_dev_t dev, struct pci_config_table *entry)
++{
++	/* No need to configure host */
++	return;
++}
++
++
++struct pci_config_table mvebu_config_table[] = {
++	/* Storage controllers */
++	{ PCI_ANY_ID, PCI_ANY_ID, PCI_CLASS_STORAGE_IDE,
++	  PCI_ANY_ID, PCI_ANY_ID, PCI_ANY_ID, mvebu_setup_ide },
++
++	/* Storage controllers */
++	{ PCI_ANY_ID, PCI_ANY_ID, PCI_ANY_ID,
++	  PCI_ANY_ID, PCI_ANY_ID, PCI_ANY_ID, mvebu_setup_host },
++	{}
++};
++#endif
++
++/*
++ * We dont use a host bridge so don't let the
++ * stack skip CFG cycle for dev = 0 func = 0
++ */
++int pci_skip_dev(struct pci_controller *hose, pci_dev_t dev)
++{
++	return 0;
++}
++
++static struct pci_controller	pci_hose[4];
++static const char speed_str[3][8] = {"NA", "2.5GHz", "5GHz"};
++static const char width_str[5][8] = {"NA", "x1", "NA", "NA", "x4"};
++
++static int mvebu_pcie_init(int host_id, int first_busno)
++{
++	struct pci_controller *hose = &pci_hose[host_id];
++	u32 link, speed, width;
++
++	memset(hose, 0, sizeof(hose));
++
++	/* Setup the HW */
++	mvebu_pcie_hw_init(host_id, first_busno);
++
++	/* Set PCI regions */
++	pci_set_region(&hose->regions[0],
++		       MVEBU_PCIE_MEM_BASE(host_id), MVEBU_PCIE_MEM_BASE(host_id),
++		       MVEBU_PCIE_MEM_SIZE(host_id), PCI_REGION_MEM);
++
++	hose->region_count = 1;
++
++	pci_set_ops(hose,
++		    pci_hose_read_config_byte_via_dword,
++		    pci_hose_read_config_word_via_dword,
++		    mvebu_pcie_read_config,
++		    pci_hose_write_config_byte_via_dword,
++		    pci_hose_write_config_word_via_dword,
++		    mvebu_pcie_write_config);
++
++	/* CFG cycle pointers */
++	hose->cfg_addr = (uint *)PCIE_CONF_ADDR_OFF(host_id);
++	hose->cfg_data = (unsigned char *)PCIE_CONF_DATA_OFF(host_id);
++
++	/* TODO - we might need this for IDE */
++	/*hose->config_table = mvebu_config_table;*/
++
++	hose->first_busno = first_busno;
++
++	/* Register the host */
++	pci_register_hose(hose);
++
++	/* Scan the bus */
++	hose->last_busno = pci_hose_scan(hose);
++
++	/* Check the link type - for info only */
++	link = readl(PCIE_LINK_CTL_OFF(host_id));
++	speed = (link >> 16) & 0xF;
++	width = (link >> 20) & 0x3F;
++
++	printf("PCIE-%d: Link up %s @ %s (Bus %d)\n", host_id, width_str[width], speed_str[speed], first_busno);
++
++	return hose->last_busno + 1;
++}
++
++static int mvebu_pcie_check_link(int hid)
++{
++	return readl(PCIE_STAT_OFF(hid)) &  PCIE_STAT_LINK;
++}
++
++void mvebu_pcie_init_board(int max_hosts, u16 active_mask)
++{
++	int host_id;
++	int first_busno = 0;
++
++	/* Loop over all active PCI ports */
++	for (host_id = 0; host_id < max_hosts; host_id++) {
++		/* Check if unit is enabled */
++		if ((active_mask & (1 << host_id)) == 0)
++			continue;
++
++		/* Don't register host if link is down */
++		if (mvebu_pcie_check_link(host_id))
++			continue;
++
++		first_busno = mvebu_pcie_init(host_id, first_busno);
++	}
++}
+diff --git a/include/configs/armada38x.h b/include/configs/armada38x.h
+index 4feabc9..6432225 100644
+--- a/include/configs/armada38x.h
++++ b/include/configs/armada38x.h
+@@ -49,6 +49,7 @@
+ /* Enable IO drivers */
+ #define CONFIG_MVEBU_UART
+ #define CONFIG_MVEBU_SPI
++#define CONFIG_MVEBU_PCI
+ /*
+ #define MV_INCLUDE_SDIO
+ #define MV_INCLUDE_INTEG_SATA
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index ca7641d..53d4868 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -231,8 +231,8 @@
+ 	#define  CONFIG_SYS_MMC_MAX_DEVICE
+ #endif
+ 
+-/* PCI */
+-#ifdef MV_INCLUDE_PEX
++/* PCI-E */
++#ifdef CONFIG_MVEBU_PCI
+ 	#define CONFIG_PCI
+ 	#define CONFIG_CMD_PCI
+ 	#define CONFIG_PCI_HOST PCI_HOST_FORCE  /* select pci host function     */
+@@ -250,7 +250,7 @@
+ 	#define PCI_HOST_FORCE   1      /* configure as pci host        */
+ 	#define PCI_HOST_AUTO    2      /* detected via arbiter enable  */
+ 
+-#endif /* MV_INCLUDE_PEX */
++#endif /* CONFIG_MVEBU_PCI */
+ 
+ 
+ /* Network */
+-- 
+1.9.1
+

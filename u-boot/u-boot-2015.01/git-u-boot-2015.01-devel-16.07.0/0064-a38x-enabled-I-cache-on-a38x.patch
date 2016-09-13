@@ -1,0 +1,46 @@
+From e7111b82c70e196ec22cc00d1dd7a85ce0708791 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 27 Aug 2014 16:38:36 +0300
+Subject: [PATCH 0064/1240] a38x: enabled I cache on a38x
+
+	- Left the I cache disabled for A8K PXP
+
+Change-Id: I88cabf34f02c1261579ad5327683f06692408634
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/11344
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/armada8k.h     | 3 +++
+ include/configs/mvebu-common.h | 1 -
+ 2 files changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index 99ae895..d334d18 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -63,6 +63,9 @@
+  */
+ #ifdef CONFIG_PALLADIUM
+ 
++/* Disable I-CACHE for palladium */
++#define CONFIG_SYS_ICACHE_OFF
++
+ #undef CONFIG_BOOTDELAY
+ #define CONFIG_BOOTDELAY                -1
+ 
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 53d4868..987dd8d 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -70,7 +70,6 @@
+ 
+ /* Cache */
+ #define CONFIG_SYS_DCACHE_OFF
+-#define CONFIG_SYS_ICACHE_OFF
+ #define CONFIG_SYS_CACHELINE_SIZE       32
+ 
+ /*
+-- 
+1.9.1
+

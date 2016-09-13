@@ -1,0 +1,37 @@
+From 5190296b80bd5e0f8dff0643496ba1a9ecb7191d Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Thu, 3 Sep 2015 11:04:36 +0300
+Subject: [PATCH 0400/1240] dts: apn806: thermal: add thermal-sensor-v2 entry
+
+Change-Id: I6d9cce42aa8182f22355e2074bf50211ea17be60
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23407
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/apn-806.dtsi | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/arch/arm/dts/apn-806.dtsi b/arch/arm/dts/apn-806.dtsi
+index 16cd017..fe8d376 100644
+--- a/arch/arm/dts/apn-806.dtsi
++++ b/arch/arm/dts/apn-806.dtsi
+@@ -109,6 +109,15 @@
+ 				};
+ 			};
+ 
++			thermal: thermal@6f8084 {
++				compatible = "marvell,thermal-sensor-v2";
++				gain = <425>;
++				offset = <153400>;
++				divisor = <1000>;
++				reg = <0x6f8084 0x12>;
++				status = "okay";
++			};
++
+ 		};
+ 		pcie-controller {
+ 			#address-cells = <1>;
+-- 
+1.9.1
+

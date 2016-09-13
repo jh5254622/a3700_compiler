@@ -1,0 +1,33 @@
+From 9fbdf90bc098a2621a57c180898360fed479ab88 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Tue, 29 Dec 2015 13:38:53 +0200
+Subject: [PATCH 0620/1240] fix: cci: a3700: enable cci basic configuration for
+ coherency
+
+enable the compilation of mvebu_misc_init, which currently contain basic cci configuration.
+(Enable Slave interfaces for Snoop & DVM and enable issueing snoops & DVM messages)
+
+Change-Id: I356f797d1f52782f4e89caa56561cbca328e0821
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26389
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+---
+ configs/mvebu_armadalp_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index 7cf50cf..e426ef6 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -16,6 +16,7 @@ CONFIG_USB_STORAGE=y
+ +S:CONFIG_DEVEL_BOARD=y
+ CONFIG_CUSTOMER_BOARD=y
+ +S:CONFIG_SPL_DRIVERS_MISC_SUPPORT=y
+++S:CONFIG_MVEBU_A3700_MISC_INIT=y
+ +S:CONFIG_MVEBU_A3700_IO_ADDR_DEC=y
+ +S:CONFIG_MVEBU_MBUS=y
+ +S:CONFIG_MVEBU_MBUS_SPL_ONLY=y
+-- 
+1.9.1
+

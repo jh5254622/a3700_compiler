@@ -1,0 +1,34 @@
+From 5590a4fe1e41a05101f7d230e7f40d9b9e74f432 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 13 Oct 2015 14:52:34 +0300
+Subject: [PATCH 0430/1240] fix: rfu: ap-806: fixed RFU window init of PCIe
+ configuration window
+
+- In PCIe configuration window there is no enable bit
+
+Change-Id: I0dac336758e4375a52917b938e2d2783a3ba2854
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23970
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ drivers/misc/mvebu_rfu.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/misc/mvebu_rfu.c b/drivers/misc/mvebu_rfu.c
+index d1d52f1..053129b 100644
+--- a/drivers/misc/mvebu_rfu.c
++++ b/drivers/misc/mvebu_rfu.c
+@@ -124,7 +124,8 @@ static void rfu_enable_win(struct rfu_win *win, u32 trgt_id)
+ 	}
+ 
+ 	alr = (u32)((start_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
+-	alr |= WIN_ENABLE_BIT;
++	if (trgt_id != PCIE_REGS_TID)
++		alr |= WIN_ENABLE_BIT;
+ 	writel(alr, rfu_alr_offset_get(trgt_id));
+ }
+ 
+-- 
+1.9.1
+

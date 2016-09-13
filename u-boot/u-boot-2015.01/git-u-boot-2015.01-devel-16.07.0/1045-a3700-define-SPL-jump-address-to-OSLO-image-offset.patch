@@ -1,0 +1,72 @@
+From 4f4693dda7598293a2e15c86d4a203ddec9f54b7 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Wed, 13 Apr 2016 21:41:23 +0800
+Subject: [PATCH 1045/1240] a3700: define SPL jump address to OSLO image offset
+
+This patch adds OSLO image address Kconfig parameter,
+and let SPL jump to OLSO at the end.
+In SPL+u-boot case, the OLSO is the u-boot image,
+in SPL+ATF+u-boot case, the OLSO is the ATF image.
+The default OSLO image start address is set to 0x4100000,
+which is the ATF image start address after it is loaded.
+
+Change-Id: I627436e3cefb6735349f0289be72f3e5f969cc87
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28981
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/cpu/armv8/armada3700/Kconfig | 11 +++++++++++
+ arch/arm/cpu/armv8/armada3700/spl.c   | 10 +++++-----
+ 2 files changed, 16 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada3700/Kconfig b/arch/arm/cpu/armv8/armada3700/Kconfig
+index a38d45b..d4fc13d 100644
+--- a/arch/arm/cpu/armv8/armada3700/Kconfig
++++ b/arch/arm/cpu/armv8/armada3700/Kconfig
+@@ -37,5 +37,16 @@ config MVEBU_BOOTMODE_SWITCH_SUPPORT
+ 	  in order to fallback to uart mode automatically
+ 	  when a mal-function bootloader image is present in flash.
+ 
++config OSLO_START_ADDR
++        hex "OSLO image start address"
++        default 4100000
++        help
++          Define the OSLO image start address.
++          In case of SPL+u-boot, it is the u-boot start address 0,
++          in case of SPI+ATF+u-boot, it is the start
++          address of ATF.
++          The default OSLO start address 0x4100000 is the ATF image start
++          address after it is loaded.
++
+ endif
+ 
+diff --git a/arch/arm/cpu/armv8/armada3700/spl.c b/arch/arm/cpu/armv8/armada3700/spl.c
+index 58fad93..6234ab3 100644
+--- a/arch/arm/cpu/armv8/armada3700/spl.c
++++ b/arch/arm/cpu/armv8/armada3700/spl.c
+@@ -30,7 +30,7 @@
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+-void (*ptr_uboot_start)(void);
++void (*ptr_oslo_start)(void);
+ 
+ void board_init_f(ulong silent)
+ {
+@@ -138,8 +138,8 @@ void board_init_f(ulong silent)
+ 	init_io_addr_dec();
+ #endif
+ 
+-	debug("SPL processing done. Jumping to u-boot\n\n");
+-	ptr_uboot_start = 0;
+-	/* Jump from SPL to u-boot start address */
+-	ptr_uboot_start();
++	debug("SPL processing done. Jumping to OSLO image\n\n");
++	ptr_oslo_start = (void *)CONFIG_OSLO_START_ADDR;
++	/* Jump from SPL to OSLO start address, which could be u-boot or ATF */
++	ptr_oslo_start();
+ }
+-- 
+1.9.1
+

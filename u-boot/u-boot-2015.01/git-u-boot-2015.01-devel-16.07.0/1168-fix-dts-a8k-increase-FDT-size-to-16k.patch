@@ -1,0 +1,37 @@
+From 05872944df19525d2d367706e21720da9261d9fb Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Wed, 25 May 2016 17:19:26 +0300
+Subject: [PATCH 1168/1240] fix: dts: a8k: increase FDT size to 16k
+
+latest GPIO addition caused A8040 DTB to exceed FDT_SIZE limit,
+which caused multiple run-time issues for A8040-db, since it's
+cp-slave dt entries became invalid.
+
+this patch increase the limit to be 16KB for A8K.
+(A3700 & A38x set it's own FDT_SIZE in their defconfig files)
+
+Change-Id: I1964b944899e1b5a59ee51b15edf9cfd026192aa
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29997
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ dts/Kconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dts/Kconfig b/dts/Kconfig
+index 7b50b1b..8f90fe7 100644
+--- a/dts/Kconfig
++++ b/dts/Kconfig
+@@ -46,7 +46,7 @@ endchoice
+ 
+ config FDT_SIZE
+ 	hex "Device Tree size and alignment size (hex)"
+-	default 0x3000
++	default 0x4000
+ 	help
+ 	  This field limit the maximum size for a single device tree.
+ 	  value is also the alignment size for smaller files.
+-- 
+1.9.1
+

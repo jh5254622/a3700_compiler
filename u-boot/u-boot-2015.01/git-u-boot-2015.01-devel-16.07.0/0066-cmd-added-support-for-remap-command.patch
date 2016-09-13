@@ -1,0 +1,150 @@
+From ebde8ee99e6516a1e1a59f03973f6d904b4e2554 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 27 Aug 2014 14:14:29 +0300
+Subject: [PATCH 0066/1240] cmd: added support for remap command
+
+	This command can be used to access different BARs
+	on the PCI bus
+
+Change-Id: I68f608190302c0db6eda30365f54fb962350f5cf
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/11339
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/adec_ccu.c   |  5 +++++
+ arch/arm/cpu/mvebu-common/adec_mbus.c  | 27 ++++++++++++++++++++++-
+ arch/arm/include/asm/arch-mvebu/adec.h |  1 +
+ common/mvebu/cmd_misc.c                | 40 ++++++++++++++++++++++++++++++++--
+ 4 files changed, 70 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/adec_ccu.c b/arch/arm/cpu/mvebu-common/adec_ccu.c
+index a8748cd..7ad44c1 100644
+--- a/arch/arm/cpu/mvebu-common/adec_ccu.c
++++ b/arch/arm/cpu/mvebu-common/adec_ccu.c
+@@ -98,6 +98,11 @@ static void adec_enable_ap_win(struct adec_win *win, u32 win_id)
+ 	writel(ahr, AP_WIN_AHR_OFFSET(win_id));
+ }
+ 
++int adec_remap(phys_addr_t input, phys_addr_t output)
++{
++	return 0;
++}
++
+ void adec_dump(void)
+ {
+ 	u32 win_id;
+diff --git a/arch/arm/cpu/mvebu-common/adec_mbus.c b/arch/arm/cpu/mvebu-common/adec_mbus.c
+index 67e4710..52c7cd7 100644
+--- a/arch/arm/cpu/mvebu-common/adec_mbus.c
++++ b/arch/arm/cpu/mvebu-common/adec_mbus.c
+@@ -99,6 +99,31 @@ void adec_dump(void)
+ 	return;
+ }
+ 
++int adec_remap(phys_addr_t input, phys_addr_t output)
++{
++	int win;
++	u32 ctrl, base;
++
++	for (win = 0; win < MAX_MBUS_WINS; win++) {
++		ctrl = readl(mbus_adec_base + MBUS_WIN_CTRL_REG(win));
++		base = readl(mbus_adec_base + MBUS_WIN_BASE_REG(win));
++
++		if ((ctrl & MBUS_CR_WIN_ENABLE) && (base == input)) {
++			if (win >= MAX_MBUS_REMAP_WINS) {
++				printf("Window %d with base addres 0x%08x is not remapable\n",
++				       win, (uint)base);
++				return 1;
++			}
++			writel(output & MBUS_RLR_REMAP_LOW_MASK, mbus_adec_base + MBUS_WIN_REMAP_LOW_REG(win));
++			writel(0x0, mbus_adec_base + MBUS_WIN_REMAP_HIGH_REG(win));
++			return 0;
++		}
++	}
++
++	printf("Couldn't find XBAR window with base address 0x%08x\n", (uint)input);
++	return 0;
++}
++
+ int adec_init(struct adec_win *windows)
+ {
+ 	u32 win_id, index, mbus_win;
+@@ -108,7 +133,7 @@ int adec_init(struct adec_win *windows)
+ 	mbus_adec_base = (void *)MVEBU_ADEC_BASE;
+ 
+ 	/* disable all windows */
+-	for (win_id = 0; windows[win_id].enabled != TBL_TERM; win_id++) {
++	for (win_id = 0; win_id < MAX_MBUS_WINS; win_id++) {
+ 		mbus_win = readl(mbus_adec_base + MBUS_WIN_CTRL_REG(win_id));
+ 		mbus_win &= ~MBUS_CR_WIN_ENABLE;
+ 		writel(mbus_win, mbus_adec_base + MBUS_WIN_CTRL_REG(win_id));
+diff --git a/arch/arm/include/asm/arch-mvebu/adec.h b/arch/arm/include/asm/arch-mvebu/adec.h
+index 7214d60..c8bc811 100644
+--- a/arch/arm/include/asm/arch-mvebu/adec.h
++++ b/arch/arm/include/asm/arch-mvebu/adec.h
+@@ -35,5 +35,6 @@
+ 
+ void adec_dump(void);
+ int adec_init(struct adec_win *windows);
++int adec_remap(phys_addr_t input, phys_addr_t output);
+ 
+ #endif /* _ADEC_H_ */
+diff --git a/common/mvebu/cmd_misc.c b/common/mvebu/cmd_misc.c
+index 66a1d86..b2de878 100644
+--- a/common/mvebu/cmd_misc.c
++++ b/common/mvebu/cmd_misc.c
+@@ -34,11 +34,47 @@ int do_map_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+ 
+ U_BOOT_CMD(
+ 	map,      1,     1,      do_map_cmd,
+-	"map	- Display address decode windows\n",
+-	"\n"
++	"Display address decode windows\n",
+ 	"\tDisplay address decode windows\n"
+ );
+ 
++int do_remap_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
++			char * const argv[])
++{
++	phys_addr_t input;
++	phys_addr_t output;
++
++	if (argc < 3) {
++		printf("Error: Not enough arguments\n");
++		printf("Usage:\n%s\n", cmdtp->usage);
++		return 1;
++	}
++
++	input = simple_strtoul(argv[1], NULL, 16);
++	output = simple_strtoul(argv[2], NULL, 16);
++
++	if (adec_remap(input, output)) {
++		printf("Error: Failed to remap 0x%08x->0x%08x\n", (uint)input, (uint)output);
++		return 1;
++	}
++
++	printf("Remapped address 0x%08x t0 0x%08x\n", (uint)input, (uint)output);
++	return 0;
++}
++
++U_BOOT_CMD(
++	remap,      3,     1,      do_remap_cmd,
++	"Remap the output address of a window",
++	"input_addr output_addr\n"
++	"  - input_addr: Base address used by CPU\n"
++	"  - output_addr: Base address issued by window target\n"
++	"The remap command enables modifying the base address used\n"
++	"to access a certain HW unit. It is usefull when the PCI\n"
++	"address space is different then the CPU address space\n"
++	"Remapping the PCI window enables the PCI host to change the ouput\n"
++	"address on the PCI bus and so to access different PCI BARs\n"
++);
++
+ 
+ int do_units_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+ 			char * const argv[])
+-- 
+1.9.1
+

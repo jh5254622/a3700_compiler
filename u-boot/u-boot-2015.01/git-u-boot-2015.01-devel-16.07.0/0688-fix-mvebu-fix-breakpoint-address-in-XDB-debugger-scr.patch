@@ -1,0 +1,33 @@
+From eeed90d0420101abaf205573e2c500e06415f476 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 14 Jan 2016 16:41:59 +0200
+Subject: [PATCH 0688/1240] fix: mvebu: fix breakpoint address in XDB debugger
+ script
+
+- due to add read for general init function before SPL run
+
+Change-Id: Ie34b45e601d0c204f6785e2bfe9caf75255b6704
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26802
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ tools/marvell/debugger_scripts/XDB/startup.xdb | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/marvell/debugger_scripts/XDB/startup.xdb b/tools/marvell/debugger_scripts/XDB/startup.xdb
+index 71d64d4a..bb3ab7d 100644
+--- a/tools/marvell/debugger_scripts/XDB/startup.xdb
++++ b/tools/marvell/debugger_scripts/XDB/startup.xdb
+@@ -37,7 +37,7 @@ ELSE
+ 		PRINT "%s" "Running on APN 806\n"
+ 		define macro /button static_ddr_init "batch \"./tools/marvell/debugger_scripts/XDB/ap806_static.xdb\"\n"
+ 		SET VAL @first_breakp = 0xFFE1C048
+-		SET VAL @second_breakp = 0xFFE1C07C
++		SET VAL @second_breakp = 0xFFE1C080
+ 	ELSE
+ 		PRINT "Unknown device ID %x\n" @dev_id
+ 	END
+-- 
+1.9.1
+

@@ -1,0 +1,58 @@
+From b7dd505a2d5401e977c51c6dbb4ebb17a54e0ae5 Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Tue, 19 Apr 2016 17:10:34 +0300
+Subject: [PATCH 128/239] fix: psci: a8k: Init stack before calling GICv2 init
+ functions
+
+- The stack on secondary CPU has to be initialized prior to
+  calling teh GICv2 init functions. Failure to do so causes
+  exception upon powering up the secondary CPU in Linux.
+  Fixed in function armada8k_cpu_entry()
+- Till now those functions (provided by ATF infrastructure)
+  were not in use due to this failure and instead, proprietary
+  functions of marvell were used (those will be removed in
+  upcoming patch)
+
+Change-Id: I9b7d552f309f5cf35a855a51c08dafd3e22347db
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29210
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ plat/marvell/a8k/a70x0/aarch64/plat_psci.S | 16 +++-------------
+ 1 file changed, 3 insertions(+), 13 deletions(-)
+
+diff --git a/plat/marvell/a8k/a70x0/aarch64/plat_psci.S b/plat/marvell/a8k/a70x0/aarch64/plat_psci.S
+index 0bc7335..072bc4e 100644
+--- a/plat/marvell/a8k/a70x0/aarch64/plat_psci.S
++++ b/plat/marvell/a8k/a70x0/aarch64/plat_psci.S
+@@ -116,22 +116,12 @@ _armada8k_cpu_entry:
+ 	msr	cpacr_el1, x0			/* Enable FP/SIMD */
+ 0:
+ 
+-#if 0
+-	bl	gicv2_pcpu_distif_init
+ 
+-	bl	gicv2_cpuif_enable
+-#endif
++	bl	psci_build_stack
+ 
+-#if defined(CONFIG_GICV3)
+-	ldr	x0, =PLAT_MARVELL_GICR_BASE
+-	bl	gic_init_secure_percpu
+-#elif defined(CONFIG_GICV2)
+-	ldr	x0, =PLAT_MARVELL_GICD_BASE
+-	ldr	x1, =PLAT_MARVELL_GICC_BASE
+-	bl	gic_init_secure_percpu
+-#endif
++	bl	gicv2_pcpu_distif_init
+ 
+-	bl	psci_build_stack
++	bl	gicv2_cpuif_enable
+ 
+ 	bl	armv8_switch_to_el2
+ #ifdef CONFIG_ARMV8_SWITCH_TO_EL1
+-- 
+1.9.1
+

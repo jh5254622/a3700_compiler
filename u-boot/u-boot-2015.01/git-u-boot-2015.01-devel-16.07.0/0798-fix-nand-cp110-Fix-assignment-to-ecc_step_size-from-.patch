@@ -1,0 +1,31 @@
+From 9c246eda54df969a3940408aa1c18bca0d614760 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Wed, 3 Feb 2016 21:15:04 +0200
+Subject: [PATCH 0798/1240] fix: nand: cp110: Fix assignment to ecc_step_size
+ from dt info
+
+Change-Id: Ic5591e5647d51052962c381f4552af690ea24f1c
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27206
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/mtd/nand/pxa3xx_nand.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/mtd/nand/pxa3xx_nand.c b/drivers/mtd/nand/pxa3xx_nand.c
+index 23e1509..8f05b6d 100644
+--- a/drivers/mtd/nand/pxa3xx_nand.c
++++ b/drivers/mtd/nand/pxa3xx_nand.c
+@@ -1571,7 +1571,7 @@ static int pxa3xx_nand_probe_dt(struct pxa3xx_nand_info *info)
+ 	pdata->ecc_strength = fdtdec_get_int(blob, node, "nand-ecc-strength", 0);
+ 
+ 	/* ECC step size */
+-	pdata->ecc_strength = fdtdec_get_int(blob, node, "nand-ecc-step-size", 0);
++	pdata->ecc_step_size = fdtdec_get_int(blob, node, "nand-ecc-step-size", 0);
+ 
+ 	info->pdata = pdata;
+ 
+-- 
+1.9.1
+

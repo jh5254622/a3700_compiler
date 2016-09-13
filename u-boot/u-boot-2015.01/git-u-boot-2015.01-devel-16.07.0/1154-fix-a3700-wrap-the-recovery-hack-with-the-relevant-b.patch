@@ -1,0 +1,46 @@
+From 433e1cfcc43cb1a80b742bb11b86bc8b40b432d5 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Mon, 23 May 2016 21:50:31 +0800
+Subject: [PATCH 1154/1240] fix: a3700: wrap the recovery hack with the
+ relevant build option
+
+- The uart recovery hack is only used for Marvell board. The
+  customer design should not build with this part of code.
+- This patch is to wrap the relevant code in last_stage_init()
+  with the build option CONFIG_MVEBU_BOOTMODE_SWITCH_SUPPORT,
+  which is only activated with CONFIG_DEVEL_BOARD.
+
+Change-Id: If88490e0f4fcd1a347244181810b6f203e96dd10
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29869
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/cpu/armv8/armada3700/soc-init.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/arch/arm/cpu/armv8/armada3700/soc-init.c b/arch/arm/cpu/armv8/armada3700/soc-init.c
+index 293098f..d457879 100644
+--- a/arch/arm/cpu/armv8/armada3700/soc-init.c
++++ b/arch/arm/cpu/armv8/armada3700/soc-init.c
+@@ -189,6 +189,8 @@ int last_stage_init(void)
+ 	fdt_blob = cfg_eeprom_get_fdt();
+ 	set_working_fdt_addr(fdt_blob);
+ #endif
++
++#ifdef CONFIG_MVEBU_BOOTMODE_SWITCH_SUPPORT
+ 	/* here we switch back to original mode mode by
+ 	 * writing I2C chip 4c address 0.
+ 	 */
+@@ -199,6 +201,8 @@ int last_stage_init(void)
+ 		mvebu_boot_mode_set(BOOT_MODE_AUTO_SCAN);
+ 	else
+ 		mvebu_boot_mode_set(boot_mode_set);
++#endif
++
+ 	return 0;
+ }
+ #endif
+-- 
+1.9.1
+

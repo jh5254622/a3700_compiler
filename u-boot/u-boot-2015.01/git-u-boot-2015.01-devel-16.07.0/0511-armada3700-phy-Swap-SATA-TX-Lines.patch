@@ -1,0 +1,51 @@
+From b4a8c7a10fe36cf78e29e207cd7905fcb3608cf7 Mon Sep 17 00:00:00 2001
+From: Hezi Shahmoon <hezi@marvell.com>
+Date: Wed, 18 Nov 2015 15:17:00 +0300
+Subject: [PATCH 0511/1240] armada3700: phy: Swap SATA TX Lines
+
+Change-Id: Ibefead05f9408cfea9fec977af04479cc256a22e
+Signed-off-by: Hezi Shahmoon <hezi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24981
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ drivers/phy/comphy_a3700.c | 6 ++++++
+ drivers/phy/comphy_a3700.h | 4 ++++
+ 2 files changed, 10 insertions(+)
+
+diff --git a/drivers/phy/comphy_a3700.c b/drivers/phy/comphy_a3700.c
+index 1dbad52..b2334f1 100644
+--- a/drivers/phy/comphy_a3700.c
++++ b/drivers/phy/comphy_a3700.c
+@@ -247,6 +247,12 @@ static int comphy_sata_power_up(void)
+ 	debug_enter();
+ 
+ 	/*
++	 * 0. Swap SATA TX lines
++	 */
++	reg_set((void __iomem *)rh_vsreg_addr, vphy_sync_pattern_reg, 0);
++	reg_set((void __iomem *)rh_vsreg_data, bs_txd_inv, bs_txd_inv);
++
++	/*
+ 	 * 1. Select 40-bit data width width
+ 	 */
+ 	reg_set((void __iomem *)rh_vsreg_addr, vphy_loopback_reg0, 0);
+diff --git a/drivers/phy/comphy_a3700.h b/drivers/phy/comphy_a3700.h
+index 4b37fbe..b4d5359 100644
+--- a/drivers/phy/comphy_a3700.h
++++ b/drivers/phy/comphy_a3700.h
+@@ -177,6 +177,10 @@
+ #define rh_vs0_a			(SAHCI_BASE + 0xA0)
+ #define rh_vs0_d			(SAHCI_BASE + 0xA4)
+ 
++#define vphy_sync_pattern_reg	0x224
++#define bs_txd_inv				BIT10
++#define bs_rxd_inv				BIT11
++
+ #define vphy_loopback_reg0		0x223
+ #define bs_phyintf_40bit		0x0C00
+ #define bs_pll_ready_tx			0x10
+-- 
+1.9.1
+

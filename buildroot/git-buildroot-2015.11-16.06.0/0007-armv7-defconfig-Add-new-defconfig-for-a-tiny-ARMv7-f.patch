@@ -1,0 +1,34 @@
+From 80ca16fae8739017f74f8eb265bccf22e8049590 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Wed, 25 Mar 2015 11:40:18 +0200
+Subject: [PATCH 07/66] armv7: defconfig: Add new defconfig for a tiny ARMv7
+ filesystem
+
+Change-Id: Ibad4ce3427744cb8e691e617a5ea165ad9ae18a8
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17826
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ configs/mvebu_armv7_tiny_le_defconfig | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+ create mode 100644 configs/mvebu_armv7_tiny_le_defconfig
+
+diff --git a/configs/mvebu_armv7_tiny_le_defconfig b/configs/mvebu_armv7_tiny_le_defconfig
+new file mode 100644
+index 0000000..26af975
+--- /dev/null
++++ b/configs/mvebu_armv7_tiny_le_defconfig
+@@ -0,0 +1,10 @@
++BR2_arm=y
++BR2_cortex_a9=y
++BR2_ARM_FPU_VFPV3=y
++BR2_TOOLCHAIN_EXTERNAL=y
++BR2_TARGET_GENERIC_GETTY_PORT="ttyS0"
++BR2_ROOTFS_OVERLAY="user_files"
++BR2_TARGET_ROOTFS_CPIO=y
++BR2_TARGET_ROOTFS_EXT2=y
++BR2_TARGET_ROOTFS_EXT2_2r1=y
++BR2_TARGET_ROOTFS_TAR_GZIP=y
+-- 
+1.9.1
+

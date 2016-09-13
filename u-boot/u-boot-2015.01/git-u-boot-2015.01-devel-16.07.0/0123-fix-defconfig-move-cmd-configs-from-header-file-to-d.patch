@@ -1,0 +1,158 @@
+From 7715f07d1b156a42ab6e9d3cd8eaa20cdf10b923 Mon Sep 17 00:00:00 2001
+From: Jing Hua <jinghua@marvell.com>
+Date: Wed, 4 Feb 2015 00:03:06 +0800
+Subject: [PATCH 0123/1240] fix: defconfig: move cmd configs from header file
+ to defconfig
+
+	move all the u-boot cmd defines from include/config_cmd_default.h
+	to A38x and A8K defconfig
+
+Change-Id: I6ce64824bb13980eea40fcf0f90de52b8c21329c
+Signed-off-by: Jing Hua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/16432
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Kconfig | 44 +++++++++++++++++++++++++++++++++++++++
+ include/configs/mvebu-common.h    | 10 ---------
+ 2 files changed, 44 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index 5cbe89c..29e9a42 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -6,24 +6,67 @@ config MVEBU
+ 	bool "Support MVEBU devices"
+ 	depends on $SYS_VENDOR="mvebu"
+ 	default y
++	select CMD_BDI
++	select CMD_BOOTD
++	select CMD_ECHO
++	select CMD_EDITENV
++	select CMD_FPGA
++	select CMD_IMI
++	select CMD_ITEST
++	select CMD_IMLS
++	select CMD_LOADB
++	select CMD_LOADS
++	select CMD_MEMORY
++	select CMD_MISC
++	select CMD_FLASH
++	select CMD_NET
++	select CMD_DHCP
++	select CMD_PING
++	select CMD_NFS
++	select CMD_RUN
++	select CMD_SAVEENV
++	select CMD_SOURCE
++	select CMD_XIMG
+ 
+ menu "IO support"
+ 
+ config MVEBU_NAND
+ 	bool "NAND flash support"
+ 	default n
++	select CMD_NAND
++	help
++	  Choose this option to add support
++	  for NAND driver, using pxa3xx nand
++	  driver.
++	  base address is configured under MVEBU_NAND_BASE
+ 
+ config MVEBU_SPI
+ 	bool "SPI flash support"
+ 	default n
++	select CMD_SF
++	select CMD_SPI
++	help
++	  Choose this option to add support
++	  for SPI driver, using mvebu_spi
++	  driver.
++	  base address is configured under MVEBU_SPI_BASE
++
+ 
+ config MVEBU_PCI
+ 	bool "PCIE support"
+ 	default n
++	select CMD_PCI
++	help
++	  Choose this option to add support
++	  for PCI driver, using mvebu_pci
++	  driver.
++	  base address is configured under MVEBU_PCI_BASE
++
+ 
+ config MVEBU_UART
+ 	bool "UART support"
+ 	default n
++	select CMD_CONSOLE
+ 	help
+ 	  Choose this option to add support
+ 	  for UART driver, using COM1 NS16550
+@@ -33,6 +76,7 @@ config MVEBU_UART
+ config MVEBU_I2C
+ 	bool "I2C support"
+ 	default n
++	select CMD_I2C
+ 	help
+ 	  Choose this option to add support
+ 	  for I2C driver, using Marvell mvebu_i2c.c
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index c360980..9a42649 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -21,7 +21,6 @@
+ #define _MVEBU_COMMON_H_
+ 
+ #include <asm/arch/regs-base.h>
+-#include <config_cmd_default.h>
+ 
+ /* Temp */
+ #define CONFIG_ADEC
+@@ -208,7 +207,6 @@
+ /* I2C */
+ #ifdef CONFIG_MVEBU_I2C
+ 	#define CONFIG_SYS_I2C
+-	#define CONFIG_CMD_I2C
+ 	#define CONFIG_I2C_MULTI_BUS
+ 	#define CONFIG_SYS_I2C_SPEED            100000  /* I2C speed default */
+ /*	#define CONFIG_CMD_EEPROM
+@@ -253,7 +251,6 @@
+ /* PCI-E */
+ #ifdef CONFIG_MVEBU_PCI
+ 	#define CONFIG_PCI
+-	#define CONFIG_CMD_PCI
+ 	#define CONFIG_PCI_PNP  /* Enable plug-and-play */
+ 	/*#define CONFIG_MVEBU_PCI_EP*/ /* Set PCI host as end point */
+ 
+@@ -276,10 +273,6 @@
+ 
+ /* General Networking */
+ #ifdef CONFIG_MVEBU_NET
+-	/* Commands */
+-	#define CONFIG_CMD_NET
+-	#define CONFIG_CMD_DHCP
+-	#define CONFIG_CMD_PING
+ 
+ 	/* Environment */
+ 	#define CONFIG_IPADDR           10.4.50.154
+@@ -349,7 +342,6 @@
+ 	#define CONFIG_NAND_PXA3XX
+ 	#define CONFIG_SYS_MAX_NAND_DEVICE 1
+ 	#define CONFIG_SYS_NAND_MAX_CHIPS 1
+-	#define CONFIG_CMD_NAND
+ 	#define CONFIG_SYS_NAND_SELF_INIT
+ 	#define CONFIG_NAND_ECC_STRENGTH 4
+ 	#define CONFIG_NAND_ECC_STEP_SIZE 512
+@@ -357,8 +349,6 @@
+ 
+ /* SPI Flash */
+ #ifdef CONFIG_MVEBU_SPI
+-	#define CONFIG_CMD_SPI
+-	#define CONFIG_CMD_SF
+ 	#define CONFIG_SPI_FLASH
+ 	#define CONFIG_SPI_FLASH_WINBOND
+ 	#define CONFIG_SPI_FLASH_STMICRO
+-- 
+1.9.1
+

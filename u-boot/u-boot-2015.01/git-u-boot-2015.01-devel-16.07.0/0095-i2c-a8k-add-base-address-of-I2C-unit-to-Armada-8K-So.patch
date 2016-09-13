@@ -1,0 +1,30 @@
+From c83e22f96020e0bfc7a812df31eb575f886d4800 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 4 Nov 2014 14:26:57 +0200
+Subject: [PATCH 0095/1240] i2c: a8k: add base address of I2C unit to Armada 8K
+ SoC
+
+Change-Id: I1f4ff8ddd5ac7b4642d81fbcffd9d167d8124bd9
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/14041
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/include/asm/arch-armada8k/regs-base.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm/include/asm/arch-armada8k/regs-base.h b/arch/arm/include/asm/arch-armada8k/regs-base.h
+index 4bee8ff..aac7e01 100644
+--- a/arch/arm/include/asm/arch-armada8k/regs-base.h
++++ b/arch/arm/include/asm/arch-armada8k/regs-base.h
+@@ -30,6 +30,7 @@
+ #define MVEBU_ADEC_IOB_BASE 	(MVEBU_REGS_BASE + 0x2810000)
+ 
+ #define MVEBU_SPI_REGS_BASE(x)	(MVEBU_REGS_BASE + 0x500000)
++#define MVEBU_I2C_BASE(x)	(MVEBU_REGS_BASE + 0x511000 + (0x100 * x))
+ #define MVEBU_UART_BASE(x)	(MVEBU_REGS_BASE + 0x512000 + (0x100 * x))
+ #define MVEBU_MISC_REGS_BASE	(MVEBU_REGS_BASE + 0x18200)
+ #define MVEBU_DEVICE_ID_REG	(MVEBU_MISC_REGS_BASE + 0x38)
+-- 
+1.9.1
+

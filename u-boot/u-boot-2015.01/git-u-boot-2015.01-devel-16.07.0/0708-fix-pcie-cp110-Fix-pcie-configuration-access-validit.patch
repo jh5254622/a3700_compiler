@@ -1,0 +1,39 @@
+From 2129ef0d8a55a16c048efb7e9baa70a9a2f9f869 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Mon, 18 Jan 2016 15:04:58 +0200
+Subject: [PATCH 0708/1240] fix: pcie: cp110: Fix pcie configuration access
+ validity check
+
+A configuration access is considered valid in two cases:
+- The configuration is intended for a directly connected device, and
+  thus the device-number must be 0x0 (Because we are not a switch).
+- The configuration is intended for a remote device, which might be
+  beyond a switch, so the device-number might get any value.
+
+Change-Id: If558f36713c4df39d0ad0f3ff343357a382bd7e0
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26844
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/pci/pcie_dw.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/pci/pcie_dw.c b/drivers/pci/pcie_dw.c
+index 7c245f7..7396d7d 100644
+--- a/drivers/pci/pcie_dw.c
++++ b/drivers/pci/pcie_dw.c
+@@ -137,8 +137,9 @@ static int dw_pcie_addr_valid(pci_dev_t d, int first_busno)
+ 	 * on the local bus. Beyound the local bus, there might be
+ 	 * a Switch and everyting is possible.
+ 	 */
+-	if ((PCI_BUS(d) == first_busno) && (PCI_DEV(d) > 0))
++	if ((PCI_BUS(d) <= first_busno+1) && (PCI_DEV(d) > 0))
+ 		return 0;
++
+ 	return 1;
+ }
+ 
+-- 
+1.9.1
+

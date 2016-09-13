@@ -1,0 +1,57 @@
+From 1fb08d0ef48ae64fe70c3606850dff029ea38d72 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Wed, 2 Dec 2015 18:37:06 +0200
+Subject: [PATCH 0568/1240] phy: a3700: enable Marvell PHY driver support
+
+PHY driver is required to initalize Marvell PHYs, to enable enhanced configurations,
+such as Auto negotiation, configure SGMII mode, etc.
+This driver now intializes both 1512 PHYs (via RGMII and SGMII interfaces)
+
+- enabled PHY driver in Armada-3700 defconfig
+- add Kconfig entry for PHY_MARVELL flag
+
+Change-Id: I310fd4be3ccdffb76628a9db3a8fb6480a008b9b
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25555
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ configs/mvebu_armadalp_defconfig | 1 +
+ drivers/net/Kconfig              | 9 +++++++++
+ 2 files changed, 10 insertions(+)
+
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index 2554c51..7cf50cf 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -33,6 +33,7 @@ CONFIG_CMD_USB=y
+ CONFIG_CMD_NET=y
+ CONFIG_CMD_PING=y
+ CONFIG_CMD_MII=y
++CONFIG_PHY_MARVELL=y
+ CONFIG_CMD_MVEBU_BUBT=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+diff --git a/drivers/net/Kconfig b/drivers/net/Kconfig
+index 1985f94..2e15409 100644
+--- a/drivers/net/Kconfig
++++ b/drivers/net/Kconfig
+@@ -42,6 +42,15 @@ config MVEBU_NETA_BYPASS_DEC_WIN
+ 	  bypass the first layer of GBE decode window by
+ 	  setting the first window to 4GB.
+ 
++config PHY_MARVELL
++	bool "marvell PHY driver"
++	default n
++	help
++	  Choose this option to add support
++	  for marvell PHY driver, which enables
++	  PHY layer and initialization support
++	  Supports general initialization for Alaska 88E1510/88E1518/88E1512
++
+ config MAX_NETA_PORT_NUM
+ 	int "max port number in neta driver"
+ 	depends on MVNETA
+-- 
+1.9.1
+

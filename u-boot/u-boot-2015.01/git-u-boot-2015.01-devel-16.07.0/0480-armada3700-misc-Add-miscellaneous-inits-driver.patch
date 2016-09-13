@@ -1,0 +1,193 @@
+From f712e8e13dba01e18191c9e89e0d0f6860f5d7a9 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Mon, 9 Nov 2015 17:52:59 +0200
+Subject: [PATCH 0480/1240] armada3700: misc: Add miscellaneous inits driver
+
+- Add driver for running miscellaneous initialization
+  procedures
+- Move CCI-400 init from MVEBU IO address decoding
+  driver to the miscellaneous init.
+- Add CONFIG_MVEBU_A3700_MISC_INIT to A3700 default
+  palladium configuration (SPL)
+
+Change-Id: I65e06d1e5f03cb5a46dc8d407ccb2765988c1394
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24702
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Tested-by: Omri Itach <omrii@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/spl.c              |  6 ++++
+ arch/arm/include/asm/arch-mvebu/mvebu_misc.h | 23 ++++++++++++++++
+ configs/mvebu_armadalp_palladium_defconfig   |  1 +
+ drivers/misc/Kconfig                         |  7 +++++
+ drivers/misc/Makefile                        |  1 +
+ drivers/misc/mvebu_io_addr_dec.c             | 11 --------
+ drivers/misc/mvebu_misc_init.c               | 41 ++++++++++++++++++++++++++++
+ 7 files changed, 79 insertions(+), 11 deletions(-)
+ create mode 100644 arch/arm/include/asm/arch-mvebu/mvebu_misc.h
+ create mode 100644 drivers/misc/mvebu_misc_init.c
+
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index 076933b..4624ed2 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -44,6 +44,9 @@
+ #ifdef CONFIG_MVEBU_SPL_A3700_GPIO
+ #include <asm/arch-mvebu/a3700_gpio.h>
+ #endif
++#ifdef CONFIG_MVEBU_A3700_MISC_INIT
++#include <asm/arch-mvebu/mvebu_misc.h>
++#endif
+ 
+ #ifdef CONFIG_MVEBU_SPL_SAR_DUMP
+ extern void mvebu_sar_dump_reg(void);
+@@ -80,6 +83,9 @@ void board_init_f(ulong silent)
+ #ifdef CONFIG_MVEBU_SPL_A3700_GPIO
+ 	mvebu_a3700_gpio();
+ #endif
++#ifdef CONFIG_MVEBU_A3700_MISC_INIT
++	misc_init_cci400();
++#endif
+ 	preloader_console_init();
+ 
+ #ifdef CONFIG_MVEBU_SPL_SAR_DUMP
+diff --git a/arch/arm/include/asm/arch-mvebu/mvebu_misc.h b/arch/arm/include/asm/arch-mvebu/mvebu_misc.h
+new file mode 100644
+index 0000000..fb2140b
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/mvebu_misc.h
+@@ -0,0 +1,23 @@
++/* ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _MVEBU_MISC_H_
++#define _MVEBU_MISC_H_
++
++void misc_init_cci400(void);
++
++#endif /* _MVEBU_MISC_H_ */
++
++
+diff --git a/configs/mvebu_armadalp_palladium_defconfig b/configs/mvebu_armadalp_palladium_defconfig
+index 2e6772c..7b347ef 100644
+--- a/configs/mvebu_armadalp_palladium_defconfig
++++ b/configs/mvebu_armadalp_palladium_defconfig
+@@ -11,6 +11,7 @@ CONFIG_I2C_MV_PAD_REG=n
+ +S:CONFIG_MVEBU_UART_ARLP=y
+ +S:CONFIG_DEVEL_BOARD=y
+ +S:CONFIG_SPL_DRIVERS_MISC_SUPPORT=y
+++S:CONFIG_MVEBU_A3700_MISC_INIT=y
+ +S:CONFIG_MVEBU_A3700_IO_ADDR_DEC=y
+ +S:CONFIG_MVEBU_MBUS=y
+ +S:CONFIG_MVEBU_MBUS_SPL_ONLY=y
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index 027275c..942b0fd 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -88,4 +88,11 @@ config MVEBU_A3700_IO_ADDR_DEC
+ 	  Choose this option to add support
+ 	  for Marvell Armada-3700 address decoding driver
+ 
++config MVEBU_A3700_MISC_INIT
++	bool "Armada-3700 miscellaneous initialization procedures support"
++	default n
++	help
++	  Choose this option to add support
++	  for Marvell Armada-3700 miscellaneous init procedures
++
+ endmenu
+diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
+index 2dfe363..8133948 100644
+--- a/drivers/misc/Makefile
++++ b/drivers/misc/Makefile
+@@ -35,3 +35,4 @@ obj-$(CONFIG_MVEBU_MBUS) += mvebu_mbus.o
+ obj-$(CONFIG_MVEBU_FLC) += mvebu_flc.o
+ obj-$(CONFIG_MVEBU_A3700_IO_ADDR_DEC) += mvebu_io_addr_dec.o
+ obj-$(CONFIG_MVEBU_SPL_A3700_GPIO) += mvebu_gpio.o
++obj-$(CONFIG_MVEBU_A3700_MISC_INIT) += mvebu_misc_init.o
+diff --git a/drivers/misc/mvebu_io_addr_dec.c b/drivers/misc/mvebu_io_addr_dec.c
+index 6ca13e1..58e03a8 100644
+--- a/drivers/misc/mvebu_io_addr_dec.c
++++ b/drivers/misc/mvebu_io_addr_dec.c
+@@ -26,17 +26,6 @@ int init_a3700_io_addr_dec(void)
+ 
+ 	debug_enter();
+ 
+-	/*
+-	   CCI-400 enable snoop and dvm on S3 port.
+-	   For details see the <CoreLink CCI-400 Cache Coherent Interconnect> document.
+-	   bit[0] - Enable issuing of snoop requests from this slave interface.
+-	   bit[1] - Enable issuing of DVM message requests from this slave interface
+-	   bit[29:2] - Reserved
+-	   bit[30] - Slave interface supports snoops
+-	   bit[31] - Slave interface supports DVM messages
+-	 */
+-	writel(0xC0000003, MVEBU_CCI_S3_SNOOP_CTRL_REG);
+-
+ 	/* Add units configuration code here */
+ 
+ 	debug_exit();
+diff --git a/drivers/misc/mvebu_misc_init.c b/drivers/misc/mvebu_misc_init.c
+new file mode 100644
+index 0000000..64cd517
+--- /dev/null
++++ b/drivers/misc/mvebu_misc_init.c
+@@ -0,0 +1,41 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch-mvebu/mvebu.h>
++
++void misc_init_cci400(void)
++{
++	debug_enter();
++
++	/*
++	   CCI-400 enable snoop and dvm on S3 port.
++	   For details see the <CoreLink CCI-400 Cache Coherent Interconnect> document.
++	   bit[0] - Enable issuing of snoop requests from this slave interface.
++	   bit[1] - Enable issuing of DVM message requests from this slave interface
++	   bit[29:2] - Reserved
++	   bit[30] - Slave interface supports snoops
++	   bit[31] - Slave interface supports DVM messages
++	 */
++	writel(0xC0000003, MVEBU_CCI_S3_SNOOP_CTRL_REG);
++
++	/* Add units configuration code here */
++
++	debug_exit();
++}
+-- 
+1.9.1
+

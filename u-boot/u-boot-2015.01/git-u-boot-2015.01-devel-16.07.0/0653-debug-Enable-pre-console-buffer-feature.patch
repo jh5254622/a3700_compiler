@@ -1,0 +1,39 @@
+From 6c5b54127249c8721b64d13c80830ce03100d754 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Sun, 10 Jan 2016 09:44:04 +0200
+Subject: [PATCH 0653/1240] debug: Enable pre-console buffer feature
+
+	This feature is enables collecting console printouts to a
+	temporary buffer, till the console gets initialized.
+	The pre-console buffer is located at address 0x2000000, size 1MB.
+
+Change-Id: Ie295d661e73bf753cf9e345a4205012a37b2763e
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26654
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/mvebu-common.h | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 2e5a38f..3ce32a7 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -121,6 +121,13 @@
+ #define CONFIG_SYS_CONSOLE_INFO_QUIET		/* Don't print In/Out/Err console assignment. */
+ 
+ 
++/* Pre console buffer */
++#ifndef CONFIG_SPL_BUILD
++#define CONFIG_PRE_CONSOLE_BUFFER
++#define CONFIG_PRE_CON_BUF_ADDR		(0x2000000)
++#define CONFIG_PRE_CON_BUF_SZ		(1 << 20)	/* 1MB */
++#endif
++
+ /* Default Env vars */
+ #define CONFIG_SYS_BARGSIZE             CONFIG_SYS_CBSIZE       /* Boot Argument Buffer Size */
+ #define CONFIG_BOOTDELAY                3
+-- 
+1.9.1
+

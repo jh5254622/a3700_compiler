@@ -1,0 +1,39 @@
+From ed2c88357085feb399ce08699572b81a9a9cf44b Mon Sep 17 00:00:00 2001
+From: Ofer Heifetz <oferh@marvell.com>
+Date: Thu, 31 Dec 2015 14:50:44 +0200
+Subject: [PATCH 32/66] busybox: add ifenslave support
+
+Change-Id: I77c93eac2178475aabc475f1913148c8e28cfae9
+Signed-off-by: Ofer Heifetz <oferh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26440
+Reviewed-by: Lior Amsalem <alior@marvell.com>
+Tested-by: Shadi Ammouri <shadi@marvell.com>
+---
+ package/busybox/busybox.config | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/package/busybox/busybox.config b/package/busybox/busybox.config
+index bdeaddd..33fb491 100644
+--- a/package/busybox/busybox.config
++++ b/package/busybox/busybox.config
+@@ -1,7 +1,7 @@
+ #
+ # Automatically generated make config: don't edit
+ # Busybox version: 1.24.1
+-# Thu Dec 31 14:37:08 2015
++# Thu Dec 31 14:49:32 2015
+ #
+ CONFIG_HAVE_DOT_CONFIG=y
+ 
+@@ -820,7 +820,7 @@ CONFIG_FEATURE_IFCONFIG_SLIP=y
+ CONFIG_FEATURE_IFCONFIG_MEMSTART_IOADDR_IRQ=y
+ CONFIG_FEATURE_IFCONFIG_HW=y
+ # CONFIG_FEATURE_IFCONFIG_BROADCAST_PLUS is not set
+-# CONFIG_IFENSLAVE is not set
++CONFIG_IFENSLAVE=y
+ # CONFIG_IFPLUGD is not set
+ CONFIG_IFUPDOWN=y
+ CONFIG_IFUPDOWN_IFSTATE_PATH="/var/run/ifstate"
+-- 
+1.9.1
+

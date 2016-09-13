@@ -1,0 +1,268 @@
+From a1ff228d8a1c098abf221313aed4935218d5306d Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 21 Dec 2015 10:36:56 +0200
+Subject: [PATCH 0616/1240] fix: dts: a8k: update device tree files to
+ enable/disable units in last level DTS
+
+- Update if unit is enabled in the last level of the device tree blob
+
+Change-Id: I82482f6b0995041f9f8a2e97c9a1a3aba8c86c0b
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26164
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ arch/arm/dts/apn-806-a0.dtsi    |  4 ++--
+ arch/arm/dts/apn-806-db-dop.dts | 10 ++++++++++
+ arch/arm/dts/apn-806-db.dts     | 19 +++++++++++++++++++
+ arch/arm/dts/apn-806-pd-a0.dts  |  7 +++++--
+ arch/arm/dts/apn-806-pd.dts     | 11 +++++++++++
+ arch/arm/dts/apn-806-z1.dtsi    |  6 +++---
+ arch/arm/dts/armada-70x0-db.dts | 17 +++++++++++++++++
+ arch/arm/dts/armada-70x0.dtsi   |  7 -------
+ arch/arm/dts/armada-80x0-db.dts | 17 +++++++++++++++++
+ arch/arm/dts/armada-80x0.dtsi   |  7 -------
+ 10 files changed, 84 insertions(+), 21 deletions(-)
+
+diff --git a/arch/arm/dts/apn-806-a0.dtsi b/arch/arm/dts/apn-806-a0.dtsi
+index 528f4ab..158a706 100644
+--- a/arch/arm/dts/apn-806-a0.dtsi
++++ b/arch/arm/dts/apn-806-a0.dtsi
+@@ -53,7 +53,7 @@
+ 				reg = <0x511000 0x4>;
+ 				clock = <&tclk>;
+ 				support-256-offset;
+-				status = "okay";
++				status = "disable";
+ 			};
+ 
+ 			spi0: spi@510600 {
+@@ -63,7 +63,7 @@
+ 				clock = <&tclk>;
+ 				cpol-cs-bitmap = <1>; /* bit i is set if the CPOL of
+ 							 CS-i is enabled or not */
+-				status = "okay";
++				status = "disable";
+ 			};
+ 
+ 			pinctl: pinctl@6F4000 {
+diff --git a/arch/arm/dts/apn-806-db-dop.dts b/arch/arm/dts/apn-806-db-dop.dts
+index f157f78..aa46b8a 100644
+--- a/arch/arm/dts/apn-806-db-dop.dts
++++ b/arch/arm/dts/apn-806-db-dop.dts
+@@ -33,6 +33,16 @@
+ 	};
+ 
+ 	ap-806 {
++		internal-regs {
++			i2c0: i2c@511000 {
++				status = "okay";
++			};
++
++			spi0: spi@510600 {
++				status = "okay";
++			};
++		};
++
+ 		pcie-controller {
+ 			pcie@1,0 {
+ 				reg = <0x50000000 0x2000>;
+diff --git a/arch/arm/dts/apn-806-db.dts b/arch/arm/dts/apn-806-db.dts
+index ee7543c..0b9b3e2 100644
+--- a/arch/arm/dts/apn-806-db.dts
++++ b/arch/arm/dts/apn-806-db.dts
+@@ -30,4 +30,23 @@
+ 		device_type = "memory";
+ 		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
+ 	};
++
++	ap-806 {
++		internal-regs {
++
++			i2c0: i2c@511000 {
++				status = "okay";
++			};
++
++			spi0: spi@510600 {
++				status = "okay";
++			};
++		};
++
++		pcie-controller {
++			pcie@1,0 {
++				status = "okay";
++			};
++		};
++	};
+ };
+diff --git a/arch/arm/dts/apn-806-pd-a0.dts b/arch/arm/dts/apn-806-pd-a0.dts
+index aa41a8f..fb01833 100644
+--- a/arch/arm/dts/apn-806-pd-a0.dts
++++ b/arch/arm/dts/apn-806-pd-a0.dts
+@@ -27,15 +27,18 @@
+ 	board_id = <0x10>;
+ 
+ 	ap-806 {
+-
+ 		internal-regs {
+-
+ 			tclk: tclk {
+ 				clock-frequency = <125000>;
+ 			};
+ 
++			i2c0: i2c@511000 {
++				status = "okay";
++			};
++
+ 			spi0: spi@510600 {
+ 				spi-max-frequency = <51200>;
++				status = "okay";
+ 			};
+ 		};
+ 	};
+diff --git a/arch/arm/dts/apn-806-pd.dts b/arch/arm/dts/apn-806-pd.dts
+index d0d21cc..7195311 100644
+--- a/arch/arm/dts/apn-806-pd.dts
++++ b/arch/arm/dts/apn-806-pd.dts
+@@ -34,8 +34,19 @@
+ 				clock-frequency = <125000>;
+ 			};
+ 
++			i2c0: i2c@511000 {
++				status = "okay";
++			};
++
+ 			spi0: spi@510600 {
+ 				spi-max-frequency = <51200>;
++				status = "okay";
++			};
++		};
++
++		pcie-controller {
++			pcie@1,0 {
++				status = "disable";
+ 			};
+ 		};
+ 	};
+diff --git a/arch/arm/dts/apn-806-z1.dtsi b/arch/arm/dts/apn-806-z1.dtsi
+index 81a8edf..aeaeb6c 100644
+--- a/arch/arm/dts/apn-806-z1.dtsi
++++ b/arch/arm/dts/apn-806-z1.dtsi
+@@ -54,7 +54,7 @@
+ 				reg = <0x511000 0x4>;
+ 				clock = <&tclk>;
+ 				support-256-offset;
+-				status = "okay";
++				status = "disable";
+ 			};
+ 
+ 			spi0: spi@510600 {
+@@ -64,7 +64,7 @@
+ 				clock = <&tclk>;
+ 				cpol-cs-bitmap = <1>; /* bit i is set if the CPOL of
+ 							 CS-i is enabled or not */
+-				status = "okay";
++				status = "disable";
+ 			};
+ 
+ 			pinctl: pinctl@6F008C {
+@@ -145,7 +145,7 @@
+ 			pcie@1,0 {
+ 				reg = <0xffe00000 0x100000>;
+ 				mem = <0xfe000000 0x1f00000>;
+-				status = "okay";
++				status = "disable";
+ 			};
+ 		};
+ 	};
+diff --git a/arch/arm/dts/armada-70x0-db.dts b/arch/arm/dts/armada-70x0-db.dts
+index 5a47d7b..f2a4092 100644
+--- a/arch/arm/dts/armada-70x0-db.dts
++++ b/arch/arm/dts/armada-70x0-db.dts
+@@ -30,6 +30,23 @@
+ 		device_type = "memory";
+ 		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
+ 	};
++	ap-806 {
++		internal-regs {
++			i2c0: i2c@511000 {
++				status = "okay";
++			};
++
++			spi0: spi@510600 {
++				status = "okay";
++			};
++		};
++
++		pcie-controller {
++			pcie@1,0 {
++				status = "okay";
++			};
++		};
++	};
+ 	cp110-master {
+ 		internal-regs {
+ 			pinctl@440000 {
+diff --git a/arch/arm/dts/armada-70x0.dtsi b/arch/arm/dts/armada-70x0.dtsi
+index 68ed617..a10389e 100644
+--- a/arch/arm/dts/armada-70x0.dtsi
++++ b/arch/arm/dts/armada-70x0.dtsi
+@@ -21,11 +21,4 @@
+ 
+ / {
+ 	compatible = "marvell,armada-70x0";
+-	ap-806 {
+-		internal-regs {
+-			spi@510600 {
+-				status = "disabled";
+-			};
+-		};
+-	};
+ };
+diff --git a/arch/arm/dts/armada-80x0-db.dts b/arch/arm/dts/armada-80x0-db.dts
+index 98a6fb0..b908ae5 100644
+--- a/arch/arm/dts/armada-80x0-db.dts
++++ b/arch/arm/dts/armada-80x0-db.dts
+@@ -30,6 +30,23 @@
+ 		device_type = "memory";
+ 		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
+ 	};
++	ap-806 {
++		internal-regs {
++			i2c0: i2c@511000 {
++				status = "okay";
++			};
++
++			spi0: spi@510600 {
++				status = "okay";
++			};
++		};
++
++		pcie-controller {
++			pcie@1,0 {
++				status = "okay";
++			};
++		};
++	};
+ 	cp110-master {
+ 		internal-regs {
+ 			pinctl@440000 {
+diff --git a/arch/arm/dts/armada-80x0.dtsi b/arch/arm/dts/armada-80x0.dtsi
+index ac6cb0c..1cbaafd 100644
+--- a/arch/arm/dts/armada-80x0.dtsi
++++ b/arch/arm/dts/armada-80x0.dtsi
+@@ -22,11 +22,4 @@
+ 
+ / {
+ 	compatible = "marvell,armada-80x0";
+-	ap-806 {
+-		internal-regs {
+-			spi@510600 {
+-				status = "disabled";
+-			};
+-		};
+-	};
+ };
+-- 
+1.9.1
+

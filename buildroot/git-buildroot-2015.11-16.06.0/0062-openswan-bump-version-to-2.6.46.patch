@@ -1,0 +1,38 @@
+From d7d4a0614548cdc513459332fae93197cd525c87 Mon Sep 17 00:00:00 2001
+From: Ofer Heifetz <oferh@marvell.com>
+Date: Mon, 23 May 2016 10:56:22 +0300
+Subject: [PATCH 62/66] openswan: bump version to 2.6.46
+
+Change-Id: Id374c1200c7aaafff2f37eb0fdee772c0230cc10
+Signed-off-by: Ofer Heifetz <oferh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30136
+Tested-by: Star_Automation <star@marvell.com>
+---
+ package/openswan/openswan.hash | 2 +-
+ package/openswan/openswan.mk   | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/package/openswan/openswan.hash b/package/openswan/openswan.hash
+index ef4e18b..97bd529 100644
+--- a/package/openswan/openswan.hash
++++ b/package/openswan/openswan.hash
+@@ -1,2 +1,2 @@
+ # Locally calculated after checking pgp signature
+-sha256	b657b4a3828fc6e9830aabeabec047a71993daeb9dd2607f321e355bc5a53e1e	openswan-2.6.45.tar.gz
++sha256	c1605c96d3c3cf357cefea7622f3acbc7a02d6a3cebfb76979327b566084a5ea	openswan-2.6.46.tar.gz
+diff --git a/package/openswan/openswan.mk b/package/openswan/openswan.mk
+index 7fa945f..54bd4b3 100644
+--- a/package/openswan/openswan.mk
++++ b/package/openswan/openswan.mk
+@@ -4,7 +4,7 @@
+ #
+ ################################################################################
+ 
+-OPENSWAN_VERSION = 2.6.45
++OPENSWAN_VERSION = 2.6.46
+ OPENSWAN_SITE = http://download.openswan.org/openswan
+ OPENSWAN_LICENSE = GPLv2+, BSD-3c
+ OPENSWAN_LICENSE_FILES = COPYING LICENSE
+-- 
+1.9.1
+

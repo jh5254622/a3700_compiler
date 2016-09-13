@@ -1,0 +1,41 @@
+From 65b03d9b18df3800c54d74172753df15d1f944ec Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 30 Mar 2016 16:32:24 +0300
+Subject: [PATCH 0991/1240] fix: spi: increase max frequency to 50 MHz
+
+The 10 MHz limitation was relevant only for AP-806 SPI
+
+Change-Id: Ifb332d3c94355228a8478b32723f1b5037c05dcd
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28678
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/cp110.dtsi | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index 216556f..19b643a 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -31,7 +31,7 @@ refclk {
+ spi0@700600 {
+ 	compatible = "marvell,orion-spi";
+ 	reg = <0x700600 0x50>;
+-	spi-max-frequency = <10000000>;
++	spi-max-frequency = <50000000>;
+ 	clock = <&refclk>;
+ 	cpol-cs-bitmap = <0>; /* bit i is set if the CPOL of
+ 				CS-i is enabled or not */
+@@ -41,7 +41,7 @@ spi0@700600 {
+ spi1@700680 {
+ 	compatible = "marvell,orion-spi";
+ 	reg = <0x700680 0x50>;
+-	spi-max-frequency = <10000000>;
++	spi-max-frequency = <50000000>;
+ 	clock = <&refclk>;
+ 	cpol-cs-bitmap = <0>; /* bit i is set if the CPOL of
+ 				CS-i is enabled or not */
+-- 
+1.9.1
+

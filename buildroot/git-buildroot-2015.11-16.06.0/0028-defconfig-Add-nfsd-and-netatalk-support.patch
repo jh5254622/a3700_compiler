@@ -1,0 +1,37 @@
+From 39cd386df20da0af22ce85148de90844fb2622fe Mon Sep 17 00:00:00 2001
+From: Ofer Heifetz <oferh@marvell.com>
+Date: Mon, 28 Dec 2015 14:01:07 +0200
+Subject: [PATCH 28/66] defconfig: Add nfsd and netatalk support
+
+Change-Id: Id3aef9701d93ce5708f1eae244e0f32c61a11705
+Signed-off-by: Ofer Heifetz <oferh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26349
+Tested-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ configs/mvebu_armv8_le_defconfig | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/configs/mvebu_armv8_le_defconfig b/configs/mvebu_armv8_le_defconfig
+index 32bbc51..8198cef 100644
+--- a/configs/mvebu_armv8_le_defconfig
++++ b/configs/mvebu_armv8_le_defconfig
+@@ -33,6 +33,7 @@ BR2_PACKAGE_CPIO=y
+ BR2_PACKAGE_CRAMFS=y
+ BR2_PACKAGE_E2FSPROGS_DEBUGFS=y
+ BR2_PACKAGE_MTD=y
++BR2_PACKAGE_NFS_UTILS=y
+ BR2_PACKAGE_XFSPROGS=y
+ BR2_PACKAGE_DEVMEM2=y
+ BR2_PACKAGE_HDPARM=y
+@@ -60,6 +61,7 @@ BR2_PACKAGE_IPSEC_TOOLS=y
+ BR2_PACKAGE_IPTABLES=y
+ BR2_PACKAGE_LIGHTTPD=y
+ BR2_PACKAGE_NCFTP=y
++BR2_PACKAGE_NETATALK=y
+ BR2_PACKAGE_NETCAT=y
+ BR2_PACKAGE_OPENSSH=y
+ BR2_PACKAGE_RSYNC=y
+-- 
+1.9.1
+

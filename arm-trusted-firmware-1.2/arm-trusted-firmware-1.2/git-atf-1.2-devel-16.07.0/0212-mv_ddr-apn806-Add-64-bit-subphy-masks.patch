@@ -1,0 +1,29 @@
+From ebb4ce6bfdab927a34c9650a59800bacd329e1c9 Mon Sep 17 00:00:00 2001
+From: Victor Axelrod <victora@marvell.com>
+Date: Thu, 9 Jun 2016 16:28:04 +0300
+Subject: [PATCH 212/239] mv_ddr: apn806: Add 64-bit subphy masks
+
+Change-Id: I63d0794009dfefce311601597b8f986f47482b7b
+Signed-off-by: Victor Axelrod <victora@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30392
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_topology.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_topology.h b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_topology.h
+index 1e57df7..2b86fcb 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_topology.h
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_topology.h
+@@ -106,6 +106,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define BUS_MASK_16BIT			0x3 /* TODO: check if needed */
+ #define BUS_MASK_16BIT_ECC		0x13 /* TODO: check if needed */
+ #define BUS_MASK_16BIT_ECC_PUP3		0xb /* TODO: check if needed */
++#define MV_DDR_64BIT_BUS_MASK		0xff
+ 
+ #define DYNAMIC_CS_SIZE_CONFIG
+ 
+-- 
+1.9.1
+

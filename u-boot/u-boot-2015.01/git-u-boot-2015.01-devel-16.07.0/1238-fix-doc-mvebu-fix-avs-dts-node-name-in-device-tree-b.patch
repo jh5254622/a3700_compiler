@@ -1,0 +1,35 @@
+From 44c25f779241e1ed4e62f77d7074ea24351b3ccf Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Thu, 30 Jun 2016 21:51:53 +0800
+Subject: [PATCH 1238/1240] fix: doc: mvebu: fix avs dts node name in
+ device-tree-bindings doc
+
+- in device-tree-bindings doc for avs module, dts node name used to
+  be pm, which is not correct.
+- change the name to avs.
+
+Change-Id: Iacb5183e397400014409a1237f1424f07a1f5ce2
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30858
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Wilson Ding <dingwei@marvell.com>
+---
+ doc/device-tree-bindings/power/mvebu-avs.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/doc/device-tree-bindings/power/mvebu-avs.txt b/doc/device-tree-bindings/power/mvebu-avs.txt
+index ed7b198..be2ef2d 100644
+--- a/doc/device-tree-bindings/power/mvebu-avs.txt
++++ b/doc/device-tree-bindings/power/mvebu-avs.txt
+@@ -5,7 +5,7 @@ Required Properties:
+ -reg: AVS internal register offset and size
+ 
+ Example:
+-	pm@11500 {
++	avs@11500 {
+ 		compatible = "marvell,armada-3700-avs";
+ 		reg = <0x11500 0x40>;
+ 	};
+-- 
+1.9.1
+

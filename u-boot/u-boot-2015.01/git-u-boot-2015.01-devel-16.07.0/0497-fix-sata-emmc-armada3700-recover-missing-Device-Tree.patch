@@ -1,0 +1,43 @@
+From cdef0c50390c8696e6de24c84244bd0c45a195b3 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Thu, 12 Nov 2015 19:10:48 +0800
+Subject: [PATCH 0497/1240] fix: sata, emmc: armada3700: recover missing Device
+ Tree nodes
+
+    issue: sata and mmc device tree nodes are removed by mistake in patch
+armada3700: set IO decode windows target to DRAM, which makes sata and emmc
+can not be probed.
+    fix: restore the missing device tree nodes for sata and emmc.
+Change-Id: Ibcf3936f545004df278b249e2c08581145065fbe
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24800
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ arch/arm/dts/armada-lp.dtsi | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index 22125d4..573db25 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -107,6 +107,16 @@
+ 					status = "disabled";
+ 				};
+ 			};
++			sata: sata@e0000 {
++				compatible = "marvell,mvebu-sata";
++				reg = <0xe0000 0x200>;
++				status = "disabled";
++			};
++			mmc0: mmc@D8000 {
++				compatible = "marvell,xenon-sdhci";
++				reg = <0xD8000 0x300>;
++				status = "disabled";
++			};
+ 		};
+ 	};
+ };
+-- 
+1.9.1
+

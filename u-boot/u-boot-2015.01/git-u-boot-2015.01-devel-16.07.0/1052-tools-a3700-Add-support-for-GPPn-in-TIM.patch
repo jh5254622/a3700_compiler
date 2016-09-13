@@ -1,0 +1,104 @@
+From cb68060cbfc79a72c6ac72bcafecdb52b634b226 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Wed, 13 Apr 2016 13:02:28 +0300
+Subject: [PATCH 1052/1240] tools: a3700: Add support for GPPn in TIM
+
+- Add support for GPPn packages in TIM.
+  The General Purpose Patch block can add more initialization
+  steps to the BootROM flow. GPP1 is executed right after TIM
+  load and before image processing. GPP2 is executed after
+  load of all images just before paasing control to the image
+  execution.
+  The GPPn is optional and will be bypassed if the image descriptor
+  folder does not contain gpp1.txt or gpp2.txt files.
+
+Change-Id: I39da0106d1e43328b01a848908248dacae39c813
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28986
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ scripts/buildtim.sh | 44 +++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 43 insertions(+), 1 deletion(-)
+
+diff --git a/scripts/buildtim.sh b/scripts/buildtim.sh
+index d7a2f5b..a77163a 100755
+--- a/scripts/buildtim.sh
++++ b/scripts/buildtim.sh
+@@ -48,6 +48,12 @@ SIGNFILE=$9
+ TIMNPREF="timn"
+ # Reserved area definition for TIMN - file name prefix
+ RSRVD2PREF="rsrvdtimn"
++# General Purpose Patch files -
++# can be different for trusted/non-trusted boot modes
++GPP1PREF="gpp1"
++GPP2PREF="gpp2"
++GPP1FILE="$IMGPATH/$GPP1PREF.$FILEEXT"
++GPP2FILE="$IMGPATH/$GPP2PREF.$FILEEXT"
+ 
+ usage () {
+ 	echo ""
+@@ -217,16 +223,51 @@ else
+ 	echo "" >> $OUTFILE
+ fi
+ 
+-# DDR init
++# Extended reserved area - GPP actions and DDR init
+ if [ ! -e "$DDRFILE" ]; then
++	# DDR init is mandatory
+ 	echo "Cannot find $DDRFILE file!"
+ 	exit 1
+ else
+ 	echo "Extended Reserved Data:" >> $OUTFILE
+ 	echo "Consumer ID:" >> $OUTFILE
+ 	echo "CID: TBRI" >> $OUTFILE
++
++	# GPPn packages are optional
++	if [ -e "$GPP1FILE" ]; then
++		echo "PID: GPP1" >> $OUTFILE
++	fi
++	if [ -e "$GPP2FILE" ]; then
++		echo "PID: GPP2" >> $OUTFILE
++	fi
+ 	echo "PID: DDR3" >> $OUTFILE
+ 	echo "End Consumer ID:" >> $OUTFILE
++
++	# GPPn packages are optional
++	if [ -e "$GPP1FILE" ]; then
++		echo "GPP:" >> $OUTFILE
++		echo "GPP_PID: GPP1" >> $OUTFILE
++		echo "GPP Operations:" >> $OUTFILE
++		echo "GPP_IGNORE_INST_TO: 0x0" >> $OUTFILE
++		echo "End GPP Operations:" >> $OUTFILE
++		echo "Instructions:" >> $OUTFILE
++		cat $GPP1FILE >> $OUTFILE
++		echo "End Instructions:" >> $OUTFILE
++		echo "End GPP:" >> $OUTFILE
++	fi
++
++	if [ -e "$GPP2FILE" ]; then
++		echo "GPP:" >> $OUTFILE
++		echo "GPP_PID: GPP2" >> $OUTFILE
++		echo "GPP Operations:" >> $OUTFILE
++		echo "GPP_IGNORE_INST_TO: 0x0" >> $OUTFILE
++		echo "End GPP Operations:" >> $OUTFILE
++		echo "Instructions:" >> $OUTFILE
++		cat $GPP2FILE >> $OUTFILE
++		echo "End Instructions:" >> $OUTFILE
++		echo "End GPP:" >> $OUTFILE
++	fi
++
+ 	echo "DDR Initialization:" >> $OUTFILE
+ 	echo "DDR_PID: DDR3" >> $OUTFILE
+ 	echo "Operations:" >> $OUTFILE
+@@ -238,6 +279,7 @@ else
+ 	cat $DLLTUNFILE >> $OUTFILE
+ 	echo "End Instructions:" >> $OUTFILE
+ 	echo "End DDR Initialization:" >> $OUTFILE
++
+ 	echo "End Extended Reserved Data:" >> $OUTFILE
+ 	echo "" >> $OUTFILE
+ fi
+-- 
+1.9.1
+

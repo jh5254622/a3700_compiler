@@ -1,0 +1,89 @@
+From 397d920ead741d04b4b1e12ce924f586f38b6e38 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Mon, 25 Jan 2016 14:06:52 +0200
+Subject: [PATCH 0723/1240] x86: ahci: Make sure interface is not busy after
+ enabling the port
+
+Each time U-Boot boots on Intel Crown Bay board, the displayed hard
+drive information is wrong. It could be either wrong capacity or just
+a 'Capacity: not available' message. After enabling the debug switch,
+we can see the scsi inquiry command did not execute successfully.
+However, doing a 'scsi scan' in the U-Boot shell does not expose
+this issue.
+
+SCSI:  Target spinup took 0 ms.
+SATA link 1 timeout.
+AHCI 0001.0100 32 slots 2 ports 3 Gbps 0x3 impl SATA mode
+flags: ncq stag pm led clo only pmp pio slum part ccc apst
+scanning bus for devices...
+ahci_device_data_io: 0 byte transferred.   <--- scsi inquiry fails
+ahci_device_data_io: 512 byte transferred.
+ahci_device_data_io: 512 byte transferred.
+ahci_device_data_io: 512 byte transferred.
+  Device 0: (0:0) Vendor: ATA Prod.:  Rev: ?8
+              Type: Hard Disk
+	                  Capacity: 912968.3 MB = 891.5 GB (1869759264 x 512)
+			  Found 1 device(s).
+
+So uninitialized contents on the stack were passed to dev_print() to
+display those wrong information.
+
+The symptom were observed on two hard drives (one is Seagate, the
+other one is Western Digital). The fix is to make sure the AHCI
+interface is not busy by checking the error and status information
+from task file register after enabling the port in ahci_port_start()
+before proceeding other operations like scsi_scan().
+
+Change-Id: I9e5dad57f1f170cda74b54696cd7d103dd73622f
+Signed-off-by: Bin Meng <bmeng.cn@gmail.com>
+Reviewed-by: Simon Glass <sjg@chromium.org>
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27000
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/block/ahci.c | 21 ++++++++++++++++++++-
+ 1 file changed, 20 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/block/ahci.c b/drivers/block/ahci.c
+index dcd3394..3993af6 100644
+--- a/drivers/block/ahci.c
++++ b/drivers/block/ahci.c
+@@ -489,6 +489,21 @@ static void ahci_fill_cmd_slot(struct ahci_ioports *pp, u32 opts)
+ #endif
+ }
+ 
++static int wait_spinup(void __iomem *port_mmio)
++{
++	ulong start;
++	u32 tf_data;
++
++	start = get_timer(0);
++	do {
++		tf_data = readl(port_mmio + PORT_TFDATA);
++		if (!(tf_data & ATA_BUSY))
++			return 0;
++	} while (get_timer(start) < WAIT_MS_SPINUP);
++
++	return -ETIMEDOUT;
++}
++
+ 
+ #ifdef CONFIG_AHCI_SETFEATURES_XFER
+ static void ahci_set_feature(u8 port)
+@@ -590,7 +605,11 @@ static int ahci_port_start(u8 port)
+ 
+ 	debug("Exit start port %d\n", port);
+ 
+-	return 0;
++	/*
++	 * Make sure interface is not busy based on error and status
++	 * information from task file data register before proceeding
++	 */
++	return wait_spinup(port_mmio);
+ }
+ 
+ 
+-- 
+1.9.1
+

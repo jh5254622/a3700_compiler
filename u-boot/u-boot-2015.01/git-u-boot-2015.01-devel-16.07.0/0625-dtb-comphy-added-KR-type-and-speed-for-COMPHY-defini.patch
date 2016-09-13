@@ -1,0 +1,66 @@
+From fa5c6cdf104db1c2e46b7654c64c74fbd43852ca Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Thu, 31 Dec 2015 19:55:29 +0200
+Subject: [PATCH 0625/1240] dtb: comphy: added KR type and speed for COMPHY
+ definitions
+
+- those definitions will be used for 10G-KR ports in 70x0/80x0
+
+Change-Id: I83b6386188f57706faa36ada69fa640d8ca4019a
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26448
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/include/asm/arch-mvebu/comphy.h | 2 ++
+ include/dt-bindings/comphy/comphy_data.h | 4 +++-
+ 2 files changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/include/asm/arch-mvebu/comphy.h b/arch/arm/include/asm/arch-mvebu/comphy.h
+index 21427e7..d7a3a27 100644
+--- a/arch/arm/include/asm/arch-mvebu/comphy.h
++++ b/arch/arm/include/asm/arch-mvebu/comphy.h
+@@ -32,6 +32,7 @@ enum phy_speed {
+ 	__5gbps,
+ 	__6gbps,
+ 	__6_25gbps,
++	__10_3125gbps,
+ 	MAX_SERDES_SPEED,
+ 	INVALID_SPEED = 0xff
+ };
+@@ -55,6 +56,7 @@ enum phy_type {
+ 	USB3_DEVICE,
+ 	XAUI,
+ 	RXAUI,
++	KR,
+ 	MAX_PHY_TYPE,
+ 	INVALID_TYPE = 0xff
+ };
+diff --git a/include/dt-bindings/comphy/comphy_data.h b/include/dt-bindings/comphy/comphy_data.h
+index fc2613a..2886ddf 100644
+--- a/include/dt-bindings/comphy/comphy_data.h
++++ b/include/dt-bindings/comphy/comphy_data.h
+@@ -23,10 +23,11 @@
+ #define PHY_SPEED_1_5G		1
+ #define PHY_SPEED_2_5G		2
+ #define PHY_SPEED_3G		3
+-#define PHY_SPEED_3_125G		4
++#define PHY_SPEED_3_125G	4
+ #define PHY_SPEED_5G		5
+ #define PHY_SPEED_6G		6
+ #define PHY_SPEED_6_25G		7
++#define PHY_SPEED_10_3125G	8
+ 
+ #define PHY_TYPE_UNCONNECTED		0
+ #define PHY_TYPE_PEX0		1
+@@ -46,6 +47,7 @@
+ #define PHY_TYPE_USB3_DEVICE		15
+ #define PHY_TYPE_XAUI		16
+ #define PHY_TYPE_RXAUI		17
++#define PHY_TYPE_KR			18
+ 
+ #endif /* _COMPHY_DATA_H_ */
+ 
+-- 
+1.9.1
+

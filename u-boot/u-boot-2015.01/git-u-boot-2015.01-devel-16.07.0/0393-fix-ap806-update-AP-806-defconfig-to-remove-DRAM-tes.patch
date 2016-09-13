@@ -1,0 +1,27 @@
+From 41f8cae604d758bbefc21be786780bb71293e214 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 2 Sep 2015 12:55:44 +0300
+Subject: [PATCH 0393/1240] fix: ap806: update AP-806 defconfig to remove DRAM
+ test
+
+Change-Id: If104b28cef03e9d5f520c67a2683741e05253cbd
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23365
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ configs/mvebu_apn806_defconfig | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/configs/mvebu_apn806_defconfig b/configs/mvebu_apn806_defconfig
+index d7bdc58..e0546d5 100644
+--- a/configs/mvebu_apn806_defconfig
++++ b/configs/mvebu_apn806_defconfig
+@@ -33,4 +33,3 @@ CONFIG_ENC28J60=y
+ CONFIG_MVEBU_PINCTL=y
+ +S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+ +S:CONFIG_MVEBU_MK6_SUPPORT=y
+-+S:CONFIG_MVEBU_SPL_MEMORY_TEST=y
+-- 
+1.9.1
+

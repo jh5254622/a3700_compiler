@@ -1,0 +1,37 @@
+From e6118605fcefe082e0a40844c3f493877bf78912 Mon Sep 17 00:00:00 2001
+From: zachary <zhangzg@marvell.com>
+Date: Fri, 24 Jun 2016 22:59:57 +0800
+Subject: [PATCH 1225/1240] fix: mvebu: bubt command read u-boot image from mmc
+ failure
+
+- In mmc_read_file routine which is used for bubt command
+  to load u-boot image from mmc card, instead of reading
+  from mmc card, it looks into usb device.
+- correct device name from usb to mmc
+
+Change-Id: If4376abadbb3ee5860c25289f478cab28bf6e21d
+Signed-off-by: zachary <zhangzg@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30712
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ common/mvebu/cmd_bubt.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/common/mvebu/cmd_bubt.c b/common/mvebu/cmd_bubt.c
+index 7e61db2..b1a515a 100644
+--- a/common/mvebu/cmd_bubt.c
++++ b/common/mvebu/cmd_bubt.c
+@@ -181,7 +181,7 @@ static size_t mmc_read_file(const char *file_name)
+ 	}
+ 
+ 	/* Load from data partition (0) */
+-	if (fs_set_blk_dev("usb", "0", FS_TYPE_ANY)) {
++	if (fs_set_blk_dev("mmc", "0", FS_TYPE_ANY)) {
+ 		printf("Error: MMC 0 not found\n");
+ 		return 0;
+ 	}
+-- 
+1.9.1
+

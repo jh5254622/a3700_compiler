@@ -1,0 +1,42 @@
+From 5513a26b522755f0eedac79ccff768ca56162d61 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 27 Jun 2016 14:54:54 +0300
+Subject: [PATCH 235/239] fix: stream-id: cp110: set same STREAM-ID for SATA
+ port 0/1
+
+SATA unit had 2 port and should configure them with the same STREAM-ID
+
+Change-Id: I27cc50884d75633c5b7f4710e3b0f0f86da1091c
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30746
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ plat/marvell/a8k/a70x0/cp110_setup.c | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/plat/marvell/a8k/a70x0/cp110_setup.c b/plat/marvell/a8k/a70x0/cp110_setup.c
+index 3436cae..7f5f5d9 100644
+--- a/plat/marvell/a8k/a70x0/cp110_setup.c
++++ b/plat/marvell/a8k/a70x0/cp110_setup.c
+@@ -130,8 +130,14 @@ void cp110_stream_id_init(uintptr_t cp110_base)
+ 	int i = 0;
+ 	uint32_t stream_id = MAX_PCIE_STREAM_ID;
+ 
+-	while (stream_id_reg[i])
+-		mmio_write_32(cp110_base + stream_id_reg[i++], stream_id++);
++	while (stream_id_reg[i]) {
++		/* SATA port 0/1 are in the same SATA unit, and they should use
++		** the same STREAM ID number */
++		if (stream_id_reg[i] == SATA_0_STREAM_ID_REG)
++			mmio_write_32(cp110_base + stream_id_reg[i++], stream_id);
++		else
++			mmio_write_32(cp110_base + stream_id_reg[i++], stream_id++);
++	}
+ }
+ 
+ void cp110_axi_attr_init(int cp_index)
+-- 
+1.9.1
+

@@ -1,0 +1,48 @@
+From de2d6c7370c7089314aa356d0a6a8201a150776f Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 9 Sep 2015 10:47:07 +0300
+Subject: [PATCH 0417/1240] comphy: ap806: enabled PCIe-By4 for AP-806-DB
+
+Change-Id: I1d48e4bb26b1d29951a088ecc2333b053d6948e2
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23503
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/apn-806.dtsi | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/apn-806.dtsi b/arch/arm/dts/apn-806.dtsi
+index a717890..1837b76 100644
+--- a/arch/arm/dts/apn-806.dtsi
++++ b/arch/arm/dts/apn-806.dtsi
+@@ -102,13 +102,25 @@
+ 			comphy {
+ 				compatible = "marvell,mvebu-comphy", "marvell,comphy-ap806";
+ 				mux-bitcount = <1>;
+-				max-lanes = <1>;
++				max-lanes = <4>;
+ 				reg-comphy = <0x6F0000 0x8>;
+ 				reg-hpipe3 = <0x70000 0x8>;
+ 				phy0 {
+ 					phy-type = <PHY_TYPE_PEX0>;
+ 					phy-speed = <PHY_SPEED_5G>;
+ 				};
++				phy1 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy2 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy3 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
+ 			};
+ 
+ 			thermal: thermal@6f8084 {
+-- 
+1.9.1
+

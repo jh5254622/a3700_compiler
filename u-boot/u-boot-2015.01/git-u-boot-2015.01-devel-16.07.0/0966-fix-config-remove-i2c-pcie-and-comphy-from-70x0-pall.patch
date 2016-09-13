@@ -1,0 +1,68 @@
+From 80e4d33a02612913bf456464061aad33cdd84287 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Mon, 21 Mar 2016 15:02:16 +0200
+Subject: [PATCH 0966/1240] fix: config: remove i2c, pcie and comphy from 70x0
+ palladuim
+
+Change-Id: I56e933e4a15a4156caff1888222faa65a12447e3
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28408
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ configs/mvebu_armada70x0_pd_defconfig | 24 ++++++++++--------------
+ 1 file changed, 10 insertions(+), 14 deletions(-)
+
+diff --git a/configs/mvebu_armada70x0_pd_defconfig b/configs/mvebu_armada70x0_pd_defconfig
+index 5346d7c..d0102b5 100644
+--- a/configs/mvebu_armada70x0_pd_defconfig
++++ b/configs/mvebu_armada70x0_pd_defconfig
+@@ -2,23 +2,12 @@ CONFIG_SPL=y
+ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_ARMADA_8K=y
+-CONFIG_PALLADIUM=y
+-# CONFIG_MVEBU_LLC_ENABLE is not set
+-CONFIG_MVEBU_CCU=y
+-CONFIG_MVEBU_IOB=y
+-CONFIG_MVEBU_RFU=y
+-CONFIG_MVEBU_MPP_BUS=y
+-# CONFIG_MVEBU_TOOLS_SUPPORT is not set
+-+S:CONFIG_DEVEL_BOARD=y
+-# CONFIG_MVEBU_SAR is not set
+-+S:# CONFIG_MULTI_DT_FILE is not set
+ CONFIG_CMD_BOOTD=y
+ CONFIG_CMD_RUN=y
+ CONFIG_CMD_EDITENV=y
+ CONFIG_CMD_SAVEENV=y
+ CONFIG_CMD_MEMORY=y
+ CONFIG_CMD_MEMTEST=y
+-CONFIG_CMD_PCI=y
+ CONFIG_CMD_NET=y
+ CONFIG_CMD_PING=y
+ CONFIG_CMD_TIME=y
+@@ -29,11 +18,18 @@ CONFIG_CMD_MVEBU_BUBT=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-70x0-pd"
+-CONFIG_MVEBU_DW_PCIE=y
+ CONFIG_MVEBU_ICU=y
++CONFIG_MVEBU_CCU=y
++CONFIG_MVEBU_IOB=y
++CONFIG_MVEBU_RFU=y
+ +S:CONFIG_SYS_NS16550=y
+-CONFIG_MVEBU_I2C=y
+ CONFIG_MVEBU_SPI=y
+ CONFIG_MVEBU_PINCTL=y
+-+S:CONFIG_MVEBU_COMPHY_SUPPORT=y
++CONFIG_MVEBU_MPP_BUS=y
+ +S:# CONFIG_MVEBU_SPL_DDR_SUPPORT is not set
+++S:CONFIG_DEVEL_BOARD=y
++# CONFIG_MVEBU_SAR is not set
+++S:# CONFIG_MULTI_DT_FILE is not set
++# CONFIG_MVEBU_LLC_ENABLE is not set
++CONFIG_PALLADIUM=y
++# CONFIG_MVEBU_TOOLS_SUPPORT is not set
+-- 
+1.9.1
+

@@ -1,0 +1,72 @@
+From c1b77733ea433c087ac53aee5ba02c107f1e4abf Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 8 Jul 2015 14:23:26 +0300
+Subject: [PATCH 0252/1240] comphy: fdt: a38x: added COMPHY node for armada 38x
+
+- Added basic comphy node, that had configuration for the first 3 phys
+
+Change-Id: Ia3fdd22a140f28081701233ca1d7addf5062dfb6
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/21133
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/armada-385-db.dts    | 22 ++++++++++++++++++++++
+ configs/mvebu_armada38x_defconfig |  3 ++-
+ 2 files changed, 24 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/armada-385-db.dts b/arch/arm/dts/armada-385-db.dts
+index 15a77f5..550fd87 100644
+--- a/arch/arm/dts/armada-385-db.dts
++++ b/arch/arm/dts/armada-385-db.dts
+@@ -1,5 +1,7 @@
+ 
+ /dts-v1/;
++
++#include <dt-bindings/comphy/comphy_data.h>
+ #define ATTR(remapped, target, attributes) (((remapped) << 12) | ((target) << 8) | (attributes))
+ 
+ / {
+@@ -88,6 +90,26 @@
+ 				#size-cells = <0>;
+ 				status = "disabled";
+ 			};
++
++			comphy {
++				compatible = "marvell,mvebu-comphy", "marvell,comphy-armada38x";
++				mux-bitcount = <4>;
++				max-lanes = <6>;
++				reg-comphy = <0x18300 0x8>;
++				reg-hpipe3 = <0xa0000 0x8>;
++				phy0 {
++					phy-type = <PHY_TYPE_SATA0>;
++					phy-speed = <PHY_SPEED_1_25G>;
++				};
++				phy1 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy2 {
++					phy-type = <PHY_TYPE_PEX1>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++			};
+ 			mbus {
+ 				compatible = "marvell,mvebu-mbus";
+ 				reg = <0x20000 0x50>;
+diff --git a/configs/mvebu_armada38x_defconfig b/configs/mvebu_armada38x_defconfig
+index e6140c1..09e244f 100644
+--- a/configs/mvebu_armada38x_defconfig
++++ b/configs/mvebu_armada38x_defconfig
+@@ -31,6 +31,7 @@ CONFIG_CMD_MVEBU_BUBT=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-385-db"
+-CONFIG_MVEBU_PINCTL=y
+ CONFIG_MVEBU_MBUS=y
+ +S:CONFIG_SYS_NS16550=y
++CONFIG_MVEBU_PINCTL=y
+++S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+-- 
+1.9.1
+

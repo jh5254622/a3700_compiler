@@ -1,0 +1,30 @@
+From 4cf45d877c640d09cfac9962955245d463682715 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 30 Aug 2015 23:04:23 +0300
+Subject: [PATCH 0390/1240] makefile: change output binary file for Armada-LP
+ to be aligned with other SoCs
+
+Change-Id: Id3ffb1ca37dc6b4d004f96ed0c1176068ee9b26b
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23329
+Tested-by: Star_Automation <star@marvell.com>
+---
+ Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index 23b39c8..7f4d7c6 100644
+--- a/Makefile
++++ b/Makefile
+@@ -915,7 +915,7 @@ DOIMAGE_LIBS_CHECK = \
+ doimage: $(obj)/u-boot.bin $(SPLIMAGE)
+ 		@$(DOIMAGE_LIBS_CHECK)
+ 		$(DOIMAGE) $(DOIMAGE_FLAGS)
+-		mv u-boot_h.bin u-boot-$(CONFIG_SYS_SOC).bin
++		mv u-boot_h.bin u-boot-spl.bin
+ 
+ bin2phex: doimage
+ 		$(TIM2PHEX) -i $(DOIMAGE_CFG) -o u-boot-$(CONFIG_SYS_SOC).hex
+-- 
+1.9.1
+

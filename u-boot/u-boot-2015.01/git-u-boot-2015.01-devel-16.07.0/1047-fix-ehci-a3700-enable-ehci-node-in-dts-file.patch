@@ -1,0 +1,42 @@
+From 27aba516acc3b22b45e69fcbf3b014fcb95ec50c Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Fri, 15 Apr 2016 00:00:21 +0800
+Subject: [PATCH 1047/1240] fix: ehci: a3700: enable ehci node in dts file
+
+- this patch enables USB2 PHY init, but not ehci driver.
+- now there is no USB2 PHY init in kernel, so to make ehci
+  driver work in kernel, u-boot has to do the PHY init.
+- PHY driver under u-boot only init the USB2 PHY while
+  in dts file USB2 node is enabled (status being okay).
+- but now there is no concurrent support for USB2 and USB3,
+  so ehci and xhci driver could not be enabled at the same
+  time in u-boot, see detail in SYSTEMSW-2396.
+- and by default xhci driver is enabled, so in this patch,
+  usb2 fdt node is enabled, while ehci driver is not.
+
+Change-Id: I5040baff7636434d3fe73be51c05b0ecba111201
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29035
+Reviewed-by: Victor Gu <xigu@marvell.com>
+Tested-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/dts/armada-3700-db.dts | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/arch/arm/dts/armada-3700-db.dts b/arch/arm/dts/armada-3700-db.dts
+index 87f0668..97c1469 100644
+--- a/arch/arm/dts/armada-3700-db.dts
++++ b/arch/arm/dts/armada-3700-db.dts
+@@ -79,6 +79,9 @@
+ 			usb3: usb3@58000 {
+ 				status = "okay";
+ 			};
++			usb: usb@5e000 {
++				status = "okay";
++			};
+ 		};
+ 	};
+ };
+-- 
+1.9.1
+

@@ -1,0 +1,61 @@
+From 65947fda0b19990f8a772697acc2c676508c0ce3 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Tue, 24 Feb 2015 14:59:27 +0200
+Subject: [PATCH 0126/1240] fix: update output binary images names to include
+ SoC name
+
+	- Added SoC name to binary names (i.e 'armada38x',' armadalp', etc..)
+	- removed 'flash' string from name
+
+	example: u-boot-armada38x-spi.bin
+
+Change-Id: Ie2d4111dc45349fe7a841737b441072917e390ec
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/16981
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ Makefile                       | 4 ++--
+ include/configs/mvebu-common.h | 4 ++--
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 171f2e2..fb4cce4 100644
+--- a/Makefile
++++ b/Makefile
+@@ -850,8 +850,8 @@ DOIMAGE_FLAGS 		:= -T $(CONFIG_DOIMAGE_TYPE) -D 0x0 -E 0x0 $(NAND_OPTS) -G $(BIN
+ DOIMAGE_UART_FLGS	:= -T uart -D 0x0 -E 0x0 -G $(BIN_HDR_UART)
+ 
+ doimage: $(obj)/u-boot.bin $(DOIMAGE) $(BIN_HDR) $(BIN_HDR_UART)
+-		$(DOIMAGE) $(DOIMAGE_FLAGS)     u-boot.bin u-boot-$(CONFIG_DOIMAGE_SUFFIX).bin
+-		$(DOIMAGE) $(DOIMAGE_UART_FLGS) u-boot.bin u-boot-$(CONFIG_DOIMAGE_SUFFIX)-uart.bin
++		$(DOIMAGE) $(DOIMAGE_FLAGS)     u-boot.bin u-boot-$(CONFIG_SYS_SOC)-$(CONFIG_DOIMAGE_SUFFIX).bin
++		$(DOIMAGE) $(DOIMAGE_UART_FLGS) u-boot.bin u-boot-$(CONFIG_SYS_SOC)-$(CONFIG_DOIMAGE_SUFFIX)-uart.bin
+ 
+ bin2phex: $(obj)/u-boot.bin
+ 		$(BIN2PHEX) -i u-boot.bin -o u-boot.hex -b 0x0
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 9a42649..d08dafc 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -157,14 +157,14 @@
+ #if defined(CONFIG_MVEBU_NAND_BOOT)
+ 	#define CONFIG_ENV_IS_IN_NAND
+ 	#define CONFIG_DOIMAGE_TYPE	"nand"
+-	#define CONFIG_DOIMAGE_SUFFIX	"nand-flash"
++	#define CONFIG_DOIMAGE_SUFFIX	"nand"
+ #endif /* CONFIG_MVEBU_NAND_BOOT */
+ 
+ /* Boot from SPI settings */
+ #if defined(CONFIG_MVEBU_SPI_BOOT)
+ 	#define CONFIG_ENV_IS_IN_SPI_FLASH
+ 	#define CONFIG_DOIMAGE_TYPE	"flash"
+-	#define CONFIG_DOIMAGE_SUFFIX	"spi-flash"
++	#define CONFIG_DOIMAGE_SUFFIX	"spi"
+ #endif /* CONFIG_MVEBU_SPI_BOOT */
+ 
+ 
+-- 
+1.9.1
+

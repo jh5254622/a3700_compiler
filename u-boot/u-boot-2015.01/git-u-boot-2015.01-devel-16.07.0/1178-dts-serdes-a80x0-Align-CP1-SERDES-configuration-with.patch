@@ -1,0 +1,68 @@
+From 6ebc67379f519b9a74e869a36791e3e144a396e1 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Tue, 31 May 2016 13:27:48 +0300
+Subject: [PATCH 1178/1240] dts: serdes: a80x0: Align CP1 SERDES configuration
+ with CP0
+
+- Set SERDES-0 as SGMII and SERDES-1 as USB3 HOST0 in CP1
+  configuration
+  Keep SERDES-4 on CP1 disconnected due to missing internal
+  connection to USB HOST1 unit.
+
+Change-Id: I63074faddef4cb2bcb559d1a54cad7787540c737
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30215
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/armada-80x0-db.dtsi | 13 ++++---------
+ 1 file changed, 4 insertions(+), 9 deletions(-)
+
+diff --git a/arch/arm/dts/armada-80x0-db.dtsi b/arch/arm/dts/armada-80x0-db.dtsi
+index 9f95b09..cd8484e 100644
+--- a/arch/arm/dts/armada-80x0-db.dtsi
++++ b/arch/arm/dts/armada-80x0-db.dtsi
+@@ -246,36 +246,31 @@
+ 
+ 			comphy {
+ 				/* Serdes Configuration:
+-					Lane 0: Unconnected
+-					Lane 1: Unconnected
++					Lane 0: SGMII2
++					Lane 1: USB3_HOST0
+ 					Lane 2: KR (10G)
+ 					Lane 3: SATA1
+ 					Lane 4: Unconnected
+ 					Lane 5: PEX2x1
+ 				*/
+ 				phy0 {
+-					phy-type = <PHY_TYPE_UNCONNECTED>;
++					phy-type = <PHY_TYPE_SGMII2>;
+ 					phy-speed = <PHY_SPEED_3_125G>;
+ 				};
+ 				phy1 {
+-					phy-type = <PHY_TYPE_UNCONNECTED>;
+-					phy-speed = <PHY_SPEED_5G>;
++					phy-type = <PHY_TYPE_USB3_HOST0>;
+ 				};
+ 				phy2 {
+ 					phy-type = <PHY_TYPE_KR>;
+-					phy-speed = <PHY_SPEED_10_3125G>;
+ 				};
+ 				phy3 {
+ 					phy-type = <PHY_TYPE_SATA1>;
+-					phy-speed = <PHY_SPEED_5G>;
+ 				};
+ 				phy4 {
+ 					phy-type = <PHY_TYPE_UNCONNECTED>;
+-					phy-speed = <PHY_SPEED_5G>;
+ 				};
+ 				phy5 {
+ 					phy-type = <PHY_TYPE_PEX2>;
+-					phy-speed = <PHY_SPEED_5G>;
+ 				};
+ 			};
+ 			mdio {
+-- 
+1.9.1
+

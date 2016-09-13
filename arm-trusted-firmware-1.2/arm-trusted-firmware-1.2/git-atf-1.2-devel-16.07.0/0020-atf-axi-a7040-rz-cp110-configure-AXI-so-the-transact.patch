@@ -1,0 +1,277 @@
+From 06c78ab6ad427e8a0a0c93e92256286bb18c89e0 Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Wed, 17 Feb 2016 15:57:04 +0200
+Subject: [PATCH 020/239] atf: axi: a7040-rz (cp110): configure AXI so the
+ transactions towards the fabric will be coherent
+
+- These configurations make the units issue coherent transaction towards
+  the soc fabric
+- Enable Ax-Cache and Ax-Domain for AXI-units
+- Set Ax-Cache as cacheable, no allocate, modifiable, bufferable
+- Set Ax-Domain as Outer shareable domain
+
+Change-Id: I416daa071c7bb0c02bfc435401eeb7bfa1695460
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27584
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ .../plat/marvell/a8k/a7040_rz/board/cp110_setup.h  |  39 ++++++++
+ plat/marvell/a8k/a7040_rz/cp110_setup.c            | 111 +++++++++++++++++++++
+ plat/marvell/a8k/a7040_rz/plat_bl31_setup.c        |  44 ++++++++
+ plat/marvell/a8k/a7040_rz/plat_def.h               |   1 +
+ plat/marvell/a8k/a7040_rz/platform.mk              |   3 +
+ 5 files changed, 198 insertions(+)
+ create mode 100644 include/plat/marvell/a8k/a7040_rz/board/cp110_setup.h
+ create mode 100644 plat/marvell/a8k/a7040_rz/cp110_setup.c
+ create mode 100644 plat/marvell/a8k/a7040_rz/plat_bl31_setup.c
+
+diff --git a/include/plat/marvell/a8k/a7040_rz/board/cp110_setup.h b/include/plat/marvell/a8k/a7040_rz/board/cp110_setup.h
+new file mode 100644
+index 0000000..70d4604
+--- /dev/null
++++ b/include/plat/marvell/a8k/a7040_rz/board/cp110_setup.h
+@@ -0,0 +1,39 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2016 Marvell International Ltd.
++* ***************************************************************************
++*
++* Redistribution and use in source and binary forms, with or without
++* modification, are permitted provided that the following conditions are met:
++*
++* Redistributions of source code must retain the above copyright notice, this
++* list of conditions and the following disclaimer.
++*
++* Redistributions in binary form must reproduce the above copyright notice,
++* this list of conditions and the following disclaimer in the documentation
++* and/or other materials provided with the distribution.
++*
++* Neither the name of Marvell nor the names of its contributors may be used
++* to endorse or promote products derived from this software without specific
++* prior written permission.
++*
++* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
++* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++* POSSIBILITY OF SUCH DAMAGE.
++*
++***************************************************************************
++*/
++#ifndef __PLAT_CP110_H__
++#define __PLAT_CP110_H__
++
++void cp110_init(void);
++
++#endif /* __PLAT_CP110_H__ */
+diff --git a/plat/marvell/a8k/a7040_rz/cp110_setup.c b/plat/marvell/a8k/a7040_rz/cp110_setup.c
+new file mode 100644
+index 0000000..837825a
+--- /dev/null
++++ b/plat/marvell/a8k/a7040_rz/cp110_setup.c
+@@ -0,0 +1,111 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2016 Marvell International Ltd.
++* ***************************************************************************
++*
++* Redistribution and use in source and binary forms, with or without
++* modification, are permitted provided that the following conditions are met:
++*
++* Redistributions of source code must retain the above copyright notice, this
++* list of conditions and the following disclaimer.
++*
++* Redistributions in binary form must reproduce the above copyright notice,
++* this list of conditions and the following disclaimer in the documentation
++* and/or other materials provided with the distribution.
++*
++* Neither the name of Marvell nor the names of its contributors may be used
++* to endorse or promote products derived from this software without specific
++* prior written permission.
++*
++* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
++* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++* POSSIBILITY OF SUCH DAMAGE.
++*
++***************************************************************************
++*/
++
++#include <plat_def.h>
++#include <mmio.h>
++
++/*
++ * AXI Configuration.
++ */
++
++ /* Used for Units of CP-110 (e.g. USB device, USB Host, and etc) */
++#define MVEBU_AXI_ATTR_BASE			(MVEBU_CP0_REGS_BASE + 0x441300)
++#define MVEBU_AXI_ATTR_REG(index)		(MVEBU_AXI_ATTR_BASE + 0x4 * index)
++#define MVEBU_AXI_ATTR_ARCACHE_OFFSET		4
++#define MVEBU_AXI_ATTR_ARCACHE_MASK		(0xF << MVEBU_AXI_ATTR_ARCACHE_OFFSET)
++#define MVEBU_AXI_ATTR_ARDOMAIN_OFFSET		12
++#define MVEBU_AXI_ATTR_ARDOMAIN_MASK		(0x3 << MVEBU_AXI_ATTR_ARDOMAIN_OFFSET)
++#define MVEBU_AXI_ATTR_AWCACHE_OFFSET		20
++#define MVEBU_AXI_ATTR_AWCACHE_MASK		(0xF << MVEBU_AXI_ATTR_AWCACHE_OFFSET)
++#define MVEBU_AXI_ATTR_AWDOMAIN_OFFSET		28
++#define MVEBU_AXI_ATTR_AWDOMAIN_MASK		(0x3 << MVEBU_AXI_ATTR_AWDOMAIN_OFFSET)
++
++
++enum axi_attr {
++	AXI_ADUNIT_ATTR = 0,
++	AXI_COMUNIT_ATTR,
++	AXI_EIP197_ATTR,
++	AXI_USB3D_ATTR,
++	AXI_USB3H0_ATTR,
++	AXI_USB3H1_ATTR,
++	AXI_SATA0_ATTR,
++	AXI_SATA1_ATTR,
++	AXI_DAP_ATTR,
++	AXI_DFX_ATTR,
++	AXI_DBG_TRC_ATTR = 12,
++	AXI_SDIO_ATTR,
++	AXI_MSS_ATTR,
++	AXI_MAX_ATTR,
++};
++
++void cp110_axi_attr_init(void)
++{
++	uint32_t index, data;
++
++	/* Initialize AXI attributes for Armada-7040 SoC */
++	/* Releveant for 7040 SoC (and not AP-806 Stand alone) */
++
++	/* Go over the AXI attributes and set Ax-Cache and Ax-Domain */
++	for (index = 0; index < AXI_MAX_ATTR; index++) {
++		switch (index) {
++		/* DFX and MSS unit works with no coherent only -
++		   there's no option to configure the Ax-Cache and Ax-Domain */
++		case AXI_DFX_ATTR:
++		case AXI_MSS_ATTR:
++			continue;
++		default:
++			/* Set Ax-Cache as cacheable, no allocate, modifiable, bufferable
++			 The values are different because Read & Write definition
++			 is different in Ax-Cache */
++			data = mmio_read_32(MVEBU_AXI_ATTR_REG(index));
++			data &= ~MVEBU_AXI_ATTR_ARCACHE_MASK;
++			data |= 0xB << MVEBU_AXI_ATTR_ARCACHE_OFFSET;
++			data &= ~MVEBU_AXI_ATTR_AWCACHE_MASK;
++			data |= 0x7 << MVEBU_AXI_ATTR_AWCACHE_OFFSET;
++			/* Set Ax-Domain as Outer domain */
++			data &= ~MVEBU_AXI_ATTR_ARDOMAIN_MASK;
++			data |= 0x2 << MVEBU_AXI_ATTR_ARDOMAIN_OFFSET;
++			data &= ~MVEBU_AXI_ATTR_AWDOMAIN_MASK;
++			data |= 0x2 << MVEBU_AXI_ATTR_AWDOMAIN_OFFSET;
++			mmio_write_32(MVEBU_AXI_ATTR_REG(index), data);
++		}
++	}
++
++	return;
++}
++
++void cp110_init(void)
++{
++	cp110_axi_attr_init();
++}
+diff --git a/plat/marvell/a8k/a7040_rz/plat_bl31_setup.c b/plat/marvell/a8k/a7040_rz/plat_bl31_setup.c
+new file mode 100644
+index 0000000..d669a4b
+--- /dev/null
++++ b/plat/marvell/a8k/a7040_rz/plat_bl31_setup.c
+@@ -0,0 +1,44 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2016 Marvell International Ltd.
++* ***************************************************************************
++*
++* Redistribution and use in source and binary forms, with or without
++* modification, are permitted provided that the following conditions are met:
++*
++* Redistributions of source code must retain the above copyright notice, this
++* list of conditions and the following disclaimer.
++*
++* Redistributions in binary form must reproduce the above copyright notice,
++* this list of conditions and the following disclaimer in the documentation
++* and/or other materials provided with the distribution.
++*
++* Neither the name of Marvell nor the names of its contributors may be used
++* to endorse or promote products derived from this software without specific
++* prior written permission.
++*
++* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
++* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++* POSSIBILITY OF SUCH DAMAGE.
++*
++***************************************************************************
++*/
++
++#include <plat_marvell.h>
++#include <cp110_setup.h>
++
++/* This function overruns the same function in marvell_bl31_setup.c */
++void bl31_plat_arch_setup(void)
++{
++	marvell_bl31_plat_arch_setup();
++
++	cp110_init();
++}
+diff --git a/plat/marvell/a8k/a7040_rz/plat_def.h b/plat/marvell/a8k/a7040_rz/plat_def.h
+index 893cfff..bf71bd5 100644
+--- a/plat/marvell/a8k/a7040_rz/plat_def.h
++++ b/plat/marvell/a8k/a7040_rz/plat_def.h
+@@ -40,6 +40,7 @@
+ 
+ #define MVEBU_REGS_BASE			0xF0000000
+ #define MVEBU_RFU_BASE			(MVEBU_REGS_BASE + 0x6F0000)
++#define MVEBU_CP0_REGS_BASE		0xF2000000
+ 
+ /*******************************************************************************
+  * MVEBU memory map related constants
+diff --git a/plat/marvell/a8k/a7040_rz/platform.mk b/plat/marvell/a8k/a7040_rz/platform.mk
+index 18c29e9..5c2906d 100644
+--- a/plat/marvell/a8k/a7040_rz/platform.mk
++++ b/plat/marvell/a8k/a7040_rz/platform.mk
+@@ -50,6 +50,7 @@ ATF_INCLUDES		:=	-Iinclude/common/tbbr
+ PLAT_INCLUDES		:=	-I$(PLAT_FAMILY_BASE)/$(PLAT)			\
+ 				-I$(PLAT_FAMILY_BASE)/$(PLAT)/include			\
+ 				-I$(PLAT_INCLUDE_BASE)/$(PLAT)/board/common		\
++				-I$(PLAT_INCLUDE_BASE)/$(PLAT)/board			\
+ 				-I$(PLAT_INCLUDE_BASE)/common					\
+ 				-I$(PLAT_INCLUDE_BASE)/common/aarch64			\
+ 				-I$(PLAT_SRC_BASE)								\
+@@ -67,6 +68,8 @@ BL31_SOURCES		+=	lib/cpus/aarch64/cortex_a72.S		\
+ 				$(PLAT_SRC_BASE)/aarch64/plat_psci.S		\
+ 				$(PLAT_SRC_BASE)/plat_pm.c					\
+ 				$(PLAT_SRC_BASE)/plat_topology.c			\
++				$(PLAT_SRC_BASE)/plat_bl31_setup.c			\
++				$(PLAT_SRC_BASE)/cp110_setup.c				\
+ 				plat/marvell/common/marvell_gicv2.c			\
+ 				${MARVELL_GIC_SOURCES}
+ 
+-- 
+1.9.1
+

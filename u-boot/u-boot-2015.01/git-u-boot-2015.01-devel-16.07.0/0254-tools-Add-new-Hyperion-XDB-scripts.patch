@@ -1,0 +1,243 @@
+From 50cb620bbf7eef76247718934d66ef9504242a66 Mon Sep 17 00:00:00 2001
+From: kostap <kostap@marvell.com>
+Date: Tue, 14 Jul 2015 14:48:50 +0300
+Subject: [PATCH 0254/1240] tools: Add new Hyperion XDB scripts
+
+	- Add new Hyperion scrypt supporting 2 CPUs (2xCA53+CM3)
+	- Add Linux probe connection option to old low-level UP script
+
+Change-Id: I19b50062b61623987d4023468f7002b5e2f7bd63
+Signed-off-by: kostap <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/21271
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ .../debugger_scripts/XDB/QT_Hyperion_ARMv8_UP.xsf  |  2 +-
+ .../debugger_scripts/XDB/hyperion_3core.xsf        | 19 ++++++++++
+ .../XDB/hyperion_add/add_hyperion.bat              | 18 ++++++++++
+ .../XDB/hyperion_add/add_hyperion.sh               | 40 ++++++++++++++++++++++
+ .../debugger_scripts/XDB/hyperion_add/jtag1.ini    | 32 +++++++++++++++++
+ .../debugger_scripts/XDB/hyperion_add/jtag2.ini    | 32 +++++++++++++++++
+ .../debugger_scripts/XDB/hyperion_add/jtag3.ini    | 24 +++++++++++++
+ 7 files changed, 166 insertions(+), 1 deletion(-)
+ create mode 100644 tools/marvell/debugger_scripts/XDB/hyperion_3core.xsf
+ create mode 100644 tools/marvell/debugger_scripts/XDB/hyperion_add/add_hyperion.bat
+ create mode 100755 tools/marvell/debugger_scripts/XDB/hyperion_add/add_hyperion.sh
+ create mode 100644 tools/marvell/debugger_scripts/XDB/hyperion_add/jtag1.ini
+ create mode 100644 tools/marvell/debugger_scripts/XDB/hyperion_add/jtag2.ini
+ create mode 100644 tools/marvell/debugger_scripts/XDB/hyperion_add/jtag3.ini
+
+diff --git a/tools/marvell/debugger_scripts/XDB/QT_Hyperion_ARMv8_UP.xsf b/tools/marvell/debugger_scripts/XDB/QT_Hyperion_ARMv8_UP.xsf
+index 8996638..d87ba12 100644
+--- a/tools/marvell/debugger_scripts/XDB/QT_Hyperion_ARMv8_UP.xsf
++++ b/tools/marvell/debugger_scripts/XDB/QT_Hyperion_ARMv8_UP.xsf
+@@ -13,4 +13,4 @@ Template=true
+ Version=2:2
+ [SETTINGS]
+ Global=
+-CS=-L "usb:" -target scanchain=FPGA_ARMV8_UP tckoverwrite=100kHz hotdebug device=mjc override=ap:1,debug:0x80030000,cti:0x80038000 option=0x20
++CS=-L "tcp:127.0.0.1:3020:usb:" -target scanchain=FPGA_ARMV8_UP tckoverwrite=100kHz hotdebug device=mjc override=ap:1,debug:0x80030000,cti:0x80038000 option=0x20
+diff --git a/tools/marvell/debugger_scripts/XDB/hyperion_3core.xsf b/tools/marvell/debugger_scripts/XDB/hyperion_3core.xsf
+new file mode 100644
+index 0000000..ea5915a
+--- /dev/null
++++ b/tools/marvell/debugger_scripts/XDB/hyperion_3core.xsf
+@@ -0,0 +1,19 @@
++-----------------------------------------------------------------------
++ MARVELL INTERNATIONAL LTD., ON BEHALF OF ITSELF AND ITS WORLDWIDE
++AFFILIATES(COLLECTIVELY, "MARVELL"), MAKES NO WARRANTY OF ANY KIND WITH
++REGARD TO THIS MATERIAL, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
++OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
++MARVELL ASSUMES NO RESPONSIBILITY FOR ANY ERRORS THAT MAY
++APPEAR IN THIS DOCUMENT. MARVELL MAKES NO COMMITMENT TO
++UPDATE NOR TO KEEP CURRENT THE INFORMATION CONTAINED IN THIS DOCUMENT.
++-----------------------------------------------------------------------
++[PROJECT]
++Target=JTAG CS/CS/CS
++Template=true
++Version=2:2
++[SETTINGS]
++Global=-plg ".\..\plugin\common\vt100\vt100.dll " -sync "EctHardware"
++CS=-plg ".\..\plugin\arm\trace\etmtrace.dll " -L "tcp:127.0.0.1:3020:usb:" -target override=ap:1,debug:0x80030000,cti:0x80038000 scanchain=JTAG_CS_CS_CS_dap4_jcs_hyperion hotdebug device=mjc
++CS$2=-plg ".\..\plugin\arm\trace\etmtrace.dll " -L "tcp:127.0.0.1:3020:usb:" -target override=ap:1,debug:0x80032000,cti:0x80039000 -target scanchain=JTAG_CS_CS_CS_dap4_jcs_hyperion hotdebug device=mjc
++CS$3=-plg ".\..\plugin\arm\trace\etmtrace.dll " -L "tcp:127.0.0.1:3020:usb:" -target override=ap:3 -target scanchain=JTAG_CS_CS_CS_dap4_jcs_hyperion hotdebug lowlevel device=mjc
++
+diff --git a/tools/marvell/debugger_scripts/XDB/hyperion_add/add_hyperion.bat b/tools/marvell/debugger_scripts/XDB/hyperion_add/add_hyperion.bat
+new file mode 100644
+index 0000000..c5aefcd
+--- /dev/null
++++ b/tools/marvell/debugger_scripts/XDB/hyperion_add/add_hyperion.bat
+@@ -0,0 +1,18 @@
++
++@echo off
++
++echo Add Hyperion to XDB in %MARVELL_XDB_HOME%
++
++set THOME=%MARVELL_XDB_HOME%\xdb\tci\cs\jtag
++
++initool "%THOME%\config1\jtag.ini" -m jtag1.ini
++initool "%THOME%\config2\jtag.ini" -m jtag2.ini
++initool "%THOME%\config2\jtag.ini" -m jtag3.ini
++
++set THOME=%MARVELL_XDB_HOME%xdb\configurations\jtag\SoC\hyperion
++if not exist "%THOME%" mkdir "%THOME%"
++
++copy .\hyperion_3core.xsf "%THOME%"
++
++@echo on
++
+diff --git a/tools/marvell/debugger_scripts/XDB/hyperion_add/add_hyperion.sh b/tools/marvell/debugger_scripts/XDB/hyperion_add/add_hyperion.sh
+new file mode 100755
+index 0000000..29ed2c7
+--- /dev/null
++++ b/tools/marvell/debugger_scripts/XDB/hyperion_add/add_hyperion.sh
+@@ -0,0 +1,40 @@
++#!/bin/bash
++
++if [ -z "$MARVELL_XDB_HOME" ]; then
++	#	MARVELL_XDB_HOME="/home/user/.wine/drive_c/Marvell/XDB5.7"
++	echo "Please set the XDB location by setting MARVELL_XDB_HOME variable"
++	exit 1
++fi
++echo "Add Hyperion to XDB in $MARVELL_XDB_HOME"
++
++THOME=$MARVELL_XDB_HOME/xdb/tci/cs/jtag
++
++if [ -z `grep -m 1 hyperion "$THOME/config1/jtag.ini"` ]; then
++	cat jtag1.ini >> "$THOME/config1/jtag.ini"
++	echo "Adding Hyperion settings to $THOME/config1/jtag.ini file"
++else
++	echo "Hyperion settings already present in $THOME/config1/jtag.ini file"
++fi
++if [ -z `grep -m 1 hyperion "$THOME/config2/jtag.ini"` ]; then
++	cat jtag2.ini >> "$THOME/config2/jtag.ini"
++	echo "Adding Hyperion settings to $THOME/config2/jtag.ini file"
++else
++	echo "Hyperion settings already present in $THOME/config1/jtag.ini file"
++fi
++if [ -z `grep -m 1 hyperion "$THOME/config3/jtag.ini"` ]; then
++	cat jtag3.ini >> "$THOME/config3/jtag.ini"
++	echo "Adding Hyperion settings to $THOME/config2/jtag.ini file"
++else
++	echo "Hyperion settings already present in $THOME/config1/jtag.ini file"
++fi
++
++THOME=$MARVELL_XDB_HOME/xdb/configurations/jtag/SoC/hyperion
++
++if  ! [ -d "$THOME" ]; then
++	mkdir "$THOME"
++	echo "Creating new folder $THOME"
++fi
++
++cp ../hyperion_3core.xsf "$THOME"
++
++
+diff --git a/tools/marvell/debugger_scripts/XDB/hyperion_add/jtag1.ini b/tools/marvell/debugger_scripts/XDB/hyperion_add/jtag1.ini
+new file mode 100644
+index 0000000..22188f9
+--- /dev/null
++++ b/tools/marvell/debugger_scripts/XDB/hyperion_add/jtag1.ini
+@@ -0,0 +1,32 @@
++
++[JTAG_CS_CS_CS_dap4_jcs_hyperion]
++datfile=jcs/dap4.jcs
++singlecpu=1.0.0,11,0x0411fc080
++steptimeout=1000
++jtagdelay=200
++connectdelay=500
++driveruse=yes
++highspeed=yes
++slowdown=0
++hsslowdown=0
++ctinum=1.2
++ectnum=1.0
++cstf0num=1.0.1
++maxspeed=20KHz
++
++
++[SWD_CS_CS_CS_dap4_jcs_hyperion]
++datfile=jcs/swddap4.jcs
++singlecpu=1.0.0,11,0x0411fc080
++steptimeout=1000
++jtagdelay=200
++connectdelay=500
++driveruse=yes
++highspeed=yes
++slowdown=0
++hsslowdown=0
++ctinum=1.2
++ectnum=1.0
++cstf0num=1.0.1
++maxspeed=10KHz
++
+diff --git a/tools/marvell/debugger_scripts/XDB/hyperion_add/jtag2.ini b/tools/marvell/debugger_scripts/XDB/hyperion_add/jtag2.ini
+new file mode 100644
+index 0000000..abaac73
+--- /dev/null
++++ b/tools/marvell/debugger_scripts/XDB/hyperion_add/jtag2.ini
+@@ -0,0 +1,32 @@
++
++[JTAG_CS_CS_CS_dap4_jcs_hyperion]
++datfile=jcs/dap4.jcs
++singlecpu=1.1.1,11,0x0411fc080
++steptimeout=1000
++jtagdelay=200
++connectdelay=500
++driveruse=yes
++highspeed=yes
++slowdown=0
++hsslowdown=0
++ctinum=1.2
++ectnum=1.0
++cstf0num=1.0.1
++maxspeed=20KHz
++
++
++[SWD_CS_CS_CS_dap4_jcs_hyperion]
++datfile=jcs/swddap4.jcs
++singlecpu=1.1.1,11,0x0411fc080
++steptimeout=1000
++jtagdelay=200
++connectdelay=500
++driveruse=yes
++highspeed=yes
++slowdown=0
++hsslowdown=0
++ctinum=1.2
++ectnum=1.0
++cstf0num=1.0.1
++maxspeed=10KHz
++
+diff --git a/tools/marvell/debugger_scripts/XDB/hyperion_add/jtag3.ini b/tools/marvell/debugger_scripts/XDB/hyperion_add/jtag3.ini
+new file mode 100644
+index 0000000..1fc6697
+--- /dev/null
++++ b/tools/marvell/debugger_scripts/XDB/hyperion_add/jtag3.ini
+@@ -0,0 +1,24 @@
++[JTAG_CS_CS_CS_dap4_jcs_hyperion]
++datfile=jcs/dap4.jcs
++singlecpu=1.0.0,8,0x0411fc080
++steptimeout=1000
++jtagdelay=200
++connectdelay=500
++driveruse=yes
++highspeed=yes
++slowdown=0
++hsslowdown=0
++maxspeed=10KHz
++
++[SWD_CS_CS_CS_dap4_jcs_hyperion]
++datfile=jcs/swddap4.jcs
++singlecpu=1.0.0,8,0x0411fc080
++steptimeout=1000
++jtagdelay=200
++connectdelay=500
++driveruse=yes
++highspeed=yes
++slowdown=0
++hsslowdown=0
++maxspeed=10KHz
++
+-- 
+1.9.1
+

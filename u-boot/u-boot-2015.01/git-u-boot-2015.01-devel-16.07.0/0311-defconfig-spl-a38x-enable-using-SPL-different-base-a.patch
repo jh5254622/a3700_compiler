@@ -1,0 +1,28 @@
+From 0a6258357f3ea63eb4d691fefd32573daac170fe Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Wed, 12 Aug 2015 10:44:25 +0300
+Subject: [PATCH 0311/1240] defconfig: spl: a38x: enable using SPL different
+ base address
+
+Enable CONFIG_MVEBU_SPL_DIFFRENT_BASE_ADDR for A38x defconfig
+Change-Id: Ib7bdba6422e6c0e7c3f906d69f5f7e40a861db2d
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22685
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ configs/mvebu_armada38x_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/configs/mvebu_armada38x_defconfig b/configs/mvebu_armada38x_defconfig
+index 46a58b3..3e64a7e0 100644
+--- a/configs/mvebu_armada38x_defconfig
++++ b/configs/mvebu_armada38x_defconfig
+@@ -37,3 +37,4 @@ CONFIG_MVEBU_MBUS=y
+ CONFIG_MVEBU_PINCTL=y
+ +S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+ CONFIG_MVEBU_THERMAL_SENSOR_28NM=y
+++S:CONFIG_MVEBU_SPL_DIFFRENT_BASE_ADDR=y
+-- 
+1.9.1
+

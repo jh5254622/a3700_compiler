@@ -1,0 +1,28 @@
+From 7ad44f5da5e460dc350bd24dd8d007313209b6e0 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 13 Mar 2016 12:53:31 +0200
+Subject: [PATCH 062/239] .gitignore: ignore DRAM sub project
+
+Change-Id: Idbb60087000dd5a013ea831e30c0b953f4039818
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28189
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ .gitignore | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/.gitignore b/.gitignore
+index 0254df4..41348d8 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -18,3 +18,6 @@ tools/cert_create/src/*.o
+ tools/cert_create/src/**/*.o
+ tools/cert_create/cert_create
+ tools/doimage/doimage
++
++# Ignore sub projects
++drivers/marvell/dram
+-- 
+1.9.1
+

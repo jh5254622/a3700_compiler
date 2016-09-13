@@ -1,0 +1,178 @@
+From 7f08e7ac02edfb93d1ca4b51eb7170d3173f8636 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 16 Nov 2015 13:45:47 +0200
+Subject: [PATCH 0502/1240] dts: a70x0, a80x0: added device tree for
+ Armada-80x0, and Armada-70x0 boards
+
+- Added device tree for Armada 80x0, and Armada 70x0
+
+Change-Id: I5eb74cdcaca37beb174bacb63176862545720011
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24898
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/dts/Makefile           |  4 +++-
+ arch/arm/dts/armada-70x0-db.dts | 31 +++++++++++++++++++++++++++++++
+ arch/arm/dts/armada-70x0.dtsi   | 24 ++++++++++++++++++++++++
+ arch/arm/dts/armada-80x0-db.dts | 31 +++++++++++++++++++++++++++++++
+ arch/arm/dts/armada-80x0.dtsi   | 25 +++++++++++++++++++++++++
+ 5 files changed, 114 insertions(+), 1 deletion(-)
+ create mode 100644 arch/arm/dts/armada-70x0-db.dts
+ create mode 100644 arch/arm/dts/armada-70x0.dtsi
+ create mode 100644 arch/arm/dts/armada-80x0-db.dts
+ create mode 100644 arch/arm/dts/armada-80x0.dtsi
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index bae8791..ffd32cb 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -56,7 +56,9 @@ dtb-$(CONFIG_MVEBU) += armada-lp-db.dtb
+ dtb-$(CONFIG_MVEBU) += armada-lp-palladium.dtb
+ dtb-$(CONFIG_MVEBU) += apn-806-db.dtb \
+ 		       apn-806-pd.dtb \
+-		       apn-806-db-dop.dtb
++		       apn-806-db-dop.dtb \
++		       armada-80x0-db.dtb \
++		       armada-70x0-db.dtb
+ 
+ targets += $(dtb-y)
+ 
+diff --git a/arch/arm/dts/armada-70x0-db.dts b/arch/arm/dts/armada-70x0-db.dts
+new file mode 100644
+index 0000000..3f3066d
+--- /dev/null
++++ b/arch/arm/dts/armada-70x0-db.dts
+@@ -0,0 +1,31 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/dts-v1/;
++
++#include "armada-70x0.dtsi" /* include SoC device tree */
++
++/ {
++	model = "DB-ARMADA-70x0";
++	compatible = "marvell,armada-70x0-db", "marvell,armada-70x0";
++
++	memory {
++		device_type = "memory";
++		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
++	};
++};
+diff --git a/arch/arm/dts/armada-70x0.dtsi b/arch/arm/dts/armada-70x0.dtsi
+new file mode 100644
+index 0000000..a10389e
+--- /dev/null
++++ b/arch/arm/dts/armada-70x0.dtsi
+@@ -0,0 +1,24 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include "apn-806-db.dtsi"
++#include "cp110-master.dtsi"
++
++/ {
++	compatible = "marvell,armada-70x0";
++};
+diff --git a/arch/arm/dts/armada-80x0-db.dts b/arch/arm/dts/armada-80x0-db.dts
+new file mode 100644
+index 0000000..20d8fca
+--- /dev/null
++++ b/arch/arm/dts/armada-80x0-db.dts
+@@ -0,0 +1,31 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/dts-v1/;
++
++#include "armada-80x0.dtsi" /* include SoC device tree */
++
++/ {
++	model = "DB-ARMADA-80x0";
++	compatible = "marvell,armada-80x0-db", "marvell,armada-80x0";
++
++	memory {
++		device_type = "memory";
++		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
++	};
++};
+diff --git a/arch/arm/dts/armada-80x0.dtsi b/arch/arm/dts/armada-80x0.dtsi
+new file mode 100644
+index 0000000..57b610b
+--- /dev/null
++++ b/arch/arm/dts/armada-80x0.dtsi
+@@ -0,0 +1,25 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include "apn-806-db.dtsi"
++#include "cp110-master.dtsi"
++#include "cp110-master.dtsi"
++
++/ {
++	compatible = "marvell,armada-80x0";
++};
+-- 
+1.9.1
+

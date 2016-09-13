@@ -1,0 +1,41 @@
+From be4ad4168372ec24d9b147f691649417924df3e0 Mon Sep 17 00:00:00 2001
+From: Jing Hua <jinghua@marvell.com>
+Date: Wed, 8 Apr 2015 15:40:40 +0800
+Subject: [PATCH 0174/1240] fix: arlp: add get_soc_id routine
+
+	in Armada LP, there is no device ID register, like A38x.
+	for Palladium debug purpose, add hardcoded device_id now, and will be
+	replaced by other correct method later.
+
+Change-Id: Ib225f03c786f668dcf754d706026246e8b801ebd
+Signed-off-by: Jing Hua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/18240
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv7/armadalp/soc-init.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/arch/arm/cpu/armv7/armadalp/soc-init.c b/arch/arm/cpu/armv7/armadalp/soc-init.c
+index 70d9314..4a16a54 100644
+--- a/arch/arm/cpu/armv7/armadalp/soc-init.c
++++ b/arch/arm/cpu/armv7/armadalp/soc-init.c
+@@ -29,6 +29,15 @@ int soc_early_init_f(void)
+ 	return 0;
+ }
+ 
++int soc_get_id(void)
++{
++	/* TO-DO, get soc ID from PCIe register */
++	/* in ArmadaLP, there is no device ID register, like A38x,
++	    it needs to be got from PCIe register, like A370 and AXP */
++	u32 id = 0x9991;
++	return id;
++}
++
+ struct mvebu_soc_family *soc_init(void)
+ {
+ 	/* Do early SOC specific init here */
+-- 
+1.9.1
+

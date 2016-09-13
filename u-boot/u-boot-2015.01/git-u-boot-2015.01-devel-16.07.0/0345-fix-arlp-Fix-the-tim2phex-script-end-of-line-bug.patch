@@ -1,0 +1,43 @@
+From d74f7090f7fa0384eaedd3abbc60900846f30eea Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Sun, 23 Aug 2015 11:20:49 +0300
+Subject: [PATCH 0345/1240] fix: arlp: Fix the tim2phex script end of line bug
+
+- Print end of line when starting a new row instead of
+  doing so at the end of row. This fix allows to use
+  rows that are not aligned to 16 bytes.
+
+Change-Id: I1e8caeb75d8738e923c6ea6a7e26d79c9d53cd44
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23029
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ scripts/tim2phex.pl | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/scripts/tim2phex.pl b/scripts/tim2phex.pl
+index 4927ba0..f00a0a7 100755
+--- a/scripts/tim2phex.pl
++++ b/scripts/tim2phex.pl
+@@ -94,7 +94,7 @@ sub tim2hex
+ 		while (read($src, $byte, 1)) {
+ 			if ($byte_idx == 0) {
+ 				# Print image address @ row start position
+-				print $dst sprintf("%08x/", $addr);
++				print $dst sprintf("\n%08x/", $addr);
+ 			} else {
+ 				print $dst ";";
+ 			}
+@@ -104,7 +104,7 @@ sub tim2hex
+ 
+ 			# end of row
+ 			if ($byte_idx == 16) {
+-				print $dst "\n";
++				#print $dst "\n";
+ 				$byte_idx = 0;
+ 				$addr += 16;
+ 			}
+-- 
+1.9.1
+

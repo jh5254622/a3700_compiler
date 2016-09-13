@@ -1,0 +1,1097 @@
+From 35b15d6a9465f4d7b5e44cc36c7f07a74507ebb9 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Mon, 21 Mar 2016 18:27:01 +0200
+Subject: [PATCH 1137/1240] efuse: a3700: Add eFuse driver and command line
+ tools
+
+- Add "efuse" u-boot command for reading and writing
+  SoC efuse values
+- Add efuse driver for a3700 and stub for a8k
+- Add CPU mailbox support required for a3700 efuse access
+
+Change-Id: I89ec4d6a09f0415cc86737a4f5eff4bd6976d7db
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28421
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv8/armada3700/Makefile           |   1 +
+ arch/arm/cpu/armv8/armada3700/a3700_mbox.c       | 122 ++++++++
+ arch/arm/include/asm/arch-armada3700/mbox.h      |  70 +++++
+ arch/arm/include/asm/arch-armada3700/regs-base.h |   2 +
+ arch/arm/include/asm/arch-mvebu/efuse.h          |  98 ++++++
+ common/mvebu/Kconfig                             |   7 +
+ common/mvebu/Makefile                            |   1 +
+ common/mvebu/cmd_efuse.c                         | 145 +++++++++
+ drivers/Kconfig                                  |   2 +
+ drivers/Makefile                                 |   1 +
+ drivers/efuse/Kconfig                            |  11 +
+ drivers/efuse/Makefile                           |   2 +
+ drivers/efuse/a3700_efuse.c                      | 371 +++++++++++++++++++++++
+ drivers/efuse/a3700_efuse.h                      |  75 +++++
+ drivers/efuse/a8k_efuse.c                        |  37 +++
+ 15 files changed, 945 insertions(+)
+ create mode 100644 arch/arm/cpu/armv8/armada3700/a3700_mbox.c
+ create mode 100644 arch/arm/include/asm/arch-armada3700/mbox.h
+ create mode 100644 arch/arm/include/asm/arch-mvebu/efuse.h
+ create mode 100644 common/mvebu/cmd_efuse.c
+ create mode 100644 drivers/efuse/Kconfig
+ create mode 100644 drivers/efuse/Makefile
+ create mode 100644 drivers/efuse/a3700_efuse.c
+ create mode 100644 drivers/efuse/a3700_efuse.h
+ create mode 100644 drivers/efuse/a8k_efuse.c
+
+diff --git a/arch/arm/cpu/armv8/armada3700/Makefile b/arch/arm/cpu/armv8/armada3700/Makefile
+index 11513a8..9f8a989 100644
+--- a/arch/arm/cpu/armv8/armada3700/Makefile
++++ b/arch/arm/cpu/armv8/armada3700/Makefile
+@@ -25,3 +25,4 @@ obj-$(CONFIG_MVEBU_GPIO) += gpio.o
+ obj-$(CONFIG_MVEBU_A3700_MISC_INIT) += mvebu_misc_init.o
+ obj-$(CONFIG_MVEBU_A3700_CLOCK) += mvebu_clock.o
+ obj-$(CONFIG_MVEBU_BOOTMODE_SWITCH_SUPPORT) += mvebu_bootmode.o
++obj-$(CONFIG_MVEBU_EFUSE_SUPPORT) += a3700_mbox.o
+diff --git a/arch/arm/cpu/armv8/armada3700/a3700_mbox.c b/arch/arm/cpu/armv8/armada3700/a3700_mbox.c
+new file mode 100644
+index 0000000..3574edd
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armada3700/a3700_mbox.c
+@@ -0,0 +1,122 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2015 Marvell International Ltd.
++* ***************************************************************************
++* This program is free software: you can redistribute it and/or modify it
++* under the terms of the GNU General Public License as published by the Free
++* Software Foundation, either version 2 of the License, or any later version.
++*
++* This program is distributed in the hope that it will be useful,
++* but WITHOUT ANY WARRANTY; without even the implied warranty of
++* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++* GNU General Public License for more details.
++*
++* You should have received a copy of the GNU General Public License
++* along with this program.  If not, see <http://www.gnu.org/licenses/>.
++* ***************************************************************************
++*/
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch-mvebu/mvebu.h>
++#include <asm/arch-armada3700/mbox.h>
++
++/******************************************************************************
++ *	mbox_send
++ ******************************************************************************/
++int mbox_send(enum mbox_opsize opsz, enum mbox_op op, uint32_t row, uint32_t offs, uint32_t *args)
++{
++	uint32_t	params[MBOX_MAX_ARGS];
++	uint32_t	n, params_to_send;
++
++	if (args == 0) {
++		printf("%s: Invalid argument\n", __func__);
++		return 1;
++	}
++
++	if (op != MB_OP_READ && op != MB_OP_WRITE) {
++		printf("%s: Invalid operation\n", __func__);
++		return 1;
++	}
++
++	memset(params, 0, MBOX_MAX_ARGS * sizeof(uint32_t));
++
++	/* First parameter in the list describes eFuse row */
++	params[0] = row;
++
++	switch (opsz) {
++	case MB_OPSZ_BIT:
++	case MB_OPSZ_BYTE:
++	case MB_OPSZ_WORD:
++		params_to_send = 3;
++		params[1] = offs;
++		params[2] = args[0];
++		break;
++	case MB_OPSZ_DWORD:
++		params_to_send = 3;
++		params[1] = args[0];
++		params[2] = args[1];
++		break;
++	case MB_OPSZ_256B:
++		params_to_send = 9;
++		memcpy(&params[1], args, 8 * sizeof(uint32_t));
++		break;
++	default:
++		printf("%s: Invalid size\n", __func__);
++		return 1;
++	}
++
++	/* First, fill all command arguments */
++	for (n = 0; n < params_to_send; n++) {
++		debug("=>MBOX WRITE PARAM[%d] = %08X\n", n, params[n]);
++		writel(params[n], MBOX_SEND_ARG_OFFS(n));
++	}
++
++	/* Writing command triggers mailbox dispatch and
++	   intarrupt on secure CPU side */
++	debug("=>MBOX WRITE CMD = %08X\n", MBOX_COMMAND(opsz, op));
++	writel(MBOX_COMMAND(opsz, op), MBOX_SEND_CMD_OFFS);
++
++	return 0;
++}
++
++/******************************************************************************
++ *	mbox_receive - BLOCKING
++ ******************************************************************************/
++int mbox_receive(enum mbox_status *stat, uint32_t *args, uint32_t timeout_us)
++{
++	uint32_t n;
++	uint32_t regval;
++
++	if (args == 0) {
++		*stat = MB_STAT_BAD_ARGUMENT;
++		return 1;
++	}
++
++	/* Poll for secure CPU command completion */
++	for (n = 0; n < timeout_us; n++) {
++		regval = readl(MBOX_SEC_CPU_INT_STAT_REG);
++		if (regval & MBOX_SEC_CPU_CMD_SET)
++			break;
++		mdelay(100);
++	}
++
++	if (n == timeout_us) {
++		printf("%s: MB timeout\n", __func__);
++		return 1;
++	}
++
++	/* Read comamnd status and arguments */
++	for (n = 0; n < MBOX_MAX_ARGS; n++) {
++		args[n] = readl(MBOX_RECEIVE_ARG_OFFS(n));
++		debug("<=MBOX READ ARG[%d] = %08X\n", n, args[n]);
++	}
++
++	*stat = readl(MBOX_RECEIVE_STAT_OFFS);
++	debug("<=MBOX READ STATUS = %08X\n", *stat);
++
++	/* Reset host interrupt */
++	regval = readl(MBOX_HOST_INT_RESET) | MBOX_SEC_CPU_CMD_COMPLETE;
++	writel(regval, MBOX_HOST_INT_RESET);
++
++	return 0;
++}
+diff --git a/arch/arm/include/asm/arch-armada3700/mbox.h b/arch/arm/include/asm/arch-armada3700/mbox.h
+new file mode 100644
+index 0000000..908e065
+--- /dev/null
++++ b/arch/arm/include/asm/arch-armada3700/mbox.h
+@@ -0,0 +1,70 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _A3700_MBOX_H_
++#define _A3700_MBOX_H_
++
++#define MBOX_MAX_ARGS			(16)
++#define MBOX_CMD_TIMEOUT		(100000)
++
++/* Mailbox command, arguments and status */
++#define MBOX_SEND_ARG_OFFS(n)		(MVEBU_MBOX_REGS_BASE + (n) * 4)
++#define MBOX_SEND_CMD_OFFS		(MVEBU_MBOX_REGS_BASE + 0x40)
++#define MBOX_RECEIVE_STAT_OFFS		(MVEBU_MBOX_REGS_BASE + 0x80)
++#define MBOX_RECEIVE_ARG_OFFS(n)	(MVEBU_MBOX_REGS_BASE + 0x84 + (n) * 4)
++
++/* Host intterrupt reset - to complete received command/status processing */
++#define MBOX_HOST_INT_RESET		(MVEBU_MBOX_REGS_BASE + 0xC8)
++#define MBOX_SEC_CPU_CMD_COMPLETE	(BIT0)
++
++/* Host interrupt status - to poll for new command/status received from secure CPU */
++#define MBOX_SEC_CPU_INT_STAT_REG	(MVEBU_REGS_BASE + 0x17814)
++#define MBOX_SEC_CPU_CMD_SET		(BIT31)
++
++#define MBOX_COMMAND(sz, op)		((sz) | (op << 8))
++#define MBOX_OP_SIZE(cmd)		(cmd & 0xF)
++#define MBOX_OPERATION(cmd)		((cmd >> 8) & 0xF)
++
++enum mbox_opsize {
++	MB_OPSZ_BIT	= 1,	/* single bit */
++	MB_OPSZ_BYTE	= 2,	/* single byte */
++	MB_OPSZ_WORD	= 3,	/* 4 bytes - half row */
++	MB_OPSZ_DWORD	= 4,	/* 8 bytes - one row */
++	MB_OPSZ_256B	= 5,	/* 32 bytes - 4 rows */
++	MB_OPSZ_MAX
++};
++
++enum mbox_op {
++	MB_OP_READ	= 1,
++	MB_OP_WRITE	= 2,
++	MB_OP_MAX
++};
++
++enum mbox_status {
++	MB_STAT_SUCCESS			= 0,
++	MB_STAT_HW_ERROR		= 1,
++	MB_STAT_TIMEOUT			= 2,
++	MB_STAT_BAD_ARGUMENT		= 3,
++
++	MB_STAT_MAX
++};
++
++int mbox_send(enum mbox_opsize opsz, enum mbox_op op, uint32_t row, uint32_t offs, uint32_t *args);
++int mbox_receive(enum mbox_status *stat, uint32_t *args, uint32_t timeout_us);
++
++#endif /* _A3700_MBOX_H_ */
+diff --git a/arch/arm/include/asm/arch-armada3700/regs-base.h b/arch/arm/include/asm/arch-armada3700/regs-base.h
+index 0412bef..485f482 100644
+--- a/arch/arm/include/asm/arch-armada3700/regs-base.h
++++ b/arch/arm/include/asm/arch-armada3700/regs-base.h
+@@ -68,5 +68,7 @@
+ /* AVS */
+ #define MVEBU_AVS_REGS_BASE		(MVEBU_REGS_BASE + 0x11500)
+ 
++/* Mailbox */
++#define MVEBU_MBOX_REGS_BASE		(MVEBU_REGS_BASE + 0xB0000)
+ 
+ #endif	/* _REGS_BASE_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/efuse.h b/arch/arm/include/asm/arch-mvebu/efuse.h
+new file mode 100644
+index 0000000..15ebec6
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/efuse.h
+@@ -0,0 +1,98 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _MVEBU_EFUSE_H_
++#define _MVEBU_EFUSE_H_
++
++#define MVEBU_EFUSE_256B_ASCII_LEN	(64)	/* 256 bit key ASCII representation length */
++#define MVEBU_EFUSE_512B_ASCII_LEN	(128)	/* 256 bit key ASCII representation length */
++#define MVEBU_EFUSE_MAX_STRLEN		(MVEBU_EFUSE_512B_ASCII_LEN + 1) /* MAX key length in ASCII + \0 */
++
++enum efuse_id {
++	EFUSE_ID_BOOT_DEVICE		= 0,	/* Platform boot device in trusted boot mode */
++	EFUSE_ID_KAK_DIGEST		= 1,	/* KAK key digest (OEM key hash) */
++	EFUSE_ID_CSK_INDEX		= 2,	/* CSK key valid index (0-15) */
++	EFUSE_ID_AES_KEY		= 3,	/* Symmetric key / RKEK (write only) */
++	EFUSE_ID_ENCRYPTION_EN		= 4,	/* Enable boot image encryption */
++	EFUSE_ID_JTAG_DIGECT		= 5,	/* JTAG key digest */
++	EFUSE_ID_SEC_JTAG_DIS		= 6,	/* Secure CPU JTAG disable */
++	EFUSE_ID_SEC_JTAG_PERM_DIS	= 7,	/* Secure CPU permanent JTAG disable */
++	EFUSE_ID_AP_JTAG_DIS		= 8,	/* Application CPU JTAG disable */
++	EFUSE_ID_AP_JTAG_PERM_DIS	= 9,	/* Application CPU permanent JTAG disable */
++	EFUSE_ID_SPI_NAND_CFG		= 10,	/* SPI NAND configuration */
++	EFUSE_ID_PIN			= 11,	/* PIN */
++	EFUSE_ID_TOKEN			= 12,	/* Token */
++	EFUSE_ID_SPI_CS			= 13,	/* SPI chip select (0-4) */
++	EFUSE_ID_EMMC_CLOCK		= 14,	/* EMMC boot clock */
++	EFUSE_ID_OPERATION_MODE		= 15,	/* Operation mode trusted/untrusted/etc. */
++	EFUSE_ID_UART_DIS		= 16,	/* UART boot disable */
++	EFUSE_ID_UART_PERM_DIS		= 17,	/* UART boot permanent disable */
++	EFUSE_ID_ESC_SEQ_DIS		= 18,	/* UART escape sequence disable */
++	EFUSE_ID_GPIO_TOGGLE_DIS	= 19,	/* GPIO toggle disable */
++	EFUSE_ID_LONG_KEY_EN		= 20,	/* Long key enable */
++
++	EFUSE_ID_MAX
++};
++
++struct efuse_info {
++	char *name;
++	char *note;
++};
++
++#define MVEBU_EFUSE_INFO	{ \
++		{"BOOT_DEVICE", "SPINOR, SPINAND, EMMCNORM, EMMCALT, SATA, UART, AUTO"}, \
++		{"KAK_DIGEST", "SHA-256 KAK key digest in HEX format"}, \
++		{"CSK_INDEX", "CSK index in range 0 to 15 in DEC format"}, \
++		{"AES256_KEY", "AES-256 symmetric encryption key in HEX format"}, \
++		{"ENCRYPTION", "Enabe/Disable image encryption (2 bits, binary value):\n" \
++				"\t\t\t00 - Encryption is disabled\n" \
++				"\t\t\t01 - Encryption is enabled for recovery type images for eMMC only\n" \
++				"\t\t\t10 - Encryption is enabled for primary type images\n" \
++				"\t\t\t11 - Encryption is enabled for primary and recovery type images"}, \
++		{"JTAG_DIGEST", "JTAG KAK key digest in HEX format"}, \
++		{"SEC_JTAG_DIS", "Enabe/Disable secure JTAG - 0 or 1"}, \
++		{"SEC_JTAG_PR_DIS", "Enabe/Disable secure JTAG permanently - 0 or 1"}, \
++		{"AP_JTAG_DIS", "Enabe/Disable application CPU JTAG - 0 or 1"}, \
++		{"AP_JTAG_PR_DIS", "Enabe/Disable application CPU JTAG permanently - 0 or 1"}, \
++		{"SPI_NAND_CFG", "SPI NAND parameters in format PZ.BP.SO.SN, where (all decimal numbers):\n" \
++				"\t\t\tPZ - Page Size (for instance 2048)\n" \
++				"\t\t\tBP - Number of Pages per Block (for instance 64)\n" \
++				"\t\t\tSO - Spare area byte Offset\n" \
++				"\t\t\tSN - Spare area page Number"}, \
++		{"PIN_CODE", "64-bit pin code in HEX format"}, \
++		{"TOKEN", "\t64-bit token in HEX format"}, \
++		{"SPI_CS", "\tSPI chip select 0 to 3"}, \
++		{"EMMC_CLOCK", "EMMC clock - 0 - 12.5MHz, 1 - 50MHz"}, \
++		{"OPER_MODE", "Operation mode in range of 0 to 3, where:\n" \
++				"\t\t\t0 - Non-trusted BootROM, unprogrammed\n" \
++				"\t\t\t1 - Non-trusted boot, no security check on the boot device content\n" \
++				"\t\t\t2 - Trusted boot, security check is performed on the boot device content\n" \
++				"\t\t\t3 - Tamper state; BootROM does not boot device"}, \
++		{"UART_DIS", "Enabe/Disable UART port - 0 or 1"}, \
++		{"UART_PR_DIS", "Enabe/Disable UART port permanently - 0 or 1"}, \
++		{"ESC_SEQ_DIS", "Enabe/Disable Escape sequence in trusted boot mode - 0 or 1"}, \
++		{"GPIO_TOGGLE_DIS", "Enabe/Disable GPIO pin 11 and 12 toogle - 0 or 1"}, \
++		{"LONG_KEY_EN", "Enabe/Disable long key (512b) support  - 0 or 1"}, \
++		{"INVALID", "Invalid ID"} \
++	}
++
++int efuse_id_valid(enum efuse_id fid);
++int efuse_write(enum efuse_id fid, const char *value);
++int efuse_read(enum efuse_id fid, char *value);
++
++#endif /* _MVEBU_EFUSE_H_ */
+diff --git a/common/mvebu/Kconfig b/common/mvebu/Kconfig
+index 6b4cdba..8463181 100644
+--- a/common/mvebu/Kconfig
++++ b/common/mvebu/Kconfig
+@@ -82,4 +82,11 @@ config CMD_MVEBU_HW_INFO
+ 	  And update the MAC address in FDT file for Linux.
+ 	  When save the box information, it will be saved to EEPROM.
+ 
++config CMD_MVEBU_EFUSE
++	bool "efuse"
++	depends on MVEBU_EFUSE_SUPPORT
++	default n
++	help
++	  eFuse - allow access to SoC eFuse (OTP) entries
++
+ endmenu
+diff --git a/common/mvebu/Makefile b/common/mvebu/Makefile
+index f196ae3..2b7e742 100644
+--- a/common/mvebu/Makefile
++++ b/common/mvebu/Makefile
+@@ -25,3 +25,4 @@ obj-$(CONFIG_CMD_MVEBU_MSS_BOOT) += cmd_mss.o
+ obj-$(CONFIG_CMD_MVEBU_PHY_INDIRECT) += cmd_phy_indirect.o
+ obj-$(CONFIG_ENV_IS_IN_BOOTDEV) += env_bootdev.o
+ obj-$(CONFIG_CMD_MVEBU_HW_INFO) += cmd_hw_info.o
++obj-$(CONFIG_CMD_MVEBU_EFUSE) += cmd_efuse.o
+diff --git a/common/mvebu/cmd_efuse.c b/common/mvebu/cmd_efuse.c
+new file mode 100644
+index 0000000..978a7bf
+--- /dev/null
++++ b/common/mvebu/cmd_efuse.c
+@@ -0,0 +1,145 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++ #include <config.h>
++ #include <common.h>
++ #include <command.h>
++ #include <vsprintf.h>
++ #include <errno.h>
++ #include <asm/arch-mvebu/efuse.h>
++
++int do_efuse_cmd(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
++{
++	const char		*cmd = NULL;
++	const char		*efuse = NULL;
++	const char		*writeval = NULL;
++	char			readval[MVEBU_EFUSE_MAX_STRLEN];
++	enum efuse_id		fid = EFUSE_ID_MAX;
++	struct efuse_info	finfo[] = MVEBU_EFUSE_INFO;
++	int			status = CMD_RET_SUCCESS;
++
++	if (argc < 2) {
++		printf("Error: No command supplied\n");
++		return CMD_RET_USAGE;
++	} else
++		cmd = argv[1];
++
++	if ((strcmp(cmd, "read") == 0) && (argc < 3)) {
++		printf("Error: Please specify eFuse ID\n");
++		return CMD_RET_USAGE;
++	}
++
++	if ((strcmp(cmd, "write") == 0) && (argc < 4)) {
++		printf("Error: Please specify eFuse ID and value\n");
++		return CMD_RET_USAGE;
++	}
++
++
++	if (argc > 2) {
++		efuse = argv[2];
++		for (fid = EFUSE_ID_BOOT_DEVICE; fid < EFUSE_ID_MAX; fid++) {
++			if (strcmp(efuse, finfo[fid].name) == 0)
++				break;
++		}
++		if (fid == EFUSE_ID_MAX) {
++			printf("%s - Invalid eFuse ID\n", efuse);
++			return CMD_RET_USAGE;
++		} else if (efuse_id_valid(fid) != 1) {
++			printf("%s - Unsupported eFuse ID\n", efuse);
++			return CMD_RET_USAGE;
++		}
++	}
++
++	if (argc > 3)
++		writeval = argv[3];
++
++
++	if (strcmp(cmd, "list") == 0) {
++
++		/* LIST */
++		printf("  EFUSE ID\t\tDESCRIPTION\n");
++		printf("---------------------------------------------------------\n");
++		for (fid = EFUSE_ID_BOOT_DEVICE; fid < EFUSE_ID_MAX; fid++) {
++			if (efuse_id_valid(fid))
++				printf("%s\t%s\n", finfo[fid].name, finfo[fid].note);
++		}
++
++	} else if (strcmp(cmd, "dump") == 0) {
++
++		/* DUMP */
++		printf("  EFUSE ID\t\tVALUE\n");
++		printf("---------------------------------------------------------\n");
++		for (fid = EFUSE_ID_BOOT_DEVICE; fid < EFUSE_ID_MAX; fid++) {
++			if (efuse_id_valid(fid)) {
++				if (efuse_read(fid, readval) == 0) {
++					printf("%s\t%s%s\n", finfo[fid].name,
++						strlen(finfo[fid].name) < 8 ? "\t" : "", readval);
++				} else {
++					printf("%s\t=== ERROR READING EFUSE VALUE ===\n", finfo[fid].name);
++					status = CMD_RET_FAILURE;
++				}
++			}
++		}
++
++	} else if (strcmp(cmd, "read") == 0) {
++
++		/* READ */
++		if (efuse_read(fid, readval) == 0) {
++			printf("%s\t%s%s\n", finfo[fid].name,
++				strlen(finfo[fid].name) < 8 ? "\t" : "", readval);
++		} else {
++			printf("%s\t=== ERROR READING EFUSE VALUE ===\n", finfo[fid].name);
++			status = CMD_RET_FAILURE;
++		}
++
++	} else if (strcmp(cmd, "write") == 0) {
++
++		/* WRITE */
++		if (efuse_write(fid, writeval) == 0) {
++			if (efuse_read(fid, readval) == 0) {
++				printf("Returned EFUSE value after write:\n");
++				printf("%s\t%s\n", finfo[fid].name, readval);
++			} else {
++				printf("%s\t=== ERROR READING BACK EFUSE VALUE ===\n", finfo[fid].name);
++				status = CMD_RET_FAILURE;
++			}
++		} else {
++			printf("%s\t=== ERROR WRITING EFUSE VALUE ===\n", finfo[fid].name);
++			status = CMD_RET_FAILURE;
++		}
++
++	} else {
++
++		/* ERROR */
++		printf("Usupported command \"%s\"\n", cmd);
++		status = CMD_RET_USAGE;
++
++	}
++
++	return status;
++}
++
++U_BOOT_CMD(
++	efuse,      4,     1,      do_efuse_cmd,
++	"efuse - read/Write SoC eFuse entries\n",
++	"\n"
++	"Access to SoC eFuse entry values\n"
++	"\tlist         - Display all supported eFuse entry ids\n"
++	"\tdump         - Dump all supported eFuse entries\n"
++	"\tread id      - Read eFuse entry \"id\"\n"
++	"\twrite val id - Write \"val\" to eFuse entry \"id\"\n"
++);
+diff --git a/drivers/Kconfig b/drivers/Kconfig
+index b9b5dc1..5481e43 100644
+--- a/drivers/Kconfig
++++ b/drivers/Kconfig
+@@ -54,4 +54,6 @@ source "drivers/thermal/Kconfig"
+ 
+ source "drivers/ddr/Kconfig"
+ 
++source "drivers/efuse/Kconfig"
++
+ endmenu
+diff --git a/drivers/Makefile b/drivers/Makefile
+index 5ef58c0..219d33d 100644
+--- a/drivers/Makefile
++++ b/drivers/Makefile
+@@ -23,3 +23,4 @@ obj-y += input/
+ # SOC specific infrastructure drivers.
+ obj-y += soc/
+ obj-y += thermal/
++obj-y += efuse/
+diff --git a/drivers/efuse/Kconfig b/drivers/efuse/Kconfig
+new file mode 100644
+index 0000000..b31e3c1
+--- /dev/null
++++ b/drivers/efuse/Kconfig
+@@ -0,0 +1,11 @@
++menu "eFuse support"
++
++config MVEBU_EFUSE_SUPPORT
++	bool "eFuse support"
++	depends on (TARGET_ARMADA_3700 || TARGET_ARMADA_8K)
++	default y
++	help
++	  Choose this option to add support
++	  for eFuse access driver
++
++endmenu
+diff --git a/drivers/efuse/Makefile b/drivers/efuse/Makefile
+new file mode 100644
+index 0000000..f6b1f78
+--- /dev/null
++++ b/drivers/efuse/Makefile
+@@ -0,0 +1,2 @@
++obj-$(CONFIG_TARGET_ARMADA_3700) += a3700_efuse.o
++obj-$(CONFIG_TARGET_ARMADA_8K) += a8k_efuse.o
+diff --git a/drivers/efuse/a3700_efuse.c b/drivers/efuse/a3700_efuse.c
+new file mode 100644
+index 0000000..ae9caa8
+--- /dev/null
++++ b/drivers/efuse/a3700_efuse.c
+@@ -0,0 +1,371 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2015 Marvell International Ltd.
++* ***************************************************************************
++* This program is free software: you can redistribute it and/or modify it
++* under the terms of the GNU General Public License as published by the Free
++* Software Foundation, either version 2 of the License, or any later version.
++*
++* This program is distributed in the hope that it will be useful,
++* but WITHOUT ANY WARRANTY; without even the implied warranty of
++* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++* GNU General Public License for more details.
++*
++* You should have received a copy of the GNU General Public License
++* along with this program.  If not, see <http://www.gnu.org/licenses/>.
++* ***************************************************************************
++*/
++#include <common.h>
++#include <command.h>
++#include <vsprintf.h>
++#include <malloc.h>
++#include <errno.h>
++#include <asm/io.h>
++#include <asm/arch-mvebu/mvebu.h>
++#include "a3700_efuse.h"
++
++
++static struct a3700_efuse_info efuse_info[EFUSE_ID_MAX] = A3700_EFUSE_INFO;
++static char *bdnames[] = A3700_BOOT_DEV_NAMES;
++
++/******************************************************************************
++ *	efuse_id_valid
++ ******************************************************************************/
++int efuse_id_valid(enum efuse_id fid)
++{
++	if (fid < EFUSE_ID_MAX)
++		return 1;
++	else
++		return 0;
++}
++
++/******************************************************************************
++ *	efuse_write
++ ******************************************************************************/
++int efuse_write(enum efuse_id fid, const char *value)
++{
++	uint32_t		args[MBOX_MAX_ARGS];
++	enum a3700_boot_dev	bdev;
++	uint32_t		info_idx, numval = 0;
++	uint32_t		numwords, ascii_words;
++	char			buf[9];
++	int			status, n;
++	enum mbox_status	cmd_stat;
++	uint64_t		fullrow;
++	char			*str, *strcopy, *substr;
++	uint32_t		val[4];
++
++	/* Find efuse info with length and offset */
++	for (info_idx = 0; info_idx < EFUSE_ID_MAX; info_idx++) {
++		if (efuse_info[info_idx].id == fid)
++			break;
++	}
++
++	if (info_idx == EFUSE_ID_MAX) {
++		printf("%s: Unsupported eFuse ID\n", __func__);
++		return 1;
++	}
++
++	/* Each word is coded by 8 ASCII characters, one character per nibble */
++	numwords = strlen(value) >> 3;
++	memset(buf, 0, 9);
++	memset(args, 0, MBOX_MAX_ARGS * sizeof(uint32_t));
++
++	/* parse input parameter */
++	switch (fid) {
++	case EFUSE_ID_BOOT_DEVICE:
++		for (bdev = 0; bdev < MAX_BOOT_DEVS; bdev++) {
++			if (strcmp(value, bdnames[bdev]) == 0)
++				break;
++		}
++		if (bdev == MAX_BOOT_DEVS) {
++			printf("%s: Unsupported Boot Device\n", __func__);
++			return 1;
++		}
++		numval = bdev;
++		break;
++
++	case EFUSE_ID_KAK_DIGEST:
++	case EFUSE_ID_AES_KEY:
++	case EFUSE_ID_JTAG_DIGECT:
++	case EFUSE_ID_PIN:
++	case EFUSE_ID_TOKEN:
++		/* TODO - add support for 512b keys if needed */
++		if (efuse_info[info_idx].mbopsz == MB_OPSZ_256B) {
++			ascii_words = 8;
++		} else if (efuse_info[info_idx].mbopsz == MB_OPSZ_DWORD) {
++			ascii_words = 2;
++		} else {
++			printf("Bad operation size for this key!\n");
++			return 1;
++		}
++		if (numwords != ascii_words) {
++			printf("%s: Unsupported digest length (%d) - expected %d bytes\n",
++			      __func__, numwords << 3, ascii_words << 3);
++			return 1;
++		}
++		/* Convert ASCII representation to WORD integer arguments
++		   The eFuse has to have LSB part in lower rows */
++		for (n = 0; n < numwords; n++) {
++			memcpy(buf, &value[n * 8], 8);	/* 8 ASCII characters in WORD argument */
++			args[numwords - n - 1] = simple_strtoul(buf, 0, 16);
++		}
++		break;
++
++	case EFUSE_ID_CSK_INDEX:
++		numval = simple_strtoul(value, 0, 10);
++		if (numval > 15) {
++			printf("%s: Invalid CSK index %d, expected [0..15]\n", __func__, numval);
++			return 1;
++		}
++		/* The CSK key validity is stored in a single efuse row,
++		   but the bit offset depends on CSK index.
++		   Each index is selected by majority vote out of 3 bits.
++		   In order to set single index, 2 or 3 physical bits should be programmed
++		   Gap between index start positions is 4 bits.
++		 */
++		fullrow = 0x7 << (4 * numval);
++		args[0] = fullrow & 0xFFFFFFFF;
++		args[1] = (fullrow >> 32) & 0xFFFFFFFF;
++		break;
++
++	case EFUSE_ID_ENCRYPTION_EN:
++		numval = simple_strtoul(value, 0, 16);
++		if ((numval != 0x11) && (numval != 0x10) && (numval != 0x1)) {
++			printf("%s: Invalid value %x, expected 1, 10 or 11\n", __func__, numval);
++			return 1;
++		}
++		numval = (numval & 1) | ((numval & 0x10) >> 3);
++		break;
++
++	case EFUSE_ID_SEC_JTAG_DIS:
++	case EFUSE_ID_SEC_JTAG_PERM_DIS:
++	case EFUSE_ID_AP_JTAG_DIS:
++	case EFUSE_ID_AP_JTAG_PERM_DIS:
++	case EFUSE_ID_UART_DIS:
++	case EFUSE_ID_UART_PERM_DIS:
++	case EFUSE_ID_ESC_SEQ_DIS:
++	case EFUSE_ID_GPIO_TOGGLE_DIS:
++	case EFUSE_ID_LONG_KEY_EN:
++	case EFUSE_ID_EMMC_CLOCK:
++		numval = simple_strtoul(value, 0, 10);
++		if (numval != 1) {
++			printf("%s: Invalid value %d, expected 1\n", __func__, numval);
++			return 1;
++		}
++		break;
++
++	case EFUSE_ID_OPERATION_MODE:
++	case EFUSE_ID_SPI_CS:
++		numval = simple_strtoul(value, 0, 10);
++		if (numval > 3) {
++			printf("%s: Invalid value %d, expected [0..3]\n", __func__, numval);
++			return 1;
++		}
++		break;
++
++	case EFUSE_ID_SPI_NAND_CFG:
++		strcopy = strdup(value);
++		if (strcopy == NULL) {
++			printf("%s: Unable to duplicate parameters list!\n", __func__);
++			return 1;
++		}
++		str = strcopy;
++		for (n = 0; n < 4; n++) {
++			if (str == NULL) {
++				printf("%s: Invalid parameters list, expected PZ.BP.SO.SN\n", __func__);
++				return 1;
++			}
++			substr = strsep(&str, ".");
++			val[n] = simple_strtoul(substr, 0, 10);
++			if (((n == 0) && (val[n] > 0xFFFF)) || ((n > 0) && (val[n] > 0xFF))) {
++				printf("%s: Invalid value[%d] %d, expected %s\n",
++				      __func__, n, val[n], n == 0 ? "0 - 65535" : "0 - 255");
++				return 1;
++			}
++		}
++		free(strcopy);
++		args[0] = (val[1] << 16) | val[0]; /* PZ - bit[15:0], PB - bit[23:16] */
++		args[1] = (val[3] << 16) | val[2]; /* SO - bit[39:32], SN - bit[55:48] */
++		break;
++
++	default:
++		printf("%s: This eFuse ID write function is not implemented\n", __func__);
++		return 1;
++	}
++
++	/* Send command to the remote CPU */
++	for (n = 0; n < efuse_info[info_idx].numops; n++) {
++		/* for bit fields write 1 bit a time */
++		if (efuse_info[info_idx].mbopsz == MB_OPSZ_BIT)
++			args[0] = (numval >> n) & 1;
++
++		status = mbox_send(efuse_info[info_idx].mbopsz,
++				   MB_OP_WRITE,
++				   efuse_info[info_idx].row,
++				   efuse_info[info_idx].bitoffs[n],
++				   args);
++
++		if (status != 0) {
++			printf("%s: Failed to dispatch command to remote CPU (n=%d)\n", __func__, n);
++			break;
++		}
++
++		/* Ensure the command execution ended on remote CPU */
++		cmd_stat = MB_STAT_SUCCESS;
++		status = mbox_receive(&cmd_stat, args, MBOX_CMD_TIMEOUT);
++		if (status != 0 || cmd_stat != MB_STAT_SUCCESS) {
++			printf("%s: Remote command execution failed (n=%d). Error local=%d, remote=%d\n",
++			      __func__, n, status, cmd_stat);
++			break;
++		}
++	}
++
++	return status;
++}
++
++/******************************************************************************
++ *	efuse_read
++ ******************************************************************************/
++int efuse_read(enum efuse_id fid, char *value)
++{
++	uint32_t		args[MBOX_MAX_ARGS];
++	uint32_t		info_idx, n;
++	uint32_t		count;
++	int			status;
++	enum mbox_status	cmd_stat;
++	uint32_t		numval = 0;
++	uint32_t		page_sz, page_block, spare_offs, spare_page;
++	uint32_t		numwords;
++	uint64_t		fullrow;
++
++	/* Find efuse info with length and offset */
++	for (info_idx = 0; info_idx < EFUSE_ID_MAX; info_idx++) {
++		if (efuse_info[info_idx].id == fid)
++			break;
++	}
++
++	if (info_idx == EFUSE_ID_MAX) {
++		printf("%s: Unsupported eFuse ID\n", __func__);
++		return 1;
++	}
++
++	memset(args, 0, MBOX_MAX_ARGS * sizeof(uint32_t));
++
++	/* Send command to the remote CPU */
++	for (n = 0; n < efuse_info[info_idx].numops; n++) {
++		status = mbox_send(efuse_info[info_idx].mbopsz,
++				   MB_OP_READ,
++				   efuse_info[info_idx].row,
++				   efuse_info[info_idx].bitoffs[n],
++				   args);
++
++		if (status != 0) {
++			printf("%s: Failed to dispatch command to remote CPU (n=%d)\n", __func__, n);
++			return status;
++		}
++
++		/* Ensure the command execution ended on remote CPU and get the result */
++		cmd_stat = MB_STAT_SUCCESS;
++		status = mbox_receive(&cmd_stat, args, MBOX_CMD_TIMEOUT);
++		if (status != 0) {
++			printf("%s: Failed locally (n=%d). Error=%d\n", __func__, n, status);
++			return status;
++		} else if (cmd_stat != MB_STAT_SUCCESS) {
++			printf("%s: Failed on remote (n=%d). Error=%d\n", __func__, n, cmd_stat);
++			return 1;
++		}
++
++		/* for bit fields collect 1 bit a time */
++		if (efuse_info[info_idx].mbopsz == MB_OPSZ_BIT)
++			numval |= (args[0] & 1) << n;
++	}
++
++	/* format the output value */
++	switch (fid) {
++	case EFUSE_ID_BOOT_DEVICE:
++		if (numval >= MAX_BOOT_DEVS || numval == INVALID)
++			sprintf(value, "INVALID VALUE (%d)", numval);
++		else
++			sprintf(value, "%s (%d)", bdnames[numval], numval);
++		break;
++
++	case EFUSE_ID_KAK_DIGEST:
++	case EFUSE_ID_AES_KEY:
++	case EFUSE_ID_JTAG_DIGECT:
++	case EFUSE_ID_PIN:
++	case EFUSE_ID_TOKEN:
++		/* TODO - add support for 512b keys if needed */
++		if (efuse_info[info_idx].mbopsz == MB_OPSZ_256B) {
++			numwords = 8;
++		} else if (efuse_info[info_idx].mbopsz == MB_OPSZ_DWORD) {
++			numwords = 2;
++		} else {
++			printf("Bad operation size for this key!\n");
++			return 1;
++		}
++		/* The eFuse has LSB part in lower rows */
++		for (n = 0; n < numwords; n++)
++			sprintf(value + n * 8, "%08X", args[numwords - n - 1]);
++		break;
++
++	case EFUSE_ID_CSK_INDEX:
++		/* show all valid CSK IDs */
++		count = 0;
++		fullrow = args[1];	/* MSB */
++		fullrow <<= 32;
++		fullrow |= args[0];	/* LSB */
++		for (n = 0; n < 15; n++) {
++			/* Each CSK validity is a 3 bit majority vote
++			   The distance between fileds is 4 bits */
++			numval = (fullrow >> (n * 4)) & 0x7;
++			/* Two or more bits set - CSK is valid */
++			if (numval > 4 || numval == 3)
++				count += sprintf(value + count, "%d ", n);
++		}
++		if (count == 0)
++			sprintf(value, "NONE");
++		break;
++
++	case EFUSE_ID_ENCRYPTION_EN:
++		sprintf(value, "%01d%01d", (numval >> 1) & 1, numval & 1);
++		break;
++
++	case EFUSE_ID_LONG_KEY_EN:
++		sprintf(value, "%s (%d)", numval == 0 ? "DISABLED" : "ENABLED", numval);
++		break;
++
++	case EFUSE_ID_SEC_JTAG_DIS:
++	case EFUSE_ID_SEC_JTAG_PERM_DIS:
++	case EFUSE_ID_AP_JTAG_DIS:
++	case EFUSE_ID_AP_JTAG_PERM_DIS:
++	case EFUSE_ID_UART_DIS:
++	case EFUSE_ID_UART_PERM_DIS:
++	case EFUSE_ID_ESC_SEQ_DIS:
++	case EFUSE_ID_GPIO_TOGGLE_DIS:
++		sprintf(value, "%s (%d)", numval == 1 ? "DISABLED" : "ENABLED", numval);
++		break;
++
++	case EFUSE_ID_OPERATION_MODE:
++	case EFUSE_ID_SPI_CS:
++		sprintf(value, "%d", numval);
++		break;
++
++	case EFUSE_ID_EMMC_CLOCK:
++		sprintf(value, "%s (%d)", numval == 0 ? "12.5MHz" : "50MHz", numval);
++		break;
++
++	case EFUSE_ID_SPI_NAND_CFG:
++		page_sz = args[0] & 0xFFFF;		/* bit[15:0] */
++		page_block = (args[0] >> 16) & 0xFF;	/* bit[23:16] */
++		spare_offs = args[1] & 0xFF;		/* bit[39:32], value 1 means byte 0 */
++		spare_page = (args[1] >> 16) & 0xFF;	/* bit[55:48], value 1 means page 0 */
++		sprintf(value, "%04d.%02d.%02d.%02d", page_sz, page_block, spare_offs, spare_page);
++		break;
++
++	default:
++		sprintf(value, "NOT IMPLEMENTED");
++	}
++
++	return 0;
++}
+diff --git a/drivers/efuse/a3700_efuse.h b/drivers/efuse/a3700_efuse.h
+new file mode 100644
+index 0000000..01075e9
+--- /dev/null
++++ b/drivers/efuse/a3700_efuse.h
+@@ -0,0 +1,75 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _A3700_EFUSE_H_
++#define _A3700_EFUSE_H_
++
++#include <asm/arch-mvebu/efuse.h>
++#include <asm/arch-armada3700/mbox.h>
++
++
++enum a3700_boot_dev {
++	AUTO		= 0,
++	SPINOR		= 1,
++	EMMCNORM	= 2,
++	EMMCALT		= 3,
++	SATA		= 4,
++	SPINAND		= 5,
++	UART		= 6,
++	INVALID		= 7,
++	VECTOR_DIV	= 8,
++	VECTOR_XTAL	= 9,
++
++	MAX_BOOT_DEVS
++};
++
++#define A3700_BOOT_DEV_NAMES	{"AUTO", "SPINOR", "EMMCNORM", "EMMCALT", "SATA", "SPINAND", "UART", "", "", ""}
++
++struct a3700_efuse_info {
++	enum efuse_id		id;		/* efuse ID */
++	enum mbox_opsize	mbopsz;		/* mailbox operation size bit/byte/word, etc. */
++	uint32_t		row;		/* efuse row or start row for multi-row values */
++	uint32_t		numops;		/* number of write operations required for setting the field */
++	int32_t			bitoffs[4];	/* efuse bit offset within the row for bit size efuses */
++};
++
++#define A3700_EFUSE_INFO	{ \
++		{ EFUSE_ID_BOOT_DEVICE,       MB_OPSZ_BIT,   1,   4, { 48, 52, 56, 60 } }, \
++		{ EFUSE_ID_KAK_DIGEST,        MB_OPSZ_256B,  8,   1, { 0, 0, 0, 0 } }, \
++		{ EFUSE_ID_CSK_INDEX,         MB_OPSZ_DWORD, 3,   1, { 0, 0, 0, 0 } }, \
++		{ EFUSE_ID_AES_KEY,           MB_OPSZ_256B,  26,  1, { 0, 0, 0, 0 } }, \
++		{ EFUSE_ID_ENCRYPTION_EN,     MB_OPSZ_BIT,   0,   2, { 56, 60, 0, 0 } }, \
++		{ EFUSE_ID_JTAG_DIGECT,       MB_OPSZ_256B,  16,  1, { 0, 0, 0, 0 } }, \
++		{ EFUSE_ID_SEC_JTAG_DIS,      MB_OPSZ_BIT,   0,   1, { 24, 0, 0, 0 } }, \
++		{ EFUSE_ID_SEC_JTAG_PERM_DIS, MB_OPSZ_BIT,   0,   1, { 28, 0, 0, 0 } }, \
++		{ EFUSE_ID_AP_JTAG_DIS,       MB_OPSZ_BIT,   0,   1, { 16, 0, 0, 0 } }, \
++		{ EFUSE_ID_AP_JTAG_PERM_DIS,  MB_OPSZ_BIT,   0,   1, { 20, 0, 0, 0 } }, \
++		{ EFUSE_ID_SPI_NAND_CFG,      MB_OPSZ_DWORD, 6,   1, { 0, 0, 0, 0 } }, \
++		{ EFUSE_ID_PIN,               MB_OPSZ_DWORD, 4,   1, { 0, 0, 0, 0 } }, \
++		{ EFUSE_ID_TOKEN,             MB_OPSZ_DWORD, 5,   1, { 0, 0, 0, 0 } }, \
++		{ EFUSE_ID_SPI_CS,            MB_OPSZ_BIT,   1,   2, { 40, 44, 0, 0 } }, \
++		{ EFUSE_ID_EMMC_CLOCK,        MB_OPSZ_BIT,   1,   2, { 32, 36, 0, 0 } }, \
++		{ EFUSE_ID_OPERATION_MODE,    MB_OPSZ_BIT,   1,   2, { 0, 4, 0, 0 } }, \
++		{ EFUSE_ID_UART_DIS,          MB_OPSZ_BIT,   0,   1, { 32, 0, 0, 0 } }, \
++		{ EFUSE_ID_UART_PERM_DIS,     MB_OPSZ_BIT,   0,   1, { 36, 0, 0, 0 } }, \
++		{ EFUSE_ID_ESC_SEQ_DIS,       MB_OPSZ_BIT,   1,   1, { 20, 0, 0, 0 } }, \
++		{ EFUSE_ID_GPIO_TOGGLE_DIS,   MB_OPSZ_BIT,   1,   1, { 16, 0, 0, 0 } }, \
++		{ EFUSE_ID_LONG_KEY_EN,       MB_OPSZ_BIT,   1,   1, { 12, 0, 0, 0 } } \
++	}
++
++#endif /* _A3700_EFUSE_H_ */
+diff --git a/drivers/efuse/a8k_efuse.c b/drivers/efuse/a8k_efuse.c
+new file mode 100644
+index 0000000..059de8d
+--- /dev/null
++++ b/drivers/efuse/a8k_efuse.c
+@@ -0,0 +1,37 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2015 Marvell International Ltd.
++* ***************************************************************************
++* This program is free software: you can redistribute it and/or modify it
++* under the terms of the GNU General Public License as published by the Free
++* Software Foundation, either version 2 of the License, or any later version.
++*
++* This program is distributed in the hope that it will be useful,
++* but WITHOUT ANY WARRANTY; without even the implied warranty of
++* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++* GNU General Public License for more details.
++*
++* You should have received a copy of the GNU General Public License
++* along with this program.  If not, see <http://www.gnu.org/licenses/>.
++* ***************************************************************************
++*/
++
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch-mvebu/mvebu.h>
++#include <asm/arch-mvebu/efuse.h>
++
++int efuse_id_valid(enum efuse_id fid)
++{
++	return 0;
++}
++
++int efuse_write(enum efuse_id fid, const char *value)
++{
++	return 0;
++}
++
++int efuse_read(enum efuse_id fid, char *value)
++{
++	return 0;
++}
+-- 
+1.9.1
+

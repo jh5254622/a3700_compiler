@@ -1,0 +1,128 @@
+
+/dts-v1/;
+#include <dt-bindings/ddr/ddr_data.h>
+#include "armada-3700.dtsi"
+#include <dt-bindings/multi-fdt/multi-fdt.h>
+
+/* detail board setup:
+ * Pcie Jumper slot	:	DB-88F3720-PCIe-mPCIe-Jumper
+ * SGMII module slot	:	DB-88F3720-SerDes-Jumper
+ * RGMII module slot	:	DB-88F3720-PHY module
+ * eMMC slot		:	DB-88F3720-eMMC_NAND module
+ * SDIO slot		:	DB-88F3720-SDcard module
+ *
+ * PHY0 (USB3/SGMII1)	:	USB3
+ * PHY1 (PCIe/SGMII0)	:	PCIe (WiFi via mini_PCIe module)
+ * PHY2 (SATA)		:	SATA
+ * RGMII-0		:	Ethernet via PHY (1 Lane)
+ * USB2 Port 0		:	USB2 as part USB3
+ * USB2 Port 1		:	USB2 Host
+ * eMMC*		:	eMMC NAND
+ * SDIO*		:	SD card
+ * BOOT device*		:	SPI Flash
+*/
+
+/ {
+	model = "DB-88F3720-DDR3-Modular";
+	compatible = "marvell,armada-3700-db0", "marvell,armada-3700";
+	fdt_config_id = <A3700_DDR3_DB_CONFIG_ID_DEFAULT>;
+	board_id = <A3700_DDR3_DB_ID>;
+
+	soc {
+		internal-regs {
+			avs@11500 {
+				status = "okay";
+			};
+			serial: serial@12000 {
+				status = "okay";
+			};
+			spi0: spi@10600 {
+				output-enable-gpio = <&gpio0 ARMADA_3700_GPIO(BANK_0, 60) GPIO_ACTIVE_HIGH>;
+				status = "okay";
+			};
+			pm@14000 {
+				vdd_control = "avs";
+				status = "okay";
+			};
+			neta0: neta@30000 {
+				status = "okay";
+				phy_addr = <0x0>;
+				phy_mode = "rgmii";
+			};
+			i2c: i2c@11000 {
+				status = "okay";
+			};
+			comphy {
+				phy0 {
+					phy-type = <PHY_TYPE_PEX0>;
+					phy-speed = <PHY_SPEED_2_5G>;
+				};
+				phy1 {
+					phy-type = <PHY_TYPE_USB3_HOST0>;
+					phy-speed = <PHY_SPEED_5G>;
+				};
+			};
+			pcie-controller {
+				pcie@1,0 {
+					reset-gpio = <&gpio1 ARMADA_3700_GPIO(BANK_1, 3) GPIO_ACTIVE_HIGH>;
+					status = "okay";
+				};
+			};
+			sata: sata@e0000 {
+				status = "okay";
+			};
+			mmc0: mmc@D8000 {
+				xenon,emmc;
+				bus-width = <8>;
+				status = "okay";
+			};
+			mmc1: mmc@D0000 {
+				sdio-vcc-gpio = <&gpio1 ARMADA_3700_GPIO(BANK_1, 22) GPIO_ACTIVE_HIGH>;
+				bus-width = <4>;
+				status = "okay";
+			};
+			usb3: usb3@58000 {
+				status = "okay";
+			};
+			usb: usb@5e000 {
+				status = "okay";
+			};
+		};
+	};
+};
+
+&pinctl0 { /* north bridge */
+		/* MPP Bus:
+		   JTAG     0
+		   SDIO     1
+		   eMMC     2
+		   PWM      [3-6]
+		   PMIC     [7-8]
+		   I2C      [9-10]
+		   SPI      [15]
+		   ONEWIRE  [16]
+		   UART     [17]
+		   SPI_QUAD [18]
+		   UART2    [19]
+		   LED      [20-23]
+		*/
+			/* 0 1 2 3 4 5 6 7 */
+	pin-func = < 0 1 0 1 1 1 1 1
+			   1 1 0 0 1 1 1 0
+			   1 0 0 0 0 0 0 0 >;
+};
+
+&pinctl1 { /* south bridge */
+		/* MPP Bus:
+		   USB32    0
+		   USB2     1
+		   SB-SDIO  2
+		   RGMII    3
+		   PCIE     4
+		   PTP      [5-7]
+		   MII      8
+		*/
+			/* 0 1 2 3 4 5 6 7 */
+	pin-func = < 1 1 0 0 1 1 0 0
+			   0 >;
+};

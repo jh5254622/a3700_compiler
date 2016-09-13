@@ -1,0 +1,92 @@
+From db344e34609cf9349ebe876aeacff72d5831eca4 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Thu, 14 Jan 2016 01:15:12 +0800
+Subject: [PATCH 0687/1240] scsi: a3700: enable SATA power by default
+
+Enable the SATA power by default by setting the IO
+expander via I2C.
+Thus corresponding bit(bit2 of reg 0x6) in IO expander
+(I2C device 0x22) will be cleared to output mode,
+and the SATA will be powered on.
+
+Change-Id: Id89ee4e56fb35a7d7af13c40b6c8874359642e43
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26758
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv8/armadalp/soc-init.c | 31 +++++++++++++++++++++++++++++++
+ arch/arm/cpu/mvebu-common/soc-init.c   |  9 +++++++++
+ 2 files changed, 40 insertions(+)
+
+diff --git a/arch/arm/cpu/armv8/armadalp/soc-init.c b/arch/arm/cpu/armv8/armadalp/soc-init.c
+index 3f7dc86..3646565 100644
+--- a/arch/arm/cpu/armv8/armadalp/soc-init.c
++++ b/arch/arm/cpu/armv8/armadalp/soc-init.c
+@@ -24,6 +24,12 @@
+ #include <netdev.h>
+ #include <asm/arch/mbus_reg.h>
+ #include <asm/arch-mvebu/mbus.h>
++#include <i2c.h>
++
++/* IO expander I2C device */
++#define I2C_DEV_IO_EXPANDER	0x22
++#define  CONFIG_PORT_0_REG	0x6
++#define  CONFIG_PORT_0_SATA_OFF	2
+ 
+ /* NB warm reset */
+ #define MVEBU_NB_WARM_RST_REG	(MVEBU_GPIO_NB_REG_BASE + 0x40)
+@@ -154,3 +160,28 @@ void reset_cpu(ulong ignored)
+ 	   to trigger warm reset */
+ 	writel(MVEBU_NB_WARM_RST_MAGIC_NUM, MVEBU_NB_WARM_RST_REG);
+ }
++
++#ifdef CONFIG_SCSI_AHCI_PLAT
++void board_ahci_power_on(void)
++{
++/* This I2C IO expander configuration is board specific,
++ * and adequete only to Marvell A3700 DB board
++ */
++#ifdef CONFIG_DEVEL_BOARD
++	int ret;
++	unsigned char buffer[1];
++
++	/* Enable power of SATA by set IO expander via I2C,
++	 * to set corresponding bit to output mode to enable the power for SATA.
++	 */
++	ret = i2c_read(I2C_DEV_IO_EXPANDER, CONFIG_PORT_0_REG, sizeof(unsigned char), buffer, sizeof(buffer));
++	if (ret)
++		error("failed to read IO expander value via I2C\n");
++
++	buffer[0] &= ~(1 << CONFIG_PORT_0_SATA_OFF);
++	ret = i2c_write(I2C_DEV_IO_EXPANDER, CONFIG_PORT_0_REG, sizeof(unsigned char), buffer, sizeof(buffer));
++	if (ret)
++		error("failed to set IO expander via I2C\n");
++#endif /* CONFIG_DEVEL_BOARD */
++}
++#endif
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index 3155fc1..d1a8ca2 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -43,8 +43,17 @@
+ #endif
+ 
+ #ifdef CONFIG_SCSI_AHCI_PLAT
++void __board_ahci_power_on(void)
++{
++	return;
++}
++void board_ahci_power_on(void) __attribute__((weak, alias("__board_ahci_power_on")));
++
+ void board_ahci_init(void)
+ {
++	/* enable the AHCI power */
++	board_ahci_power_on();
++
+ 	ahci_init();
+ 	/* use mode 1 for scsi_scan, so scsi device info will
+ 	  * be reported (print out) after scan the scsi bus.
+-- 
+1.9.1
+

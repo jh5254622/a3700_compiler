@@ -1,0 +1,34 @@
+From 6f6f054348a35397afd3207c770557f41142bd40 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Sun, 29 Nov 2015 13:29:36 +0200
+Subject: [PATCH 0540/1240] fix: clock: a8k: aligned clock prints with tabs
+
+Change-Id: Ie1731f73a7d277ae9e6a932a31765f82fd6ef1c0
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25365
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/clock.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/clock.c b/arch/arm/cpu/armv8/armada8k/clock.c
+index 7d278fd..bce2082 100644
+--- a/arch/arm/cpu/armv8/armada8k/clock.c
++++ b/arch/arm/cpu/armv8/armada8k/clock.c
+@@ -74,8 +74,8 @@ u32 soc_get_ddr_clk(void)
+ 
+ void soc_print_clock_info(void)
+ {
+-	printf("Clock: CPU     %-4d [MHz]\n", soc_get_cpu_clk() / MHz);
+-	printf("       DDR     %-4d [MHz]\n", soc_get_ddr_clk() / MHz);
+-	printf("       FABRIC  %-4d [MHz]\n", soc_get_ring_clk() / MHz);
+-	printf("       MSS     %-4d [MHz]\n", soc_get_mss_clk() / MHz);
++	printf("Clock:  CPU     %-4d [MHz]\n", soc_get_cpu_clk() / MHz);
++	printf("\tDDR     %-4d [MHz]\n", soc_get_ddr_clk() / MHz);
++	printf("\tFABRIC  %-4d [MHz]\n", soc_get_ring_clk() / MHz);
++	printf("\tMSS     %-4d [MHz]\n", soc_get_mss_clk() / MHz);
+ }
+-- 
+1.9.1
+

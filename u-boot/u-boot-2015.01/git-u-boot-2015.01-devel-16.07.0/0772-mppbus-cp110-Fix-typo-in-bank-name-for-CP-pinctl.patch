@@ -1,0 +1,32 @@
+From 8298f13432cf7e53935b6c42193829b005cf10d4 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 2 Feb 2016 21:14:04 +0200
+Subject: [PATCH 0772/1240] mppbus: cp110: Fix typo in bank-name for CP pinctl
+
+	From cp-110 to cp110.
+
+Change-Id: I2f3be74e6d409488c35df43f1e4889a3660dae97
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27155
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/cp110.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index 48d09a8..34d4374 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -82,7 +82,7 @@ usb3@510000 { /* USB3_H1 */
+ 
+ pinctl@440000 {
+ 	compatible = "marvell,mvebu-pinctl";
+-	bank-name ="cp-110";
++	bank-name ="cp110";
+ 	reg = <0x440000 0x10>;
+ 	pin-count = <63>;
+ 	max-func = <0xf>;
+-- 
+1.9.1
+

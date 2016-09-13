@@ -1,0 +1,48 @@
+From e33c783fcca7415fdf7d84bbf7cd1f38834457c9 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 4 Jan 2016 17:20:17 +0200
+Subject: [PATCH 0629/1240] fix: spl: mvebu: change the write of CPU freq to
+ use x8 instead of x0
+
+- The X0 used to pass silent boot from the BootRom
+
+Change-Id: I8235fae2c955a48f5cf3c7b3eac5bba5a9185335
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26514
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ arch/arm/cpu/armv8/start.S | 13 +++++++++++--
+ 1 file changed, 11 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/start.S b/arch/arm/cpu/armv8/start.S
+index c2ffdc7..18d5155 100644
+--- a/arch/arm/cpu/armv8/start.S
++++ b/arch/arm/cpu/armv8/start.S
+@@ -28,8 +28,7 @@ _start:
+ 	stp	x27, x28,[sp, #-16]!
+ 	stp	x29, x30,[sp, #-16]!
+ 
+-	ldr	x0, =COUNTER_FREQUENCY
+-	msr	cntfrq_el0, x0	/* Initialize CNTFRQ */
++	bl	lowlevel_init_spl	/* low level init before SPL run */
+ 
+ 	bl	board_init_f
+ 	ldp	x29, x30,[sp], #16	/* @ restore regs and return */
+@@ -241,3 +240,13 @@ ENTRY(c_runtime_cpu_setup)
+ ENDPROC(c_runtime_cpu_setup)
+ 
+ #endif /* defined(CONFIG_MVEBU) && defined(CONFIG_SPL_BUILD) */
++
++WEAK(lowlevel_init_spl)
++	mov	x29, lr
++
++	ldr	x8, =COUNTER_FREQUENCY
++	msr	cntfrq_el0, x8	/* Initialize CNTFRQ */
++
++	mov	lr, x29
++	ret
++ENDPROC(lowlevel_init_spl)
+-- 
+1.9.1
+

@@ -1,0 +1,64 @@
+From 6f727bff5f13a2ebced28ff8fedbf94a50479c8b Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 17 Jan 2016 14:41:04 +0200
+Subject: [PATCH 0694/1240] doc: mvebu: add start point of User Guide of
+ U-Boot-2015.01
+
+Change-Id: I8d0ba5513c47e797ed25b8259c998ba5d4676add
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26821
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ doc/mvebu/user_guide.txt | 38 ++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 38 insertions(+)
+ create mode 100644 doc/mvebu/user_guide.txt
+
+diff --git a/doc/mvebu/user_guide.txt b/doc/mvebu/user_guide.txt
+new file mode 100644
+index 0000000..7d0d1c3
+--- /dev/null
++++ b/doc/mvebu/user_guide.txt
+@@ -0,0 +1,38 @@
++User Guide
++----------
++
++User Guide for U-Boot 2015.01 for Marvell specific commands and build
++
++Table of contents:
++------------------
++1. Build instructions:
++   How to compile the U-Boot, and how to change configuration using
++   menuconfig, include description how to add config for SPL:
++   doc/mvebu/build.txt
++
++2. Boot U-Boot for the first time
++   How to Boot for the first time on the board using XDB and UART
++   2.1 Booting using XDB: doc/mvebu/xdb_debugger.txt
++   2.2 Booting using UART: doc/mvebu/uart_boot.txt
++
++3. U-Boot upgrade instructions
++   Update environment variable parameters, bubt command, and burning U-Boot using
++   step-by-step commands.
++   doc/mvebu/commands/bubt.txt
++
++4. Booting Linux Kernel
++   Set environment variables and boot command.
++   doc/mvebu/linux_boot.txt
++
++5. Commands:
++   ir - display and change memory values: doc/mvebu/commands/ir.txt
++   fdt_config - select & change board configuration: doc/mvebu/commands/fdt_config.txt
++   fdt - change and edit FDT file in memory: doc/mvebu/commands/fdt.txt
++   mmc - mmc usage: doc/mvebu/commands/mmc.txt
++   usb - usb usage: doc/mvebu/commands/usb.txt
++   sata - sata usage: doc/mvebu/commands/sata.txt
++   SatR - toggle Sample at reset modes: doc/mvebu/commands/sar.txt
++
++6. Board options:
++   List of board options of development board.
++   doc/mvebu/board/<board_name>.txt
+-- 
+1.9.1
+

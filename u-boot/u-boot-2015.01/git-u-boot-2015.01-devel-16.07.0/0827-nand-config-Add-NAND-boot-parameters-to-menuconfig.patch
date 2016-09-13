@@ -1,0 +1,70 @@
+From fa661a5adc87819d12e79b227b6132bc24645ad0 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Thu, 4 Feb 2016 10:19:31 +0200
+Subject: [PATCH 0827/1240] nand: config: Add NAND boot parameters to
+ menuconfig
+
+- Add Block size and Cell Type to menuconfig.
+- Update Makefile to pass these parameters to doimage.
+
+Change-Id: I49cab9fe90d29af75579c5f42d8ea0e22ca5b2e5
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27217
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Kconfig | 23 +++++++++++++++++++++++
+ include/configs/armada38x.h       |  2 --
+ 2 files changed, 23 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index 279cf9e..565f584 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -118,6 +118,29 @@ config MVEBU_NOR_BOOT
+ 
+ endchoice
+ 
++menu "NAND Boot Parameters"
++depends on MVEBU_NAND_BOOT
++
++config MVEBU_NAND_BLOCK_SIZE
++	int "NAND Boot Page Size (KB)"
++	default 256
++	help
++	  Set the nand boot device block size (in KB).
++	  This parameter is used by Bootrom in order to
++	  determine the location of bad blocks
++	  markers.
++
++config MVEBU_NAND_CELL_TYPE
++	string "NAND Boot Cell Type (SLC/MLC)"
++	default SLC
++	help
++	  Set the boot nand cell type (0 for SLC,
++	  1 for MLC).
++	  This parameter is used by bootrom in order
++	  to determine the bad block marker location
++	  within the block.
++endmenu
++
+ config ENV_IS_IN_BOOTDEV
+ 	bool "Boot-time Environment Selection"
+ 	depends on (MVEBU_SPI || MVEBU_NAND)
+diff --git a/include/configs/armada38x.h b/include/configs/armada38x.h
+index 4a0ff64..d6a7308 100644
+--- a/include/configs/armada38x.h
++++ b/include/configs/armada38x.h
+@@ -63,8 +63,6 @@
+ /* Define NAND chip parameters */
+ #if defined(CONFIG_MVEBU_NAND_BOOT) || defined(CONFIG_ENV_IS_IN_BOOTDEV)
+ #define CONFIG_MVEBU_NAND_PAGE_SIZE	4096
+-#define CONFIG_MVEBU_NAND_BLOCK_SIZE	128
+-#define CONFIG_MVEBU_NAND_CELL_TYPE	MLC
+ #endif
+ 
+ /* Clock */
+-- 
+1.9.1
+

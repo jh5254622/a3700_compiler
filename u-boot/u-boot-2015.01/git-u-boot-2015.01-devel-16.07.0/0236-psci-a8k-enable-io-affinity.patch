@@ -1,0 +1,37 @@
+From 93632423abdbbd456e2f818103b8f5865c17a829 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Sun, 5 Jul 2015 12:44:51 +0300
+Subject: [PATCH 0236/1240] psci: a8k: enable io affinity
+
+Change-Id: Ifc204729b6dbac321d2637caefcbab601d495abd
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20999
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/psci.S | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/psci.S b/arch/arm/cpu/armv8/armada8k/psci.S
+index 186e28f..74682ea 100644
+--- a/arch/arm/cpu/armv8/armada8k/psci.S
++++ b/arch/arm/cpu/armv8/armada8k/psci.S
+@@ -26,6 +26,7 @@
+ 
+ #define MVEBU_CCU_HTC_ASET_REG	0x4264
+ #define MVEBU_PRIVATE_UID_REG	0x30
++#define MVEBU_IO_AFFINITY	0xF00
+ 
+ .pushsection ._secure.text, "ax"
+ 
+@@ -41,6 +42,7 @@ enable_affinity:
+ 	orr     x0, x3, x0
+ 	mov	x3, #0x1
+ 	lsl     x1, x3, x2
++	orr	x1, x1, #(MVEBU_IO_AFFINITY)
+ 	str     w1, [x0]
+ 
+ 	/* Activate Affinity in CA-57 configuration
+-- 
+1.9.1
+

@@ -1,0 +1,55 @@
+From 536509af59f31cb7963b52721955201cf08f0c43 Mon Sep 17 00:00:00 2001
+From: Jing Hua <jinghua@marvell.com>
+Date: Mon, 21 Sep 2015 10:31:46 +0800
+Subject: [PATCH 0422/1240] fix: arlp: add CONFIG_64BIT define to ArmadaLP
+
+	For neta driver of ArmadaLP, dma_addr_t is used, which in Arm64
+	is 64 bits wide, and it is defined as u64 under #ifdef CONFIG_64BIT
+	in file arch/arm/include/asm/types.h. So we need CONFIG_64BIT for ArmadaLP.
+	1. Add 64BIT define in arch/arm/Kconfig.
+	2. Add default select 64BIT to ARM64.
+	3. Add default select ARM64 to ArmadaLP.
+
+Change-Id: I9a30f2cdeddc4fd1c05904d0a1b9b9b12d332728
+Signed-off-by: Jing Hua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23679
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/Kconfig | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index 6cc5001..b48ddec 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -6,6 +6,7 @@ config SYS_ARCH
+ 
+ config ARM64
+ 	bool
++	select 64BIT
+ 
+ config HAS_VBAR
+         bool
+@@ -113,6 +114,7 @@ config TARGET_ARMADA_38X
+ config TARGET_ARMADA_LP
+ 	bool "Support Armada LP"
+ 	select SUPPORT_SPL
++	select ARM64
+ 
+ config TARGET_SMDK2410
+ 	bool "Support smdk2410"
+@@ -817,6 +819,9 @@ config ARCH_UNIPHIER
+ 
+ endchoice
+ 
++config 64BIT
++	bool
++
+ source "arch/arm/cpu/arm926ejs/davinci/Kconfig"
+ 
+ source "arch/arm/cpu/armv7/exynos/Kconfig"
+-- 
+1.9.1
+

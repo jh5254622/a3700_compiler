@@ -1,0 +1,31 @@
+From ec1c79d7b7a404ea32f93b1fef1588fb781e4c29 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 10 Nov 2015 13:23:09 +0200
+Subject: [PATCH 0476/1240] fix: fdt: added missing compatible strings for
+ USB/SDIO
+
+Change-Id: If8bc8a50231ab86fa87b65dbd9ebd1b4e7b527b9
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24705
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ lib/fdtdec.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index b182c4a..1f0a7e9 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -91,6 +91,8 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_I2C, "marvell,mvebu-i2c"),
+ 	COMPAT(MVEBU_ARLP_I2C, "marvell,armadalp-i2c"),
+ 	COMPAT(MVEBU_SATA, "marvell,mvebu-sata"),
++	COMPAT(MVEBU_USB, "marvell,mvebu-usb"),
++	COMPAT(MVEBU_SDIO, "marvell,mvebu-sdio"),
+ 	COMPAT(MVEBU_SAR, "marvell,sample-at-reset"),
+ 	COMPAT(MVEBU_PINCTL, "marvell,mvebu-pinctl"),
+ 	COMPAT(MVEBU_MPP_BUS, "marvell,mvebu-mpp-bus"),
+-- 
+1.9.1
+

@@ -1,0 +1,32 @@
+From eac51096ebc5f9023d298b6e5097396a3387bd7f Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 3 Sep 2015 10:56:00 +0300
+Subject: [PATCH 0405/1240] pci: re-enable PCI in u-boot when working with
+ dram-on-pci
+
+Change-Id: I3e15ac03938256c003bd5947131c3447fe1ec308
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23404
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ common/board_r.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/common/board_r.c b/common/board_r.c
+index 81ca9d33..7a1b4d30 100644
+--- a/common/board_r.c
++++ b/common/board_r.c
+@@ -224,9 +224,7 @@ static int initr_unlock_ram_in_cache(void)
+ #ifdef CONFIG_PCI
+ static int initr_pci(void)
+ {
+-#ifndef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+ 	pci_init();
+-#endif
+ 
+ 	return 0;
+ }
+-- 
+1.9.1
+

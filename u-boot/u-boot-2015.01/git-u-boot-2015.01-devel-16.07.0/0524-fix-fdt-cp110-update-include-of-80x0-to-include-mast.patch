@@ -1,0 +1,33 @@
+From 6ab2d61d65cb1f4d81b4ffd121810dfc53467498 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 22 Nov 2015 19:58:48 +0200
+Subject: [PATCH 0524/1240] fix: fdt: cp110: update include of 80x0 to include
+ master and slave
+
+- Bug found when include 2 files of master
+
+Change-Id: I61d5a7295da199b631faec4d3941a386c56011ac
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25147
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ arch/arm/dts/armada-80x0.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/armada-80x0.dtsi b/arch/arm/dts/armada-80x0.dtsi
+index 57b610b..1cbaafd 100644
+--- a/arch/arm/dts/armada-80x0.dtsi
++++ b/arch/arm/dts/armada-80x0.dtsi
+@@ -18,7 +18,7 @@
+ 
+ #include "apn-806-db.dtsi"
+ #include "cp110-master.dtsi"
+-#include "cp110-master.dtsi"
++#include "cp110-slave.dtsi"
+ 
+ / {
+ 	compatible = "marvell,armada-80x0";
+-- 
+1.9.1
+

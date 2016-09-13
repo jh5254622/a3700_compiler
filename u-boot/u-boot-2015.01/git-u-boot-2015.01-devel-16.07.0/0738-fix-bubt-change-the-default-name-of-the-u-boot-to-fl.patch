@@ -1,0 +1,62 @@
+From 8c4e9a4116e33a1c4e999374d5ed8f9c80f51e24 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 27 Jan 2016 11:11:32 +0200
+Subject: [PATCH 0738/1240] fix: bubt: change the default name of the u-boot to
+ flash-image.bin for A8k
+
+- Change the name of the default U-Boot due using ARM-trusted-firmware
+
+Change-Id: I41aae2362d6cbfe453f9c333a34e3d92ba58cecc
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27044
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Neta Zur Hershkovits <neta@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ common/mvebu/cmd_bubt.c        | 2 +-
+ include/configs/armada8k.h     | 3 +++
+ include/configs/mvebu-common.h | 1 +
+ 3 files changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/common/mvebu/cmd_bubt.c b/common/mvebu/cmd_bubt.c
+index f0ebe20..5f6afde 100644
+--- a/common/mvebu/cmd_bubt.c
++++ b/common/mvebu/cmd_bubt.c
+@@ -459,7 +459,7 @@ int do_bubt_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+ 	char dst_dev_name[8];
+ 
+ 	if (argc < 2)
+-		copy_filename(BootFile, "u-boot.bin", sizeof(BootFile));
++		copy_filename(BootFile, CONFIG_MVEBU_UBOOT_DFLT_NAME, sizeof(BootFile));
+ 	else
+ 		copy_filename(BootFile, argv[1], sizeof(BootFile));
+ 
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index 2670aa2..3644cc4 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -73,6 +73,9 @@ extern char __end_of_spl[];
+  */
+ #include "mvebu-common.h"
+ 
++#undef CONFIG_MVEBU_UBOOT_DFLT_NAME
++#define CONFIG_MVEBU_UBOOT_DFLT_NAME	"flash-image.bin"
++
+ #define CONFIG_SYS_PCI_64BIT	/* enable 64-bit PCI resources */
+ 
+ /*
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 147f4cb..0fd5bef 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -50,6 +50,7 @@
+ #define CONFIG_SYS_MALLOC_LEN           (5 << 20)	/* Reserve 5MB for malloc*/
+ #endif
+ #define CONFIG_NR_DRAM_BANKS		(2)
++#define CONFIG_MVEBU_UBOOT_DFLT_NAME	"u-boot.bin"
+ 
+ /* maybe need to set back to 0x7fff0 */
+ #define CONFIG_SYS_INIT_SP_ADDR         (CONFIG_SYS_TEXT_BASE + 0xFF0000)   /* End of 16M scrubbed by training in bootrom */
+-- 
+1.9.1
+

@@ -1,0 +1,99 @@
+From 3f34a2c4a7df020b16eeb034aca24409732916c5 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Sun, 15 May 2016 17:15:06 +0300
+Subject: [PATCH 1111/1240] fix: tools: a3700: Correct the trusted boot image
+ partitioning
+
+- Move SPL image from SRAM to DRAM in img-1 file
+- Move WTMI image to start of SRAM, allow mailbox support
+  instead of dummy code (img-2)
+- Move u-boot flash location forward allowing larger WTMI
+  image support (up to 64KB)
+- Change the CM3 and AP CPU start addresses for reflecting
+  the above modification in rsrvdtimn file
+- Move TIMN to lover SRAM address allowing larger TIMN size
+  The TIM contains only RSA keys since it is limited to 12KB
+  The DDR init moved to TIMN.
+
+Change-Id: I09263544c71160b11e95218921223120c11a7dea
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29718
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ tools/wtp/trusted/img-1.txt     | 2 +-
+ tools/wtp/trusted/img-2.txt     | 2 +-
+ tools/wtp/trusted/img-3.txt     | 2 +-
+ tools/wtp/trusted/rsrvdtimn.txt | 4 ++--
+ tools/wtp/trusted/timn.txt      | 2 +-
+ 5 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/tools/wtp/trusted/img-1.txt b/tools/wtp/trusted/img-1.txt
+index eca1f13..cf7348f 100644
+--- a/tools/wtp/trusted/img-1.txt
++++ b/tools/wtp/trusted/img-1.txt
+@@ -1,7 +1,7 @@
+ Image ID:                       0x4F424d49		; OBMI - 64K code + 16K data
+ Next Image ID:                  0x57544d49		; WTMI next
+ Flash Entry Address:            0x00008000		; OBMI flash addr
+-Load Address:                   0x1FFF0000		; OBMI RAM addr
++Load Address:                   0x61000000		; OBMI RAM addr
+ Image Size To Hash in bytes:    0xFFFFFFFF		; Hash complete image file
+ Hash Algorithm ID:              32			; SHA-256
+ Partition Number:               0x00000000
+diff --git a/tools/wtp/trusted/img-2.txt b/tools/wtp/trusted/img-2.txt
+index 14eaadf..d6ce288 100644
+--- a/tools/wtp/trusted/img-2.txt
++++ b/tools/wtp/trusted/img-2.txt
+@@ -1,7 +1,7 @@
+ Image ID:                       0x57544d49		; WTMI
+ Next Image ID:                  0x4F534C4F		; OSLO next
+ Flash Entry Address:            0x00028000		; WTMI flash addr
+-Load Address:                   0x200040F0		; WTMI RAM addr
++Load Address:                   0x1FFF0000		; WTMI RAM addr
+ Image Size To Hash in bytes:    0xFFFFFFFF		; Hash complete image file
+ Hash Algorithm ID:              32			; SHA-256
+ Partition Number:               0x00000000
+diff --git a/tools/wtp/trusted/img-3.txt b/tools/wtp/trusted/img-3.txt
+index 19416d0..80fc0f0 100644
+--- a/tools/wtp/trusted/img-3.txt
++++ b/tools/wtp/trusted/img-3.txt
+@@ -1,6 +1,6 @@
+ Image ID:                       0x4F534C4F		; OSLO
+ Next Image ID:                  0xFFFFFFFF		; NONE
+-Flash Entry Address:            0x0002A000		; OSLO flash addr
++Flash Entry Address:            0x00038000		; OSLO flash addr
+ Load Address:                   0x60000000		; OSLO RAM addr
+ Image Size To Hash in bytes:    0xFFFFFFFF		; Hash complete image file
+ Hash Algorithm ID:              32			; SHA-256
+diff --git a/tools/wtp/trusted/rsrvdtimn.txt b/tools/wtp/trusted/rsrvdtimn.txt
+index c33e6ce..735f8b8 100644
+--- a/tools/wtp/trusted/rsrvdtimn.txt
++++ b/tools/wtp/trusted/rsrvdtimn.txt
+@@ -4,8 +4,8 @@
+ 0x0000001C	; Size of CRV2 package in bytes
+ 0x00000002	; Number of cores to release
+ 0x00000000	; Core_ID: 0 - AP0, 1 - AP1, 2 - CM3
+-0xF0000000	; PC address for Core_ID above
++0x01000000	; PC address for Core_ID above
+ 0x00000002	; Core_ID: 0 - AP0, 1 - AP1, 2 - CM3
+-0x200040F0	; PC address for Core_ID above
++0x1FFF0000	; PC address for Core_ID above
+ 0x5465726D	;Term
+ 0x00000008	; Size of this package in bytes
+diff --git a/tools/wtp/trusted/timn.txt b/tools/wtp/trusted/timn.txt
+index fe7eb57..d18902f 100644
+--- a/tools/wtp/trusted/timn.txt
++++ b/tools/wtp/trusted/timn.txt
+@@ -1,7 +1,7 @@
+ Image ID:                       0x54494D4E		; TIMN
+ Next Image ID:                  0x4F424d49		; Next Image - OBMI
+ Flash Entry Address:            0x00004000		; TIMN flash addr
+-Load Address:                   0x20004100		; TIMN ISRAM addr
++Load Address:                   0x20004000		; TIMN ISRAM addr
+ Image Size To Hash in bytes:    0xFFFFFFFF		; Hash complete image file
+ Hash Algorithm ID:              32			; SHA-256
+ Partition Number:               0x00000000
+-- 
+1.9.1
+

@@ -1,0 +1,48 @@
+From e1758e41637c64dc8302db154dbf418f4d96a4d5 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Mon, 1 Feb 2016 16:34:45 +0800
+Subject: [PATCH 0759/1240] i2c: a3700: enable I2C driver in SPL
+
+there are features in SPL that need to read eeprom,
+so I2C driver need to be enabled in SPL.
+
+Change-Id: I7ae0d35ecb8ffbda17d48b71c53f66106ea12cdb
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27091
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ configs/mvebu_armadalp_defconfig | 4 ++--
+ scripts/Makefile.spl             | 1 +
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index bf29887..c00060a 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -34,8 +34,8 @@ CONFIG_SCSI_AHCI_PLAT=y
+ CONFIG_MVNETA=y
+ CONFIG_MVEBU_NETA_BYPASS_DEC_WIN=y
+ CONFIG_PHY_MARVELL=y
+-CONFIG_I2C_MV=y
+-# CONFIG_I2C_MV_PAD_REG is not set
+++S:CONFIG_I2C_MV=y
+++S:# CONFIG_I2C_MV_PAD_REG is not set
+ CONFIG_MVEBU_SPI=y
+ CONFIG_USB=y
+ CONFIG_USB_XHCI_HCD=y
+diff --git a/scripts/Makefile.spl b/scripts/Makefile.spl
+index 5a39b85..2e7e7dd 100644
+--- a/scripts/Makefile.spl
++++ b/scripts/Makefile.spl
+@@ -84,6 +84,7 @@ libs-$(CONFIG_MVEBU_COMPHY_SUPPORT) += drivers/phy/
+ libs-$(CONFIG_OF_EMBED) += dts/
+ libs-$(CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT) += drivers/pci/
+ libs-$(CONFIG_MVEBU_I2C) += drivers/i2c/
++libs-$(CONFIG_I2C_MV) += drivers/i2c/
+ 
+ head-y		:= $(addprefix $(obj)/,$(head-y))
+ libs-y		:= $(addprefix $(obj)/,$(libs-y))
+-- 
+1.9.1
+

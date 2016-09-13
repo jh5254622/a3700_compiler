@@ -1,0 +1,134 @@
+From 156d8e80e9c88206d4fff27b7b16d805cfa0e92b Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Fri, 26 Jun 2015 09:50:21 +0300
+Subject: [PATCH 0220/1240] sample at reset: added support for swapped bits in
+ sample at reset command
+
+- Added boolean for FDT to set if the bits of the specific option is swapped or
+  not.
+
+Change-Id: Ib82e1f767fbba5eb4091b05e18baafea338a8b2f
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20502
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/dts/armada-385-db.dts              |  1 +
+ board/mvebu/common/sar.c                    | 27 +++++++++++++++++++++++++--
+ board/mvebu/common/sar.h                    |  1 +
+ doc/device-tree-bindings/misc/mvebu-sar.txt |  2 ++
+ 4 files changed, 29 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/dts/armada-385-db.dts b/arch/arm/dts/armada-385-db.dts
+index 65012c2..b520a67 100644
+--- a/arch/arm/dts/armada-385-db.dts
++++ b/arch/arm/dts/armada-385-db.dts
+@@ -138,6 +138,7 @@
+ 			options = "0x0", "1800/900",
+ 				"0x1", "1600/800";
+ 			default = <0x1>;
++			swap-bit;
+ 			status = "okay";
+ 		};
+ 		bootsrc {
+diff --git a/board/mvebu/common/sar.c b/board/mvebu/common/sar.c
+index 25fd5fd..0292307 100644
+--- a/board/mvebu/common/sar.c
++++ b/board/mvebu/common/sar.c
+@@ -30,6 +30,21 @@ struct sar_data sar_board;
+ #define board_get_sar() (&sar_board)
+ #define board_get_sar_table() (sar_board.sar_lookup)
+ 
++static u32 swap_value(u32 val, u32 bit_length)
++{
++	u32 var_mask = (1 << bit_length) - 1;
++
++	val = (val & 0xFFFF0000) >> 16 | (val & 0x0000FFFF) << 16;
++	val = (val & 0xFF00FF00) >> 8 | (val & 0x00FF00FF) << 8;
++	val = (val & 0xF0F0F0F0) >> 4 | (val & 0x0F0F0F0F) << 4;
++	val = (val & 0xCCCCCCCC) >> 2 | (val & 0x33333333) << 2;
++	val = (val & 0xAAAAAAAA) >> 1 | (val & 0x55555555) << 1;
++	val = (val >> (32 - bit_length)) & var_mask;
++	debug("value is swaped, new value = 0x%x\n", val);
++
++	return val;
++}
++
+ static int sar_read_reg(u32 *reg)
+ {
+ 	uchar byte = 0;
+@@ -86,6 +101,9 @@ int sar_read_var(struct sar_var *var, int *val)
+ 		return -1;
+ 
+ 	(*val) = (sar_reg >> var->start_bit) & var_mask;
++	if (var->swap_bit)
++		(*val) = swap_value(*val, var->bit_length);
++
+ 
+ 	debug("var offet = %d len = %d val = 0x%x\n", var->start_bit, var->bit_length, (*val));
+ 
+@@ -101,6 +119,8 @@ int sar_write_var(struct sar_var *var, int val)
+ 		return -1;
+ 
+ 	/* Update the bitfield inside the sar register */
++	if (var->swap_bit)
++		val = swap_value(val, var->bit_length);
+ 	val &= var_mask;
+ 	sar_reg &= ~(var_mask << var->start_bit);
+ 	sar_reg |= (val << var->start_bit);
+@@ -363,8 +383,10 @@ static void sar_dump(void)
+ 			continue;
+ 		printf("\t\tID = %d, ", i);
+ 		printf("Key = %s, ", sar->sar_lookup[i].key);
+-		printf("Desc. = %s\n", sar->sar_lookup[i].desc);
+-		printf("\t\tStart bit = 0x%x, ", sar->sar_lookup[i].start_bit);
++		printf("Desc. = %s", sar->sar_lookup[i].desc);
++		if (sar->sar_lookup[i].swap_bit)
++			printf(", BIT is swapped");
++		printf("\n\t\tStart bit = 0x%x, ", sar->sar_lookup[i].start_bit);
+ 		printf("Bit length = %d\n", sar->sar_lookup[i].bit_length);
+ 		printf("\t\tThis variable had %d options:\n", sar->sar_lookup[i].option_cnt);
+ 		for (id = 0; id < sar->sar_lookup[i].option_cnt; id++) {
+@@ -421,6 +443,7 @@ void sar_init(void)
+ 		sar->sar_lookup[id].start_bit = fdtdec_get_int(gd->fdt_blob, var, "start-bit", 0);
+ 		sar->sar_lookup[id].bit_length = fdtdec_get_int(gd->fdt_blob, var, "bit-length", 0);
+ 		sar->sar_lookup[id].option_cnt = fdtdec_get_int(gd->fdt_blob, var, "option-cnt", 0);
++		sar->sar_lookup[id].swap_bit = fdtdec_get_bool(gd->fdt_blob, var, "swap-bit");
+ 		/* Get the options list */
+ 		len = fdt_count_strings(gd->fdt_blob, var, "options");
+ 		if ((len < 0) || (sar->sar_lookup[id].option_cnt*2 != len)) {
+diff --git a/board/mvebu/common/sar.h b/board/mvebu/common/sar.h
+index f4d8186..b4b1371 100644
+--- a/board/mvebu/common/sar.h
++++ b/board/mvebu/common/sar.h
+@@ -46,6 +46,7 @@ struct sar_var {
+ 	u8 bit_length;
+ 	u8 option_cnt;
+ 	u8 active;
++	bool swap_bit;
+ 	char *desc;
+ 	char *key;
+ 	struct var_opts option_desc[MAX_VAR_OPTIONS];
+diff --git a/doc/device-tree-bindings/misc/mvebu-sar.txt b/doc/device-tree-bindings/misc/mvebu-sar.txt
+index 7e9cfc4..1c41742 100644
+--- a/doc/device-tree-bindings/misc/mvebu-sar.txt
++++ b/doc/device-tree-bindings/misc/mvebu-sar.txt
+@@ -20,6 +20,7 @@ The SAR node requires the following properties:
+ 		- option-cnt: The count of the options in this sample at reset node
+ 		- options: Describe the options list by setting the "value", "describtion of the value"
+ 		- default: What is the value of default options
++		- swap-bit: Boolean set if the bit is swapped in this option
+ 		- status: Set if the Sample at reset option is enabled/disabled
+ 
+ Example:
+@@ -40,6 +41,7 @@ sar {
+ 		options = "0x0", "1800/900",
+ 			  "0x1", "1600/800";
+ 		default = <0x1>;
++		swap-bit;
+ 		status = "okay";
+ 	};
+ 	bootsrc {
+-- 
+1.9.1
+

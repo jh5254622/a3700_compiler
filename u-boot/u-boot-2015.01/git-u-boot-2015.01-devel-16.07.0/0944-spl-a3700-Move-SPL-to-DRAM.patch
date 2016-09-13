@@ -1,0 +1,173 @@
+From 58f26e7bc76c8b4ebd46da92c08edcc7267dc09f Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Sun, 6 Mar 2016 08:52:12 +0200
+Subject: [PATCH 0944/1240] spl: a3700: Move SPL to DRAM
+
+- Move SPL start address from SRAM to DRAM
+- Disable DDR and clocks initialization when running from DRAM.
+- Enable DRAM window bypass in MBUS driver
+- Update TIM components for reflecting this change.
+
+Change-Id: I9a9f0dd875501b351a686a77e3947e4599f71054
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28045
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/cpu/armv8/armada3700/spl.c | 8 ++++++--
+ configs/mvebu_armada3700_defconfig  | 2 +-
+ drivers/ddr/ddr_mckinley6_arlp.c    | 9 ++++++++-
+ include/configs/armada3700.h        | 9 ++++++++-
+ tools/wtp/untrusted/img-1.txt       | 4 ++--
+ tools/wtp/untrusted/img-2.txt       | 2 +-
+ tools/wtp/untrusted/rsrvd.txt       | 4 ++--
+ 7 files changed, 28 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada3700/spl.c b/arch/arm/cpu/armv8/armada3700/spl.c
+index 2fa37f5..eace09f 100644
+--- a/arch/arm/cpu/armv8/armada3700/spl.c
++++ b/arch/arm/cpu/armv8/armada3700/spl.c
+@@ -82,7 +82,12 @@ void board_init_f(ulong silent)
+ 	preloader_console_init();
+ 
+ 	/* Clock should be enabeld before initialize the I/O units */
+-#ifdef CONFIG_MVEBU_A3700_CLOCK
++#if defined(CONFIG_MVEBU_A3700_CLOCK) && !defined(SPL_IS_IN_DRAM)
++	/* Dynamic clocks configuration is only supported for SPL running from SRAM
++	   Changing the DDR clock is not possible when the SPL code is located in DDR.
++	   When SPL is running from DRAM, all clocks should be set by TIM at boot
++	   time, since TIM code is is executed by secure CPU (CM3) from internal SRAM.
++	*/
+ 	init_clock();
+ #endif
+ 
+@@ -112,4 +117,3 @@ void board_init_f(ulong silent)
+ 	/* Jump from SPL to u-boot start address */
+ 	ptr_uboot_start();
+ }
+-
+diff --git a/configs/mvebu_armada3700_defconfig b/configs/mvebu_armada3700_defconfig
+index 1ebc227..89a77ff 100644
+--- a/configs/mvebu_armada3700_defconfig
++++ b/configs/mvebu_armada3700_defconfig
+@@ -43,4 +43,4 @@ CONFIG_USB=y
+ CONFIG_USB_XHCI_HCD=y
+ +S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+ +S:CONFIG_MVEBU_MK6_SUPPORT=y
+-+S:CONFIG_MVEBU_DLL_TUNE_SUPPORT=y
+++S:CONFIG_MVEBU_MBUS_SKIP_DRAM_WIN=y
+diff --git a/drivers/ddr/ddr_mckinley6_arlp.c b/drivers/ddr/ddr_mckinley6_arlp.c
+index 5d32373..2d97371 100644
+--- a/drivers/ddr/ddr_mckinley6_arlp.c
++++ b/drivers/ddr/ddr_mckinley6_arlp.c
+@@ -131,6 +131,7 @@ struct mvebu_mckinley_config mckinley_phy_config[] = {
+ 
+ void mvebu_dram_mac_init(struct mvebu_dram_config *dram_config)
+ {
++#if !defined(SPL_IS_IN_DRAM)
+ 	void __iomem *base_addr = dram_config->mac_base;
+ 	struct mvebu_mckinley_config *mac_config = &mckinley_mac_config[0];
+ 	u32 freq_indx, reg, idx, size;
+@@ -204,6 +205,7 @@ void mvebu_dram_mac_init(struct mvebu_dram_config *dram_config)
+ 	}
+ 
+ 	debug_exit();
++#endif
+ }
+ 
+ /* set_dram_info - passing dram information from spl to u-boot by saving it on dram, start from address 0x04000000 */
+@@ -243,6 +245,7 @@ void set_dram_info(void *base_addr)
+ 
+ void mvebu_dram_phy_init(struct mvebu_dram_config *dram_config)
+ {
++#if !defined(SPL_IS_IN_DRAM)
+ 	void __iomem *base_addr = dram_config->phy_base;
+ 	struct mvebu_mckinley_config *phy_config = &mckinley_phy_config[0];
+ 	u32 freq_indx, reg, cs_mask;
+@@ -289,7 +292,7 @@ void mvebu_dram_phy_init(struct mvebu_dram_config *dram_config)
+ 		error("DDR init timeout!\n");
+ 
+ 	debug("DDR init is done.\n");
+-
++#endif
+ #ifdef CONFIG_MVEBU_SYS_INFO
+ 	set_dram_info(dram_config->mac_base);
+ #endif
+@@ -425,6 +428,10 @@ void mvebu_dram_dll_tune(struct mvebu_dram_config *dram_config)
+ 
+ 	debug_enter();
+ 
++#if !defined(SPL_IS_IN_DRAM)
++	printf("DDR: DLL tune should not be called when running from DRAM!\n");
++	return;
++#endif
+ 	dll = readl(base_addr + MC6_CH0_PHY_DLL_CONTROL_B0);
+ 	printf("DDR: start DLL tuning with initial phase delays (P) %#x, (N) %#x\n",
+ 	(dll >> DLL_PHASE_POS_SHIFT) & DLL_PHASE_SZ_MASK,
+diff --git a/include/configs/armada3700.h b/include/configs/armada3700.h
+index e14f65f..4e168d3 100644
+--- a/include/configs/armada3700.h
++++ b/include/configs/armada3700.h
+@@ -75,9 +75,16 @@
+    CM3 BootROM uses adresses   0xF0016000 - 0xF001FFFF
+    CM3 mapping for SRAM is     0x1FFF0000 - 0x20010000
+  */
+-#define CONFIG_SPL_TEXT_BASE		0xF0000000
++#define CONFIG_SPL_TEXT_BASE		0x01000000
+ #define CONFIG_SPL_MAX_SIZE		0x00010000	/* 64K */
+ 
++#if (CONFIG_SPL_TEXT_BASE != 0xF0000000)
++#define SPL_IS_IN_DRAM
++#else
++#undef SPL_IS_IN_DRAM
++#endif
++
++
+ #ifndef __ASSEMBLY__
+ extern char __end_of_spl[];
+ #endif /* __ASSEMBLY__ */
+diff --git a/tools/wtp/untrusted/img-1.txt b/tools/wtp/untrusted/img-1.txt
+index f9108a9..b4b8003 100644
+--- a/tools/wtp/untrusted/img-1.txt
++++ b/tools/wtp/untrusted/img-1.txt
+@@ -1,7 +1,7 @@
+-Image ID:                       0x4F424d49		; OBMI - 64K code + 16K data
++Image ID:                       0x4F424d49		; OBMI (SPL) 64K code + 16K data
+ Next Image ID:                  0x57544d49		; WTMI next
+ Flash Entry Address:            0x00004000		; OBMI flash addr
+-Load Address:                   0x1FFF0000		; OBMI RAM addr
++Load Address:                   0x61000000		; OBMI RAM addr
+ Image Size To CRC in bytes:     0x00000000
+ Hash Algorithm ID:              32			; SHA-256
+ Partition Number:               0x00000000
+diff --git a/tools/wtp/untrusted/img-2.txt b/tools/wtp/untrusted/img-2.txt
+index 78206c8..54c1bec 100644
+--- a/tools/wtp/untrusted/img-2.txt
++++ b/tools/wtp/untrusted/img-2.txt
+@@ -1,7 +1,7 @@
+ Image ID:                       0x57544d49		; WTMI
+ Next Image ID:                  0x4F534C4F		; OSLO next
+ Flash Entry Address:            0x00024000		; WTMI flash addr
+-Load Address:                   0x200040F0		; WTMI RAM addr
++Load Address:                   0x1FFF0000		; WTMI RAM addr
+ Image Size To CRC in bytes:     0x00000000
+ Hash Algorithm ID:              32			; SHA-256
+ Partition Number:               0x00000000
+diff --git a/tools/wtp/untrusted/rsrvd.txt b/tools/wtp/untrusted/rsrvd.txt
+index c33e6ce..735f8b8 100644
+--- a/tools/wtp/untrusted/rsrvd.txt
++++ b/tools/wtp/untrusted/rsrvd.txt
+@@ -4,8 +4,8 @@
+ 0x0000001C	; Size of CRV2 package in bytes
+ 0x00000002	; Number of cores to release
+ 0x00000000	; Core_ID: 0 - AP0, 1 - AP1, 2 - CM3
+-0xF0000000	; PC address for Core_ID above
++0x01000000	; PC address for Core_ID above
+ 0x00000002	; Core_ID: 0 - AP0, 1 - AP1, 2 - CM3
+-0x200040F0	; PC address for Core_ID above
++0x1FFF0000	; PC address for Core_ID above
+ 0x5465726D	;Term
+ 0x00000008	; Size of this package in bytes
+-- 
+1.9.1
+

@@ -1,0 +1,87 @@
+From 53145c1f7aff192447c714c6c65ea468047884c6 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Thu, 29 May 2014 19:10:51 +0300
+Subject: [PATCH 0664/1240] fix: usb: fixed support for USB to ETH adapters
+ (ASIX)
+
+- Added alignment for USB ETH adapter MAC address
+  (using eth_setenv_enetaddr_by_index() routine)
+  after identifying device, updating ethXaddr environment
+  variable with actual MAC adress
+- Fixed compilation error for debug print
+
+following should be done in u-boot to use generic ETH adapter:
+ usb reset
+ setenv ethact asx0
+
+Change-Id: I2172638573d76b64b101ae82347af8f0eae692bb
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/8323
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26711
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/usb/eth/asix.c      | 2 +-
+ drivers/usb/eth/usb_ether.c | 4 ++++
+ include/net.h               | 2 ++
+ net/eth.c                   | 2 +-
+ 4 files changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/usb/eth/asix.c b/drivers/usb/eth/asix.c
+index ac6baae..082bfb7 100644
+--- a/drivers/usb/eth/asix.c
++++ b/drivers/usb/eth/asix.c
+@@ -475,7 +475,7 @@ static int asix_send(struct eth_device *eth, void *packet, int length)
+ 				length + sizeof(packet_len),
+ 				&actual_len,
+ 				USB_BULK_SEND_TIMEOUT);
+-	debug("Tx: len = %u, actual = %u, err = %d\n",
++	debug("Tx: len = %lu, actual = %u, err = %d\n",
+ 			length + sizeof(packet_len), actual_len, err);
+ 
+ 	return err;
+diff --git a/drivers/usb/eth/usb_ether.c b/drivers/usb/eth/usb_ether.c
+index 7cb96e3..92706b4 100644
+--- a/drivers/usb/eth/usb_ether.c
++++ b/drivers/usb/eth/usb_ether.c
+@@ -102,6 +102,10 @@ static void probe_valid_drivers(struct usb_device *dev)
+ 			 * relies on it
+ 			 */
+ 			eth_register(eth);
++
++			/* update eth[X]addr environment variable with actual MAC address from device */
++			eth_setenv_enetaddr_by_index("eth", eth->index, eth->enetaddr);
++
+ 			if (eth_write_hwaddr(eth, "usbeth",
+ 					usb_max_eth_dev - 1))
+ 				puts("Warning: failed to set MAC address\n");
+diff --git a/include/net.h b/include/net.h
+index 18d279e..4e745cf 100644
+--- a/include/net.h
++++ b/include/net.h
+@@ -166,6 +166,8 @@ static inline __attribute__((always_inline)) void eth_halt_state_only(void)
+  */
+ int eth_write_hwaddr(struct eth_device *dev, const char *base_name,
+ 		     int eth_number);
++int eth_setenv_enetaddr_by_index(const char *base_name, int index,
++		 uchar *enetaddr);
+ 
+ #ifdef CONFIG_MCAST_TFTP
+ int eth_mcast_join(IPaddr_t mcast_addr, u8 join);
+diff --git a/net/eth.c b/net/eth.c
+index eac4f7b..8803929 100644
+--- a/net/eth.c
++++ b/net/eth.c
+@@ -47,7 +47,7 @@ int eth_getenv_enetaddr_by_index(const char *base_name, int index,
+ 	return eth_getenv_enetaddr(enetvar, enetaddr);
+ }
+ 
+-static inline int eth_setenv_enetaddr_by_index(const char *base_name, int index,
++int eth_setenv_enetaddr_by_index(const char *base_name, int index,
+ 				 uchar *enetaddr)
+ {
+ 	char enetvar[32];
+-- 
+1.9.1
+

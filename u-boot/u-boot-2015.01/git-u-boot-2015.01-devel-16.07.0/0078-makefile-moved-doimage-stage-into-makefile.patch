@@ -1,0 +1,280 @@
+From f6d692e1f90563b6fb37b42f8e573b316f213438 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 22 Sep 2014 13:37:11 +0300
+Subject: [PATCH 0078/1240] makefile: moved doimage stage into makefile
+
+	The purpose of this is to slowly depreceate the perl
+	build script which started collecting garbage and hacking stuff we
+	need to do in other ways. Altough it is not ideal to modify
+	u-boot Makefile, this change is not intrusive since it adds a
+	post rule on the regular build. Using only the makefile gives a
+	better and more standard experience to customers using our
+	u-boot
+
+Change-Id: I215a818697d01d6bf2524013f226a9d1f44e9d15
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/11874
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ Makefile                       |  23 ++++++++
+ include/configs/armada38x.h    |   7 +++
+ include/configs/mvebu-common.h |  29 ++++++----
+ scripts/bin2phex.pl            | 122 +++++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 171 insertions(+), 10 deletions(-)
+ create mode 100644 scripts/bin2phex.pl
+
+diff --git a/Makefile b/Makefile
+index 36a9a28..9b41443 100644
+--- a/Makefile
++++ b/Makefile
+@@ -732,6 +732,9 @@ ALL-$(CONFIG_REMAKE_ELF) += u-boot.elf
+ # We can't do this yet due to the need for binary blobs
+ # ALL-$(CONFIG_X86_RESET_VECTOR) += u-boot.rom
+ 
++ALL-$(CONFIG_MVEBU_DOIMAGE) += doimage
++ALL-$(CONFIG_PALLADIUM) += bin2phex
++
+ # enable combined SPL/u-boot/dtb rules for tegra
+ ifneq ($(CONFIG_TEGRA),)
+ ifeq ($(CONFIG_SPL),y)
+@@ -834,6 +837,26 @@ OBJCOPYFLAGS_u-boot.ldr.srec := -I binary -O srec
+ u-boot.ldr.hex u-boot.ldr.srec: u-boot.ldr FORCE
+ 	$(call if_changed,objcopy)
+ 
++ifdef CONFIG_MVEBU
++DOIMAGE :=  $(SRCTREE)/tools/marvell/doimage
++BIN_HDR :=  $(SRCTREE)/tools/marvell/bin_hdr
++BIN_HDR_UART :=  $(SRCTREE)/tools/marvell/bin_hdr.uart
++BIN2PHEX := $(SRCTREE)/scripts/bin2phex.pl
++
++ifdef CONFIG_MVEBU_NAND_BOOT
++NAND_OPTS := -P $(CONFIG_MVEBU_NAND_PAGE_SIZE) -L $(CONFIG_MVEBU_NAND_BLOCK_SIZE) -N $(CONFIG_MVEBU_NAND_CELL_TYPE)
++endif
++DOIMAGE_FLAGS 		:= -T $(CONFIG_DOIMAGE_TYPE) -D 0x0 -E 0x0 $(NAND_OPTS) -G $(BIN_HDR)
++DOIMAGE_UART_FLGS	:= -T uart -D 0x0 -E 0x0 -G $(BIN_HDR_UART)
++
++doimage: $(obj)u-boot.bin $(DOIMAGE) $(BIN_HDR) $(BIN_HDR_UART)
++		$(DOIMAGE) $(DOIMAGE_FLAGS)     u-boot.bin u-boot-$(CONFIG_DOIMAGE_SUFFIX).bin
++		$(DOIMAGE) $(DOIMAGE_UART_FLGS) u-boot.bin u-boot-$(CONFIG_DOIMAGE_SUFFIX)-uart.bin
++
++bin2phex: $(obj)u-boot.bin
++		$(BIN2PHEX) -i u-boot.bin -o u-boot.hex -b 0x0
++endif # CONFIG_MVEBU
++
+ #
+ # U-Boot entry point, needed for booting of full-blown U-Boot
+ # from the SPL U-Boot version.
+diff --git a/include/configs/armada38x.h b/include/configs/armada38x.h
+index e54468a..869580f 100644
+--- a/include/configs/armada38x.h
++++ b/include/configs/armada38x.h
+@@ -89,6 +89,13 @@
+ #define CONFIG_OF_BOARD_SETUP	1
+ */
+ 
++/* Define NAND chip parameters */
++#ifdef CONFIG_MVEBU_NAND_BOOT
++#define CONFIG_MVEBU_NAND_PAGE_SIZE	4096
++#define CONFIG_MVEBU_NAND_BLOCK_SIZE	128
++#define CONFIG_MVEBU_NAND_CELL_TYPE	MLC
++#endif
++
+ /* Clock */
+ #ifndef __ASSEMBLY__
+ 	#define CONFIG_SYS_HZ                   1000
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index a113653..7b95613 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -137,7 +137,7 @@
+ #define CONFIG_CMD_MVEBU_BUBT
+ 
+ 
+-/* No flash setup */
++/* Flash env setup */
+ #if !defined(MV_INCLUDE_NOR) && !defined(CONFIG_MVEBU_NAND_BOOT) && !defined(CONFIG_MVEBU_SPI_BOOT)
+ 	#undef CONFIG_CMD_FLASH
+ 	#undef CONFIG_CMD_IMLS
+@@ -153,8 +153,26 @@
+ 	/* TODO - Do we really need this */
+ 	#define CONFIG_SYS_MONITOR_BASE	0
+ 	#define CONFIG_SYS_MONITOR_LEN	0x80000  /* Reserve 512 kB for Monitor */
++
++	#define CONFIG_MVEBU_DOIMAGE
+ #endif
+ 
++
++/* Boot from NAND settings */
++#if defined(CONFIG_MVEBU_NAND_BOOT)
++	#define CONFIG_ENV_IS_IN_NAND
++	#define CONFIG_DOIMAGE_TYPE	"nand"
++	#define CONFIG_DOIMAGE_SUFFIX	"nand-flash"
++#endif /* CONFIG_MVEBU_NAND_BOOT */
++
++/* Boot from SPI settings */
++#if defined(CONFIG_MVEBU_SPI_BOOT)
++	#define CONFIG_ENV_IS_IN_SPI_FLASH
++	#define CONFIG_DOIMAGE_TYPE	"flash"
++	#define CONFIG_DOIMAGE_SUFFIX	"spi-flash"
++#endif /* CONFIG_MVEBU_SPI_BOOT */
++
++
+ /* Generic Interrupt Controller Definitions */
+ #define GICD_BASE                       MVEBU_GICD_BASE
+ #define GICC_BASE                       MVEBU_GICC_BASE
+@@ -345,11 +363,6 @@
+ 	#define CONFIG_NAND_ECC_STEP_SIZE 512
+ #endif
+ 
+-/* Boot from NAND settings */
+-#if defined(CONFIG_MVEBU_NAND_BOOT)
+-	#define CONFIG_ENV_IS_IN_NAND
+-#endif /* CONFIG_MVEBU_SPI_BOOT */
+-
+ /* SPI Flash */
+ #ifdef CONFIG_MVEBU_SPI
+ 	#define CONFIG_CMD_SPI
+@@ -373,10 +386,6 @@
+ 
+ #endif  /* MV_INCLUDE_SPI */
+ 
+-/* Boot from SPI settings */
+-#if defined(CONFIG_MVEBU_SPI_BOOT)
+-	#define CONFIG_ENV_IS_IN_SPI_FLASH
+-#endif /* CONFIG_MVEBU_SPI_BOOT */
+ 
+ /* NOR Flash */
+ #ifdef MV_INCLUDE_NOR
+diff --git a/scripts/bin2phex.pl b/scripts/bin2phex.pl
+new file mode 100644
+index 0000000..36cd5ca
+--- /dev/null
++++ b/scripts/bin2phex.pl
+@@ -0,0 +1,122 @@
++#!/usr/bin/perl
++
++sub bin2hex
++{
++	my ($in_file, $out_file, $base_addr) = @_;
++
++	# Generate a HEX dump from the binary using GCC
++	system ("\${CROSS_COMPILE}objcopy -O verilog -I binary $in_file /tmp/image.tmp");
++
++	# Convert base address to 16 byte resolution
++	my $addr = sprintf("%d", hex($base_addr));
++	$addr = $addr / 16;
++
++	unless(open $src, "</tmp/image.tmp")
++	{
++		print ("Failed to open input file $in_file\n");
++		goto ERROR;
++	}
++	unless(open $dst, ">$out_file")
++	{
++		print ("Failed to open output file $out_file\n");
++		goto ERROR;
++	}
++
++	# Move away the first line which containes an address
++	my $tmp = <$src>;
++
++	# Add address to each line
++	foreach my $line (<$src>)
++	{
++		# Create address line
++		my $addr_str = sprintf("@%07x",$addr);
++
++		# Remove spaces line endings and ^M
++		$line =~ s/\r//;
++		$line =~ s/ //g;
++		chomp($line);
++
++		print $dst "$addr_str\n";
++		print $dst reverse split /(..)/, $line;
++		print $dst "\n";
++
++		$addr++;
++	}
++
++	close($dst);
++	close($src);
++
++	`rm -rf /tmp/image.tmp`;
++
++	return 0;
++
++ERROR:
++	return 1;
++}
++
++sub usage
++{
++	print "\nConvert binary file to Palladium HEX format\n";
++	print "\nExample  : bin2phex.pl -i Image -o Image.hex -b 0x0\n";
++	print "\n";
++	print "Options:\n";
++	print "\t-i\tInput file in binary format\n";
++	print "\t-o\tOutput file in Palladium HEX format\n";
++	print "\t-b\tBase address of the image in hex\n";
++	print "\n";
++	print "Environment Variables:\n";
++	print "\tCROSS_COMPILE     Cross compiler to build U-BOOT\n";
++	print "\n";
++}
++
++# Main
++use strict;
++use warnings;
++use Getopt::Std;
++
++use vars qw($opt_o $opt_b $opt_h $opt_i);
++
++getopt('o:i:b');
++
++if ($opt_h)
++{
++	usage();
++	exit 0;
++}
++
++unless ($opt_i) {
++	printf "\nError: Please specify input file\n\n";
++	usage();
++	exit 1;
++}
++unless (-e $opt_i) {
++	printf "\nError: Input file $opt_i doesn't exist\n\n";
++	exit 1;
++}
++
++unless ($opt_o) {
++	printf "\nError: Please specify output file\n\n";
++	usage();
++	exit 1;
++}
++
++unless ($opt_b) {
++	printf "\nError: Please specify the base address of the image\n\n";
++	usage();
++	exit 1;
++}
++
++my $cross = $ENV{'CROSS_COMPILE'};
++if(!defined $cross){
++	printf "\nError: Please set environment variable CROSS_COMPILE\n\n";
++	usage();
++	exit 1;
++}
++
++if(bin2hex($opt_i, $opt_o, $opt_b)) {
++	printf "\nError: Failed converting image\n\n";
++	exit 1;
++}
++
++exit 0;
++
+-- 
+1.9.1
+

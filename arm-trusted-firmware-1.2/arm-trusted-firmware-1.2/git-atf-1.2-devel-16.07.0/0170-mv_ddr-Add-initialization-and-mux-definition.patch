@@ -1,0 +1,83 @@
+From 90e957da536d0e5c097841622c460b00a8dc6be9 Mon Sep 17 00:00:00 2001
+From: Ofir Fedida <ofedida@marvell.com>
+Date: Mon, 23 May 2016 12:22:32 +0300
+Subject: [PATCH 170/239] mv_ddr: Add initialization and mux definition
+
+add register definition and mux definition
+
+Change-Id: Ifab7ade0de59610ec9bb8da9639f87b3d62fc546
+Signed-off-by: Ofir Fedida <ofedida@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29872
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/ddr3_hws_hw_training_def.h | 10 +++++++++-
+ drivers/marvell/mv_ddr/ddr3_training.c            |  2 +-
+ drivers/marvell/mv_ddr/ddr3_training_ip_flow.h    | 16 +++++++++++++++-
+ 3 files changed, 25 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/marvell/mv_ddr/ddr3_hws_hw_training_def.h b/drivers/marvell/mv_ddr/ddr3_hws_hw_training_def.h
+index be89909..c2e47f9 100644
+--- a/drivers/marvell/mv_ddr/ddr3_hws_hw_training_def.h
++++ b/drivers/marvell/mv_ddr/ddr3_hws_hw_training_def.h
+@@ -144,7 +144,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define REG_SDRAM_CONFIG_PUPRSTDIV_OFFS		28
+ #define REG_SDRAM_CONFIG_RSTRD_OFFS		30
+ 
+-#define REG_SDRAM_PINS_MUX			0x19d4
++#define REG_SDRAM_PINS_MUX_ADDR			0x19d4
++#define CTRL_PINS_MUX_OFFS			0
++#define CTRL_PINS_MUX_MASK			0x3
++enum {
++	DUNIT_DDR3_ON_BOARD = 0x0,
++	DUNIT_DDR3_DIMM = 0x1,
++	DUNIT_DDR4_ON_BOARD = 0x2,
++	DUNIT_DDR4_DIMM = 0x3
++};
+ 
+ #define REG_DUNIT_CTRL_LOW_ADDR			0x1404
+ #define REG_DUNIT_CTRL_LOW_2T_OFFS		3
+diff --git a/drivers/marvell/mv_ddr/ddr3_training.c b/drivers/marvell/mv_ddr/ddr3_training.c
+index 84a0960..ff9001b 100644
+--- a/drivers/marvell/mv_ddr/ddr3_training.c
++++ b/drivers/marvell/mv_ddr/ddr3_training.c
+@@ -1174,7 +1174,7 @@ int ddr3_pre_algo_config(void)
+ 		/* Set Bus3 ECC MUX */
+ 		CHECK_STATUS(ddr3_tip_if_write
+ 			     (0, ACCESS_TYPE_UNICAST, PARAM_NOT_CARE,
+-			      REG_SDRAM_PINS_MUX, 0x100, 0x100));
++			      REG_SDRAM_PINS_MUX_ADDR, 0x100, 0x100));
+ 	}
+ 
+ 	/* Set regular ECC training mode (bus4 and bus 3) */
+diff --git a/drivers/marvell/mv_ddr/ddr3_training_ip_flow.h b/drivers/marvell/mv_ddr/ddr3_training_ip_flow.h
+index 5629430..de70a51 100644
+--- a/drivers/marvell/mv_ddr/ddr3_training_ip_flow.h
++++ b/drivers/marvell/mv_ddr/ddr3_training_ip_flow.h
+@@ -258,8 +258,22 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define ODPG_BIST_FAILED_DATA_HI_REG		0x16c4
+ #define ODPG_BIST_FAILED_DATA_LOW_REG		0x16c8
+ #define ODPG_WRITE_DATA_ERROR_REG		0x16cc
++
+ #define CS_ENABLE_REG				0x16d8
+-#define WR_LEVELING_DQS_PATTERN_REG		0x16dc
++#define TUNING_ACTIVE_SEL_OFFS			0x6
++#define TUNING_ACTIVE_SEL_MASK			0x1
++#define FC_SAMPLE_STAGES_OFFS			0
++#define FC_SAMPLE_STAGES_MASK			0x7
++#define SINGLE_CS_PIN_OFFS			3
++#define SINGLE_CS_PIN_MASK			0x1
++enum {
++	ENABLE_TIP = 1,
++	ENABLE_MCKINLEY = 0,
++	USES_SEPARATE = 0,
++	USES_SINGLE = 0x1
++};
++
++#define WR_LEVELING_DQS_PATTERN_REG			0x16dc
+ 
+ #define ODPG_BIST_DONE				0x186d4
+ #define ODPG_BIST_DONE_BIT_OFFS			0
+-- 
+1.9.1
+

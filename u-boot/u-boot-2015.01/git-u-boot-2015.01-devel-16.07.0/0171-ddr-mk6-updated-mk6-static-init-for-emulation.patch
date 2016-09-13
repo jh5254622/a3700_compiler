@@ -1,0 +1,57 @@
+From 261061414e4f8d292a88ce14ac21928e4ae9c937 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Tue, 14 Apr 2015 13:25:46 +0300
+Subject: [PATCH 0171/1240] ddr: mk6: updated mk6 static init for emulation
+
+Change-Id: Iefe4a3e82cccfe6951e9ed2971dd68f150827c06
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/18254
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/ddr/ddr_mckinley6.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/drivers/ddr/ddr_mckinley6.c b/drivers/ddr/ddr_mckinley6.c
+index 75010ff..a631146 100644
+--- a/drivers/ddr/ddr_mckinley6.c
++++ b/drivers/ddr/ddr_mckinley6.c
+@@ -30,7 +30,11 @@ void static_dram_init(void)
+ 	writel(0x00200000, 0xf0020314);
+ 	writel(0x00200000, 0xf0020318);
+ 	writel(0x00200000, 0xf002031c);
++#ifdef CONFIG_PALLADIUM
++	writel(0x000d0001, 0xf0020200); /* use 512MB CS */
++#else
+ 	writel(0x000e0001, 0xf0020200);
++#endif
+ 	writel(0x00000000, 0xf0020204);
+ 	writel(0x400e0001, 0xf0020208);
+ 	writel(0x00000000, 0xf002020c);
+@@ -38,7 +42,11 @@ void static_dram_init(void)
+ 	writel(0x00000000, 0xf0020214);
+ 	writel(0xc00e0001, 0xf0020218);
+ 	writel(0x00000000, 0xf002021c);
++#ifdef CONFIG_PALLADIUM
++	writel(0x13010332, 0xf0020220); /* use 64 bit ls*/
++#else
+ 	writel(0x05000632, 0xf0020220);
++#endif
+ 	writel(0x05000632, 0xf0020224);
+ 	writel(0x05000632, 0xf0020228);
+ 	writel(0x05000632, 0xf002022c);
+@@ -49,7 +57,11 @@ void static_dram_init(void)
+ 	writel(0x00000001, 0xf0020048);
+ 	writel(0x00010200, 0xf0020180);
+ 	writel(0x000000ff, 0xf0020050);
++#ifdef CONFIG_PALLADIUM
++	writel(0x00000000, 0xf002004c); /* Disable ECC */
++#else
+ 	writel(0x00000002, 0xf002004c);
++#endif
+ 	writel(0x00000480, 0xf0020054);
+ 	writel(0x0000080a, 0xf0020300);
+ 	writel(0x00000032, 0xf0020380);
+-- 
+1.9.1
+

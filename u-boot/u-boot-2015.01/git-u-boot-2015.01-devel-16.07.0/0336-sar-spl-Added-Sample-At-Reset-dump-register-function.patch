@@ -1,0 +1,274 @@
+From cc633ddefb2b347e1f75432be8bef94bc3562042 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 17 Aug 2015 15:50:04 +0300
+Subject: [PATCH 0336/1240] sar: spl: Added Sample At Reset dump register
+ function
+
+Change-Id: I4ee3b896b642c5ecfdb8855a6c5102d726a32ce0
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22894
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/spl.c             |  9 ++++
+ arch/arm/cpu/mvebu-common/tools/Kconfig     | 12 +++++
+ arch/arm/cpu/mvebu-common/tools/Makefile    |  1 +
+ arch/arm/cpu/mvebu-common/tools/mvebu_sar.c | 50 +++++++++++++++++++++
+ arch/arm/include/asm/arch-armada38x/sar.h   | 51 ++++++++++++++++++++++
+ arch/arm/include/asm/arch-armada8k/sar.h    | 68 +++++++++++++++++++++++++++++
+ 6 files changed, 191 insertions(+)
+ create mode 100644 arch/arm/cpu/mvebu-common/tools/mvebu_sar.c
+ create mode 100644 arch/arm/include/asm/arch-armada38x/sar.h
+ create mode 100644 arch/arm/include/asm/arch-armada8k/sar.h
+
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index 9aa8238..ae9e1d4 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -36,6 +36,10 @@
+ #include <asm/arch-mvebu/flc.h>
+ #endif
+ 
++#ifdef CONFIG_MVEBU_SPL_SAR_DUMP
++extern void mvebu_sar_dump_reg(void);
++#endif
++
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+ static int setup_fdt(void)
+@@ -64,6 +68,10 @@ void board_init_f(ulong silent)
+ 	setup_fdt();
+ 	preloader_console_init();
+ 
++#ifdef CONFIG_MVEBU_SPL_SAR_DUMP
++	mvebu_sar_dump_reg();
++#endif
++
+ #ifndef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+ /* when DDR over PCIE is enabled, add delay before and after the comphy_init
+    to verify that the PCIE card init done, before setting the comphy to avoid
+@@ -93,4 +101,5 @@ void board_init_f(ulong silent)
+ 	if (run_memory_test())
+ 		printf("**** DRAM test failed ****\n");
+ #endif
++
+ }
+diff --git a/arch/arm/cpu/mvebu-common/tools/Kconfig b/arch/arm/cpu/mvebu-common/tools/Kconfig
+index c115609..7687103 100644
+--- a/arch/arm/cpu/mvebu-common/tools/Kconfig
++++ b/arch/arm/cpu/mvebu-common/tools/Kconfig
+@@ -39,4 +39,16 @@ config MVEBU_MEM_TEST_END_ADDR
+ 	help
+ 	  This option set the end address
+ 	  of the DRAM test in SPL code
++
++config MVEBU_SPL_SAR_DUMP
++	bool "Sample at reset dump"
++	depends on SPL
++	default n
++	help
++	  To add this option you need to edit the
++	  defconfig and add the following line:
++	  +S:CONFIG_MVEBU_SPL_SAR_DUMP=y
++	  Choose this option to dump sample at
++	  reset register
++
+ endmenu
+diff --git a/arch/arm/cpu/mvebu-common/tools/Makefile b/arch/arm/cpu/mvebu-common/tools/Makefile
+index 061e7a5..1689071 100644
+--- a/arch/arm/cpu/mvebu-common/tools/Makefile
++++ b/arch/arm/cpu/mvebu-common/tools/Makefile
+@@ -17,3 +17,4 @@
+ #
+ 
+ obj-$(CONFIG_MVEBU_SPL_MEMORY_TEST) += ddr_test.o
++obj-$(CONFIG_MVEBU_SPL_SAR_DUMP) += mvebu_sar.o
+diff --git a/arch/arm/cpu/mvebu-common/tools/mvebu_sar.c b/arch/arm/cpu/mvebu-common/tools/mvebu_sar.c
+new file mode 100644
+index 0000000..f31016f
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/tools/mvebu_sar.c
+@@ -0,0 +1,50 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <asm/system.h>
++#include <asm/io.h>
++#include <asm/arch/sar.h>
++
++void mvebu_sar_dump_reg(void)
++{
++	u32 reg, val;
++	struct sar_info *sar;
++
++	printf("| SAR Name    | Mask       | Offset     | Value      |\n");
++	printf("Sample at reset register 0:\n");
++	reg = readl(SAMPLE_AT_RESET_REG_0);
++	sar = sar_0;
++	while (sar->offset != -1) {
++		val = (reg & sar->mask) >> sar->offset;
++		printf("| %s | 0x%08x | 0x%08x | 0x%08x |\n",
++		       sar->name, sar->offset, sar->mask, val);
++		sar++;
++	}
++
++	printf("Sample at reset register 1:\n");
++	reg = readl(SAMPLE_AT_RESET_REG_1);
++	sar = sar_1;
++	while (sar->offset != -1) {
++		val = (reg & sar->mask) >> sar->offset;
++		printf("| %s | 0x%08x | 0x%08x | 0x%08x |\n",
++		       sar->name, sar->offset, sar->mask, val);
++		sar++;
++	}
++	printf("\n");
++}
+diff --git a/arch/arm/include/asm/arch-armada38x/sar.h b/arch/arm/include/asm/arch-armada38x/sar.h
+new file mode 100644
+index 0000000..f8eb0a3
+--- /dev/null
++++ b/arch/arm/include/asm/arch-armada38x/sar.h
+@@ -0,0 +1,51 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _SAR_H_
++#define _SAR_H_
++
++#include <asm/arch/memory-map.h>
++
++#define SAMPLE_AT_RESET_REG_0		(MVEBU_REGS_BASE + 0xE4200)
++#define SAR_CPU_ENABLE_OFFSET		16
++#define SAR_CPU_ENABLE_MASK		(0x1 << SAR_CPU_ENABLE_OFFSET)
++#define SAR_BOOT_SOURCE_OFFSET		3
++#define SAR_BOOT_SOURCE_MASK		(0x3F << SAR_BOOT_SOURCE_OFFSET)
++
++#define SAMPLE_AT_RESET_REG_1		(MVEBU_REGS_BASE + 0xE4204)
++#define SAR_CPU_DDR_FREQ_OFFSET		17
++#define SAR_CPU_DDR_FREQ_MASK		(0x1F << SAR_CPU_DDR_FREQ_OFFSET)
++
++struct sar_info {
++	char *name;
++	u32 offset;
++	u32 mask;
++};
++
++struct sar_info sar_0[] = {
++	{"CPU Enable ",		SAR_CPU_ENABLE_OFFSET,	SAR_CPU_ENABLE_MASK},
++	{"Boot src   ",		SAR_BOOT_SOURCE_OFFSET,	SAR_BOOT_SOURCE_MASK},
++	{"",			-1,			-1},
++};
++
++struct sar_info sar_1[] = {
++	{"CPU DDR frq",	SAR_CPU_DDR_FREQ_OFFSET, SAR_CPU_DDR_FREQ_MASK},
++	{"",			-1,			-1},
++};
++
++#endif	/* _SAR_H_ */
+diff --git a/arch/arm/include/asm/arch-armada8k/sar.h b/arch/arm/include/asm/arch-armada8k/sar.h
+new file mode 100644
+index 0000000..efac14f
+--- /dev/null
++++ b/arch/arm/include/asm/arch-armada8k/sar.h
+@@ -0,0 +1,68 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _SAR_H_
++#define _SAR_H_
++
++#include <asm/arch/memory-map.h>
++
++#define SAMPLE_AT_RESET_REG_0		(MVEBU_REGS_BASE + 0x7F0200)
++
++#define SAR_DUAL_AP_MODE_OFFSET		0
++#define SAR_DUAL_AP_MODE_MASK		(0x1 << SAR_DUAL_AP_MODE_OFFSET)
++#define SAR_I2C_INIT_EN_OFFSET		1
++#define SAR_I2C_INIT_EN_MASK		(0x1 << SAR_I2C_INIT_EN_OFFSET)
++#define SAR_BOOT_SRC_OFFSET		2
++#define SAR_BOOT_SRC_MASK		(0x3 << SAR_BOOT_SRC_OFFSET)
++#define SAR_C2C_IHB_OFFSET		4
++#define SAR_C2C_IHB_MASK		(0x1 << SAR_C2C_IHB_OFFSET)
++#define SAR_EFUSE_BYPASS_OFFSET		7
++#define SAR_EFUSE_BYPASS_MASK		(0x1 << SAR_EFUSE_BYPASS_OFFSET)
++#define SAR_STAND_ALONE_AP_MODE_OFFSET	8
++#define SAR_STAND_ALONE_AP_MODE_MASK	(0x1 << SAR_STAND_ALONE_AP_MODE_OFFSET)
++#define SAR_SLAVE_AP_MODE_OFFSET	9
++#define SAR_SLAVE_AP_MODE_MASK		(0x1 << SAR_SLAVE_AP_MODE_OFFSET)
++#define SAR_AVS_MASTER_OFFSET		11
++#define SAR_AVS_MASTER_MASK		(0x1 << SAR_AVS_MASTER_OFFSET)
++
++#define SAMPLE_AT_RESET_REG_1		(MVEBU_REGS_BASE + 0x7F0204)
++
++struct sar_info {
++	char *name;
++	u32 offset;
++	u32 mask;
++};
++
++struct sar_info sar_0[] = {
++	{"Dual AP mode       ", SAR_DUAL_AP_MODE_OFFSET, SAR_DUAL_AP_MODE_MASK },
++	{"I2C init Enable    ", SAR_I2C_INIT_EN_OFFSET, SAR_I2C_INIT_EN_MASK },
++	{"Boot Source        ", SAR_BOOT_SRC_OFFSET, SAR_BOOT_SRC_MASK },
++	{"C2C IHB select     ", SAR_C2C_IHB_OFFSET, SAR_C2C_IHB_MASK },
++	{"EFUSE ByPass       ", SAR_EFUSE_BYPASS_OFFSET, SAR_EFUSE_BYPASS_MASK },
++	{"Stand Alone AP mode", SAR_STAND_ALONE_AP_MODE_OFFSET, SAR_STAND_ALONE_AP_MODE_MASK},
++	{"Slave AP mode      ", SAR_SLAVE_AP_MODE_OFFSET, SAR_SLAVE_AP_MODE_MASK },
++	{"AVS master         ", SAR_AVS_MASTER_OFFSET, SAR_AVS_MASTER_MASK },
++	{"",			-1,			-1},
++};
++
++struct sar_info sar_1[] = {
++	{"",			-1,			-1},
++};
++
++
++#endif	/* _SAR_H_ */
+-- 
+1.9.1
+

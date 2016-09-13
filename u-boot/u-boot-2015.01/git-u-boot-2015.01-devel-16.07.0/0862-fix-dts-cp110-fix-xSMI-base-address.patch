@@ -1,0 +1,30 @@
+From 58c2d565048ad4f877b2cbda07d6589e3519a582 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 17 Feb 2016 11:12:28 +0200
+Subject: [PATCH 0862/1240] fix: dts: cp110: fix xSMI base address
+
+Change-Id: Ie19ecb2d02248804e56ffc96b7db0a3f8341b3a5
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27567
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/cp110.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index 3b70778..909e149 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -121,7 +121,7 @@ nand@720000 {
+ 
+ mdio0@12A200 {
+ 	compatible = "marvell,mvebu-mdio";
+-	reg_xsmi = <0x15B000 0x20>;
++	reg_xsmi = <0x12A600 0x20>;
+ 	reg_smi = <0x12A200 0x4>;
+ 	status = "okay";
+ };
+-- 
+1.9.1
+

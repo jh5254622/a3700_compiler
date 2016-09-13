@@ -1,0 +1,67 @@
+From d03b4e34fa625cdd2b19712c6c43ee695d72c471 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Fri, 4 Dec 2015 18:02:43 +0800
+Subject: [PATCH 0575/1240] sdio: a3700: added SDIO node in DT files for A3700
+
+- This patch enables the SDIO only module in DT files.
+- It is disabled in customer0 DTS file since the customer0
+  does not need it for now.
+
+Change-Id: I480257cb074201572ac74cb0b92c555c5e00d63d
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25612
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/armada-lp-customer0.dts | 3 +++
+ arch/arm/dts/armada-lp-db.dts        | 3 +++
+ arch/arm/dts/armada-lp.dtsi          | 5 +++++
+ 3 files changed, 11 insertions(+)
+
+diff --git a/arch/arm/dts/armada-lp-customer0.dts b/arch/arm/dts/armada-lp-customer0.dts
+index 5762caf..51ff932 100644
+--- a/arch/arm/dts/armada-lp-customer0.dts
++++ b/arch/arm/dts/armada-lp-customer0.dts
+@@ -49,6 +49,9 @@
+ 			mmc0: mmc@D8000 {
+ 				status = "disabled";
+ 			};
++			mmc1: mmc@D0000 {
++				status = "disabled";
++			};
+ 			usb3: usb3@58000 {
+ 				status = "disabled";
+ 			};
+diff --git a/arch/arm/dts/armada-lp-db.dts b/arch/arm/dts/armada-lp-db.dts
+index 2c96dba..6605fe0 100644
+--- a/arch/arm/dts/armada-lp-db.dts
++++ b/arch/arm/dts/armada-lp-db.dts
+@@ -49,6 +49,9 @@
+ 			mmc0: mmc@D8000 {
+ 				status = "okay";
+ 			};
++			mmc1: mmc@D0000 {
++				status = "okay";
++			};
+ 			usb3: usb3@58000 {
+ 				status = "okay";
+ 			};
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index 857e315..a6544d8 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -114,6 +114,11 @@
+ 				reg = <0xD8000 0x300>;
+ 				status = "disabled";
+ 			};
++			mmc1: mmc@D0000 {
++				compatible = "marvell,xenon-sdhci";
++				reg = <0xD0000 0x300>;
++				status = "disabled";
++			};
+ 			usb3: usb3@58000 {
+ 				compatible = "marvell,mvebu-usb3";
+ 				reg = <0x58000 0x450>;
+-- 
+1.9.1
+

@@ -1,0 +1,63 @@
+From af5871bfa827d828bc86ef8a8e5803ccdae20d3b Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 6 Aug 2015 17:30:39 +0300
+Subject: [PATCH 0305/1240] fix: thermal: update thermal sensor driver to check
+ the valid bit
+
+- update thermal sensor driver to check the valid bit instead of waiting 10us
+  the 10us is not enough to get the thermal sensor ready.
+
+Change-Id: I5b6520cb85c81b49e9f5e217ac558b27ac023f1d
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22607
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ common/mvebu/cmd_misc.c              | 2 +-
+ drivers/thermal/mvebu_thermal_28nm.c | 9 +++++++--
+ 2 files changed, 8 insertions(+), 3 deletions(-)
+
+diff --git a/common/mvebu/cmd_misc.c b/common/mvebu/cmd_misc.c
+index d355520..7675412 100644
+--- a/common/mvebu/cmd_misc.c
++++ b/common/mvebu/cmd_misc.c
+@@ -195,7 +195,7 @@ int thermal_sensor_cmd(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[]
+ 
+ U_BOOT_CMD(
+ 	tsen, 1, 1, thermal_sensor_cmd,
+-	"temp   - Display the SoC temperature.\n",
++	"tsen - Display the SoC temperature.\n",
+ 	"\n\tDisplay the SoC temperature as read from the on chip thermal sensor.\n"
+ );
+ #endif
+diff --git a/drivers/thermal/mvebu_thermal_28nm.c b/drivers/thermal/mvebu_thermal_28nm.c
+index 87f8f5f..2a77e97 100644
+--- a/drivers/thermal/mvebu_thermal_28nm.c
++++ b/drivers/thermal/mvebu_thermal_28nm.c
+@@ -56,7 +56,7 @@ u32 mvebu_thermal_sensor_read(void)
+ u32 mvebu_thermal_sensor_probe(void)
+ {
+ 	const void *blob = gd->fdt_blob;
+-	u32 node, reg;
++	u32 node, reg, timeout = 0;
+ 
+ 	debug_enter();
+ 	debug("Initializing thermal sensor unit\n");
+@@ -77,8 +77,13 @@ u32 mvebu_thermal_sensor_probe(void)
+ 	reg |= THERMAL_SEN_CTRL_MSB_RST_MASK;
+ 	writel(reg, thermal_base + THERMAL_SEN_CTRL_MSB);
+ 
+-	udelay(10); /* wait 10 ms and check if the TSEN is ready */
+ 	reg = readl(thermal_base + THERMAL_SEN_CTRL_STATS);
++	while ((reg & THERMAL_SEN_CTRL_STATS_VALID_MASK) == 0 && timeout < 300) {
++		udelay(1);
++		reg = readl(thermal_base + THERMAL_SEN_CTRL_STATS);
++		timeout++;
++	}
++
+ 	if ((reg & THERMAL_SEN_CTRL_STATS_VALID_MASK) == 0) {
+ 		error("%s: thermal sensor is not ready\n", __func__);
+ 		return -1;
+-- 
+1.9.1
+

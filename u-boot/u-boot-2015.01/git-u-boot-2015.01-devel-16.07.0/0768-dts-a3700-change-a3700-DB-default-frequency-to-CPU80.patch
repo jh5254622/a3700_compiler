@@ -1,0 +1,31 @@
+From a14021f8325919c14a8ce31a986ebfb234a7d5f8 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Tue, 2 Feb 2016 22:46:38 +0800
+Subject: [PATCH 0768/1240] dts: a3700: change a3700 DB default frequency to
+ CPU800/DDR800
+
+Change-Id: I8af9535864efea8c89812ceee8da375827e38116
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27118
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/dts/armada-lp-db.dts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/armada-lp-db.dts b/arch/arm/dts/armada-lp-db.dts
+index f8002c6..bd96b90 100644
+--- a/arch/arm/dts/armada-lp-db.dts
++++ b/arch/arm/dts/armada-lp-db.dts
+@@ -27,7 +27,7 @@
+ 
+ 	soc {
+ 		freq {
+-			preset = <PRESET_CPU_600_DDR_600>;
++			preset = <PRESET_CPU_800_DDR_800>;
+ 		};
+ 
+ 		internal-regs {
+-- 
+1.9.1
+

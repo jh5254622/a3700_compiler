@@ -1,0 +1,91 @@
+From 880ea7db2f2ecc73d57a460a09d99a7c144c97b9 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 22 Dec 2015 09:37:48 +0200
+Subject: [PATCH 0605/1240] fix: pcie: a8k: fixed PCIe memory windows to align
+ with Linux
+
+	Current memory map overrides configuration spaces @ 0xF2000000 and
+	0xF4000000 which should be 32MB and not 16MB
+
+Change-Id: I2ede63e256a384be37fa95ba08cda0151466b4b5
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26196
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/cp110-slave.dtsi | 12 ++++++------
+ arch/arm/dts/cp110.dtsi       | 12 ++++++------
+ 2 files changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/arch/arm/dts/cp110-slave.dtsi b/arch/arm/dts/cp110-slave.dtsi
+index 04318c6..8e241a2 100644
+--- a/arch/arm/dts/cp110-slave.dtsi
++++ b/arch/arm/dts/cp110-slave.dtsi
+@@ -38,20 +38,20 @@
+ 	cp110-slave {
+ 		internal-regs {
+ 			map-iob {
+-				windows = <0x0 0xfa000000 0x0 0x1000000 0x2 /* PEX1_X1 window */
+-					0x0 0xfb000000 0x0 0x1000000 0x3 /* PEX2_X1 window */
+-					0x0 0xf9000000 0x0 0x1000000 0x4 /* PEX0_X4 window */>;
++				windows = <0x0 0xfb000000 0x0 0x1000000 0x2 /* PEX1_X1 window */
++					0x0 0xfc000000 0x0 0x1000000 0x3 /* PEX2_X1 window */
++					0x0 0xfa000000 0x0 0x1000000 0x4 /* PEX0_X4 window */>;
+ 			};
+ 
+ 			pcie-controller {
+ 				pcie@0,0 {
+-					mem = <0xf9000000 0x1000000>;
++					mem = <0xfa000000 0x1000000>;
+ 				};
+ 				pcie@1,0 {
+-					mem = <0xfa000000 0x1000000>;
++					mem = <0xfb000000 0x1000000>;
+ 				};
+ 				pcie@2,0 {
+-					mem = <0xfb000000 0x1000000>;
++					mem = <0xfc000000 0x1000000>;
+ 				};
+ 			};
+ 		};
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index 314bb4f..bf345c3 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -20,9 +20,9 @@ map-iob {
+ 	compatible = "marvell,mvebu-iob";
+ 	reg = <0x190000 0x50>;
+ 	max-win = <16>;
+-	windows = <0x0 0xf6000000 0x0 0x1000000 0x2 /* PEX1_X1 window */
+-		0x0 0xf7000000 0x0 0x1000000 0x3 /* PEX2_X1 window */
+-		0x0 0xf5000000 0x0 0x1000000 0x4 /* PEX0_X4 window */
++	windows = <0x0 0xf7000000 0x0 0x1000000 0x2 /* PEX1_X1 window */
++		0x0 0xf8000000 0x0 0x1000000 0x3 /* PEX2_X1 window */
++		0x0 0xf6000000 0x0 0x1000000 0x4 /* PEX0_X4 window */
+ 		0x0 0xf9000000 0x0 0x1000000 0x5 /* NAND window */>;
+ };
+ 
+@@ -51,17 +51,17 @@ pcie-controller {
+ 
+ 	pcie@0,0 {
+ 		reg = <0x00600000 0x20000>;
+-		mem = <0xf5000000 0x1000000>;
++		mem = <0xf6000000 0x1000000>;
+ 		status = "disabled";
+ 	};
+ 	pcie@1,0 {
+ 		reg = <0x00620000 0x20000>;
+-		mem = <0xf6000000 0x1000000>;
++		mem = <0xf7000000 0x1000000>;
+ 		status = "disabled";
+ 	};
+ 	pcie@2,0 {
+ 		reg = <0x00640000 0x20000>;
+-		mem = <0xf7000000 0x1000000>;
++		mem = <0xf8000000 0x1000000>;
+ 		status = "disabled";
+ 	};
+ };
+-- 
+1.9.1
+

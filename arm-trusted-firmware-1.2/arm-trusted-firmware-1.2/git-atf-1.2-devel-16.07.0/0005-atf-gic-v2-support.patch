@@ -1,0 +1,567 @@
+From 2ba96a9b53ef6be5f25781799dede526683a6c7b Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Wed, 3 Feb 2016 13:02:50 +0200
+Subject: [PATCH 005/239] atf: gic v2 support
+
+support gic v2 for marvell platforms in general and for
+A8K platforms specifically
+
+Change-Id: I3cbb025230c1206efbcfb30d307117d962e38ea9
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27165
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ .../plat/marvell/a8k/common/aarch64/arm_macros.S   | 189 +++++++++++++++++++++
+ plat/marvell/a8k/a7040_rz/include/plat_macros.S    |  41 +++++
+ plat/marvell/common/aarch64/gic_64.S               | 177 +++++++++++++++++++
+ plat/marvell/common/marvell_gicv2.c                | 110 ++++++++++++
+ 4 files changed, 517 insertions(+)
+ create mode 100644 include/plat/marvell/a8k/common/aarch64/arm_macros.S
+ create mode 100644 plat/marvell/a8k/a7040_rz/include/plat_macros.S
+ create mode 100644 plat/marvell/common/aarch64/gic_64.S
+ create mode 100644 plat/marvell/common/marvell_gicv2.c
+
+diff --git a/include/plat/marvell/a8k/common/aarch64/arm_macros.S b/include/plat/marvell/a8k/common/aarch64/arm_macros.S
+new file mode 100644
+index 0000000..85ac8d0
+--- /dev/null
++++ b/include/plat/marvell/a8k/common/aarch64/arm_macros.S
+@@ -0,0 +1,189 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2016 Marvell International Ltd.
++* ***************************************************************************
++*
++* Redistribution and use in source and binary forms, with or without
++* modification, are permitted provided that the following conditions are met:
++*
++* Redistributions of source code must retain the above copyright notice, this
++* list of conditions and the following disclaimer.
++*
++* Redistributions in binary form must reproduce the above copyright notice,
++* this list of conditions and the following disclaimer in the documentation
++* and/or other materials provided with the distribution.
++*
++* Neither the name of Marvell nor the names of its contributors may be used
++* to endorse or promote products derived from this software without specific
++* prior written permission.
++*
++* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
++* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++* POSSIBILITY OF SUCH DAMAGE.
++*
++***************************************************************************
++*/
++/*
++ * Copyright (c) 2015, ARM Limited and Contributors. All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ *
++ * Redistributions of source code must retain the above copyright notice, this
++ * list of conditions and the following disclaimer.
++ *
++ * Redistributions in binary form must reproduce the above copyright notice,
++ * this list of conditions and the following disclaimer in the documentation
++ * and/or other materials provided with the distribution.
++ *
++ * Neither the name of ARM nor the names of its contributors may be used
++ * to endorse or promote products derived from this software without specific
++ * prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
++ */
++#ifndef __ARM_MACROS_S__
++#define __ARM_MACROS_S__
++
++#include <cci.h>
++#include <gic_common.h>
++#include <gicv2.h>
++#include <gicv3.h>
++#include <platform_def.h>
++
++/*
++*	These Macros are required by ATF
++*/
++
++.section .rodata.gic_reg_name, "aS"
++/* Applicable only to GICv2 and GICv3 with SRE disabled (legacy mode) */
++gicc_regs:
++	.asciz "gicc_hppir", "gicc_ahppir", "gicc_ctlr", ""
++
++#ifdef USE_CCI
++/* Applicable only to GICv3 with SRE enabled */
++icc_regs:
++	.asciz "icc_hppir0_el1", "icc_hppir1_el1", "icc_ctlr_el3", ""
++#endif
++/* Registers common to both GICv2 and GICv3 */
++gicd_pend_reg:
++	.asciz "gicd_ispendr regs (Offsets 0x200 - 0x278)\n"	\
++		" Offset:\t\t\tvalue\n"
++newline:
++	.asciz "\n"
++spacer:
++	.asciz ":\t\t0x"
++
++	/* ---------------------------------------------
++	 * The below utility macro prints out relevant GIC
++	 * registers whenever an unhandled exception is
++	 * taken in BL31 on ARM standard platforms.
++	 * Expects: GICD base in x16, GICC base in x17
++	 * Clobbers: x0 - x10, sp
++	 * ---------------------------------------------
++	 */
++	.macro arm_print_gic_regs
++	/* Check for GICv3 system register access */
++	mrs	x7, id_aa64pfr0_el1
++	ubfx	x7, x7, #ID_AA64PFR0_GIC_SHIFT, #ID_AA64PFR0_GIC_WIDTH
++	cmp	x7, #1
++	b.ne	print_gicv2
++
++	/* Check for SRE enable */
++	mrs	x8, ICC_SRE_EL3
++	tst	x8, #ICC_SRE_SRE_BIT
++	b.eq	print_gicv2
++
++#ifdef USE_CCI
++	/* Load the icc reg list to x6 */
++	adr	x6, icc_regs
++	/* Load the icc regs to gp regs used by str_in_crash_buf_print */
++	mrs	x8, ICC_HPPIR0_EL1
++	mrs	x9, ICC_HPPIR1_EL1
++	mrs	x10, ICC_CTLR_EL3
++	/* Store to the crash buf and print to console */
++	bl	str_in_crash_buf_print
++#endif
++	b	print_gic_common
++
++print_gicv2:
++	/* Load the gicc reg list to x6 */
++	adr	x6, gicc_regs
++	/* Load the gicc regs to gp regs used by str_in_crash_buf_print */
++	ldr	w8, [x17, #GICC_HPPIR]
++	ldr	w9, [x17, #GICC_AHPPIR]
++	ldr	w10, [x17, #GICC_CTLR]
++	/* Store to the crash buf and print to console */
++	bl	str_in_crash_buf_print
++
++print_gic_common:
++	/* Print the GICD_ISPENDR regs */
++	add	x7, x16, #GICD_ISPENDR
++	adr	x4, gicd_pend_reg
++	bl	asm_print_str
++gicd_ispendr_loop:
++	sub	x4, x7, x16
++	cmp	x4, #0x280
++	b.eq	exit_print_gic_regs
++	bl	asm_print_hex
++
++	adr	x4, spacer
++	bl	asm_print_str
++
++	ldr	x4, [x7], #8
++	bl	asm_print_hex
++
++	adr	x4, newline
++	bl	asm_print_str
++	b	gicd_ispendr_loop
++exit_print_gic_regs:
++	.endm
++
++
++.section .rodata.cci_reg_name, "aS"
++cci_iface_regs:
++	.asciz "cci_snoop_ctrl_cluster0", "cci_snoop_ctrl_cluster1" , ""
++
++	/* ------------------------------------------------
++	 * The below required platform porting macro prints
++	 * out relevant interconnect registers whenever an
++	 * unhandled exception is taken in BL31.
++	 * Clobbers: x0 - x9, sp
++	 * ------------------------------------------------
++	 */
++	.macro plat_print_interconnect_regs
++#ifdef USE_CCI
++	adr	x6, cci_iface_regs
++	/* Store in x7 the base address of the first interface */
++	mov_imm	x7, (PLAT_ARM_CCI_BASE + SLAVE_IFACE_OFFSET(	\
++			PLAT_ARM_CCI_CLUSTER0_SL_IFACE_IX))
++	ldr	w8, [x7, #SNOOP_CTRL_REG]
++	/* Store in x7 the base address of the second interface */
++	mov_imm	x7, (PLAT_ARM_CCI_BASE + SLAVE_IFACE_OFFSET(	\
++			PLAT_ARM_CCI_CLUSTER1_SL_IFACE_IX))
++	ldr	w9, [x7, #SNOOP_CTRL_REG]
++	/* Store to the crash buf and print to console */
++	bl	str_in_crash_buf_print
++#endif
++	.endm
++
++
++#endif /* __ARM_MACROS_S__ */
+diff --git a/plat/marvell/a8k/a7040_rz/include/plat_macros.S b/plat/marvell/a8k/a7040_rz/include/plat_macros.S
+new file mode 100644
+index 0000000..e5513f4
+--- /dev/null
++++ b/plat/marvell/a8k/a7040_rz/include/plat_macros.S
+@@ -0,0 +1,41 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2016 Marvell International Ltd.
++* ***************************************************************************
++*
++* Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
++* following conditions are met:
++*
++* Redistributions of source code must retain the above copyright notice, this list of conditions and the following
++* disclaimer.
++*
++* Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following
++* disclaimer in the documentation and/or other materials provided with the distribution.
++*
++* Neither the name of Marvell nor the names of its contributors may be used to endorse or promote products derived from this
++* software without specific prior written permission.
++*
++* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
++* INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
++* DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++* SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
++* LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++* SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++*
++***************************************************************************
++*/
++
++#ifndef __PLAT_MACROS_S__
++#define __PLAT_MACROS_S__
++
++#include <arm_macros.S>
++
++/*
++ * Required platform porting macros
++ * (Provided by included headers)
++ */
++.macro plat_print_gic_regs
++.endm
++
++#endif /* __PLAT_MACROS_S__ */
+diff --git a/plat/marvell/common/aarch64/gic_64.S b/plat/marvell/common/aarch64/gic_64.S
+new file mode 100644
+index 0000000..46aeb13
+--- /dev/null
++++ b/plat/marvell/common/aarch64/gic_64.S
+@@ -0,0 +1,177 @@
++/*
++ * GIC Initialization Routines.
++ *
++ * (C) Copyright 2013
++ * David Feng <fenghua@phytium.com.cn>
++ *
++ * SPDX-License-Identifier:	GPL-2.0+
++ */
++
++#include <asm/linkage.h>
++#include <gic_v2.h>
++
++
++#define GICD_IGROUPRn		0x0080
++#define GICD_IGROUPMODRn	0x0d00
++#define GICD_ISENABLERn		0x0100
++
++
++/*************************************************************************
++ *
++ * void gic_init_secure(DistributorBase);
++ *
++ * Initialize secure copy of GIC at EL3.
++ *
++ *************************************************************************/
++ENTRY(gic_init_secure)
++	/*
++	 * Initialize Distributor
++	 * x0: Distributor Base
++	 */
++#if defined(CONFIG_GICV3)
++	mov	w9, #0x37		/* EnableGrp0 | EnableGrp1NS */
++					/* EnableGrp1S | ARE_S | ARE_NS */
++	str	w9, [x0, GICD_CTLR]	/* Secure GICD_CTLR */
++	ldr	w9, [x0, GICD_TYPER]
++	and	w10, w9, #0x1f		/* ITLinesNumber */
++	cbz	w10, 1f			/* No SPIs */
++	add	x11, x0, (GICD_IGROUPRn + 4)
++	add	x12, x0, (GICD_IGROUPMODRn + 4)
++	mov	w9, #~0
++0:	str	w9, [x11], #0x4
++	str	wzr, [x12], #0x4	/* Config SPIs as Group1NS */
++	sub	w10, w10, #0x1
++	cbnz	w10, 0b
++#elif defined(CONFIG_GICV2)
++	mov	w9, #0x3		/* EnableGrp0 | EnableGrp1 */
++	str	w9, [x0, GICD_CTLR]	/* Secure GICD_CTLR */
++	ldr	w9, [x0, GICD_TYPER]
++	and	w10, w9, #0x1f		/* ITLinesNumber */
++	cbz	w10, 1f			/* No SPIs */
++	add	x11, x0, (GICD_IGROUPRn + 4)
++	mov	w9, #~0			/* Config SPIs as Grp1 */
++0:	str	w9, [x11], #0x4
++	sub	w10, w10, #0x1
++	cbnz	w10, 0b
++#endif
++1:
++	ret
++ENDPROC(gic_init_secure)
++
++/* insert gic_init_secure_percpu function to secure section - part of the PSCI FW */
++.pushsection ._secure.text, "ax"
++
++/*************************************************************************
++ * For Gicv2:
++ * void gic_init_secure_percpu(DistributorBase, CpuInterfaceBase);
++ * For Gicv3:
++ * void gic_init_secure_percpu(ReDistributorBase);
++ *
++ * Initialize secure copy of GIC at EL3.
++ *
++ *************************************************************************/
++ENTRY(gic_init_secure_percpu)
++#if defined(CONFIG_GICV3)
++	/*
++	 * Initialize ReDistributor
++	 * x0: ReDistributor Base
++	 */
++	mrs	x10, mpidr_el1
++	lsr	x9, x10, #32
++	bfi	x10, x9, #24, #8	/* w10 is aff3:aff2:aff1:aff0 */
++	mov	x9, x0
++1:	ldr	x11, [x9, GICR_TYPER]
++	lsr	x11, x11, #32		/* w11 is aff3:aff2:aff1:aff0 */
++	cmp	w10, w11
++	b.eq	2f
++	add	x9, x9, #(2 << 16)
++	b	1b
++
++	/* x9: ReDistributor Base Address of Current CPU */
++2:	mov	w10, #~0x2
++	ldr	w11, [x9, GICR_WAKER]
++	and	w11, w11, w10		/* Clear ProcessorSleep */
++	str	w11, [x9, GICR_WAKER]
++	dsb	st
++	isb
++3:	ldr	w10, [x9, GICR_WAKER]
++	tbnz	w10, #2, 3b		/* Wait Children be Alive */
++
++	add	x10, x9, #(1 << 16)	/* SGI_Base */
++	mov	w11, #~0
++	str	w11, [x10, GICR_IGROUPRn]
++	str	wzr, [x10, GICR_IGROUPMODRn]	/* SGIs|PPIs Group1NS */
++	mov	w11, #0x1		/* Enable SGI 0 */
++	str	w11, [x10, GICR_ISENABLERn]
++
++	/* Initialize Cpu Interface */
++	mrs	x10, ICC_SRE_EL3
++	orr	x10, x10, #0xf		/* SRE & Disable IRQ/FIQ Bypass & */
++					/* Allow EL2 access to ICC_SRE_EL2 */
++	msr	ICC_SRE_EL3, x10
++	isb
++
++	mrs	x10, ICC_SRE_EL2
++	orr	x10, x10, #0xf		/* SRE & Disable IRQ/FIQ Bypass & */
++					/* Allow EL1 access to ICC_SRE_EL1 */
++	msr	ICC_SRE_EL2, x10
++	isb
++
++	mov	x10, #0x3		/* EnableGrp1NS | EnableGrp1S */
++	msr	ICC_IGRPEN1_EL3, x10
++	isb
++
++	msr	ICC_CTLR_EL3, xzr
++	isb
++
++	msr	ICC_CTLR_EL1, xzr	/* NonSecure ICC_CTLR_EL1 */
++	isb
++
++	mov	x10, #0x1 << 7		/* Non-Secure access to ICC_PMR_EL1 */
++	msr	ICC_PMR_EL1, x10
++	isb
++#elif defined(CONFIG_GICV2)
++	/*
++	 * Initialize SGIs and PPIs
++	 * x0: Distributor Base
++	 * x1: Cpu Interface Base
++	 */
++	mov	w9, #~0			/* Config SGIs and PPIs as Grp1 */
++	str	w9, [x0, GICD_IGROUPRn]	/* GICD_IGROUPR0 */
++	mov	w9, #0x1		/* Enable SGI 0 */
++	str	w9, [x0, GICD_ISENABLERn]
++
++	/* Initialize Cpu Interface */
++	mov	w9, #0x1e7		/* Disable IRQ/FIQ Bypass & */
++					/* Enable Ack Group1 Interrupt & */
++					/* EnableGrp0 & EnableGrp1 */
++	str	w9, [x1, GICC_CTLR]	/* Secure GICC_CTLR */
++
++	mov	w9, #0x1 << 7		/* Non-Secure access to GICC_PMR */
++	str	w9, [x1, GICC_PMR]
++#endif
++	ret
++ENDPROC(gic_init_secure_percpu)
++
++
++/*************************************************************************
++ * For Gicv2:
++ * void gic_kick_secondary_cpus(DistributorBase);
++ * For Gicv3:
++ * void gic_kick_secondary_cpus(void);
++ *
++ *************************************************************************/
++ENTRY(gic_kick_secondary_cpus)
++#if defined(CONFIG_GICV3)
++	mov	x9, #(1 << 40)
++	msr	ICC_ASGI1R_EL1, x9
++	isb
++#elif defined(CONFIG_GICV2)
++	mov	w9, #0x8000
++	movk	w9, #0x100, lsl #16
++	str	w9, [x0, GICD_SGIR]
++#endif
++	ret
++ENDPROC(gic_kick_secondary_cpus)
++
++
+diff --git a/plat/marvell/common/marvell_gicv2.c b/plat/marvell/common/marvell_gicv2.c
+new file mode 100644
+index 0000000..636f2d4
+--- /dev/null
++++ b/plat/marvell/common/marvell_gicv2.c
+@@ -0,0 +1,110 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2016 Marvell International Ltd.
++* ***************************************************************************
++*
++* Redistribution and use in source and binary forms, with or without
++* modification, are permitted provided that the following conditions are met:
++*
++* Redistributions of source code must retain the above copyright notice, this
++* list of conditions and the following disclaimer.
++*
++* Redistributions in binary form must reproduce the above copyright notice,
++* this list of conditions and the following disclaimer in the documentation
++* and/or other materials provided with the distribution.
++*
++* Neither the name of Marvell nor the names of its contributors may be used
++* to endorse or promote products derived from this software without specific
++* prior written permission.
++*
++* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
++* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++* POSSIBILITY OF SUCH DAMAGE.
++*
++***************************************************************************
++*/
++/*
++ * Copyright (c) 2015, ARM Limited and Contributors. All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ *
++ * Redistributions of source code must retain the above copyright notice, this
++ * list of conditions and the following disclaimer.
++ *
++ * Redistributions in binary form must reproduce the above copyright notice,
++ * this list of conditions and the following disclaimer in the documentation
++ * and/or other materials provided with the distribution.
++ *
++ * Neither the name of ARM nor the names of its contributors may be used
++ * to endorse or promote products derived from this software without specific
++ * prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
++ */
++
++#include <gicv2.h>
++#include <plat_marvell.h>
++#include <platform.h>
++#include <platform_def.h>
++
++/*
++ * The following functions are defined as weak to allow a platform to override
++ * the way the GICv2 driver is initialised and used.
++ */
++#pragma weak plat_marvell_gic_driver_init
++#pragma weak plat_marvell_gic_init
++
++/*
++ * On a GICv2 system, the Group 1 secure interrupts are treated as Group 0
++ * interrupts.
++ */
++const unsigned int g0_interrupt_array[] = {
++	PLAT_MARVELL_G1S_IRQS,
++	PLAT_MARVELL_G0_IRQS
++};
++
++/*
++ * Ideally `marvell_gic_data` structure definition should be a `const` but it is
++ * kept as modifiable for overwriting with different GICD and GICC base when
++ * running on FVP with VE memory map.
++ */
++gicv2_driver_data_t marvell_gic_data = {
++	.gicd_base = PLAT_MARVELL_GICD_BASE,
++	.gicc_base = PLAT_MARVELL_GICC_BASE,
++	.g0_interrupt_num = ARRAY_SIZE(g0_interrupt_array),
++	.g0_interrupt_array = g0_interrupt_array,
++};
++
++/*/
++ * ARM common helper to initialize the GICv2 only driver.
++ */
++void plat_marvell_gic_driver_init(void)
++{
++	gicv2_driver_init(&marvell_gic_data);
++}
++
++void plat_marvell_gic_init(void)
++{
++	gicv2_distif_init();
++	gicv2_pcpu_distif_init();
++	gicv2_cpuif_enable();
++}
+-- 
+1.9.1
+

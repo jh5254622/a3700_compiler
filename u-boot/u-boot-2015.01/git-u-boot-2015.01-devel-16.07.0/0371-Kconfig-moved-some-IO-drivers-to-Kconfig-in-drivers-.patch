@@ -1,0 +1,128 @@
+From 81bdc7cedfeffe8bb2a88fbb1af7405033734ede Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 24 Aug 2015 10:03:13 +0300
+Subject: [PATCH 0371/1240] Kconfig: moved some IO drivers to Kconfig in
+ drivers hierarchy
+
+Change-Id: Ibd95ed2fa74cbf35a0efe03324da1b865244d9cf
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23061
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Kconfig | 30 ------------------------------
+ drivers/i2c/Kconfig               | 11 +++++++++++
+ drivers/mtd/nand/Kconfig          |  8 ++++++++
+ drivers/spi/Kconfig               | 13 +++++++++++++
+ 4 files changed, 32 insertions(+), 30 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index b1fe300..1312313 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -33,27 +33,6 @@ config MVEBU_SPL_DIFFRENT_BASE_ADDR
+ 
+ menu "IO support"
+ 
+-config MVEBU_NAND
+-	bool "NAND flash support"
+-	default n
+-	select CMD_NAND
+-	help
+-	  Choose this option to add support
+-	  for NAND driver, using pxa3xx nand
+-	  driver.
+-	  base address is configured under MVEBU_NAND_BASE
+-
+-config MVEBU_SPI
+-	bool "SPI flash support"
+-	default n
+-	select CMD_SF
+-	select CMD_SPI
+-	help
+-	  Choose this option to add support
+-	  for SPI driver, using mvebu_spi
+-	  driver.
+-	  base address is configured under MVEBU_SPI_BASE
+-
+ config MVEBU_MPP_BUS
+ 	bool "MPP bus support"
+ 	depends on (DEVEL_BOARD && MVEBU_PINCTL)
+@@ -73,15 +52,6 @@ config MVEBU_UART_ARLP
+ 	  is not using COM1 NS16550 driver.
+ 	  And base address is configured in FDT file.
+ 
+-config MVEBU_I2C
+-	bool "I2C support"
+-	default n
+-	help
+-	  Choose this option to add support
+-	  for I2C driver, using Marvell mvebu_i2c.c
+-	  driver.
+-	  base address is configured under MVEBU_I2C_BASE
+-
+ config MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+ 	bool "DDR over PCIE support in SPL"
+ 	depends on SPL
+diff --git a/drivers/i2c/Kconfig b/drivers/i2c/Kconfig
+index e69de29..1f953db 100644
+--- a/drivers/i2c/Kconfig
++++ b/drivers/i2c/Kconfig
+@@ -0,0 +1,11 @@
++menu "I2C Support"
++
++config MVEBU_I2C
++	bool "MVEBU I2C support"
++	default n
++	select CMD_I2C
++	help
++	  Choose this option to add support
++	  for Marvell's MVEBU I2C driver
++
++endmenu
+diff --git a/drivers/mtd/nand/Kconfig b/drivers/mtd/nand/Kconfig
+index c242214..ca74a61 100644
+--- a/drivers/mtd/nand/Kconfig
++++ b/drivers/mtd/nand/Kconfig
+@@ -6,6 +6,14 @@ config SYS_NAND_SELF_INIT
+ 	  This option, if enabled, provides more flexible and linux-like
+ 	  NAND initialization process.
+ 
++config MVEBU_NAND
++	bool "MVEBU NAND support"
++	default n
++	select CMD_NAND
++	help
++	  Choose this option to add support
++	  for MVEBU NAND driver
++
+ if !SPL_BUILD
+ 
+ config NAND_DENALI
+diff --git a/drivers/spi/Kconfig b/drivers/spi/Kconfig
+index e1678e6..8463eef 100644
+--- a/drivers/spi/Kconfig
++++ b/drivers/spi/Kconfig
+@@ -1,6 +1,19 @@
++menu "SPI Support"
++
+ config DM_SPI
+ 	bool "Enable Driver Model for SPI drivers"
+ 	depends on DM
+ 	help
+ 	  If you want to use driver model for SPI drivers, say Y.
+ 	  To use legacy SPI drivers, say N.
++
++config MVEBU_SPI
++	bool "MVEBU SPI support"
++	default n
++	select CMD_SF
++	select CMD_SPI
++	help
++	  Choose this option to add support
++	  for the MVEBU SPI controller
++
++endmenu
+-- 
+1.9.1
+

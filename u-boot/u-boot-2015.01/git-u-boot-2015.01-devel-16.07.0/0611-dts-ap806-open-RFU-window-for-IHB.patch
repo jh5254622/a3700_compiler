@@ -1,0 +1,34 @@
+From 17d510e29812beff3c070ba671394788c4f7dd73 Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Mon, 21 Dec 2015 13:20:44 +0200
+Subject: [PATCH 0611/1240] dts: ap806: open RFU window for IHB
+
+- this window will be used by IHB phy indirect access
+- the patch add the window for AP806-Z1 revision
+
+Change-Id: I6d917f6902441d479f591df7dc97aab889fe8e73
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26163
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/apn-806-z1.dtsi | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/apn-806-z1.dtsi b/arch/arm/dts/apn-806-z1.dtsi
+index 8d4288c..81a8edf 100644
+--- a/arch/arm/dts/apn-806-z1.dtsi
++++ b/arch/arm/dts/apn-806-z1.dtsi
+@@ -99,7 +99,8 @@
+ 				compatible = "marvell,mvebu-rfu";
+ 				reg = <0x6f0000 0x50>;
+ 				windows = <0x0 0xfe000000 0x0 0x1f00000 0x05 /* PCIe window 31Mb for PCIe port*/
+-					0x0 0xffe00000 0x0 0x100000 0x03 /* PCI-REG window 64Kb for PCIe-reg*/>;
++					0x0 0xffe00000 0x0 0x100000 0x03 /* PCI-REG window 64Kb for PCIe-reg*/
++					0x0 0xf6000000 0x0 0x100000 0x04 /* IHB window  1Mb for PHY-reg*/>;
+ 			};
+ 
+ 			comphy {
+-- 
+1.9.1
+

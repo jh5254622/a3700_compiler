@@ -1,0 +1,132 @@
+From 3f1c47482f043498aa37358a4e5f27474a5aeb46 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Thu, 26 May 2016 00:11:23 +0800
+Subject: [PATCH 1166/1240] fix: doc: a3700: remove spl description
+
+remove all spl related description from u-boot doc
+
+Change-Id: Id655a8327b3d5e9e179e6b04121fc28798ddc690
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29981
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ doc/mvebu/build.txt     |  9 +--------
+ doc/mvebu/uart_boot.txt | 48 ++++++++++++++++++------------------------------
+ 2 files changed, 19 insertions(+), 38 deletions(-)
+
+diff --git a/doc/mvebu/build.txt b/doc/mvebu/build.txt
+index 169f387..cc4e5ad 100644
+--- a/doc/mvebu/build.txt
++++ b/doc/mvebu/build.txt
+@@ -81,13 +81,6 @@ Boot device selection note for Armada-3700 builds:
+ 	selects "eMMC flash boot" device as described above.
+ 	The selected partition will be used by U-Boot "bubt" and "savenv" commands
+ 	for flashing the boot image and saving U-Boot configuration.
+-	The boot partition can be written from Linux command line using the following
+-	commands:
+-	# sudo echo 0 > /sys/block/mmcblk0boot0/force_ro
+-	# sudo dd if=u-boot-spl.img of=/dev/mmcblk0boot0
+-	The first commands remove the write protection flag from the boot partition 0.
+-	The same operation can be done for BOOT1 partition by replacing the partition
+-	ID in the above commands from mmcblk0boot0 to mmcblk0boot1.
+ 
+ 
+ 	SATA boot device:
+@@ -117,7 +110,7 @@ Boot device selection note for Armada-3700 builds:
+ 	3       1052672         975720496       9c1661a5-03     83
+ 	Using the example above, the boot image can be placed into the boot partition using
+ 	the following Linux command (assuming that SATA device is /dev/sda)
+-	# sudo dd if=u-boot-spl.img of=/dev/sda1
++	# sudo dd if=flash-image.bin of=/dev/sda1
+ 
+ 	Special note:
+ 	-------------
+diff --git a/doc/mvebu/uart_boot.txt b/doc/mvebu/uart_boot.txt
+index e0f7d5a..4bac13e 100644
+--- a/doc/mvebu/uart_boot.txt
++++ b/doc/mvebu/uart_boot.txt
+@@ -21,61 +21,49 @@ the first time or when the board fails to boot.
+ 
+ UART boot for Armada-3700 platform
+ ---------------------------------
+-1. The normal build procedure for A3700 target creates an archive
+-   with all the images required for UART boot. If these images are used,
+-   extract the uart-images.tgz archive into a temporary folder and
+-   continue with the following procedure starting with paragraph 4.
++1. The normal ATF build procedure for A3700 target creates an folder
++   with all the images required for UART boot under ATF build output
++   folder (build/a3700_z/), please make sure u-boot was built before
++   ATF, see detail in build.txt.
+ 
+-2. Change the TIM/NTIM file descriptor to use the UART image type
+-   (for NTIM - tools/wtp/u-boot-ntim.txt).
+-   Replace the following row:
+-
+-   Boot Flash Signature:          0x5350490A              ; Select SPI'0A
+-
+-   With the following one:
+-
+-   Boot Flash Signature:          0x55415223              ; Select UAR'23
+-
+-3. Build the U-Boot image as usual. Files with "_h." in their names
+-   are created for usage by the image downloader SW.
+-
+-4. Make sure the target board is in UART mode and ">" prompt is
++2. Make sure the target board is in UART mode and ">" prompt is
+    presented on the connected terminal. Pressing "Enter" in this mode
+    will show "E" and then ">" again.
+ 
+-5. Stop the terminal emulator program on the UART port attached to the
++3. Stop the terminal emulator program on the UART port attached to the
+    target board (minicom) for releasing the serial port and allowing
+    an application to use it for image download.
+ 
+-6. Start the image download application in the root U-Boot folder
+-   using the following parameters (replace UART port name with the one
+-   connected to the actual target board).
++4. Start the image download application in the ATF build folder using
++   the following parameters (replace UART port number with the one
++   connected to the actual target board, in the example /dev/ttyUSB0
++   is used).
+ 
+    Linux downloader usage example:
+ 
+-   sudo WtpDownload_linux.exe -P UART -C /dev/ttyUSB0 -R 115200 \
+-   -B TIM_UBOOT_NON_TRUSTED.bin -I spl/u-boot-spl_h.bin \
+-   -I ./u-boot_h.bin  -I ./tools/wtp/wtmi_h.dummy -E
++   sudo WtpDownload_linux.exe -P UART -C 0 -R 115200 \
++   -B ./uart-images/TIM_ATF.bin -I ./uart-images/boot-image_h.bin \
++   -I ./uart-images/wtmi_h.bin -E
+ 
+    Windows downloader usage example:
+ 
+    The target board is connected to COM7 and all images are located in
+    the same folder:
+ 
+-   WtpDownload.exe -P UART -C 7 -R 115200 -B TIM_UBOOT_NON_TRUSTED.bin
+-   -I u-boot-spl_h.bin -I u-boot_h.bin  -I wtmi_h.dummy -E
++   WtpDownload.exe -P UART -C 7 -R 115200 -B TIM_ATF.bin
++   -I boot-image_h.bin -I wtmi_h.bin -E
+ 
+    It is possible to add the "-V" parameter to the command line for
+    enabling verbose output.
+ 
+    Note that "-E" parameter can be dropped from the above commands.
+    If you do this, check that the BootROM UART download mode is
+-   selected in paragraph 4, type in terminal "wtp" without quotes and
+-   press Enter. Then follow the procedure described in paragraph 5.
++   selected in paragraph 2, type in terminal "wtp" without quotes and
++   press Enter. Then follow the procedure described in paragraph 3.
+    This command will switch the BootROM to WTP download mode. The same is
+    archieved by "-E" parameter in latest downloader SW.
+ 
+-7. After the process is finished, start the terminal emulator
++5. After the process is finished, start the terminal emulator
+    program (minicom) on that the UART port attached to the target
+    board and ensure the U-Boot prompt is reached.
+ 
+-- 
+1.9.1
+

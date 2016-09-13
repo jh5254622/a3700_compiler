@@ -1,0 +1,32 @@
+From 2a1bb512a777bd4186c64ad90dd60d49b22e420b Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Wed, 1 Jun 2016 13:50:21 +0300
+Subject: [PATCH 1185/1240] usb: mvebu: increase max UTMI count to 3
+
+A80x0 devices has 2 UTMI units on CP0, and single UTMI on CP1.
+
+Change-Id: I3ff4c7c7010669aa79c256743646b95184960cc2
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30260
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/include/asm/arch-mvebu/comphy.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/include/asm/arch-mvebu/comphy.h b/arch/arm/include/asm/arch-mvebu/comphy.h
+index bf0ebdf..289af20 100644
+--- a/arch/arm/include/asm/arch-mvebu/comphy.h
++++ b/arch/arm/include/asm/arch-mvebu/comphy.h
+@@ -59,7 +59,7 @@
+ #define DFX_DEV_GEN_PCIE_CLK_SRC_MASK		(0x3 << DFX_DEV_GEN_PCIE_CLK_SRC_OFFSET)
+ 
+ #define MAX_LANE_OPTIONS			10
+-#define MAX_UTMI_PHY_COUNT			2
++#define MAX_UTMI_PHY_COUNT			3
+ 
+ struct comphy_mux_options {
+ 	u32 type;
+-- 
+1.9.1
+

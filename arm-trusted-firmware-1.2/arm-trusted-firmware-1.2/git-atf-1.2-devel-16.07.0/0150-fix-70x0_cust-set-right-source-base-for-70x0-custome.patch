@@ -1,0 +1,77 @@
+From a656fd708707ef8e2de075bd96560522303ac6aa Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Mon, 16 May 2016 18:18:06 +0300
+Subject: [PATCH 150/239] fix: 70x0_cust: set right source base for 70x0
+ customer image
+
+- customer platfrom use a7040-rz sources instead of a70x0
+- this caused SMP mode to fail since CPU2 was identified as CPU1
+- therefore, when cpu_on procedure was invoked for CPU2, CPU1
+  database was used so it was identified as on.
+
+Change-Id: I6bb202763345d9a6310ae2f34f0cf79c7ee662a4
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29738
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c | 13 ++++++++-----
+ plat/marvell/a8k/a70x0_cust/platform.mk                 |  2 +-
+ 2 files changed, 9 insertions(+), 6 deletions(-)
+
+diff --git a/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c b/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c
+index 0deb526..b2d6593 100644
+--- a/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c
+@@ -50,7 +50,6 @@ uintptr_t marvell_get_amb_reg_offs(void)
+ int marvell_get_amb_memory_map(struct amb_win **win, uint32_t *size)
+ {
+ 	*win = amb_memory_map;
+-
+ 	if (*win == NULL)
+ 		*size = 0;
+ 	else
+@@ -62,11 +61,12 @@ int marvell_get_amb_memory_map(struct amb_win **win, uint32_t *size)
+ /*******************************************************************************
+  * RFU Configuration
+  ******************************************************************************/
++/*
+ struct rfu_win rfu_memory_map[] = {
+-	{0x0,	0xfe000000,	0x0,	0x1f00000,	PCIE_PORT_TID}, /* PCIe window 31Mb for PCIe port*/
+-	{0x0,	0xffe00000,	0x0,	0x100000,	PCIE_REGS_TID}, /* PCI-REG window 64Kb for PCIe-reg*/
+-	{0x0,	0xf9100000,	0x0,	0x100000,	IHBPHY_TID},	/* IHB window  1Mb for PHY-reg*/
++	{0x0,	0xf9100000,	0x0,	0x1f00000,	IHB_0_TID},
+ };
++*/
++struct rfu_win *rfu_memory_map = NULL;
+ 
+ uintptr_t marvell_get_rfu_reg_offs(void)
+ {
+@@ -76,7 +76,10 @@ uintptr_t marvell_get_rfu_reg_offs(void)
+ int marvell_get_rfu_memory_map(struct rfu_win **win, uint32_t *size)
+ {
+ 	*win = rfu_memory_map;
+-	*size = sizeof(rfu_memory_map)/sizeof(struct rfu_win);
++	if (*win == NULL)
++		*size = 0;
++	else
++		*size = sizeof(rfu_memory_map)/sizeof(struct rfu_win);
+ 
+ 	return 0;
+ }
+diff --git a/plat/marvell/a8k/a70x0_cust/platform.mk b/plat/marvell/a8k/a70x0_cust/platform.mk
+index 6028301..e07d293 100644
+--- a/plat/marvell/a8k/a70x0_cust/platform.mk
++++ b/plat/marvell/a8k/a70x0_cust/platform.mk
+@@ -30,7 +30,7 @@
+ # POSSIBILITY OF SUCH DAMAGE.
+ #
+ 
+-PLAT_SOC		:= a7040_rz
++PLAT_SOC		:= a70x0
+ PLAT_SOC_SRC_BASE	:= plat/marvell/a8k/$(PLAT_SOC)
+ 
+ include $(PLAT_SOC_SRC_BASE)/platform.mk
+-- 
+1.9.1
+

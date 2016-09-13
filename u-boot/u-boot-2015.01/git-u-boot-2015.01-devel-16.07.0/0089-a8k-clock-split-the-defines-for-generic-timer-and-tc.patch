@@ -1,0 +1,50 @@
+From b777885cf270fca435cb555c72ef4e499f069b24 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Tue, 7 Oct 2014 08:10:42 +0300
+Subject: [PATCH 0089/1240] a8k: clock: split the defines for generic timer and
+ tclock
+
+	tclock used the COUNTER_FREQUENCY define used to initialize
+	the generic timer. These clocks are not always identical so use
+	a different define for them
+
+Change-Id: I217c73ff27f460117a7ff4925cb3f1303d941cfe
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/13522
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/clock.c | 2 +-
+ include/configs/armada8k.h          | 3 ++-
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/clock.c b/arch/arm/cpu/armv8/armada8k/clock.c
+index b2c5dce..9c203de 100644
+--- a/arch/arm/cpu/armv8/armada8k/clock.c
++++ b/arch/arm/cpu/armv8/armada8k/clock.c
+@@ -22,7 +22,7 @@
+ 
+ u32 soc_tclk_get(void)
+ {
+-	return COUNTER_FREQUENCY;
++	return CONFIG_MSS_FREQUENCY;
+ }
+ 
+ u32 soc_cpu_clk_get(void)
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index 2ae97bf..8072d55 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -46,7 +46,8 @@
+ #define CONFIG_REMAKE_ELF
+ 
+ /* Clock Definitions */
+-#define COUNTER_FREQUENCY               (125000)     /* 24MHz */
++#define COUNTER_FREQUENCY	(46300)
++#define CONFIG_MSS_FREQUENCY	(125000)
+ 
+ /*
+  * Include the generic MVEBU configuration file.
+-- 
+1.9.1
+

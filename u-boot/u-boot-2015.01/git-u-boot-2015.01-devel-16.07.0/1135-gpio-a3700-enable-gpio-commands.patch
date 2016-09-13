@@ -1,0 +1,29 @@
+From 2b54478209cf2165acaa6e211548083b8b016f06 Mon Sep 17 00:00:00 2001
+From: Ken Ma <make@marvell.com>
+Date: Thu, 3 Mar 2016 01:22:23 +0800
+Subject: [PATCH 1135/1240] gpio: a3700: enable gpio commands
+
+Change-Id: I1a68873fa567f6808cb95293c9b652e9c0555346
+Signed-off-by: Ken Ma <make@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27987
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ configs/mvebu_armada3700_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/configs/mvebu_armada3700_defconfig b/configs/mvebu_armada3700_defconfig
+index c3d88fc..a8e1b0b 100644
+--- a/configs/mvebu_armada3700_defconfig
++++ b/configs/mvebu_armada3700_defconfig
+@@ -20,6 +20,7 @@ CONFIG_CMD_NET=y
+ CONFIG_CMD_PING=y
+ CONFIG_CMD_MII=y
+ CONFIG_CMD_MISC=y
++CONFIG_CMD_GPIO=y
+ CONFIG_CMD_MVEBU_MPP=y
+ CONFIG_CMD_MVEBU_FDT_CONFIG=y
+ CONFIG_CMD_MVEBU_BUBT=y
+-- 
+1.9.1
+

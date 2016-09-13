@@ -1,0 +1,31 @@
+From 1598994fc93fd2e8d8852c654cce824aa4dd835b Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Wed, 25 Mar 2015 11:38:43 +0200
+Subject: [PATCH 06/66] aarch64: defconfig: Enable creating ext2 filesystem
+ image
+
+	This image is used for booting RAMFS under Linux.
+
+Change-Id: Ib22d81e9d578303b03f6264661d5baee5fd66b3d
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17824
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ configs/mvebu_armv8_tiny_le_defconfig | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/configs/mvebu_armv8_tiny_le_defconfig b/configs/mvebu_armv8_tiny_le_defconfig
+index 90312be..7573a7f 100644
+--- a/configs/mvebu_armv8_tiny_le_defconfig
++++ b/configs/mvebu_armv8_tiny_le_defconfig
+@@ -3,5 +3,6 @@ BR2_TOOLCHAIN_EXTERNAL=y
+ BR2_TARGET_GENERIC_GETTY_PORT="ttyS0"
+ BR2_ROOTFS_OVERLAY="user_files"
+ BR2_TARGET_ROOTFS_CPIO=y
++BR2_TARGET_ROOTFS_EXT2=y
++BR2_TARGET_ROOTFS_EXT2_2r1=y
+ BR2_TARGET_ROOTFS_TAR_GZIP=y
+-BR2_PACKAGE_HOST_MKE2IMG=y
+-- 
+1.9.1
+

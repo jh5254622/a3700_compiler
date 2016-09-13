@@ -1,0 +1,31 @@
+From 13fb13f3c5ae33a23618b63fd4838da4df4a681c Mon Sep 17 00:00:00 2001
+From: Ofer Heifetz <oferh@marvell.com>
+Date: Wed, 6 Jan 2016 20:55:08 +0200
+Subject: [PATCH 34/66] defconfig: add dosfstools support
+
+Change-Id: I8c7c49fcdb4d89dc4236a19f8650a5143aa0d898
+Signed-off-by: Ofer Heifetz <oferh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26604
+Reviewed-by: Lior Amsalem <alior@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Tested-by: Shadi Ammouri <shadi@marvell.com>
+---
+ configs/mvebu_armv8_le_defconfig | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/configs/mvebu_armv8_le_defconfig b/configs/mvebu_armv8_le_defconfig
+index 0936aff..c9ae1bf 100644
+--- a/configs/mvebu_armv8_le_defconfig
++++ b/configs/mvebu_armv8_le_defconfig
+@@ -38,6 +38,8 @@ BR2_PACKAGE_TREE=y
+ BR2_PACKAGE_BTRFS_PROGS=y
+ BR2_PACKAGE_CPIO=y
+ BR2_PACKAGE_CRAMFS=y
++BR2_PACKAGE_DOSFSTOOLS=y
++BR2_PACKAGE_DOSFSTOOLS_MKFS_FAT=y
+ BR2_PACKAGE_E2FSPROGS_DEBUGFS=y
+ BR2_PACKAGE_MTD=y
+ BR2_PACKAGE_NFS_UTILS=y
+-- 
+1.9.1
+

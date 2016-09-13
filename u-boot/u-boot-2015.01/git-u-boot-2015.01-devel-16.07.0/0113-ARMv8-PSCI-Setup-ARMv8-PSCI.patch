@@ -1,0 +1,100 @@
+From 81c2ef9335815b714d10fb82c85823e3c810ca56 Mon Sep 17 00:00:00 2001
+From: Arnab Basu <arnab_basu@rocketmail.com>
+Date: Tue, 13 Jan 2015 02:27:16 +0530
+Subject: [PATCH 0113/1240] ARMv8: PSCI: Setup ARMv8 PSCI
+
+Setup the ARMv8 PSCI code just before switching to EL2 and jumping
+to the kernel.
+
+Change-Id: I152c66dd3f6ba5e080183e407b80f1baf6bc6536
+Signed-off-by: Arnab Basu <arnab_basu@rocketmail.com>
+Cc: Bhupesh Sharma <bhupesh.sharma@freescale.com>
+Cc: Marc Zyngier <marc.zyngier@arm.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/16361
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/cpu.c      | 23 +++++++++++++++++++++++
+ arch/arm/cpu/armv8/psci.S     |  6 ++++++
+ arch/arm/include/asm/system.h |  4 +++-
+ arch/arm/lib/bootm.c          |  3 +++
+ 4 files changed, 35 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/armv8/cpu.c b/arch/arm/cpu/armv8/cpu.c
+index e06c3cc..55d2654 100644
+--- a/arch/arm/cpu/armv8/cpu.c
++++ b/arch/arm/cpu/armv8/cpu.c
+@@ -41,3 +41,26 @@ int cleanup_before_linux(void)
+ 
+ 	return 0;
+ }
++
++#ifdef CONFIG_ARMV8_PSCI
++
++static void relocate_secure_section(void)
++{
++#ifdef CONFIG_ARMV8_SECURE_BASE
++	size_t sz = __secure_end - __secure_start;
++
++	memcpy((void *)CONFIG_ARMV8_SECURE_BASE, __secure_start, sz);
++	flush_dcache_range(CONFIG_ARMV8_SECURE_BASE,
++			   CONFIG_ARMV8_SECURE_BASE + sz + 1);
++	invalidate_icache_all();
++#endif
++}
++
++void setup_psci(void)
++{
++	relocate_secure_section();
++	fixup_vectors();
++	psci_arch_init();
++}
++
++#endif
+diff --git a/arch/arm/cpu/armv8/psci.S b/arch/arm/cpu/armv8/psci.S
+index 6028020..508e6eb 100644
+--- a/arch/arm/cpu/armv8/psci.S
++++ b/arch/arm/cpu/armv8/psci.S
+@@ -160,3 +160,9 @@ psci_vectors:
+ 	b	unhandled_exception	/* Lower EL Error (64b) */
+ 
+ .popsection
++
++ENTRY(fixup_vectors)
++        adr     x0, psci_vectors
++        msr     vbar_el3, x0
++        ret
++ENDPROC(fixup_vectors)
+diff --git a/arch/arm/include/asm/system.h b/arch/arm/include/asm/system.h
+index f63c6a5..a2074a4 100644
+--- a/arch/arm/include/asm/system.h
++++ b/arch/arm/include/asm/system.h
+@@ -77,8 +77,10 @@ void gic_init(void);
+ void gic_send_sgi(unsigned long sgino);
+ void wait_for_wakeup(void);
+ void smp_kick_all_cpus(void);
+-
+ #ifdef CONFIG_ARMV8_PSCI
++void setup_psci(void);
++void fixup_vectors(void);
++void psci_arch_init(void);
+ extern char __secure_start[];
+ extern char __secure_end[];
+ #endif
+diff --git a/arch/arm/lib/bootm.c b/arch/arm/lib/bootm.c
+index 0c1298a..0430fa5 100644
+--- a/arch/arm/lib/bootm.c
++++ b/arch/arm/lib/bootm.c
+@@ -275,6 +275,9 @@ static void boot_jump_linux(bootm_headers_t *images, int flag)
+ 	announce_and_cleanup(fake);
+ 
+ 	if (!fake) {
++#ifdef CONFIG_ARMV8_PSCI
++		setup_psci();
++#endif
+ 		do_nonsec_virt_switch();
+ 		kernel_entry(images->ft_addr, NULL, NULL, NULL);
+ 	}
+-- 
+1.9.1
+

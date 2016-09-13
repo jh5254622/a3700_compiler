@@ -1,0 +1,101 @@
+From 228f1a41e348c28a3a4a704b1b4a560c98e371ff Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Tue, 8 Mar 2016 14:47:14 +0200
+Subject: [PATCH 1028/1240] fdt_config: a70x0: enable fdt_config and multi fdt
+ in a70x0
+
+- enable fdt_config and multi fdt in a70x0
+- replace default board ID to a70x0 instead of apn806
+
+Change-Id: Ie002b3f143629a7c4e6ac3a1b49a44ad970359d9
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28117
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/armada-70x0-customer0.dts          |  4 ++--
+ arch/arm/dts/armada-70x0-db_router.dts          |  2 +-
+ arch/arm/include/asm/arch-armada8k/board-info.h | 14 ++++++++------
+ configs/mvebu_armada70x0_defconfig              |  2 +-
+ 4 files changed, 12 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/dts/armada-70x0-customer0.dts b/arch/arm/dts/armada-70x0-customer0.dts
+index 554523c..48201ab 100644
+--- a/arch/arm/dts/armada-70x0-customer0.dts
++++ b/arch/arm/dts/armada-70x0-customer0.dts
+@@ -23,8 +23,8 @@
+ / {
+ 	model = "DB-ARMADA-70x0 (Customer)";
+ 	compatible = "marvell,armada-70x0";
+-	fdt_config_id = <1>;
+-	board_id = <0x11>;
++	fdt_config_id = <2>;
++	board_id = <0x12>;
+ 
+ 	ap-806 {
+ 		internal-regs {
+diff --git a/arch/arm/dts/armada-70x0-db_router.dts b/arch/arm/dts/armada-70x0-db_router.dts
+index d453d0b..044afab 100644
+--- a/arch/arm/dts/armada-70x0-db_router.dts
++++ b/arch/arm/dts/armada-70x0-db_router.dts
+@@ -25,7 +25,7 @@
+ 	model = "DB-ARMADA-70x0 (ROUTER)";
+ 	compatible = "marvell,armada-70x0-db", "marvell,armada-70x0";
+ 	fdt_config_id = <1>;
+-	board_id = <0x11>;
++	board_id = <0x12>;
+ 
+ 	ap-806 {
+ 		internal-regs {
+diff --git a/arch/arm/include/asm/arch-armada8k/board-info.h b/arch/arm/include/asm/arch-armada8k/board-info.h
+index f47fab5..00bcdac 100644
+--- a/arch/arm/include/asm/arch-armada8k/board-info.h
++++ b/arch/arm/include/asm/arch-armada8k/board-info.h
+@@ -20,17 +20,19 @@
+ #define A8K_MARVELL_BOARD_ID_BASE			0x10
+ #define A8K_APN_806_DB					(A8K_MARVELL_BOARD_ID_BASE + 0)
+ #define A8K_7040_RZ					(A8K_MARVELL_BOARD_ID_BASE + 1)
+-#define A8K_MARVELL_MAX_BOARD_ID			(A8K_MARVELL_BOARD_ID_BASE + 2)
++#define A8K_7040					(A8K_MARVELL_BOARD_ID_BASE + 2)
++#define A8K_MARVELL_MAX_BOARD_ID			(A8K_MARVELL_BOARD_ID_BASE + 3)
+ #define A8K_MARVELL_BOARD_NUM				(A8K_MARVELL_MAX_BOARD_ID - A8K_MARVELL_BOARD_ID_BASE)
+ 
+-#define MARVELL_BOARD_ID_BASE				 A8K_MARVELL_BOARD_ID_BASE
+-#define MV_MAX_MARVELL_BOARD_ID				 A8K_MARVELL_MAX_BOARD_ID
+-#define MV_MARVELL_BOARD_NUM				 A8K_MARVELL_BOARD_NUM
+-#define MV_DEFAULT_BOARD_ID					 A8K_APN_806_DB
++#define MARVELL_BOARD_ID_BASE				A8K_MARVELL_BOARD_ID_BASE
++#define MV_MAX_MARVELL_BOARD_ID				A8K_MARVELL_MAX_BOARD_ID
++#define MV_MARVELL_BOARD_NUM				A8K_MARVELL_BOARD_NUM
++#define MV_DEFAULT_BOARD_ID				A8K_7040
+ 
+ #define BOARD_DEV_TWSI_INIT_EEPROM 0x57
+ #define MULTI_FDT_EEPROM_ADDR_LEN 2
+ #define DEFAULT_FDT_PER_BOARD { \
+ 				0x04,	/* default fdt configuration for apn-806-db board */		  \
+-				0x01,	/* default fdt configuration for armada-8040-rz1-db board */      \
++				0x01,	/* default fdt configuration for armada-7040-rz-db board */      \
++				0x01,	/* default fdt configuration for armada-7040-db board */      \
+ }
+diff --git a/configs/mvebu_armada70x0_defconfig b/configs/mvebu_armada70x0_defconfig
+index fa885f6..0e4d47c 100644
+--- a/configs/mvebu_armada70x0_defconfig
++++ b/configs/mvebu_armada70x0_defconfig
+@@ -18,6 +18,7 @@ CONFIG_CMD_TIME=y
+ CONFIG_CMD_MISC=y
+ CONFIG_CMD_TIMER=y
+ CONFIG_CMD_MVEBU_SAR=y
++CONFIG_CMD_MVEBU_FDT_CONFIG=y
+ CONFIG_CMD_MVEBU_MPP=y
+ CONFIG_CMD_MVEBU_BUBT=y
+ CONFIG_CMD_MVEBU_TSEN=y
+@@ -48,6 +49,5 @@ CONFIG_MVEBU_COMPHY_SUPPORT=y
+ CONFIG_MVEBU_THERMAL_SENSOR=y
+ CONFIG_MVEBU_THERMAL_SENSOR_28NM_V2=y
+ CONFIG_DEVEL_BOARD=y
+-# CONFIG_MULTI_DT_FILE is not set
+ # CONFIG_MVEBU_LLC_ENABLE is not set
+ CONFIG_ENV_IS_IN_BOOTDEV=y
+-- 
+1.9.1
+

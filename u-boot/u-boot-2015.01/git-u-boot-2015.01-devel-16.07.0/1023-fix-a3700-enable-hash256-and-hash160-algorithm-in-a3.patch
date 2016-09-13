@@ -1,0 +1,33 @@
+From 36f8d614f6ef7562a24c6457d2d7c33f8e9b901c Mon Sep 17 00:00:00 2001
+From: zachary <zhangzg@marvell.com>
+Date: Thu, 17 Mar 2016 21:03:37 +0800
+Subject: [PATCH 1023/1240] fix: a3700: enable hash256 and hash160 algorithm in
+ a3700 deconfig file
+
+- enable hash256 adn hash160 algorithm in a3700 deconfig file
+
+Change-Id: Ia3096442a15e32776d580c9ae4b126d1119b7c38
+Signed-off-by: zachary <zhangzg@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28212
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hua Jing <jinghua@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ configs/mvebu_armada3700_defconfig | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/configs/mvebu_armada3700_defconfig b/configs/mvebu_armada3700_defconfig
+index da76dd9..0164f80 100644
+--- a/configs/mvebu_armada3700_defconfig
++++ b/configs/mvebu_armada3700_defconfig
+@@ -43,4 +43,6 @@ CONFIG_USB=y
+ CONFIG_USB_XHCI_HCD=y
+ +S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+ +S:CONFIG_MVEBU_MK6_SUPPORT=y
++CONFIG_SHA256=y
++CONFIG_SHA1=y
+ +S:CONFIG_MVEBU_MBUS_SKIP_DRAM_WIN=y
+-- 
+1.9.1
+

@@ -1,0 +1,36 @@
+From 12e6798af7d4834722448baac831bbd0d4c39fb5 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 26 Apr 2016 15:28:49 +0300
+Subject: [PATCH 1068/1240] fix: ahci: remove error print in AHCI driver if no
+ node found in DT
+
+- Update the error print to debug print in AHCI driver if no SATA node found in
+  device tree, (node not found or disabled)
+- The user may disable the SATA and the u-boot should not print that there's no
+  AHCI node.
+
+Change-Id: Ide6c9cc15d4213e2bd55af7ae510941fab6d3bcb
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29291
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/block/ahci.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/block/ahci.c b/drivers/block/ahci.c
+index cdb43d6..5adb00f 100644
+--- a/drivers/block/ahci.c
++++ b/drivers/block/ahci.c
+@@ -1035,7 +1035,7 @@ int ahci_init(void)
+ 	count = fdtdec_find_aliases_for_id(gd->fdt_blob, "sata",
+ 			COMPAT_MVEBU_SATA, node_list, MAX_SATA_PORT_NUM);
+ 	if (count == 0) {
+-		error("could not find sata node in FDT, initialization skipped!\n");
++		debug("could not find sata node in FDT, initialization skipped!\n");
+ 		return -ENXIO;
+ 	}
+ 	for (i = 0; i < count ; i++) {
+-- 
+1.9.1
+

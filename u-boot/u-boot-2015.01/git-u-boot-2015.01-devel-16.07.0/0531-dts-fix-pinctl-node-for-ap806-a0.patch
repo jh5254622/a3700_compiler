@@ -1,0 +1,55 @@
+From 3c8a94e89111e2cedbad3b4615520072b5e95367 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 25 Nov 2015 10:31:01 +0200
+Subject: [PATCH 0531/1240] dts: fix pinctl node for ap806-a0
+
+- This driver doesn't have reversed registers
+- the maxmimum function is 0x3
+- the base registers were fixed
+- fix the initial MPP setup for UART_TX
+
+Change-Id: If045c01bac9c898a6791854cca678a95bad7d0c8
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25257
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/apn-806-a0-pd.dts | 3 +--
+ arch/arm/dts/apn-806-a0.dtsi   | 5 ++---
+ 2 files changed, 3 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/dts/apn-806-a0-pd.dts b/arch/arm/dts/apn-806-a0-pd.dts
+index a5645d2..4d7f2cd 100644
+--- a/arch/arm/dts/apn-806-a0-pd.dts
++++ b/arch/arm/dts/apn-806-a0-pd.dts
+@@ -42,6 +42,5 @@
+ &pinctl {
+ 		  /* 0 1 2 3 4 5 6 7 8 9 */
+ 	pin-func = < 3 3 3 3 3 3 0 0 0 0
+-		     0 3 0 0 0 0 0 0 0 0
+-		     3 >;
++		     0 3 0 0 0 0 0 0 0 3 >;
+ };
+diff --git a/arch/arm/dts/apn-806-a0.dtsi b/arch/arm/dts/apn-806-a0.dtsi
+index 35cac54..528f4ab 100644
+--- a/arch/arm/dts/apn-806-a0.dtsi
++++ b/arch/arm/dts/apn-806-a0.dtsi
+@@ -66,13 +66,12 @@
+ 				status = "okay";
+ 			};
+ 
+-			pinctl: pinctl@6F008C {
++			pinctl: pinctl@6F4000 {
+ 				compatible = "marvell,mvebu-pinctl";
+ 				bank-name ="apn-806";
+ 				reg = <0x6F4000 0x10>;
+ 				pin-count = <20>;
+-				max-func = <1>;
+-				reverse-reg;
++				max-func = <3>;
+ 			};
+ 
+ 			ddr-mac {
+-- 
+1.9.1
+

@@ -1,0 +1,284 @@
+From 52d2cd7527164a3796383a71d363fde913eb5164 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Mon, 8 Feb 2016 10:48:05 +0200
+Subject: [PATCH 0840/1240] a3700: add a3700 DB board description document
+
+- Board Physical Setup (Connectors, Jumpers, and modules)
+- Supported Interface configuration map
+
+Change-Id: I55b11c3323cd13ebfa032b9a1a08f4eac50dbc5d
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27334
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ doc/mvebu/a3700/armada-3700-db-setup.txt     | 43 ++++++++++++
+ doc/mvebu/a7k-a8k/armada7040-rz-db-setup.txt | 99 ++++++++++++++++++++++++++++
+ doc/mvebu/boards/armada7040-rz-db-setup.txt  | 99 ----------------------------
+ 3 files changed, 142 insertions(+), 99 deletions(-)
+ create mode 100644 doc/mvebu/a3700/armada-3700-db-setup.txt
+ create mode 100644 doc/mvebu/a7k-a8k/armada7040-rz-db-setup.txt
+ delete mode 100644 doc/mvebu/boards/armada7040-rz-db-setup.txt
+
+diff --git a/doc/mvebu/a3700/armada-3700-db-setup.txt b/doc/mvebu/a3700/armada-3700-db-setup.txt
+new file mode 100644
+index 0000000..ddbc241
+--- /dev/null
++++ b/doc/mvebu/a3700/armada-3700-db-setup.txt
+@@ -0,0 +1,43 @@
++Armada3700-DB development board setup:
++--------------------------------------
++
++The Armada3700-DB Development Board (DB) is a configurable board designed to test several
++combinations of SOC configurations. U-BOOT supports a predefined set of those configurations
++via different device tree files.
++
++This document describes the board modifications required to setup each configuration and the
++interfaces supported (or disabled in each one).
++
++To switch to a different configuration, follow the instructions in the "board setup" section.
++Once completed, change the FDT file used by U-BOOT by running the U-BOOT command "fdt_config".
++
++Board Physical Setup (Connectors, Jumpers, and modules)
++-------------------------------------------------------
++
++		|	Setup-1				|	Setup-2				|
++Connector	|     Default(USB3)			|     	SGMII1 				|
++------------------------------------------------------------------------------------------------|
++CON8		| eMMC_NAND module 	(SLM1506-v1)	| eMMC_NAND module 	(SLM1506-v1)	|
++CON15		| SDcard module		(SLM1505-v1)	| SDcard module		(SLM1505-v1)	|
++CON17(PCIe)	| PCIe-mPCIe-Jumper: SLM-1496(Optional*)| PCIe-mPCIe-Jumper: SLM-1496(Optional*)|
++CON19		| SerDes-Jumper 	(SLM1502-v1)	| 88E1512 Module 	(SLM-1496-v1)	|
++CON21		| 88E1512 Module 	(SLM-1496-v1)	| 88E1512 Module 	(SLM-1496-v1)	|
++------------------------------------------------------------------------------------------------|
++* PCIe-mPCIe-Jumper is used to enable mini PCIe0 port (CON12)
++
++The tables below summarizes the interface configuration of each setup
++
++
++setup  #	|	1	|	2	|
++name   #	|     Default 	|   SGMII1	|
++-------------------------------------------------
++SerDes PHY0	| PCIe0		| PCIe0		|
++SerDes PHY1	| USB3_H0	| SGMII1	|
++SerDes PHY2	| SATA		| SATA		|
++SATA		| CON6		| CON6		|
++PCIe		| CON12/17	| CON12/17	|
++USB3		| CON13		| N/A		|
++SGMII1		| N/A		| PHY1 (CON19)	|
++RGMII		| PHY0 (CON21)	| PHY0 (CON21)	|
++-------------------------------------------------
++
+diff --git a/doc/mvebu/a7k-a8k/armada7040-rz-db-setup.txt b/doc/mvebu/a7k-a8k/armada7040-rz-db-setup.txt
+new file mode 100644
+index 0000000..f4e1441
+--- /dev/null
++++ b/doc/mvebu/a7k-a8k/armada7040-rz-db-setup.txt
+@@ -0,0 +1,99 @@
++Armada7040-RZ development board setup:
++--------------------------------------
++
++The Armada7040-RZ Development Board (DB) is a configurable board designed to test several
++combinations of SOC configurations. U-BOOT supports a defined set of those configurations
++via different device tree files.
++
++This document describes the board modifications required to setup each configuration and the
++interfaces supported (or disabled in each one).
++
++To switch to a different configuration, follow the instructions in the "board setup" section.
++Once completed change the FDT file used by U-BOOT by running the U-BOOT command "fdt_config".
++
++
++Board Setup
++------------
++
++## setup 1: Router ###
++
++  Serdes site
++   - module: SLM1524
++   - Module DIP switch
++
++
++## setup 2: All PCI ###
++
++  Serdes site
++   - module: SLM1521
++   - Module DIP switch
++
++
++## setup 3: KR ###
++
++  Serdes site
++   - module: SLM1521
++   - Module DIP switch
++
++## setup 4: NAND ###
++
++  Serdes site
++   - module: SLM1521
++   - Module DIP switch
++
++## setup 5: RGMII only ###
++
++  Serdes site
++   - module: SLM1521
++   - Module DIP switch
++
++## setup 6: RXAUI ###
++
++  Serdes site
++   - module: SLM1522
++   - Module DIP switch
++
++## setup 7: RXAUI PCI  ###
++
++  Serdes site
++   - module: SLM1522
++   - Module DIP switch
++
++
++The tables below summarizes the interface configuration of each setup
++
++Serdes PHY configuration
++------------------------
++
++setup  #	|	1	|	2	|	3	|	4	|	5	|	6	|	7	|
++name   #	|     router 	|    all pci	|	KR	|     NAND	|   rmgii only	|    rxaui	|  rxaui-pci	|
++---------------------------------------------------------------------------------------------------------------------------------
++SerDes:	lane0	| sgmii2	| pex_x4_l0	| pex_x4_l0	| pex_x4_l0	| pex_x4_l0	| sata1		| pex_x4_l0	|
++	lane1	| usb3h0	| pex_x4_l1	| sata0		| usb3h0	| usb3h0	| sata0		| sata0		|
++	lane2	| sgmii0	| pex_x4_l2	| kr		| kr		| sata0		| sgmii0	| sgmii0	|
++	lane3	| sata1		| pex_x4_l3	| sata1		| sata1		| sata1		| sgmii2	| sgmii2	|
++	lane4	| usb3h1	| pex_x1_0	| pex_x1_0	| usb3h1	| usb3h1	| rxauil0	| rxauil0	|
++	lane5	| pex_x1_1	| pex_x1_1	| pex_x1_1	| pex_x1_1	| pex_x1_1	| rxauil1	| rxauil1	|
++---------------------------------------------------------------------------------------------------------------------------------
++
++
++Multi purpose pin configurations
++--------------------------------
++
++setup  #	|	1	|	2	|	3	|	4	|	5	|	6	|	7	|
++name   #	|     router 	|    all pci	|	KR	|     NAND	|   rmgii only	|    rxaui	|  rxaui-pci	|
++---------------------------------------------------------------------------------------------------------------------------------
++
++MPPs: 	CP-SPI0	| N/C		| N/C		| N/C		| N/C		| N/C		| N/C		| N/C		|
++	CP-SPI1	| [13-16]	| [13-16]	| [13-16]	| N/C		| [13-16]	| [13-16]	| [13-16]	|
++	NAND	| N/C		| N/C		| N/C		| [13,17-27]	| N/C		| N/C		| N/C		|
++	RGMII0	| N/C		| [0-12]	| [0-12]	| [0-12]	| [0-12]	| N/C		| N/C		|
++	RGMII1	| N/C		| [44-55]	| [44-55]	| [44-55]	| [44-55]	| N/C		| N/C		|
++	CP-UART0| [29-30]	| [29-30]	| [29-30]	| [29-30]	| [29-30]	| [29-30]	| [29-30]	|
++	CP-UART1| [40-41]	| [40-41]	| [40-41]	| [40-41]	| [40-41]	| [40-41]	| [40-41]	|
++	SD	| [56-62]	| [56-62]	| [56-62]	| [56-62]	| [56-62]	| [56-62]	| [56-62]	|
++	TDM	| [0-11]	| N/C		| N/C		| N/C		| N/C		| N/C		| N/C		|
++	TWSI	| [37-38]	| [37-38]	| [37-38]	| [37-38]	| [37-38]	| [37-38]	| [37-38]	|
++	SATA0	| [36]		| N/C		| [36]		| N/C		| [36]		| [36]		| [36]		|
++	SATA1	| [28]		| N/C		| [28]		| [28]		| [28]		| [28]		| N/C		|
++---------------------------------------------------------------------------------------------------------------------------------
+diff --git a/doc/mvebu/boards/armada7040-rz-db-setup.txt b/doc/mvebu/boards/armada7040-rz-db-setup.txt
+deleted file mode 100644
+index f4e1441..0000000
+--- a/doc/mvebu/boards/armada7040-rz-db-setup.txt
++++ /dev/null
+@@ -1,99 +0,0 @@
+-Armada7040-RZ development board setup:
+---------------------------------------
+-
+-The Armada7040-RZ Development Board (DB) is a configurable board designed to test several
+-combinations of SOC configurations. U-BOOT supports a defined set of those configurations
+-via different device tree files.
+-
+-This document describes the board modifications required to setup each configuration and the
+-interfaces supported (or disabled in each one).
+-
+-To switch to a different configuration, follow the instructions in the "board setup" section.
+-Once completed change the FDT file used by U-BOOT by running the U-BOOT command "fdt_config".
+-
+-
+-Board Setup
+-------------
+-
+-## setup 1: Router ###
+-
+-  Serdes site
+-   - module: SLM1524
+-   - Module DIP switch
+-
+-
+-## setup 2: All PCI ###
+-
+-  Serdes site
+-   - module: SLM1521
+-   - Module DIP switch
+-
+-
+-## setup 3: KR ###
+-
+-  Serdes site
+-   - module: SLM1521
+-   - Module DIP switch
+-
+-## setup 4: NAND ###
+-
+-  Serdes site
+-   - module: SLM1521
+-   - Module DIP switch
+-
+-## setup 5: RGMII only ###
+-
+-  Serdes site
+-   - module: SLM1521
+-   - Module DIP switch
+-
+-## setup 6: RXAUI ###
+-
+-  Serdes site
+-   - module: SLM1522
+-   - Module DIP switch
+-
+-## setup 7: RXAUI PCI  ###
+-
+-  Serdes site
+-   - module: SLM1522
+-   - Module DIP switch
+-
+-
+-The tables below summarizes the interface configuration of each setup
+-
+-Serdes PHY configuration
+-------------------------
+-
+-setup  #	|	1	|	2	|	3	|	4	|	5	|	6	|	7	|
+-name   #	|     router 	|    all pci	|	KR	|     NAND	|   rmgii only	|    rxaui	|  rxaui-pci	|
+----------------------------------------------------------------------------------------------------------------------------------
+-SerDes:	lane0	| sgmii2	| pex_x4_l0	| pex_x4_l0	| pex_x4_l0	| pex_x4_l0	| sata1		| pex_x4_l0	|
+-	lane1	| usb3h0	| pex_x4_l1	| sata0		| usb3h0	| usb3h0	| sata0		| sata0		|
+-	lane2	| sgmii0	| pex_x4_l2	| kr		| kr		| sata0		| sgmii0	| sgmii0	|
+-	lane3	| sata1		| pex_x4_l3	| sata1		| sata1		| sata1		| sgmii2	| sgmii2	|
+-	lane4	| usb3h1	| pex_x1_0	| pex_x1_0	| usb3h1	| usb3h1	| rxauil0	| rxauil0	|
+-	lane5	| pex_x1_1	| pex_x1_1	| pex_x1_1	| pex_x1_1	| pex_x1_1	| rxauil1	| rxauil1	|
+----------------------------------------------------------------------------------------------------------------------------------
+-
+-
+-Multi purpose pin configurations
+---------------------------------
+-
+-setup  #	|	1	|	2	|	3	|	4	|	5	|	6	|	7	|
+-name   #	|     router 	|    all pci	|	KR	|     NAND	|   rmgii only	|    rxaui	|  rxaui-pci	|
+----------------------------------------------------------------------------------------------------------------------------------
+-
+-MPPs: 	CP-SPI0	| N/C		| N/C		| N/C		| N/C		| N/C		| N/C		| N/C		|
+-	CP-SPI1	| [13-16]	| [13-16]	| [13-16]	| N/C		| [13-16]	| [13-16]	| [13-16]	|
+-	NAND	| N/C		| N/C		| N/C		| [13,17-27]	| N/C		| N/C		| N/C		|
+-	RGMII0	| N/C		| [0-12]	| [0-12]	| [0-12]	| [0-12]	| N/C		| N/C		|
+-	RGMII1	| N/C		| [44-55]	| [44-55]	| [44-55]	| [44-55]	| N/C		| N/C		|
+-	CP-UART0| [29-30]	| [29-30]	| [29-30]	| [29-30]	| [29-30]	| [29-30]	| [29-30]	|
+-	CP-UART1| [40-41]	| [40-41]	| [40-41]	| [40-41]	| [40-41]	| [40-41]	| [40-41]	|
+-	SD	| [56-62]	| [56-62]	| [56-62]	| [56-62]	| [56-62]	| [56-62]	| [56-62]	|
+-	TDM	| [0-11]	| N/C		| N/C		| N/C		| N/C		| N/C		| N/C		|
+-	TWSI	| [37-38]	| [37-38]	| [37-38]	| [37-38]	| [37-38]	| [37-38]	| [37-38]	|
+-	SATA0	| [36]		| N/C		| [36]		| N/C		| [36]		| [36]		| [36]		|
+-	SATA1	| [28]		| N/C		| [28]		| [28]		| [28]		| [28]		| N/C		|
+----------------------------------------------------------------------------------------------------------------------------------
+-- 
+1.9.1
+

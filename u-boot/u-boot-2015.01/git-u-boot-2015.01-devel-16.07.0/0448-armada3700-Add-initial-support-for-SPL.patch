@@ -1,0 +1,419 @@
+From 5b0662c533488c0f7aebbcde285aa2a9fa9ebe32 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Mon, 19 Oct 2015 11:13:24 +0300
+Subject: [PATCH 0448/1240] armada3700: Add initial support for SPL
+
+- Add COMPHY to ArmadaLP embedded FDT
+- Add stub for ArmadaLP COMPHY initialization
+- Extend NTIM descriptor to include 3 images instead of 2
+  One image is NTIM, one is SPL and one is U-boot itself
+
+Change-Id: I0ac9a8bca6952884cd403ea375a82d371c5200b5
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24063
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/dram_over_pci.c  | 12 +++++
+ arch/arm/cpu/mvebu-common/spl.c            | 12 ++++-
+ arch/arm/dts/armada-lp.dtsi                | 16 +++++++
+ arch/arm/include/asm/arch-mvebu/comphy.h   |  2 +
+ configs/mvebu_armadalp_defconfig           |  2 +
+ configs/mvebu_armadalp_palladium_defconfig |  1 +
+ drivers/phy/Makefile                       |  1 +
+ drivers/phy/comphy_armada_lp.c             | 75 ++++++++++++++++++++++++++++++
+ drivers/phy/comphy_core.c                  |  4 ++
+ include/configs/armadalp.h                 | 13 ++++--
+ include/fdtdec.h                           |  1 +
+ lib/fdtdec.c                               |  1 +
+ tools/wtp/u-boot-ntim.txt                  | 36 ++++++++------
+ 13 files changed, 156 insertions(+), 20 deletions(-)
+ create mode 100644 drivers/phy/comphy_armada_lp.c
+
+diff --git a/arch/arm/cpu/mvebu-common/dram_over_pci.c b/arch/arm/cpu/mvebu-common/dram_over_pci.c
+index eed508e..0761c38 100644
+--- a/arch/arm/cpu/mvebu-common/dram_over_pci.c
++++ b/arch/arm/cpu/mvebu-common/dram_over_pci.c
+@@ -95,6 +95,12 @@ void dram_over_pci_window_config(void)
+ 	writel(val, RFU_WIN_PEX_CFG);
+ }
+ 
++#elif defined(CONFIG_TARGET_ARMADA_LP)
++
++void dram_over_pci_window_config(void)
++{
++}
++
+ #elif defined(CONFIG_TARGET_ARMADA_38X)
+ 
+ void dram_over_pci_window_config(void)
+@@ -131,6 +137,8 @@ void dram_over_pci_init(const void *fdt_blob)
+ 	udelay(PCI_DEVICE_INIT_DELAY);
+ 	comphy_init(fdt_blob);
+ 
++#ifdef CONFIG_TARGET_ARMADA_8K
++
+ 	/* wait untill link training is done */
+ 	while (linkup_timeout_ms) {
+ 		if ((readl(PCIE_DEBUG_STATUS) & 0x7F) == 0x7E)
+@@ -144,6 +152,10 @@ void dram_over_pci_init(const void *fdt_blob)
+ 		error("PCIe didn't reach linkup");
+ 		printf("LTSSM reg = 0x%08x\n", readl(PCIE_DEBUG_STATUS));
+ 	}
++#else
++	mdelay(linkup_timeout_ms);
++
++#endif /* CONFIG_TARGET_ARMADA_8K */
+ 
+ 	pci_init();
+ 
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index 212170a..6e7e161 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -39,6 +39,9 @@
+ #ifdef CONFIG_MVEBU_SPL_SAR_DUMP
+ extern void mvebu_sar_dump_reg(void);
+ #endif
++#ifdef CONFIG_TARGET_ARMADA_LP
++void (*ptr_uboot_start)(void);
++#endif
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+@@ -59,7 +62,6 @@ void board_init_f(ulong silent)
+ {
+ 	gd = &gdata;
+ 	gd->baudrate = CONFIG_BAUDRATE;
+-
+ #if 0
+ 	if (silent)
+ 		gd->flags |= GD_FLG_SILENT;
+@@ -83,7 +85,8 @@ void board_init_f(ulong silent)
+ #ifndef CONFIG_PALLADIUM
+ 	mvebu_dram_init(gd->fdt_blob);
+ #endif
+-#else
++
++#else /* CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT */
+ 	dram_over_pci_init(gd->fdt_blob);
+ #endif /* CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT */
+ 
+@@ -102,4 +105,9 @@ void board_init_f(ulong silent)
+ 		printf("**** DRAM test failed ****\n");
+ #endif
+ 
++#ifdef CONFIG_TARGET_ARMADA_LP
++	ptr_uboot_start = 0;
++	/* Jump from SPL to u-boot start address */
++	ptr_uboot_start();
++#endif
+ }
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index a298adf..7054101 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -1,5 +1,6 @@
+ #define ATTR(remapped, target, attributes) (((remapped) << 12) | ((target) << 8) | (attributes))
+ 
++#include <dt-bindings/comphy/comphy_data.h>
+ / {
+ 	model = "Marvell Armada_LP Development Board";
+ 	compatible = "marvell,armada-lp";
+@@ -67,6 +68,21 @@
+ 				reg = <0x11000 0x100>;
+ 				status = "disabled";
+ 			};
++			comphy {
++				compatible = "marvell,mvebu-comphy", "marvell,comphy-armadalp";
++				mux-bitcount = <1>;
++				max-lanes = <2>;
++				reg-comphy = <0x18300 0x28>;
++				reg-hpipe3 = <0x1F300 0x3D000>;
++				phy0 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_2_5G>;
++				};
++				phy1 {
++					phy-type = <PHY_TYPE_SGMII1>;
++					phy-speed = <PHY_SPEED_2_5G>;
++				};
++			};
+ 		};
+ 	};
+ };
+diff --git a/arch/arm/include/asm/arch-mvebu/comphy.h b/arch/arm/include/asm/arch-mvebu/comphy.h
+index c793b69..0b250a7 100644
+--- a/arch/arm/include/asm/arch-mvebu/comphy.h
++++ b/arch/arm/include/asm/arch-mvebu/comphy.h
+@@ -92,6 +92,8 @@ u32 comphy_init(const void *blob);
+ int comphy_a38x_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy_map *comphy_map_data);
+ #elif defined(CONFIG_TARGET_ARMADA_8K)
+ int comphy_ap806_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy_map *serdes_map);
++#elif defined(CONFIG_TARGET_ARMADA_LP)
++int comphy_armada_lp_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy_map *serdes_map);
+ #endif
+ 
+ 
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index d0598bf..1623fc8 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -8,6 +8,7 @@ CONFIG_MVEBU_NETA_BYPASS_DEC_WIN=y
+ CONFIG_I2C_MV=y
+ CONFIG_I2C_MV_PAD_REG=n
+ +S:CONFIG_MVEBU_UART_ARLP=y
+++S:CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT=y
+ +S:CONFIG_DEVEL_BOARD=y
+ CONFIG_CUSTOMER_BOARD=y
+ CONFIG_MVEBU_MBUS=y
+@@ -24,3 +25,4 @@ CONFIG_CMD_PING=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-lp-db"
+++S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+diff --git a/configs/mvebu_armadalp_palladium_defconfig b/configs/mvebu_armadalp_palladium_defconfig
+index 1e29c5f..1ba48ee 100644
+--- a/configs/mvebu_armadalp_palladium_defconfig
++++ b/configs/mvebu_armadalp_palladium_defconfig
+@@ -23,3 +23,4 @@ CONFIG_CMD_PING=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-lp-palladium"
+++S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+diff --git a/drivers/phy/Makefile b/drivers/phy/Makefile
+index 18c0e25..8528274 100644
+--- a/drivers/phy/Makefile
++++ b/drivers/phy/Makefile
+@@ -1,4 +1,5 @@
+ obj-y += comphy_core.o
+ obj-y += comphy_a38x.o
+ obj-y += comphy_ap806_z1.o
++obj-y += comphy_armada_lp.o
+ obj-y += comphy_pcie_config.o
+diff --git a/drivers/phy/comphy_armada_lp.c b/drivers/phy/comphy_armada_lp.c
+new file mode 100644
+index 0000000..fa0d681
+--- /dev/null
++++ b/drivers/phy/comphy_armada_lp.c
+@@ -0,0 +1,75 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2015 Marvell International Ltd.
++* ***************************************************************************
++* This program is free software: you can redistribute it and/or modify it
++* under the terms of the GNU General Public License as published by the Free
++* Software Foundation, either version 2 of the License, or any later version.
++*
++* This program is distributed in the hope that it will be useful,
++* but WITHOUT ANY WARRANTY; without even the implied warranty of
++* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++* GNU General Public License for more details.
++*
++* You should have received a copy of the GNU General Public License
++* along with this program.  If not, see <http://www.gnu.org/licenses/>.
++* ***************************************************************************
++*/
++
++#define DEBUG
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch-mvebu/comphy.h>
++#include <asm/arch-mvebu/comphy_hpipe.h>
++#include <asm/arch-mvebu/mvebu.h>
++
++/***************************************************************************************************
++  * comphy_pcie_power_up
++ ***************************************************************************************************/
++static int comphy_pcie_power_up(u32 lane, void __iomem *hpipe_base_addr, void __iomem *comphy_base_addr)
++{
++	debug_enter();
++
++	debug_exit();
++
++	/* Return the status of the PLL */
++	return 1;
++}
++
++/***************************************************************************************************
++  * comphy_armada_lp_init
++ ***************************************************************************************************/
++int comphy_armada_lp_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy_map *serdes_map)
++{
++	struct comphy_map *ptr_comphy_map;
++	void __iomem *comphy_base_addr, *hpipe_base_addr;
++	u32 comphy_max_count, lane, ret = 0;
++
++	debug_enter();
++
++	comphy_base_addr = ptr_chip_cfg->comphy_base_addr;
++	comphy_max_count = ptr_chip_cfg->comphy_lanes_count;
++	hpipe_base_addr = ptr_chip_cfg->hpipe3_base_addr;
++
++	for (lane = 0, ptr_comphy_map = serdes_map; lane < comphy_max_count; lane++, ptr_comphy_map++) {
++		debug("Initialize serdes number %d\n", lane);
++		debug("Serdes type = 0x%x\n", ptr_comphy_map->type);
++		switch (ptr_comphy_map->type) {
++		case UNCONNECTED:
++			continue;
++			break;
++		case PEX0:
++			ret = comphy_pcie_power_up(lane, hpipe_base_addr, comphy_base_addr);
++			udelay(20);
++			break;
++		default:
++			debug("Unknown SerDes type, skip initialize SerDes %d\n", lane);
++			break;
++		}
++		if (ret == 0)
++			error("PLL is not locked - Failed to initialize lane %d\n", lane);
++	}
++
++	debug_exit();
++	return 0;
++}
+diff --git a/drivers/phy/comphy_core.c b/drivers/phy/comphy_core.c
+index 03296ef..23d66af 100644
+--- a/drivers/phy/comphy_core.c
++++ b/drivers/phy/comphy_core.c
+@@ -38,6 +38,10 @@ struct chip_serdes_phy_config chip_config[] = {
+ 	{.compat = CP110,
+ 	 .ptr_comphy_chip_init = comphy_cp110_init },
+ #endif
++#ifdef CONFIG_TARGET_ARMADA_LP
++	{.compat = COMPAT_COMPHY_ARMADA_LP,
++	 .ptr_comphy_chip_init = comphy_armada_lp_init },
++#endif
+ 	{.compat = COMPAT_UNKNOWN}
+ };
+ 
+diff --git a/include/configs/armadalp.h b/include/configs/armadalp.h
+index fcc7a04..f28487f 100644
+--- a/include/configs/armadalp.h
++++ b/include/configs/armadalp.h
+@@ -53,13 +53,14 @@
+ 
+ /* DRAM detection stuff */
+ #define MV_DRAM_AUTO_SIZE
+-#define CONFIG_SYS_DRAM_BANKS           1
++#define CONFIG_SYS_DRAM_BANKS		1
+ 
+ #ifdef CONFIG_SPL_BUILD
+ /* SPL */
+ /* Defines for SPL */
+-#define CONFIG_SPL_TEXT_BASE	 0xFFE1C048
+-#define CONFIG_SPL_MAX_SIZE		(0x1ffc0)
++/*#define CONFIG_SPL_TEXT_BASE		0xF0000000 - CM3 SRAM, 0x01000000 - DRAM */
++#define CONFIG_SPL_TEXT_BASE		0x01000000
++#define CONFIG_SPL_MAX_SIZE		0x00020000	/* 128K */
+ 
+ #ifndef __ASSEMBLY__
+ extern char __end_of_spl[];
+@@ -86,7 +87,7 @@ extern char __end_of_spl[];
+  */
+ #include "mvebu-common.h"
+ 
+-
++#define CONFIG_SYS_PCI_64BIT	/* enable 64-bit PCI resources */
+ 
+ /*
+  * SOC specific overrides
+@@ -102,7 +103,11 @@ extern char __end_of_spl[];
+ #define CONFIG_BOOTDELAY                -1
+ 
+ #undef CONFIG_BAUDRATE
++#ifdef CONFIG_PALLADIUM
++#define CONFIG_BAUDRATE                 300
++#else
+ #define CONFIG_BAUDRATE                 4000
++#endif
+ 
+ #undef CONFIG_BOOTARGS
+ #define CONFIG_BOOTARGS			"console=ttyS0,300 earlycon=arlp_uart,0xd0012000"
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 5216909..6643e9f 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -140,6 +140,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_COMPHY,
+ 	COMPAT_COMPHY_ARMADA_38X,
+ 	COMPAT_COMPHY_AP806,
++	COMPAT_COMPHY_ARMADA_LP,
+ 	COMPAT_MVEBU_THERMAL_SENSOR,
+ 	COMPAT_MVEBU_THERMAL_SENSOR_V2,
+ 	COMPAT_MVEBU_FLC,
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 1cd28be..a600a0d 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -102,6 +102,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_COMPHY, "marvell,mvebu-comphy"),
+ 	COMPAT(COMPHY_ARMADA_38X, "marvell,comphy-armada38x"),
+ 	COMPAT(COMPAT_COMPHY_AP806, "marvell,comphy-ap806"),
++	COMPAT(COMPAT_COMPHY_ARMADA_LP, "marvell,comphy-armadalp"),
+ 	COMPAT(MVEBU_THERMAL_SENSOR, "marvell,thermal-sensor"),
+ 	COMPAT(MVEBU_THERMAL_SENSOR_V2, "marvell,thermal-sensor-v2"),
+ 	COMPAT(MVEBU_FLC, "marvell,mvebu-flc"),
+diff --git a/tools/wtp/u-boot-ntim.txt b/tools/wtp/u-boot-ntim.txt
+index a917860..538e09c 100644
+--- a/tools/wtp/u-boot-ntim.txt
++++ b/tools/wtp/u-boot-ntim.txt
+@@ -6,7 +6,7 @@ Issue Date:                  0x02272015			; today's date
+ OEM UniqueID:                0x21796B53			; Sky!
+ Processor Type:              <undefined>
+ Boot Flash Signature:        0x5350490A			; Select SPI'0A
+-Number of Images:            2
++Number of Images:            3
+ Size of Reserved in bytes:   44
+ 
+ Image ID:                   0x54494D48				; TIMH
+@@ -18,25 +18,33 @@ Partition Number:           0x00000000
+ Image Filename: TIM_UBOOT_NON_TRUSTED.bin
+ 
+ Image ID:                   0x4F424d49				; OBMI
+-Next Image ID:              0xFFFFFFFF				; NONE
++Next Image ID:              0x4F534C4F				; OSLO next
+ Flash Entry Address:        0x00004000				; OBMI flash addr
+-Load Address:               0x60000000				; OBMI L2 addr
++Load Address:               0x61000000				; OBMI RAM addr
++Image Size To CRC in bytes: 0x00000000
++Partition Number:           0x00000000
++Image Filename: spl/u-boot-spl.bin
++
++Image ID:                   0x4F534C4F				; OSLO
++Next Image ID:              0xFFFFFFFF				; NONE
++Flash Entry Address:        0x00024000				; OSLO flash addr
++Load Address:               0x60000000				; OSLO RAM addr
+ Image Size To CRC in bytes: 0x00000000
+ Partition Number:           0x00000000
+ Image Filename: u-boot.bin
+ 
+ Reserved Data:
+-0x4F505448
+-0x00000002
+-0x43525632
+-0x0000001C
+-0x00000002
+-0x00000000
+-0x00000000
+-0x00000002
+-0x1fff0081
+-0x5465726D
+-0x00000008
++0x4F505448	;OPTH
++0x00000002	; Number of Reserved Packages
++0x43525632	;CRV2
++0x0000001C	; Size of CRV2 package in bytes
++0x00000002	; Number of cores to release
++0x00000000	; Core_ID: 0 - AP0, 1 - AP1, 2 - CM3
++0x01000000	; PC address for Core_ID above
++0x00000002	; Core_ID: 0 - AP0, 1 - AP1, 2 - CM3
++0x1fff0081	; PC address for Core_ID above
++0x5465726D	;Term
++0x00000008	; Size of this package in bytes
+ 
+ Extended Reserved Data:
+ Consumer ID:
+-- 
+1.9.1
+

@@ -1,0 +1,53 @@
+From 74426ce0a631bd9e6081a14c598ef9aaa5d64157 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Tue, 28 Jul 2015 08:58:38 +0300
+Subject: [PATCH 0270/1240] jffs2: fix compile warning under 64bit mode
+
+Change-Id: I8bd892a69b1ce2b775b68082272d5af979b22ca8
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22246
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ fs/jffs2/jffs2_1pass.c   | 4 ++--
+ fs/jffs2/jffs2_private.h | 2 +-
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/fs/jffs2/jffs2_1pass.c b/fs/jffs2/jffs2_1pass.c
+index b1d6470..4419533 100644
+--- a/fs/jffs2/jffs2_1pass.c
++++ b/fs/jffs2/jffs2_1pass.c
+@@ -395,7 +395,7 @@ static inline void *get_node_mem_nor(u32 off, void *ext_buf)
+  * Generic jffs2 raw memory and node read routines.
+  *
+  */
+-static inline void *get_fl_mem(u32 off, u32 size, void *ext_buf)
++static inline void *get_fl_mem(unsigned long off, u32 size, void *ext_buf)
+ {
+ 	struct mtdids *id = current_part->dev->id;
+ 
+@@ -422,7 +422,7 @@ static inline void *get_fl_mem(u32 off, u32 size, void *ext_buf)
+ 	return (void*)off;
+ }
+ 
+-static inline void *get_node_mem(u32 off, void *ext_buf)
++static inline void *get_node_mem(unsigned long  off, void *ext_buf)
+ {
+ 	struct mtdids *id = current_part->dev->id;
+ 
+diff --git a/fs/jffs2/jffs2_private.h b/fs/jffs2/jffs2_private.h
+index 658b325..f04224f 100644
+--- a/fs/jffs2/jffs2_private.h
++++ b/fs/jffs2/jffs2_private.h
+@@ -90,7 +90,7 @@ static inline int
+ data_crc(struct jffs2_raw_inode *node)
+ {
+ 	if (node->data_crc != crc32_no_comp(0, (unsigned char *)
+-					    ((int) &node->node_crc + sizeof (node->node_crc)),
++					    (&node->node_crc + sizeof(node->node_crc)),
+ 					     node->csize)) {
+ 		return 0;
+ 	} else {
+-- 
+1.9.1
+

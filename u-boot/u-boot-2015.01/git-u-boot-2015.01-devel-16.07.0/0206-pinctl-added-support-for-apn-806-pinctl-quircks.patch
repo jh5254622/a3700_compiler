@@ -1,0 +1,79 @@
+From cb0769d42e87d324e4c9eae3bfb0792adf233043 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 21 Jun 2015 11:28:43 +0300
+Subject: [PATCH 0206/1240] pinctl: added support for apn-806 pinctl quircks
+
+apn-806 pinctl has a bug where the register offset
+decreases when the pin index increases.
+this patch adds a flag to the pinctl driver
+to handle this condition
+
+Change-Id: I864f77ba320e3e4222aba32802e638f48bd08486
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20300
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ doc/device-tree-bindings/misc/mvebu-pinctl.txt | 4 +++-
+ drivers/gpio/mvebu_pinctl.c                    | 9 +++++++--
+ 2 files changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/doc/device-tree-bindings/misc/mvebu-pinctl.txt b/doc/device-tree-bindings/misc/mvebu-pinctl.txt
+index 3ecd957..840a57d 100644
+--- a/doc/device-tree-bindings/misc/mvebu-pinctl.txt
++++ b/doc/device-tree-bindings/misc/mvebu-pinctl.txt
+@@ -19,7 +19,9 @@ The mvebu-pinctl requires the following proprties:
+ 		the maximum function number supported by this bank
+ 	- pin-func
+ 		an array specifying the function per pin
+-
++	- reverse_reg
++		a boolean specifying the reigster order is reversed, meaning
++		pin x is controlled in register (base - x/8) instead of (base + x/8)
+ 
+ Example of a pinctl bank node:
+ 	pinctl@18000 {
+diff --git a/drivers/gpio/mvebu_pinctl.c b/drivers/gpio/mvebu_pinctl.c
+index 41340bf..ac151e3 100644
+--- a/drivers/gpio/mvebu_pinctl.c
++++ b/drivers/gpio/mvebu_pinctl.c
+@@ -40,6 +40,7 @@ struct pinctl_data {
+ 	u8	*base_reg;
+ 	u32	pin_cnt;
+ 	u32	max_func;
++	int	reg_direction;
+ 	const char    *bank_name;
+ };
+ struct pinctl_data __attribute__((section(".data"))) bank_data[CONFIG_MAX_PINCTL_BANKS];
+@@ -62,7 +63,7 @@ int pinctl_set_pin_func(int bank, int pin_id, int func)
+ 	}
+ 
+ 	/* Calculate register address and bit in register */
+-	reg_offset   = 4 * (pin_id >> (PIN_REG_SHIFT));
++	reg_offset   = pinctl->reg_direction * 4 * (pin_id >> (PIN_REG_SHIFT));
+ 	field_offset = (BITS_PER_PIN) * (pin_id & PIN_FIELD_MASK);
+ 	mask = ~(PIN_FUNC_MASK << field_offset);
+ 
+@@ -88,7 +89,7 @@ int pinctl_get_pin_func(int bank, int pin_id)
+ 		return -1;
+ 	}
+ 
+-	reg_offset   = 4 * (pin_id >> (PIN_REG_SHIFT));
++	reg_offset   = pinctl->reg_direction * 4 * (pin_id >> (PIN_REG_SHIFT));
+ 	field_offset = (BITS_PER_PIN) * (pin_id & PIN_FIELD_MASK);
+ 
+ 	func = (readl(pinctl->base_reg + reg_offset)  >> field_offset) & PIN_FUNC_MASK;
+@@ -158,6 +159,10 @@ int mvebu_pinctl_probe(void)
+ 		pinctl->max_func  = fdtdec_get_int(blob, node, "max-func", CONFIG_MAX_FUNC);
+ 		pinctl->bank_name = fdt_getprop(blob, node, "bank-name", NULL);
+ 
++		pinctl->reg_direction = 1;
++		if (fdtdec_get_bool(blob, node, "reverse-reg"))
++			pinctl->reg_direction = -1;
++
+ 		pin_func = malloc(pinctl->pin_cnt * sizeof(u32));
+ 		if (pin_func == NULL) {
+ 			error("pinctl: no memory for pin_func array\n");
+-- 
+1.9.1
+

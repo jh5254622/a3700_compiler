@@ -1,0 +1,101 @@
+From c04a07d19d85d804e588b52aa9c8db43d0d7a250 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Fri, 18 Mar 2016 16:58:33 +0800
+Subject: [PATCH 1220/1240] ehci: mvebu: add option to bypass address decode
+ configuratin for USB2
+
+For Marvell SoCs like A38x, AXP and A37x, USB2 controller needs address
+decode table configurations, which is in file ehci-marvell.c, but for some
+other SoC it is not needed, like A3700, and need to be disabled, otherwise
+there will be compilation error since there is no the same routines as A38x,
+AXP and A37x to do the addr decode.
+- add USB_EHCI_MARVELL_BYPASS_BRG_ADDR_DEC to Kconfig as default value n,
+  so it would break any SoCs that have already had EHCI support.
+- put all the USB2 address decode configuration code in ehci-marvell.c under
+  it.
+
+Change-Id: I96e88fa6c49308be1a74aac677d93d434df1e9a5
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28345
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ drivers/usb/host/Kconfig        | 12 ++++++++++++
+ drivers/usb/host/ehci-marvell.c |  7 +++++++
+ 2 files changed, 19 insertions(+)
+
+diff --git a/drivers/usb/host/Kconfig b/drivers/usb/host/Kconfig
+index 0455bc6..e68ff39 100644
+--- a/drivers/usb/host/Kconfig
++++ b/drivers/usb/host/Kconfig
+@@ -65,6 +65,18 @@ config USB_EHCI_MARVELL
+ 	  which includes Armada3700 and
+ 	  other Armada family SoCs.
+ 
++config USB_EHCI_MARVELL_BYPASS_BRG_ADDR_DEC
++	bool "Bypass MARVELL USB 2.0 bridge address decode setting"
++	default n
++	depends on USB_EHCI_MARVELL
++	---help---
++	  Choose this option to bypass configuration
++	  for USB 2.0 bridge address decode
++	  setting on certain mvebu SoCs.
++	  Address decode configuration is needed for
++	  Armada-XP, Armada-37x, Armada-38x and Armada-390
++	  SoCs, while not needed by Armada-3700.
++
+ config USB_EHCI_UNIPHIER
+ 	bool "Support for Panasonic UniPhier on-chip EHCI USB controller"
+ 	depends on ARCH_UNIPHIER
+diff --git a/drivers/usb/host/ehci-marvell.c b/drivers/usb/host/ehci-marvell.c
+index 6dbdc4b..be7cd66 100644
+--- a/drivers/usb/host/ehci-marvell.c
++++ b/drivers/usb/host/ehci-marvell.c
+@@ -10,7 +10,9 @@
+ #include <asm/io.h>
+ #include <usb.h>
+ #include "ehci.h"
++#ifndef CONFIG_USB_EHCI_MARVELL_BYPASS_BRG_ADDR_DEC
+ #include <asm/arch/cpu.h>
++#endif
+ 
+ #if defined(CONFIG_KIRKWOOD)
+ #include <asm/arch/soc.h>
+@@ -20,6 +22,7 @@
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
++#ifndef CONFIG_USB_EHCI_MARVELL_BYPASS_BRG_ADDR_DEC
+ #define rdl(off)	readl(MVUSB0_BASE + (off))
+ #define wrl(off, val)	writel((val), MVUSB0_BASE + (off))
+ 
+@@ -29,6 +32,7 @@ DECLARE_GLOBAL_DATA_PTR;
+ 
+ /*
+  * USB 2.0 Bridge Address Decoding registers setup
++ * that only relevant to AXP, a37x, a38x, a39x and etc..
+  */
+ static void usb_brg_adrdec_setup(void)
+ {
+@@ -69,6 +73,7 @@ static void usb_brg_adrdec_setup(void)
+ 		wrl(USB_WINDOW_BASE(i), base);
+ 	}
+ }
++#endif
+ 
+ /*
+  * Create the appropriate control structures to manage
+@@ -77,7 +82,9 @@ static void usb_brg_adrdec_setup(void)
+ int ehci_hcd_init(int index, enum usb_init_type init,
+ 		struct ehci_hccr **hccr, struct ehci_hcor **hcor)
+ {
++#ifndef CONFIG_USB_EHCI_MARVELL_BYPASS_BRG_ADDR_DEC
+ 	usb_brg_adrdec_setup();
++#endif
+ 
+ 	*hccr = (struct ehci_hccr *)(MVUSB0_BASE + 0x100);
+ 	*hcor = (struct ehci_hcor *)((uintptr_t) *hccr
+-- 
+1.9.1
+

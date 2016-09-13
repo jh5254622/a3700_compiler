@@ -1,0 +1,37 @@
+From 69f24517e0b4888a9f21d7b17ed33c3e6ec7f7f0 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 22 Feb 2016 14:54:02 +0200
+Subject: [PATCH 0888/1240] dts: a7040-rz: enable correct PCIe ports in NAND
+ setup
+
+in NAND setup the active PCIe ports are pci_x4 which is port 0
+and pci_x1_1 which is port 2
+
+Change-Id: Iacfa67e3e9b84d3d378c1f990db65cb0415223ae
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27742
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/armada-7040-rz-db_nand.dts | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/armada-7040-rz-db_nand.dts b/arch/arm/dts/armada-7040-rz-db_nand.dts
+index 28ee397..213a2ec 100644
+--- a/arch/arm/dts/armada-7040-rz-db_nand.dts
++++ b/arch/arm/dts/armada-7040-rz-db_nand.dts
+@@ -42,7 +42,10 @@
+ 		};
+ 
+ 		pcie-controller {
+-			pcie@1,0 {
++			pcie@0,0 {
++				status = "okay";
++			};
++			pcie@2,0 {
+ 				status = "okay";
+ 			};
+ 		};
+-- 
+1.9.1
+

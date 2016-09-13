@@ -1,0 +1,44 @@
+From a3748a6537946c4194725379e3c52395c46ba256 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 17 Aug 2015 10:05:11 +0300
+Subject: [PATCH 0326/1240] cleanup: disabled debug macro in MBUS and thermal
+ drivers
+
+Change-Id: Idea49ac411cb169b135a272fe794890cf25edb9c
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22886
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/misc/mvebu_mbus.c            | 2 --
+ drivers/thermal/mvebu_thermal_28nm.c | 1 -
+ 2 files changed, 3 deletions(-)
+
+diff --git a/drivers/misc/mvebu_mbus.c b/drivers/misc/mvebu_mbus.c
+index ae9c931..d64e224 100644
+--- a/drivers/misc/mvebu_mbus.c
++++ b/drivers/misc/mvebu_mbus.c
+@@ -16,8 +16,6 @@
+  * ***************************************************************************
+  */
+ 
+-#define DEBUG
+-/* #define DEBUG_REG */
+ 
+ #include <common.h>
+ #include <asm/system.h>
+diff --git a/drivers/thermal/mvebu_thermal_28nm.c b/drivers/thermal/mvebu_thermal_28nm.c
+index 2a77e97..b6273ec 100644
+--- a/drivers/thermal/mvebu_thermal_28nm.c
++++ b/drivers/thermal/mvebu_thermal_28nm.c
+@@ -16,7 +16,6 @@
+  * ***************************************************************************
+  */
+ 
+-#define DEBUG
+ 
+ #include <common.h>
+ #include <asm/io.h>
+-- 
+1.9.1
+

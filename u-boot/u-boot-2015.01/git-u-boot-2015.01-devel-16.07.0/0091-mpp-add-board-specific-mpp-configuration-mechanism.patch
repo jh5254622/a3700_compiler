@@ -1,0 +1,218 @@
+From da8a3a602686f9871989a2f4ed25692d0a6672f9 Mon Sep 17 00:00:00 2001
+From: Joe Zhou <shjzhou@marvell.com>
+Date: Mon, 22 Sep 2014 13:13:48 +0800
+Subject: [PATCH 0091/1240] mpp: add board specific mpp configuration mechanism
+
+	For A38x, SPI flash has conflicting MPP configurations with NAND
+	flash. To boot from different flashes, MPP pins must
+	be configured properly.
+
+Change-Id: I0c5ef45d10e5e2a4e5977f0247b7cd80282fac59
+Signed-off-by: Joe Zhou <shjzhou@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/11994
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv7/armada38x/tables.c   |  3 +++
+ arch/arm/cpu/mvebu-common/mpp.c         | 16 +++++++++++-----
+ arch/arm/include/asm/arch-mvebu/mpp.h   |  2 +-
+ board/mvebu/armada38x/db-88f6820-info.c | 18 ++++++++++++++++++
+ board/mvebu/armada38x/rd-88f6820-info.c | 15 ++++++++++++---
+ board/mvebu/common/board.h              |  3 +++
+ board/mvebu/common/devel-board.c        |  4 ++++
+ board/mvebu/common/init.c               |  1 -
+ 8 files changed, 52 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/cpu/armv7/armada38x/tables.c b/arch/arm/cpu/armv7/armada38x/tables.c
+index bd4df4a..c219a85 100644
+--- a/arch/arm/cpu/armv7/armada38x/tables.c
++++ b/arch/arm/cpu/armv7/armada38x/tables.c
+@@ -135,6 +135,9 @@ struct mpp_bus a38x_mpp_buses[MAX_MPP_BUS] = {
+ 	[SPI_0_MPP_BUS]  = {"SPI 0", 4, 1, {{{22, 0x1}, {23, 0x1}, {24, 0x1}, {25, 0x1} } } },
+ 	[M_VTT_0_MPP_BUS]  = {"M_VTT_CTRL", 1, 1, {{{43, 0x2} } } },
+ 	[SDIO_0_MPP_BUS]  = {"SDIO 0", 10, 1, {{{48, 0x5}, {49, 0x5}, {50, 0x5}, {52, 0x5}, {53, 0x5}, {54, 0x5}, {55, 0x5}, {57, 0x5}, {58, 0x5}, {59, 0x5} } } },
++	[NAND_0_MPP_BUS] = {"NAND 0", 14, 1, {{{22, 0x5}, {23, 0x5}, {25, 0x5}, {28, 0x5}, {30, 0x5}, {32, 0x5},
++						{33, 0x5}, {34, 0x5}, {35, 0x5}, {36, 0x5}, {38, 0x5}, {40, 0x5},
++						{41, 0x6}, {42, 0x5} } } },
+ };
+ 
+ struct mvebu_soc_info a38x_soc_info[] = {
+diff --git a/arch/arm/cpu/mvebu-common/mpp.c b/arch/arm/cpu/mvebu-common/mpp.c
+index d6d1d62..dcd615c 100644
+--- a/arch/arm/cpu/mvebu-common/mpp.c
++++ b/arch/arm/cpu/mvebu-common/mpp.c
+@@ -152,13 +152,13 @@ int mpp_is_bus_valid(struct mpp_bus *bus)
+ 	return valid;
+ }
+ 
+-int mpp_enable_bus(int bus_id, int bus_alt)
++int mpp_enable_bus(u32 *mpp_reg, int bus_id, int bus_alt)
+ {
+-	int i;
++	int i, reg_offset, field_offset, value;
++	u32 mask;
+ 	struct mpp_pin *pin;
+ 	struct mpp_bus *bus = soc_get_mpp_bus(bus_id);
+ 	u32 *update_mask = soc_get_mpp_update_mask();
+-	u32 *update_val = soc_get_mpp_update_val();
+ 
+ 	debug("Enabling MPP bus %s\n", bus->name);
+ 
+@@ -180,8 +180,14 @@ int mpp_enable_bus(int bus_id, int bus_alt)
+ 	for (i = 0; i < bus->pin_cnt; i++) {
+ 		pin = &bus->pin_data[bus_alt][i];
+ 		debug("Setting [pin, val] = [%d, 0x%x]\n", pin->id, pin->val);
+-		set_field(pin->id, MPP_VAL_MASK, update_mask);
+-		set_field(pin->id, pin->val, update_val);
++
++		value =  MPP_VAL_MASK & pin->val;
++		/* Calculate register address and bit in register */
++		reg_offset   = pin->id >> (MPP_FIELD_BITS);
++		field_offset = (MPP_BIT_CNT) * (pin->id & MPP_FIELD_MASK);
++		mask = ~(MPP_VAL_MASK << field_offset);
++
++		mpp_reg[reg_offset] = (mpp_reg[reg_offset] & mask) | (value << field_offset);
+ 	}
+ 
+ 	return 0;
+diff --git a/arch/arm/include/asm/arch-mvebu/mpp.h b/arch/arm/include/asm/arch-mvebu/mpp.h
+index b154b3f..e5fcfca 100644
+--- a/arch/arm/include/asm/arch-mvebu/mpp.h
++++ b/arch/arm/include/asm/arch-mvebu/mpp.h
+@@ -58,7 +58,7 @@ struct mpp_bus {
+ 
+ u8   mpp_get_pin(int mpp_id);
+ void mpp_set_pin(int mpp_id, int value);
+-int  mpp_enable_bus(int bus_id, int bus_alt);
++int  mpp_enable_bus(u32 *mpp_reg, int bus_id, int bus_alt);
+ int  mpp_is_bus_valid(struct mpp_bus *bus);
+ int  mpp_is_bus_enabled(struct mpp_bus *bus);
+ void mpp_set_and_update(u32 *mpp_reg);
+diff --git a/board/mvebu/armada38x/db-88f6820-info.c b/board/mvebu/armada38x/db-88f6820-info.c
+index cbe18d6..c8d9e90 100644
+--- a/board/mvebu/armada38x/db-88f6820-info.c
++++ b/board/mvebu/armada38x/db-88f6820-info.c
+@@ -20,6 +20,7 @@
+ #include <common.h>
+ #include <linux/compiler.h>
+ #include <asm/arch-mvebu/unit-info.h>
++#include <asm/arch-mvebu/mpp.h>
+ #include "board-info.h"
+ 
+ struct mvebu_board_config db_a38x_config = {
+@@ -29,11 +30,28 @@ struct mvebu_board_config db_a38x_config = {
+ 	.active_cfg = {BOARD_ID_CFG, SERDES_0_CFG}
+ };
+ 
++int board_get_id(void)
++{
++	return ARMADA_38X_DB_ID;
++}
++
++int db_a38x_configure_mpp(void)
++{
++#ifdef CONFIG_MVEBU_NAND_BOOT
++	mpp_enable_bus(a38x_db_info.mpp_regs, NAND_0_MPP_BUS, 0);
++#endif
++#ifdef CONFIG_MVEBU_SPI_BOOT
++	mpp_enable_bus(a38x_db_info.mpp_regs, SPI_0_MPP_BUS, 0);
++#endif
++	return 0;
++}
++
+ struct mvebu_board_info a38x_db_info = {
+ 	.name = "DB-88F6820-BP",
+ 	.id = ARMADA_38X_DB_ID,
+ 	.mpp_regs = {0x11111111, 0x11111111, 0x11266011, 0x22222011,
+ 		     0x22200002, 0x40042022, 0x55550555, 0x00005550},
++	.configure_mpp = &db_a38x_configure_mpp,
+ 	.configurable = 1,
+ 	.config_data = &db_a38x_config,
+ };
+diff --git a/board/mvebu/armada38x/rd-88f6820-info.c b/board/mvebu/armada38x/rd-88f6820-info.c
+index e610b54..12b1e66 100644
+--- a/board/mvebu/armada38x/rd-88f6820-info.c
++++ b/board/mvebu/armada38x/rd-88f6820-info.c
+@@ -20,6 +20,7 @@
+ #include <common.h>
+ #include <linux/compiler.h>
+ #include <asm/arch-mvebu/unit-info.h>
++#include <asm/arch-mvebu/mpp.h>
+ #include "board-info.h"
+ 
+ 
+@@ -35,14 +36,22 @@ u16 a38x_rd_unit_disable[MAX_UNIT_ID] = {
+ 	[SDIO_UNIT_ID] = id_to_mask(0)
+ };
+ 
++int rd_a38x_configure_mpp(void)
++{
++#ifdef CONFIG_MVEBU_SPI_BOOT
++	mpp_enable_bus(a38x_rd_info.mpp_regs, SPI_0_MPP_BUS, 0);
++#endif
++	return 0;
++}
++
+ struct mvebu_board_info a38x_rd_info = {
+ 	.name = "RD-88F6820-GP",
+ 	.id = ARMADA_38X_RD_ID,
+ 	.unit_mask = a38x_rd_unit_disable,
+ 	.unit_update_mode = UNIT_INFO_DISABLE,
+-        .mpp_regs = {0x11111111, 0x11111111, 0x11266011, 0x22222011,
+-		     0x22200002, 0x40042022, 0x55550555, 0x00005550},
++	.mpp_regs = {0x11111111, 0x11111111, 0x11266011, 0x22222011,
++				0x22200002, 0x40042022, 0x55550555, 0x00005550},
++	.configure_mpp = &rd_a38x_configure_mpp,
+ 	.configurable = 1,
+ 	.config_data = &rd_a38x_config,
+ };
+-
+diff --git a/board/mvebu/common/board.h b/board/mvebu/common/board.h
+index 515ff92..921f2b9 100644
+--- a/board/mvebu/common/board.h
++++ b/board/mvebu/common/board.h
+@@ -65,11 +65,14 @@ struct mvebu_board_info {
+ 	u32  id;
+ 	u16  *unit_mask;
+ 	enum unit_update_mode unit_update_mode;
++	/* Default MPP configurations */
+ 	u32 mpp_regs[MAX_MPP_REGS];
+ 
+ 	/* Only for development boards */
+ 	bool configurable;
+ 	struct mvebu_board_config *config_data;
++	/* Configure MPP for different board configurations */
++	int (*configure_mpp)(void);
+ };
+ 
+ /*
+diff --git a/board/mvebu/common/devel-board.c b/board/mvebu/common/devel-board.c
+index 4ec6ddc..b244735 100644
+--- a/board/mvebu/common/devel-board.c
++++ b/board/mvebu/common/devel-board.c
+@@ -50,6 +50,10 @@ int mvebu_devel_board_init(struct mvebu_board_family *brd_fam)
+ 			brd_fam->sar->sar_lookup[brd_cfg->active_cfg[idx]].active = 1;
+ 	}
+ 
++	/* Update MPP configurations */
++	if (brd->configure_mpp)
++		(*brd->configure_mpp)();
++
+ 	return 0;
+ }
+ 
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index b4466f3..4bf2f96 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -144,7 +144,6 @@ int mvebu_board_init(void)
+ 
+ #ifndef CONFIG_PALLADIUM
+ 	/* mpp_set */
+-	mpp_enable_bus(UART_0_MPP_BUS, 0);
+ 	mpp_set_and_update(brd->mpp_regs);
+ #endif
+ 
+-- 
+1.9.1
+

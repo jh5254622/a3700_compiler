@@ -1,0 +1,37 @@
+From 58f3aadf55785aa036250593ac8f0d0f222656ac Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Mon, 9 Nov 2015 10:00:00 +0200
+Subject: [PATCH 0467/1240] fix: pcie: Set BAR0 to internal registers space
+
+	Old configuration overlapped with BAR1 as it pointed to
+	0xD0000000
+
+Change-Id: I6fcd02b0d1af712b62463194d9a43b095b555c97
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24671
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/pci/pci_mvebu.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/pci/pci_mvebu.c b/drivers/pci/pci_mvebu.c
+index ca464de..0a040d0 100644
+--- a/drivers/pci/pci_mvebu.c
++++ b/drivers/pci/pci_mvebu.c
+@@ -211,6 +211,12 @@ static void mvebu_pcie_setup_mapping(void __iomem *reg_base)
+ 		writel(0, PCIE_WIN_REMAP_OFF(reg_base, i));
+ 	}
+ 
++	/* Config BAR 0 - to internal regs */
++	size = (SZ_16M - 1) & 0xFFFF0000;
++	writel(PCIE_BAR_TYPE_MEM | MVEBU_REGS_BASE  , PCIE_BAR_LO_OFF(reg_base, 0));
++	writel(0, PCIE_BAR_HI_OFF(reg_base, 0));
++	writel(size | PCIE_BAR_ENABLE, PCIE_BAR_CTRL_OFF(reg_base, 0));
++
+ 	/* Config BAR 1 - to 4G */
+ 	size = (SZ_4G - 1) & 0xFFFF0000;
+ 	writel(PCIE_BAR_TYPE_MEM, PCIE_BAR_LO_OFF(reg_base, 1));
+-- 
+1.9.1
+

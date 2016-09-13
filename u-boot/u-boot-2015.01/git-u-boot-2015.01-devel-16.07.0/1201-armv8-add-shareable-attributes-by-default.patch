@@ -1,0 +1,36 @@
+From 5b8b28fa4fb9b1d0f0f79abc0643ef92607f470c Mon Sep 17 00:00:00 2001
+From: Anton <antone@marvell.com>
+Date: Tue, 31 May 2016 15:02:47 -0700
+Subject: [PATCH 1201/1240] armv8: add shareable attributes by default
+
+Added PMD_SECT_S to all descriptors.
+This does not result in any degradation for DEV memory type,
+and is required for normal memory to support coherent operation
+with other masters.
+
+Change-Id: Ie505da05858812f8e80a91970fa0c77a650a9b4a
+Signed-off-by: Anton <antone@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30239
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv8/cache_v8.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/armv8/cache_v8.c b/arch/arm/cpu/armv8/cache_v8.c
+index f95d361..dcbfac3 100644
+--- a/arch/arm/cpu/armv8/cache_v8.c
++++ b/arch/arm/cpu/armv8/cache_v8.c
+@@ -17,7 +17,7 @@ void set_pgtable_section(u64 *page_table, u64 index, u64 section,
+ {
+ 	u64 value;
+ 
+-	value = section | PMD_TYPE_SECT | PMD_SECT_AF;
++	value = section | PMD_TYPE_SECT | PMD_SECT_AF | PMD_SECT_S;
+ 	value |= PMD_ATTRINDX(memory_type);
+ 	page_table[index] = value;
+ }
+-- 
+1.9.1
+

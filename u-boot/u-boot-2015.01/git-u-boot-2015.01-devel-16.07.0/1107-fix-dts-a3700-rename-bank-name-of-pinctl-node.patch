@@ -1,0 +1,44 @@
+From bb58db6e4053774e0afdece7f6d25bb073394260 Mon Sep 17 00:00:00 2001
+From: zachary <zhangzg@marvell.com>
+Date: Fri, 8 Apr 2016 02:26:53 +0800
+Subject: [PATCH 1107/1240] fix: dts: a3700: rename bank name of pinctl node
+
+- This patch is to correct the bank name according to soc
+  name convention.
+- The bank name is referred in pinctl driver for debug
+  or printing purpose only.
+
+Change-Id: Ibe77d9f32f620f4740c80c548b658b853c5a8d31
+Signed-off-by: zachary <zhangzg@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28875
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/armada-3700.dtsi | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/dts/armada-3700.dtsi b/arch/arm/dts/armada-3700.dtsi
+index deb50a1..59f7f98 100644
+--- a/arch/arm/dts/armada-3700.dtsi
++++ b/arch/arm/dts/armada-3700.dtsi
+@@ -39,7 +39,7 @@
+ 
+ 			pinctl0: pinctl@13830 { /* north bridge */
+ 				compatible = "marvell,mvebu-pinctl";
+-				bank-name ="armadalp-nb";
++				bank-name ="armada-3700-nb";
+ 				reg = <0x13830 0x4>;
+ 				pin-count = <24>;
+ 				max-func = <1>;
+@@ -47,7 +47,7 @@
+ 
+ 			pinctl1: pinctl@18830 { /* south bridge */
+ 				compatible = "marvell,mvebu-pinctl";
+-				bank-name ="armadalp-sb";
++				bank-name ="armada-3700-sb";
+ 				reg = <0x18830 0x4>;
+ 				pin-count = <9>;
+ 				max-func = <1>;
+-- 
+1.9.1
+

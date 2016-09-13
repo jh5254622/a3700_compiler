@@ -1,0 +1,47 @@
+From 937c91405205cf47d0472bf3d889daa9ff3fb0f7 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 18 Jun 2015 16:41:57 +0300
+Subject: [PATCH 0204/1240] a38x: Disabled I/O error propogation
+
+Disabled I/O Error propogation since it causes an
+exception when scannig a PCIe switch.
+
+Change-Id: Ice1d55bf3192779b903177dff9d246dcf080f9cd
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20277
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv7/armada38x/soc-init.c         | 5 +++++
+ arch/arm/include/asm/arch-armada38x/regs-base.h | 2 ++
+ 2 files changed, 7 insertions(+)
+
+diff --git a/arch/arm/cpu/armv7/armada38x/soc-init.c b/arch/arm/cpu/armv7/armada38x/soc-init.c
+index 13c3acc..c545698 100644
+--- a/arch/arm/cpu/armv7/armada38x/soc-init.c
++++ b/arch/arm/cpu/armv7/armada38x/soc-init.c
+@@ -34,5 +34,10 @@ struct mvebu_soc_family *soc_init(void)
+ {
+ 	/* Do early SOC specific init here */
+ 
++	/* Disable I/O error propogation. Error propogation
++	 * causes exception when scanning a PCIe port with
++	 * no device attached */
++	writel(0, MVEBU_IO_ERR_CTL_REG);
++
+ 	return &a38x_family_info;
+ }
+diff --git a/arch/arm/include/asm/arch-armada38x/regs-base.h b/arch/arm/include/asm/arch-armada38x/regs-base.h
+index 3a818e5..bd367c6 100644
+--- a/arch/arm/include/asm/arch-armada38x/regs-base.h
++++ b/arch/arm/include/asm/arch-armada38x/regs-base.h
+@@ -37,4 +37,6 @@
+ #define MVEBU_RESET_MASK_REG	(MVEBU_MISC_REGS_BASE + 0x60)
+ #define MVEBU_SOFT_RESET_REG	(MVEBU_MISC_REGS_BASE + 0x64)
+ 
++#define MVEBU_IO_ERR_CTL_REG	(MVEBU_REGS_BASE + 0x20200)
++
+ #endif	/* _REGS_BASE_H_ */
+-- 
+1.9.1
+

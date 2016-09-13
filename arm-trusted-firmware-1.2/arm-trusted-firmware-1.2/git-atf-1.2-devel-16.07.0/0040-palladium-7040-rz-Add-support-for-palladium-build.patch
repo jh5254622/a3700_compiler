@@ -1,0 +1,111 @@
+From e487581f2d9550cdaa917b469e799d395d4a2abf Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Thu, 3 Mar 2016 13:56:55 +0200
+Subject: [PATCH 040/239] palladium: 7040-rz: Add support for palladium build
+
+- align baud rate with PD.
+- set lower timer frequency.
+
+Change-Id: I33421a990193d6ca6798d31bb7c15070438e1e7c
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28017
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ Makefile                                         | 3 +++
+ docs/marvell/build.txt                           | 5 +++++
+ include/plat/marvell/a8k/common/arm_def.h        | 4 ++++
+ plat/marvell/a8k/a7040_rz/include/platform_def.h | 6 +++++-
+ plat/marvell/a8k/a7040_rz/plat_def.h             | 4 ++++
+ 5 files changed, 21 insertions(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index 1cbb749..38bf1a1 100644
+--- a/Makefile
++++ b/Makefile
+@@ -101,6 +101,8 @@ COLD_BOOT_SINGLE_CPU		:= 0
+ SPIN_ON_BL1_EXIT		:= 0
+ # Build PL011 UART driver in minimal generic UART mode
+ PL011_GENERIC_UART		:= 0
++# Enable compilation for Palladium platform
++PALLADIUM			:= 0
+ 
+ # Marvell images
+ BOOT_IMAGE			:= boot-image.bin
+@@ -459,6 +461,7 @@ ifdef EL3_PAYLOAD_BASE
+ $(eval $(call add_define,EL3_PAYLOAD_BASE))
+ endif
+ $(eval $(call add_define,PL011_GENERIC_UART))
++$(eval $(call add_define,PALLADIUM))
+ 
+ 
+ ################################################################################
+diff --git a/docs/marvell/build.txt b/docs/marvell/build.txt
+index 0ecfc96..602b4cd 100644
+--- a/docs/marvell/build.txt
++++ b/docs/marvell/build.txt
+@@ -58,6 +58,11 @@ Build Instruction:
+ 		a7040_rz
+ 		a3700_z
+ 
++Special Build Flags:
++--------------------
++	- PALLADIUM: Enables building ATF for palladium target. This mainly involves changing the UART baud rate
++	and the timer frequency to a lower values to match palladium's setup.
++
+ Build output:
+ -------------
+ 
+diff --git a/include/plat/marvell/a8k/common/arm_def.h b/include/plat/marvell/a8k/common/arm_def.h
+index bd96e30..de4ef3e 100644
+--- a/include/plat/marvell/a8k/common/arm_def.h
++++ b/include/plat/marvell/a8k/common/arm_def.h
+@@ -188,7 +188,11 @@
+ #define MARVELL_SYS_CNTREAD_BASE	0x2a800000
+ #define MARVELL_SYS_TIMCTL_BASE		0x2a810000
+ 
++#if PALLADIUM
++#define MARVELL_CONSOLE_BAUDRATE	24000
++#else
+ #define MARVELL_CONSOLE_BAUDRATE	115200
++#endif
+ 
+ /******************************************************************************
+  * Required platform porting definitions common to all MARVELL standard platforms
+diff --git a/plat/marvell/a8k/a7040_rz/include/platform_def.h b/plat/marvell/a8k/a7040_rz/include/platform_def.h
+index a26322a..dcc591a 100644
+--- a/plat/marvell/a8k/a7040_rz/include/platform_def.h
++++ b/plat/marvell/a8k/a7040_rz/include/platform_def.h
+@@ -137,8 +137,12 @@ Trusted SRAM section 0x4000000..0x4200000:
+ /*
+  * PL011 related constants
+  */
+-#define PLAT_MARVELL_BOOT_UART_BASE				(MVEBU_REGS_BASE + 0x512000)
++#define PLAT_MARVELL_BOOT_UART_BASE			(MVEBU_REGS_BASE + 0x512000)
++#if PALLADIUM
++#define PLAT_MARVELL_BOOT_UART_CLK_IN_HZ		384000
++#else
+ #define PLAT_MARVELL_BOOT_UART_CLK_IN_HZ		200000000
++#endif
+ 
+ #define PLAT_MARVELL_CRASH_UART_BASE			PLAT_MARVELL_BOOT_UART_BASE
+ #define PLAT_MARVELL_CRASH_UART_CLK_IN_HZ		PLAT_MARVELL_BOOT_UART_CLK_IN_HZ
+diff --git a/plat/marvell/a8k/a7040_rz/plat_def.h b/plat/marvell/a8k/a7040_rz/plat_def.h
+index ee833c7..8347899 100644
+--- a/plat/marvell/a8k/a7040_rz/plat_def.h
++++ b/plat/marvell/a8k/a7040_rz/plat_def.h
+@@ -36,7 +36,11 @@
+ 
+ #define MVEBU_PRIMARY_CPU		0x0
+ 
++#if PALLADIUM
++#define COUNTER_FREQUENCY		48000
++#else
+ #define COUNTER_FREQUENCY		25000000
++#endif
+ 
+ #define MVEBU_REGS_BASE			0xF0000000
+ #define MVEBU_CP0_REGS_BASE		0xF2000000
+-- 
+1.9.1
+

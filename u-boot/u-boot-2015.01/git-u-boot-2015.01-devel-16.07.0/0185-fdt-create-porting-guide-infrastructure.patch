@@ -1,0 +1,131 @@
+From 638e2dad62342d2b93ae34e11cdad1f75820cb98 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 31 May 2015 16:23:00 +0300
+Subject: [PATCH 0185/1240] fdt: create porting guide infrastructure
+
+	- Create porting guide infrastructure
+	- Write Device Tree binding for SPI & SoC.
+
+Change-Id: Ibb0202f9aca2da653e814f7d372f6c1c7de278ed
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/19620
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ doc/device-tree-bindings/README.mvebu          | 46 ++++++++++++++++++++++++++
+ doc/device-tree-bindings/clock/mvebu-clock.txt |  9 +++++
+ doc/device-tree-bindings/spi/mvebu-spi.txt     | 31 +++++++++++++++++
+ 3 files changed, 86 insertions(+)
+ create mode 100644 doc/device-tree-bindings/README.mvebu
+ create mode 100644 doc/device-tree-bindings/clock/mvebu-clock.txt
+ create mode 100644 doc/device-tree-bindings/spi/mvebu-spi.txt
+
+diff --git a/doc/device-tree-bindings/README.mvebu b/doc/device-tree-bindings/README.mvebu
+new file mode 100644
+index 0000000..b6c48b1
+--- /dev/null
++++ b/doc/device-tree-bindings/README.mvebu
+@@ -0,0 +1,46 @@
++Marvell Device Tree Binding
++===========================
++
++This document provides instructions for porting the Marvell U-Boot to
++customer board, this binding specifies what properties must be available
++in the device tree of Marvell Chip.
++
++In this section, we define device tree nodes to describe the system controller
++chip itself and each of the peripherals which it contains. Compatible string
++values for each node are prefixed with the string "marvell,", for Marvell Technology
++Group Ltd.
++
++1) General proporties "/":
++	This include the general proporties of
++	- model: name of the model of the chip
++		for example: model = "Marvell Armada 8k Development Board";
++	- compatible string: string identifying the compatibility identifiers of the board and the SoC.
++		for example: compatible = "marvell,a8k-db", "marvell,armada8k";
++
++2) /soc/ node:
++	The top-level soc node contains information about the interfaces in the SoC.
++
++	Properties:
++	- compatible: A string identifying the compatibility identifiers of the soc node.
++		for example: compatible = "marvell,armada8k-mbus";
++	- Configure the state of how many cells are in each field of child node:
++		#address-cells = <1>;
++		#size-cells = <0>;
++		Note: #address-cells is set to 1, and #size-cells is set to 0. This means that child
++		reg values are a single uint32 that represent the address with no size field.
++
++	2.1. /soc/internal-regs/ node:
++		Specify the interfaces of the SoC.
++		Properties:
++		- Compatible = "marvell,internal-regs";
++		- reg: property of internal-reg is the base address of the internal regs.
++			reg = <0xf0000000 0x4>;
++		- #address-cells = <1>;
++		- #size-cells = <1>;
++		Note: #address-cells is set to 1, and #size-cells is set to 1. This means that child
++		reg values are a 32bit.
++
++			2.1.1 /soc/internal-regs/spi/ node:
++				Specify the SPI interface, check doc/device-tree-bindings/spi/mvebu-spi.txt
++			2.1.2 /soc/internal-regs/tclock/ node:
++				Specify the clock interface, check doc/device-tree-bindings/clock/mvebu-clock.txt
+diff --git a/doc/device-tree-bindings/clock/mvebu-clock.txt b/doc/device-tree-bindings/clock/mvebu-clock.txt
+new file mode 100644
+index 0000000..e4b9601
+--- /dev/null
++++ b/doc/device-tree-bindings/clock/mvebu-clock.txt
+@@ -0,0 +1,9 @@
++Marvell Clock bindings
++======================
++
++The Clock nodes is under internal-regs node.
++
++tclk: define the T-Clock address in the SoC
++	- compatible = "marvell,tclk";
++	- reg = <0x18600 0x4>;
++		base address of sample at reset register.
+\ No newline at end of file
+diff --git a/doc/device-tree-bindings/spi/mvebu-spi.txt b/doc/device-tree-bindings/spi/mvebu-spi.txt
+new file mode 100644
+index 0000000..ad03bdc
+--- /dev/null
++++ b/doc/device-tree-bindings/spi/mvebu-spi.txt
+@@ -0,0 +1,31 @@
++Marvell SPI bindings
++====================
++
++The node name is spi0 to show that it's SPI-0, for SPI-1 should be spi1.
++
++The SPI node requires the following properties:
++	- compatible = "marvell,orion-spi";
++	- reg = <0x510600 0x50>;
++		base address of SPI-0
++	- spi-max-frequency = <51200>;
++		This property used to calculate the SPI max bus frequency.
++		The value in Byte
++	- clock = <&tclk>;
++		This property points to the used clock for the SPI interface.
++		in this example the node point to the t-clock.
++	- cpol-cs-bitmap = <1>;
++		This property is bitmap that defined if SCK idles high for chip-select i by enable bit i.
++	- status = "okay";
++		Set if the SPI interface is enabled/disabled
++
++Example for SPI-0 node:
++	spi0: spi@10600 {
++		compatible = "marvell,orion-spi";
++		reg = <0x10600 0x50>;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		spi-max-frequency = <20971520>;
++		clock = <&tclk>;
++		status = "okay";
++		cpol-cs-bitmap = <1>; /*bit i is set if the cs-i SCK idles high */
++	};
+-- 
+1.9.1
+

@@ -1,0 +1,151 @@
+From eb1c407b574a0c78b9cb13534cc5af121050f721 Mon Sep 17 00:00:00 2001
+From: zachary <zhangzg@marvell.com>
+Date: Tue, 22 Mar 2016 23:46:36 +0800
+Subject: [PATCH 1027/1240] fix: neta: a3700: rename aramdalp to a3700 name
+ marco and dtsi file
+
+- rename MVEBU_ARLP_GBE0/1_INTERNAL_REG_BASE to MVEBU_A3700_GBE0/1
+  _INTERNAL_REG_BASE in soc-init.c and regs_base.h file
+- rename armadalp-neta to armada-3700-neta in fdtdec.h/c file and
+  mvebu-gbe.txt
+
+Change-Id: Ic1c71fea7fea9e12e4eb333e7fa610836401267e
+Signed-off-by: zachary <zhangzg@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28432
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hua Jing <jinghua@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/cpu/armv8/armada3700/soc-init.c         |  6 +++---
+ arch/arm/dts/armada-3700.dtsi                    |  4 ++--
+ arch/arm/include/asm/arch-armada3700/regs-base.h |  4 ++--
+ doc/device-tree-bindings/net/mvebu-gbe.txt       | 12 ++++++------
+ drivers/net/mvneta.c                             |  4 ++--
+ lib/fdtdec.c                                     |  2 +-
+ 6 files changed, 16 insertions(+), 16 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada3700/soc-init.c b/arch/arm/cpu/armv8/armada3700/soc-init.c
+index d0f885b..2155afe 100644
+--- a/arch/arm/cpu/armv8/armada3700/soc-init.c
++++ b/arch/arm/cpu/armv8/armada3700/soc-init.c
+@@ -106,13 +106,13 @@ int cpu_eth_init(bd_t *bis)
+ 		error("failed to init mvneta\n");
+ 		return 1;
+ 	}
+-	/* in ArmadaLP, there is a new register, internal Register Base Address, for GBE to
++	/* in Armada3700, there is a new register, internal Register Base Address, for GBE to
+ 	    access other internal Register. since GBE is on South bridge, not the same island
+ 	    as CPU, here we set internal reg base value 0xf100000 into it.
+ 	    NETA drvier initialization does not rely on this configuration, so do it after
+ 	    mvneta_initialize() */
+-	writel(MVEBU_REGS_BASE, MVEBU_ARLP_GBE0_INTERNAL_REG_BASE);
+-	writel(MVEBU_REGS_BASE, MVEBU_ARLP_GBE1_INTERNAL_REG_BASE);
++	writel(MVEBU_REGS_BASE, MVEBU_A3700_GBE0_INTERNAL_REG_BASE);
++	writel(MVEBU_REGS_BASE, MVEBU_A3700_GBE1_INTERNAL_REG_BASE);
+ 
+ 	return 0;
+ }
+diff --git a/arch/arm/dts/armada-3700.dtsi b/arch/arm/dts/armada-3700.dtsi
+index 2a78e8b..05a3bc5 100644
+--- a/arch/arm/dts/armada-3700.dtsi
++++ b/arch/arm/dts/armada-3700.dtsi
+@@ -85,12 +85,12 @@
+ 			};
+ 
+ 			neta0: neta@30000 {
+-				compatible = "marvell,armadalp-neta";
++				compatible = "marvell,armada-3700-neta";
+ 				reg = <0x30000 0x20>;
+ 				status = "disabled";
+ 			};
+ 			neta1: neta@40000 {
+-				compatible = "marvell,armadalp-neta";
++				compatible = "marvell,armada-3700-neta";
+ 				reg = <0x40000 0x20>;
+ 				status = "disabled";
+ 			};
+diff --git a/arch/arm/include/asm/arch-armada3700/regs-base.h b/arch/arm/include/asm/arch-armada3700/regs-base.h
+index 492ea58..0412bef 100644
+--- a/arch/arm/include/asm/arch-armada3700/regs-base.h
++++ b/arch/arm/include/asm/arch-armada3700/regs-base.h
+@@ -36,8 +36,8 @@
+ #define MVEBU_GICC_BASE		(MVEBU_GIC_BASE + 0x80000)
+ 
+ /* GBE register base address */
+-#define MVEBU_ARLP_GBE0_INTERNAL_REG_BASE	MVEBU_REGS_BASE + 0xc364
+-#define MVEBU_ARLP_GBE1_INTERNAL_REG_BASE	MVEBU_REGS_BASE + 0xc464
++#define MVEBU_A3700_GBE0_INTERNAL_REG_BASE	MVEBU_REGS_BASE + 0xc364
++#define MVEBU_A3700_GBE1_INTERNAL_REG_BASE	MVEBU_REGS_BASE + 0xc464
+ 
+ /* CCI-400 */
+ #define MVEBU_CCI_BASE			(MVEBU_REGS_BASE + 0x8000000)
+diff --git a/doc/device-tree-bindings/net/mvebu-gbe.txt b/doc/device-tree-bindings/net/mvebu-gbe.txt
+index 54b1a1a..1533928 100644
+--- a/doc/device-tree-bindings/net/mvebu-gbe.txt
++++ b/doc/device-tree-bindings/net/mvebu-gbe.txt
+@@ -1,12 +1,12 @@
+-Marvell ArmadaLP GBE bindings
++Marvell Armada3700 GBE bindings
+ ====================
+ 
+-This GBE driver supports Marvell ArmadaLP SoC, which implements the GBE core operations.
++This GBE driver supports Marvell Armada3700 SoC, which implements the GBE core operations.
+ The node name is neta0 to show that it's GBE-0, for GBE-1 it should be neta1.
+ 
+-The GBE node for ArmadaLP requires the following properties:
++The GBE node for Armada3700 requires the following properties:
+ SoC specific:
+-	- compatible: Should be "marvell,armadalp-neta".
++	- compatible: Should be "marvell,armada-3700-neta".
+ 	- reg: The base address of the GBE unit.
+ Board specific:
+ 	- phy_mode: The phy mode for the GBE interface, which should be one of the following:
+@@ -35,7 +35,7 @@ Optional properties:
+ 
+ Examples:
+ 	neta0: neta@30000 {
+-		compatible = "marvell,armadalp-neta";
++		compatible = "marvell,armada-3700-neta";
+ 		reg = <0x30000 0x20>;
+ 		phy_addr = <0x0>;
+ 		phy_mode = "rgmii";
+@@ -49,4 +49,4 @@ Examples:
+ 			speed = <1000>;
+ 			full-duplex;
+ 		};
+-	};
+\ No newline at end of file
++	};
+diff --git a/drivers/net/mvneta.c b/drivers/net/mvneta.c
+index 2bbefb2..94e54c1 100644
+--- a/drivers/net/mvneta.c
++++ b/drivers/net/mvneta.c
+@@ -1270,10 +1270,10 @@ static int mvneta_init(struct mvneta_port *pp)
+ /* platform glue : initialize decoding windows */
+ 
+ #ifdef CONFIG_MVEBU_NETA_BYPASS_DEC_WIN
+-/* not like A380, in ArmadaLP, there are two layers of decode window for GBE,
++/* not like A380, in Armada3700, there are two layers of decode window for GBE,
+  * first layer is: GbE Address window that resides inside the GBE unit,
+  * second layer is: Fabric address window which is located in the NIC400 (South Fabric).
+- * to simple the address decode configuration for ArmadaLP,
++ * to simple the address decode configuration for Armada3700,
+  * we bypass the first layer of GBE decode window by setting the first window to 4GB.
+  */
+ static void mvneta_bypass_mbus_windows(struct mvneta_port *pp)
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 6b110f2..47e24b1 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -86,7 +86,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_SPI, "marvell,orion-spi"),
+ 	COMPAT(MVEBU_A3700_SPI, "marvell,armada-3700-spi"),
+ 	COMPAT(MVEBU_UART, "marvell,armada-3700-uart"),
+-	COMPAT(MVEBU_NETA, "marvell,armadalp-neta"),
++	COMPAT(MVEBU_NETA, "marvell,armada-3700-neta"),
+ 	COMPAT(MVEBU_PP2, "marvell,armada-a8k-pp2"),
+ 	COMPAT(MVEBU_TCLOCK, "marvell,tclk"),
+ 	COMPAT(MVEBU_I2C, "marvell,mvebu-i2c"),
+-- 
+1.9.1
+

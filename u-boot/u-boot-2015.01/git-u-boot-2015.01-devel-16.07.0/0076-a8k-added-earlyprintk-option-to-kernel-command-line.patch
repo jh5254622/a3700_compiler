@@ -1,0 +1,31 @@
+From e65737d29f25f26a92c26232542e76cb21a95fa6 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 21 Sep 2014 15:43:29 +0300
+Subject: [PATCH 0076/1240] a8k: added earlyprintk option to kernel command
+ line
+
+Change-Id: I6017c23d2df1f630e06fb2a183c75660c52f3784
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/11839
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ include/configs/armada8k.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index d334d18..a039e28 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -73,7 +73,7 @@
+ #define CONFIG_BAUDRATE                 4000
+ 
+ #undef CONFIG_BOOTARGS
+-#define CONFIG_BOOTARGS			"console=ttyS0,4000 earlyprintk root=/dev/ram0"
++#define CONFIG_BOOTARGS			"console=ttyS0,4000 earlyprintk=uart8250-32bit,0xf0512000,4000"
+ 
+ #undef  CONFIG_EXTRA_ENV_SETTINGS
+ #define CONFIG_EXTRA_ENV_SETTINGS	"kernel_addr=0x107ffc0\0"	\
+-- 
+1.9.1
+

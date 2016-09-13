@@ -1,0 +1,42 @@
+From c4b6c89d2321819ed3b164916dc021c0ad59a516 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Mon, 18 Apr 2016 16:03:52 +0300
+Subject: [PATCH 126/239] fix: psci: a3700: Init stack before calling GICv3
+ init functions
+
+- The stack on secondary CPU has to be initialized prior to
+  calling teh GICv3 init functions. Failure to do so causes
+  exception upon powering up the secondary CPU in Linux.
+  Fixed in function _armada3700_cpu_entry()
+
+Change-Id: I8ff5fa30ec544f26fd2879b4bf96143f71b97f4f
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29157
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ plat/marvell/a3700/a3700_z/aarch64/plat_psci.S | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/plat/marvell/a3700/a3700_z/aarch64/plat_psci.S b/plat/marvell/a3700/a3700_z/aarch64/plat_psci.S
+index aa862af..d19b02d 100644
+--- a/plat/marvell/a3700/a3700_z/aarch64/plat_psci.S
++++ b/plat/marvell/a3700/a3700_z/aarch64/plat_psci.S
+@@ -107,12 +107,12 @@ _armada3700_cpu_entry:
+ 	msr	cpacr_el1, x0			/* Enable FP/SIMD */
+ 0:
+ 
++	bl	psci_build_stack
++
+ 	bl	plat_marvell_gic_pcpu_init
+ 
+ 	bl	plat_marvell_gic_cpuif_enable
+ 
+-	bl	psci_build_stack
+-
+ 	bl	armv8_switch_to_el2
+ 
+ #ifdef CONFIG_ARMV8_SWITCH_TO_EL1
+-- 
+1.9.1
+

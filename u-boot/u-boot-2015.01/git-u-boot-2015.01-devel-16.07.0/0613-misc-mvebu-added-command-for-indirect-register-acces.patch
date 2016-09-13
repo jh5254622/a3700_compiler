@@ -1,0 +1,146 @@
+From d6ae9dcd59f3577976ccb9cd382bb8614385c093 Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Wed, 16 Dec 2015 16:04:10 +0200
+Subject: [PATCH 0613/1240] misc: mvebu: added command for indirect register
+ access
+
+This command currently supports only access to IHB
+
+Change-Id: Iaa6148a7af72912f75fecabed9bdb0d226b3ff65
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26003
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ common/mvebu/Kconfig            |  7 ++++
+ common/mvebu/Makefile           |  1 +
+ common/mvebu/cmd_phy_indirect.c | 91 +++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 99 insertions(+)
+ create mode 100644 common/mvebu/cmd_phy_indirect.c
+
+diff --git a/common/mvebu/Kconfig b/common/mvebu/Kconfig
+index c837e5c..97f392f 100644
+--- a/common/mvebu/Kconfig
++++ b/common/mvebu/Kconfig
+@@ -56,4 +56,11 @@ config CMD_MVEBU_PHY_FW_DOWNLOAD
+ 	  this command used for Marvell PHYs
+ 	  88X3220/88X3310
+ 
++config CMD_MVEBU_PHY_INDIRECT
++	bool "phy_indirect"
++	depends on MVEBU_PHY_INDIRECT
++	default y
++	help
++	  phy_indirect - Access to PHY indirect registers
++
+ endmenu
+diff --git a/common/mvebu/Makefile b/common/mvebu/Makefile
+index 99d351d..42e12db 100644
+--- a/common/mvebu/Makefile
++++ b/common/mvebu/Makefile
+@@ -21,4 +21,5 @@ obj-$(CONFIG_CMD_MVEBU_SAR) += cmd_sar.o
+ obj-$(CONFIG_CMD_MVEBU_MPP) += cmd_mpp.o
+ obj-$(CONFIG_CMD_MVEBU_BUBT) += cmd_bubt.o
+ obj-$(CONFIG_CMD_MVEBU_MSS_BOOT) += cmd_mss.o
++obj-$(CONFIG_CMD_MVEBU_PHY_INDIRECT) += cmd_phy_indirect.o
+ obj-$(CONFIG_ENV_IS_IN_BOOTDEV) += env_bootdev.o
+diff --git a/common/mvebu/cmd_phy_indirect.c b/common/mvebu/cmd_phy_indirect.c
+new file mode 100644
+index 0000000..73c1fe7
+--- /dev/null
++++ b/common/mvebu/cmd_phy_indirect.c
+@@ -0,0 +1,91 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <config.h>
++#include <common.h>
++#include <command.h>
++#include <asm/arch-mvebu/mvebu_phy_indirect.h>
++
++static enum phy_indirect_unit parse_unit(const char *unit)
++{
++	if ((strcmp(unit, "ihb") == 0))
++		return INDIRECT_IHB;
++	else
++		return INDIRECT_MAX;
++}
++
++int do_indirect_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
++			char * const argv[])
++{
++	const char *unit = argv[1];
++	const char *cmd = argv[2];
++	enum phy_indirect_unit phy_unit;
++	u32 reg_ofs;
++	u32 value;
++
++	phy_unit = parse_unit(unit);
++	if (phy_unit == INDIRECT_MAX) {
++		error("Error: unit %s is not supported\n", unit);
++		return 1;
++	}
++
++	if ((strcmp(cmd, "write") == 0) && (argc < 5)) {
++		error("missing parameters for 'write' command\n");
++		printf("make sure you specify both offset and value\n");
++		return 1;
++	}
++	if ((strcmp(cmd, "read") == 0) && (argc < 4)) {
++		error("missing parameters for 'read' command\n");
++		printf("make sure you specify register offset\n");
++		return 1;
++	}
++
++	/* Get Offset */
++	reg_ofs = simple_strtoul(argv[3], NULL, 16);
++
++	/* read commnad */
++	if (strcmp(cmd, "read") == 0) {
++		if (mvebu_phy_indirect_read(phy_unit, reg_ofs, &value))
++			return 1;
++		printf("0x%x: 0x%x\n", reg_ofs, value);
++	} else if (strcmp(cmd, "write") == 0) {
++		value = simple_strtoul(argv[4], NULL, 16);
++
++		if (mvebu_phy_indirect_write(phy_unit, reg_ofs, value))
++			return 1;
++	} else {
++		error("unknown command \"%s\"\n", cmd);
++		return 1;
++	}
++
++	return 0;
++}
++
++U_BOOT_CMD(
++	indirect,      5,     0,      do_indirect_cmd,
++	"Access to PHY indirect registers\n",
++	"<unit> <command> <offset> <value>\n"
++	"	- Read/Write from/to indirect registers\n"
++	"\n"
++	"Parameters:\n"
++	"\tunit		ihb\n"
++	"\tcommand	read/write\n"
++	"\toffset		register address\n"
++	"\tvalue		register data to write\n"
++	"Example: indirect ihb read 0x20\n"
++);
+-- 
+1.9.1
+

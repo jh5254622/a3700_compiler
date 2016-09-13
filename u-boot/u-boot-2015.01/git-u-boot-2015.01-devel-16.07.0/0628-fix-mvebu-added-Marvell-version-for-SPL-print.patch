@@ -1,0 +1,32 @@
+From 8d6aa61ba6bfa2fdde7c895811e39f484024f5fb Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 4 Jan 2016 12:48:25 +0200
+Subject: [PATCH 0628/1240] fix: mvebu: added Marvell version for SPL print
+
+- SYSTEMSW-2036
+
+Change-Id: Id73bc023ff52b726ab47d229c2aa1383ab5c6610
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26469
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ common/spl/spl.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/common/spl/spl.c b/common/spl/spl.c
+index ad59145..fe760a7 100644
+--- a/common/spl/spl.c
++++ b/common/spl/spl.c
+@@ -271,7 +271,7 @@ void preloader_console_init(void)
+ 	gd->have_console = 1;
+ 
+ 	puts("\nU-Boot SPL " PLAIN_VERSION " (" U_BOOT_DATE " - " \
+-			U_BOOT_TIME ")\n");
++			U_BOOT_TIME ")" CONFIG_IDENT_STRING "\n");
+ #ifdef CONFIG_SPL_DISPLAY_PRINT
+ 	spl_display_print();
+ #endif
+-- 
+1.9.1
+

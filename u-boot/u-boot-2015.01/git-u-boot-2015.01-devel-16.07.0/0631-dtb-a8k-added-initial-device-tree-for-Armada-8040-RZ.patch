@@ -1,0 +1,470 @@
+From 6e5298227ec6bdc90fa1401e37527543a6c9e01d Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Wed, 30 Dec 2015 17:42:12 +0200
+Subject: [PATCH 0631/1240] dtb: a8k: added initial device tree for
+ Armada-8040-RZ1 board
+
+added new defconfig for 70x0 build.
+update dts with CP110 default configuration.
+add new dtsi with Marvell specific info (such as S@R, MPP cmd, etc.)
+
+Change-Id: I66e4d62e94722223f8fb9c45bb11fa269cd5641c
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26417
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/Makefile                  |   2 +-
+ arch/arm/dts/armada-70x0-db.dts        |  64 ----------------
+ arch/arm/dts/armada-70x0-dev-info.dtsi | 108 ++++++++++++++++++++++++++
+ arch/arm/dts/armada-8040-rz1-db.dts    | 135 +++++++++++++++++++++++++++++++++
+ arch/arm/dts/cp110.dtsi                |  30 ++++++++
+ configs/mvebu_armada70x0_defconfig     |  40 ++++++++++
+ configs/mvebu_armada70x0_pd_defconfig  |   2 +-
+ 7 files changed, 315 insertions(+), 66 deletions(-)
+ delete mode 100644 arch/arm/dts/armada-70x0-db.dts
+ create mode 100644 arch/arm/dts/armada-70x0-dev-info.dtsi
+ create mode 100644 arch/arm/dts/armada-8040-rz1-db.dts
+ create mode 100644 configs/mvebu_armada70x0_defconfig
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index efb9627..26aa0b0 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -60,7 +60,7 @@ dtb-$(CONFIG_TARGET_ARMADA_8K) += apn-806-db.dtb \
+ 		       apn-806-pd-a0.dtb \
+ 		       apn-806-db-dop.dtb \
+ 		       armada-80x0-db.dtb \
+-		       armada-70x0-db.dtb
++		       armada-8040-rz1-db.dtb
+ 
+ targets += $(dtb-y)
+ 
+diff --git a/arch/arm/dts/armada-70x0-db.dts b/arch/arm/dts/armada-70x0-db.dts
+deleted file mode 100644
+index f2a4092..0000000
+--- a/arch/arm/dts/armada-70x0-db.dts
++++ /dev/null
+@@ -1,64 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-/dts-v1/;
+-
+-#include "armada-70x0.dtsi" /* include SoC device tree */
+-
+-/ {
+-	model = "DB-ARMADA-70x0";
+-	compatible = "marvell,armada-70x0-db", "marvell,armada-70x0";
+-	fdt_config_id = <6>;
+-	board_id = <0x10>;
+-
+-	memory {
+-		device_type = "memory";
+-		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
+-	};
+-	ap-806 {
+-		internal-regs {
+-			i2c0: i2c@511000 {
+-				status = "okay";
+-			};
+-
+-			spi0: spi@510600 {
+-				status = "okay";
+-			};
+-		};
+-
+-		pcie-controller {
+-			pcie@1,0 {
+-				status = "okay";
+-			};
+-		};
+-	};
+-	cp110-master {
+-		internal-regs {
+-			pinctl@440000 {
+-					/*   0 1 2 3 4 5 6 7 8 9 */
+-				pin-func = < 0 0 0 0 0 0 0 0 0 0
+-					     0 0 0 0 0 0 0 0 0 0
+-					     0 0 0 0 0 0 0 0 0 0
+-					     0 0 0 0 0 0 0 0 0 0
+-					     0 0 0 0 0 0 0 0 0 0
+-					     0 0 0 0 0 0 6 6 6 6
+-					     0 0 0 0>;
+-			};
+-		};
+-	};
+-};
+diff --git a/arch/arm/dts/armada-70x0-dev-info.dtsi b/arch/arm/dts/armada-70x0-dev-info.dtsi
+new file mode 100644
+index 0000000..5225805
+--- /dev/null
++++ b/arch/arm/dts/armada-70x0-dev-info.dtsi
+@@ -0,0 +1,108 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/ {
++	compatible = "marvell,cp110";
++
++	mpp-buses {
++		mpp-bus0 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "spi1";
++			bank-name = "cp110";
++			pin-count = <4>;
++			pins = <13 3  14 3  15 3  16 3>;
++		};
++		mpp-bus1 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "i2c";
++			bank-name = "cp110";
++			pin-count = <2>;
++			pins = <37 2  38 2>;
++		};
++		mpp-bus2 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "uart0";
++			bank-name = "cp110";
++			pin-count = <2>;
++			pins = <29 0xA  30 0xA>;
++		};
++		mpp-bus3 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "uart1";
++			bank-name = "cp110";
++			pin-count = <2>;
++			pins = <40 7  41 7>;
++		};
++		mpp-bus4 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "sd";
++			bank-name = "cp110";
++			pin-count = <7>;
++			pins = <56 0xE  57 0xE  58 0xE 59 0xE  60 0xE  61 0xE  62 0xE>;
++		};
++		mpp-bus5 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "tdm";
++			bank-name = "cp110";
++			pin-count = <12>;
++			pins = <0 4  1 4  2 4  3 4  4 4  5 4  6 4  7 4  8 4  9 4  10 4  11 4>;
++		};
++		mpp-bus6 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "rgmii0";
++			bank-name = "cp110";
++			pin-count = <12>;
++			pins = <0 3  1 3  2 3  3 3  4 3  5 3  6 3  7 3  8 3  9 3  10 3  11 3>;
++		};
++		mpp-bus7 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "rgmii1";
++			bank-name = "cp110";
++			pin-count = <11>;
++			pins = <45 2  46 1  47 1  48 1  49 1  50 1  51 1  52 1  53 1  54 1  55 1>;
++		};
++		mpp-bus8 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "nand";
++			bank-name = "cp110";
++			pin-count = <13>;
++			pins = <13 2  17 1  18 1  19 1  20 1  21 1  22 1  23 1  24 1  25 1  26 1  27 1 31 1>;
++		};
++		mpp-bus9 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "sata0";
++			bank-name = "cp110";
++			pin-count = <1>;
++			pins = <13 6>;
++		};
++		mpp-bus10 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "sata1";
++			bank-name = "cp110";
++			pin-count = <1>;
++			pins = <28 9>;
++		};
++		mpp-bus11 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "smi";
++			bank-name = "cp110";
++			pin-count = <2>;
++			pins = <32 7  34 7>;
++		};
++	};
++};
+diff --git a/arch/arm/dts/armada-8040-rz1-db.dts b/arch/arm/dts/armada-8040-rz1-db.dts
+new file mode 100644
+index 0000000..1164ca2
+--- /dev/null
++++ b/arch/arm/dts/armada-8040-rz1-db.dts
+@@ -0,0 +1,135 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/dts-v1/;
++
++#include "armada-70x0.dtsi" /* include SoC device tree */
++#include "armada-70x0-dev-info.dtsi" /* include Marvell specific info (S@R, MPP cmd) */
++
++/ {
++	model = "DB-ARMADA-8040R-Z1 (PEX_SGMIIx2_SATA_USB3x2)";
++	compatible = "marvell,armada-70x0-db", "marvell,armada-70x0";
++	fdt_config_id = <1>;
++	board_id = <0x11>;
++
++	memory {
++		device_type = "memory";
++		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
++	};
++	ap-806 {
++		internal-regs {
++			spi0: spi@510600 {
++				status = "okay";
++			};
++			i2c0: i2c@511000 {
++				status = "okay";
++			};
++		};
++
++		pcie-controller {
++			pcie@1,0 {
++				status = "okay";
++			};
++		};
++	};
++	cp110-master {
++		internal-regs {
++			spi@700600 {
++				status = "okay";
++			};
++			i2c@701000 {
++				status = "okay";
++			};
++			usb3@500000 {
++				status = "okay";
++			};
++			usb3@510000 {
++				status = "okay";
++			};
++			sata@550000 {
++				status = "okay";
++			};
++			mmc@780000 {
++				status = "okay";
++			};
++
++			pinctl@440000 {
++					/* MPP Bus:
++					   TDM	 [0-12]
++					   SPI   [13-16]
++					   SATA1 [28]
++					   UART0 [29-30]
++					   SMI	 [32,34]
++					   SATA0 [36]
++					   I2C	 [37-38]
++					   UART1 [40-41]
++					   XSMI	 [42-43]
++					   SD	 [56-62]
++					*/
++					/*   0   1   2   3   4   5   6   7   8   9 */
++				pin-func = < 4   4   4   4   4   4   4   4   4   4
++					     4   4   0   3   3   3   3   0   0   0
++					     0   0   0   0   0   0   0   0   9   0xA
++					     0xA 0   7   0   7   0   6   2   2   0
++					     7   7   8   8   0   0   0   0   0   0
++					     0 	 0   0   0   0   0   0xE 0xE 0xE 0xE
++					     0xE 0xE 0xE 0>;
++			};
++
++			comphy {
++				compatible = "marvell,mvebu-comphy", "marvell,comphy-cp110";
++				mux-bitcount = <4>;
++				max-lanes = <6>;
++				reg-comphy = <0x441000 0x8>;
++				reg-hpipe3 = <0x120800 0x8>;
++				/* Serdes Configuration:
++					Lane 0: SGMII2
++					Lane 1: USB3-HOST0
++					Lane 2: SGMII0
++					Lane 3: SATA1
++					Lane 4: USB3-HOST1
++					Lane 5: PEX2x1
++				*/
++				phy0 {
++					phy-type = <PHY_TYPE_SGMII2>;
++					phy-speed = <PHY_SPEED_1_25G>;
++				};
++				phy1 {
++					phy-type = <PHY_TYPE_USB3_HOST0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy2 {
++					phy-type = <PHY_TYPE_SGMII0>;
++					phy-speed = <PHY_SPEED_1_25G>;
++				};
++				phy3 {
++					phy-type = <PHY_TYPE_SATA1>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy4 {
++					phy-type = <PHY_TYPE_USB3_HOST1>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy5 {
++					phy-type = <PHY_TYPE_PEX2>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++			};
++		};
++	};
++};
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index bf345c3..0a8e7d8 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -35,6 +35,36 @@ spi@700600 {
+ 				CS-i is enabled or not */
+ 	status = "disable";
+ };
++i2c@701000 {
++	compatible = "marvell,mvebu-i2c";
++	reg = <0x701000 0x100>;
++	status = "disabled";
++};
++sata@540000 { /* SATA0 */
++	compatible = "marvell,mvebu-sata";
++	reg = <540000 0x200>;
++	status = "disabled";
++};
++sata@550000 { /* SATA1 */
++	compatible = "marvell,mvebu-sata";
++	reg = <550000 0x200>;
++	status = "disabled";
++};
++mmc@780000 {
++	compatible = "marvell,xenon-sdhci";
++	reg = <0x780000 0x300>;
++	status = "disabled";
++};
++usb3@500000 { /* USB3_H0 */
++	compatible = "marvell,mvebu-usb3";
++	reg = <0x500000 0x450>;
++	status = "disabled";
++};
++usb3@510000 { /* USB3_H1 */
++	compatible = "marvell,mvebu-usb3";
++	reg = <0x510000 0x450>;
++	status = "disabled";
++};
+ 
+ pinctl@440000 {
+ 	compatible = "marvell,mvebu-pinctl";
+diff --git a/configs/mvebu_armada70x0_defconfig b/configs/mvebu_armada70x0_defconfig
+new file mode 100644
+index 0000000..c07a4b8
+--- /dev/null
++++ b/configs/mvebu_armada70x0_defconfig
+@@ -0,0 +1,40 @@
++CONFIG_SPL=y
++CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+++S:CONFIG_ARM=y
+++S:CONFIG_TARGET_ARMADA_8K=y
++CONFIG_MVEBU_MPP_BUS=y
+++S:CONFIG_DEVEL_BOARD=y
++CONFIG_CUSTOMER_BOARD=y
++CONFIG_ARMADA_70X0_DB=y
++CONFIG_CMD_BOOTD=y
++CONFIG_CMD_RUN=y
++CONFIG_CMD_EDITENV=y
++CONFIG_CMD_SAVEENV=y
++CONFIG_CMD_MEMORY=y
++CONFIG_CMD_MEMTEST=y
++CONFIG_CMD_LOADB=y
++CONFIG_CMD_NET=y
++CONFIG_CMD_PING=y
++CONFIG_CMD_TIME=y
++CONFIG_CMD_MISC=y
++CONFIG_CMD_TIMER=y
++CONFIG_CMD_MVEBU_SAR=y
++CONFIG_CMD_MVEBU_MPP=y
++CONFIG_CMD_MVEBU_BUBT=y
++CONFIG_CMD_MVEBU_TSEN=y
+++S:CONFIG_OF_CONTROL=y
+++S:CONFIG_OF_EMBED=y
+++S:CONFIG_MULTI_DT_FILE=y
+++S:CONFIG_DEFAULT_DEVICE_TREE="armada-8040-rz1-db"
++CONFIG_MVEBU_PCI=y
++CONFIG_MVEBU_CCU=y
++CONFIG_MVEBU_RFU=y
++CONFIG_ENC28J60=y
+++S:CONFIG_SYS_NS16550=y
+++S:CONFIG_MVEBU_I2C=y
++CONFIG_MVEBU_SPI=y
++CONFIG_MVEBU_PINCTL=y
+++S:CONFIG_MVEBU_COMPHY_SUPPORT=y
++CONFIG_MVEBU_THERMAL_SENSOR=y
++CONFIG_MVEBU_THERMAL_SENSOR_28NM_V2=y
+++S:CONFIG_MVEBU_MK6_SUPPORT=y
+diff --git a/configs/mvebu_armada70x0_pd_defconfig b/configs/mvebu_armada70x0_pd_defconfig
+index da5901c..aa19410 100644
+--- a/configs/mvebu_armada70x0_pd_defconfig
++++ b/configs/mvebu_armada70x0_pd_defconfig
+@@ -28,7 +28,7 @@ CONFIG_CMD_MVEBU_MPP=y
+ CONFIG_CMD_MVEBU_BUBT=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+-+S:CONFIG_DEFAULT_DEVICE_TREE="armada-70x0-db"
+++S:CONFIG_DEFAULT_DEVICE_TREE="armada-8040-rz1-db"
+ CONFIG_MVEBU_ICU=y
+ +S:CONFIG_SYS_NS16550=y
+ CONFIG_MVEBU_I2C=y
+-- 
+1.9.1
+

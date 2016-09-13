@@ -1,0 +1,55 @@
+From f15dcd6e0fc16626127047dd167a1521c430d038 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Tue, 19 Apr 2016 21:34:49 +0800
+Subject: [PATCH 146/239] dram: a3700: read DRAM size and pass it to sys info
+
+-This patch reads static DRAM size from ATF and pass.
+ it to sys info, so that other boot loader such as u-boot
+ could get the DRAM size from sys info.
+-Disable both reading DRAM size in SPL and passing its value
+ from SPL to uboot
+
+Change-Id: I436932da0b4aa52aacd32ec1290ebfa5cff1dc76
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Signed-off-by: zachary <zhangzg@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29176
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ plat/marvell/a3700/a3700_z/plat_bl31_setup.c | 16 +++++++++++++++-
+ 1 file changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/plat/marvell/a3700/a3700_z/plat_bl31_setup.c b/plat/marvell/a3700/a3700_z/plat_bl31_setup.c
+index fa54e37..268b093 100644
+--- a/plat/marvell/a3700/a3700_z/plat_bl31_setup.c
++++ b/plat/marvell/a3700/a3700_z/plat_bl31_setup.c
+@@ -31,11 +31,25 @@
+ *
+ ***************************************************************************
+ */
+-
+ #include <plat_marvell.h>
++#include <sys_info.h>
++
++/* This function passes hard coded DRAM in ATF to sys info */
++static void pass_dram_sys_info(void)
++{
++	/* Pass DRAM size value, so that u-boot could get it later
++	 * Convert dram_size value from bits unit to MB unit by right-shift 20 bits
++	 * Uboot code expects MB unit not bit unit for Armada3700
++	 * Only single ddr chip-set is supported for Armada3700
++	 */
++	set_info(DRAM_CS0_SIZE, MARVELL_DRAM1_SIZE >> 20);
++}
+ 
+ /* This function overruns the same function in marvell_bl31_setup.c */
+ void bl31_plat_arch_setup(void)
+ {
+ 	marvell_bl31_plat_arch_setup();
++
++	/* Pass DRAM size value so that u-boot could get it later */
++	pass_dram_sys_info();
+ }
+-- 
+1.9.1
+

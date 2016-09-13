@@ -1,0 +1,98 @@
+From 24f52bffe4d74e4283636d61ed7aa105260a9667 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 24 Aug 2015 13:32:27 +0300
+Subject: [PATCH 0360/1240] mvebu: sar: added define for Sample at Reset
+ Utility
+
+Change-Id: I01e5831a9a9b39c1d1b6f375e1fce747b8513789
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23071
+Tested-by: Star_Automation <star@marvell.com>
+---
+ board/mvebu/Kconfig              |  1 +
+ board/mvebu/common/Kconfig       | 13 +++++++++++++
+ board/mvebu/common/Makefile      | 11 ++++-------
+ board/mvebu/common/devel-board.c |  3 +++
+ common/mvebu/Kconfig             |  2 +-
+ 5 files changed, 22 insertions(+), 8 deletions(-)
+ create mode 100644 board/mvebu/common/Kconfig
+
+diff --git a/board/mvebu/Kconfig b/board/mvebu/Kconfig
+index 99628a7..d2bc1c9 100644
+--- a/board/mvebu/Kconfig
++++ b/board/mvebu/Kconfig
+@@ -23,4 +23,5 @@ config CUSTOMER_BOARD
+ source "board/mvebu/armada8k/Kconfig"
+ source "board/mvebu/armada38x/Kconfig"
+ source "board/mvebu/armadalp/Kconfig"
++source "board/mvebu/common/Kconfig"
+ endmenu
+diff --git a/board/mvebu/common/Kconfig b/board/mvebu/common/Kconfig
+new file mode 100644
+index 0000000..6ddcb07
+--- /dev/null
++++ b/board/mvebu/common/Kconfig
+@@ -0,0 +1,13 @@
++menu "Development Board Utilities"
++	depends on DEVEL_BOARD
++
++config MVEBU_SAR
++	bool "Support MVEBU SAR Utility"
++	default y
++	help
++	  Say Y here to add support for Sample
++	  at Reset Utility. You need this only if
++	  you work on a Marvell development board.
++	  If not, keep this off to reduce code size
++
++endmenu
+diff --git a/board/mvebu/common/Makefile b/board/mvebu/common/Makefile
+index cc4dd16..157dfcc 100644
+--- a/board/mvebu/common/Makefile
++++ b/board/mvebu/common/Makefile
+@@ -18,10 +18,7 @@
+ 
+ obj-y	+= board-common.o
+ obj-y	+= init.o
+-obj-$(CONFIG_MVEBU_NAND) += nand_init.o
+-obj-$(CONFIG_CMD_NET)	+= eth_init.o
+-
+-ifdef CONFIG_DEVEL_BOARD
+-obj-y	+= sar.o
+-obj-y	+= devel-board.o
+-endif
++obj-$(CONFIG_MVEBU_NAND)	+= nand_init.o
++obj-$(CONFIG_CMD_NET)		+= eth_init.o
++obj-$(CONFIG_MVEBU_SAR)		+= sar.o
++obj-$(CONFIG_DEVEL_BOARD)	+= devel-board.o
+diff --git a/board/mvebu/common/devel-board.c b/board/mvebu/common/devel-board.c
+index 0903b4b..e40db13 100644
+--- a/board/mvebu/common/devel-board.c
++++ b/board/mvebu/common/devel-board.c
+@@ -27,7 +27,10 @@
+ 
+ int mvebu_devel_board_init(struct mvebu_board_info *brd)
+ {
++
++#ifdef CONFIG_MVEBU_SAR
+ 	sar_init();
++#endif
+ 
+ 	/* Update MPP configurations */
+ 	if (brd->configure_mpp)
+diff --git a/common/mvebu/Kconfig b/common/mvebu/Kconfig
+index 0846684..4e5f65f 100644
+--- a/common/mvebu/Kconfig
++++ b/common/mvebu/Kconfig
+@@ -11,7 +11,7 @@ config CMD_MVEBU_MISC
+ 
+ config CMD_MVEBU_SAR
+ 	bool "SatR"
+-	depends on DEVEL_BOARD
++	depends on MVEBU_SAR
+ 	default n
+ 	help
+ 	  SatR - Modify SOC's sample at reset (SAR) values
+-- 
+1.9.1
+

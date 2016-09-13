@@ -1,0 +1,49 @@
+From c672a87195f82859930dcece14490f5ca4376646 Mon Sep 17 00:00:00 2001
+From: Victor Axelrod <victora@marvell.com>
+Date: Sun, 3 Apr 2016 20:43:32 +0300
+Subject: [PATCH 082/239] atf: ddr: Replace dram with mv_ddr
+
+The patch modifies BLE's makefile to compile it with mv_ddr
+project source code instead of the initial dram's one.
+
+Change-Id: I4d67b7f01a422c7d3f63daf55243c8f2bd466477
+Signed-off-by: Victor Axelrod <victora@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28750
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ ble/ble.mk | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/ble/ble.mk b/ble/ble.mk
+index dfe2c87..f0d2235 100644
+--- a/ble/ble.mk
++++ b/ble/ble.mk
+@@ -28,18 +28,18 @@
+ # POSSIBILITY OF SUCH DAMAGE.
+ #
+ 
+-DRAM_ROOT		=	drivers/marvell/dram
+-DRAM_LIB		= 	$(CURDIR)/$(BUILD_PLAT)/ble/dramlib.a
+-BLE_LIBS		= 	$(DRAM_LIB)
++MV_DDR_ROOT		=	drivers/marvell/mv_ddr
++MV_DDR_LIB		= 	$(CURDIR)/$(BUILD_PLAT)/ble/mv_ddr_lib.a
++BLE_LIBS		= 	$(MV_DDR_LIB)
+ PLAT_MARVELL		=	plat/marvell
+ 
+ BLE_SOURCES		+= 	ble/ble_main.c				\
+ 				drivers/delay_timer/delay_timer.c	\
+ 				$(PLAT_MARVELL)/common/plat_delay_timer.c
+ 
+-PLAT_INCLUDES		+= 	-I$(DRAM_ROOT)
++PLAT_INCLUDES		+= 	-I$(MV_DDR_ROOT)
+ 
+ BLE_LINKERFILE		:=	ble/ble.ld.S
+ 
+-$(DRAM_LIB):
+-	@make -C $(DRAM_ROOT) --no-print-directory PLATFORM=$(PLAT) OBJ_DIR=$(CURDIR)/$(BUILD_PLAT)/ble
++$(MV_DDR_LIB):
++	@make -C $(MV_DDR_ROOT) --no-print-directory PLATFORM=$(PLAT) OBJ_DIR=$(CURDIR)/$(BUILD_PLAT)/ble
+-- 
+1.9.1
+

@@ -1,0 +1,39 @@
+From 628d420255a9a00be73102f915b65ed4751cf013 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Thu, 11 Feb 2016 10:20:33 +0200
+Subject: [PATCH 0848/1240] fix: tools: a3700: Clean up UART images on every
+ build
+
+- Clean up UART boot images on every build
+- Keep the uncompressed UART boot images folder after build
+- Add TIM textual descriptor to the UART images folder
+
+Change-Id: I2b63dddd80579b771788c7f0d7986d8c422a1750
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27435
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ Makefile | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 5e8eebc..0034144 100644
+--- a/Makefile
++++ b/Makefile
+@@ -949,10 +949,10 @@ uartimage: $(obj)/u-boot.bin $(SPLIMAGE)
+ 		$(TIMBUILD) $(TIMBLDUARTARGS)
+ 		$(DOIMAGE) $(DOIMAGE_FLAGS)
+ 		$(TIM2IMG) -i $(DOIMAGE_CFG) -o u-boot-spl-uart.img
++		@rm -rf $(UARTIMGARCH)*
+ 		@mkdir $(UARTIMGARCH)
+-		@find $(srctree) -name "*_h.*" |xargs cp -t $(UARTIMGARCH) $(TIM_IMAGE)
++		@find $(srctree) -name "*_h.*" |xargs cp -t $(UARTIMGARCH) $(TIM_IMAGE) $(DOIMAGE_CFG)
+ 		@tar czf $(UARTIMGARCH).tgz $(UARTIMGARCH)
+-		@rm -rf $(UARTIMGARCH)
+ 		$(TIMBUILD) $(TIMBLDARGS)
+ 
+ secureimg: uartimage
+-- 
+1.9.1
+

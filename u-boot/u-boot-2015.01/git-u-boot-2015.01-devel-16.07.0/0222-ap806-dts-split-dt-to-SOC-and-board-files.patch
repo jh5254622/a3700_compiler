@@ -1,0 +1,163 @@
+From 5d652f59c41cb0c51d5013e08447fb0d8bdf5b94 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Fri, 26 Jun 2015 10:24:26 +0300
+Subject: [PATCH 0222/1240] ap806: dts: split dt to SOC and board files
+
+Change-Id: I25daf397b6d9cf500142e3efcac60915b3a4a963
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20507
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/dts/Makefile            |  2 +-
+ arch/arm/dts/apn-806-db.dts      | 34 ++++++++++++++++++++++++
+ arch/arm/dts/apn-806.dtsi        | 57 ++++++++++++++++++++++++++++++++++++++++
+ configs/mvebu_armada8k_defconfig |  7 ++---
+ 4 files changed, 94 insertions(+), 6 deletions(-)
+ create mode 100644 arch/arm/dts/apn-806-db.dts
+ create mode 100644 arch/arm/dts/apn-806.dtsi
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index 9cf7606..518e23a 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -53,7 +53,7 @@ dtb-$(CONFIG_SOCFPGA) += socfpga_cyclone5_socrates.dtb
+ 
+ dtb-$(CONFIG_MVEBU) += armada-385-db.dtb
+ dtb-$(CONFIG_MVEBU) += armada-lp-db.dtb
+-dtb-$(CONFIG_MVEBU) += armada-8k.dtb
++dtb-$(CONFIG_MVEBU) += apn-806-db.dtb
+ 
+ targets += $(dtb-y)
+ 
+diff --git a/arch/arm/dts/apn-806-db.dts b/arch/arm/dts/apn-806-db.dts
+new file mode 100644
+index 0000000..ebfcecb
+--- /dev/null
++++ b/arch/arm/dts/apn-806-db.dts
+@@ -0,0 +1,34 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/dts-v1/;
++
++#include "apn-806.dtsi"
++
++/ {
++	model = "Marvell APN-806 Development Board";
++	compatible = "marvell,apn-806-db", "marvell,apn-806";
++
++	#address-cells = <2>;
++	#size-cells = <2>;
++
++	memory {
++		device_type = "memory";
++		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
++	};
++};
+diff --git a/arch/arm/dts/apn-806.dtsi b/arch/arm/dts/apn-806.dtsi
+new file mode 100644
+index 0000000..39ec48c
+--- /dev/null
++++ b/arch/arm/dts/apn-806.dtsi
+@@ -0,0 +1,57 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/ {
++
++	cpus {
++		#address-cells = <1>;
++		#size-cells = <0>;
++		cpu@0 {
++			device_type = "cpu";
++			compatible = "arm,cortex-a57";
++			reg = <0>;
++		};
++	};
++
++	soc {
++		compatible = "marvell,mvebu-apn-806";
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		internal-regs {
++			compatible = "marvell,internal-regs";
++			#address-cells = <1>;
++			#size-cells = <1>;
++			reg = <0xf0000000 0x4>;
++
++			tclk: tclk {
++				compatible = "marvell,tclk";
++				#clock-cells = <0>;
++				clock-frequency = <125000>;
++			};
++
++			spi0: spi@510600 {
++				compatible = "marvell,orion-spi";
++				reg = <0x510600 0x50>;
++				spi-max-frequency = <51200>;
++				clock = <&tclk>;
++				status = "okay";
++			};
++		};
++	};
++};
+diff --git a/configs/mvebu_armada8k_defconfig b/configs/mvebu_armada8k_defconfig
+index 50f4e7b..21f3a5e 100644
+--- a/configs/mvebu_armada8k_defconfig
++++ b/configs/mvebu_armada8k_defconfig
+@@ -2,10 +2,9 @@ CONFIG_SPL=y
+ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_ARMADA_8K=y
+++S:CONFIG_MVEBU_MK6_SUPPORT=y
+ +S:CONFIG_DEVEL_BOARD=y
+ CONFIG_APN_806_DB=y
+-CONFIG_MVEBU_MPP=y
+-+S:CONFIG_MVEBU_MK6_SUPPORT=y
+ CONFIG_CMD_BOOTD=y
+ CONFIG_CMD_RUN=y
+ CONFIG_CMD_EDITENV=y
+@@ -16,7 +15,5 @@ CONFIG_CMD_MISC=y
+ CONFIG_CMD_TIMER=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+-+S:CONFIG_DEFAULT_DEVICE_TREE="armada-8k"
+-CONFIG_MVEBU_CCU=y
+-CONFIG_MVEBU_RFU=y
+++S:CONFIG_DEFAULT_DEVICE_TREE="apn-806-db"
+ +S:CONFIG_SYS_NS16550=y
+-- 
+1.9.1
+

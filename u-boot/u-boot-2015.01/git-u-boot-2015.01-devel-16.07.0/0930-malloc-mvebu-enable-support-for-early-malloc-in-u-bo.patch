@@ -1,0 +1,55 @@
+From 31d52cf6f427abb7becec2227659c0129714571d Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Tue, 8 Mar 2016 11:27:12 +0200
+Subject: [PATCH 0930/1240] malloc: mvebu: enable support for early malloc in
+ u-boot
+
+In order to support compressed fdt in eeprom, we use gunzip function,
+and gunzip uses malloc.
+read the compressed fdt from eeprom is done at the beginning of u-boot,
+so it's necessary to enable early malloc.
+
+Change-Id: I208fa4834d2eb17ff73d80e00c61d6fa9e7c0c23
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28107
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ board/mvebu/common/init.c      | 5 +++++
+ include/configs/mvebu-common.h | 4 ++++
+ 2 files changed, 9 insertions(+)
+
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index 4691529..6f4cf29 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -57,6 +57,11 @@ int soc_early_init_f(void)
+ /* Do very basic stuff like board and soc detection */
+ int board_early_init_f(void)
+ {
++/* fdt_config uses gunzip to decompress FDT when loading it from EEPROM.
++   gunzip uses malloc, therefore it's necessary to enable malloc at this point */
++#ifdef CONFIG_SYS_MALLOC_F_LEN
++	gd->malloc_base = CONFIG_MALLOC_F_ADDR;
++#endif
+ #ifdef CONFIG_BOARD_CONFIG_EEPROM
+ 	cfg_eeprom_init();
+ #endif
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 07b45f2..80d9fa6 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -38,6 +38,10 @@
+ #define CONFIG_ARMADA_8K_SOC_ID		8022
+ 
+ /* Global definitions */
++#ifndef CONFIG_SPL_BUILD
++#define CONFIG_MALLOC_F_ADDR		0x8000000
++#define CONFIG_SYS_MALLOC_F_LEN		0x5000
++#endif
+ #ifndef CONFIG_SYS_TEXT_BASE
+ #define CONFIG_SYS_TEXT_BASE            0x00000000
+ #endif
+-- 
+1.9.1
+

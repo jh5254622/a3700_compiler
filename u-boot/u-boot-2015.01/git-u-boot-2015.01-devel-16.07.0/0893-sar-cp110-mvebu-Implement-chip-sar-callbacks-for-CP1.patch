@@ -1,0 +1,247 @@
+From 3d890fb30c6b4af0bb1d287a4cdec34cd9b9d06b Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 23 Feb 2016 09:23:15 +0200
+Subject: [PATCH 0893/1240] sar: cp110: mvebu: Implement chip-sar callbacks for
+ CP110
+
+Implement and enable CP110 callbacks in chip-sar driver.
+
+Change-Id: I399362c48111a858f8d785e6c4106385084fe58a
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27849
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/cp110.dtsi               |   6 ++
+ arch/arm/include/asm/arch-mvebu/sar.h |   3 +
+ drivers/misc/mvebu_sar/Makefile       |   2 +-
+ drivers/misc/mvebu_sar/chip_sar.c     |   6 +-
+ drivers/misc/mvebu_sar/chip_sar.h     |   4 +-
+ drivers/misc/mvebu_sar/cp110_sar.c    | 144 ++++++++++++++++++++++++++++++++++
+ 6 files changed, 159 insertions(+), 6 deletions(-)
+ create mode 100644 drivers/misc/mvebu_sar/cp110_sar.c
+
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index 671b5b1..6afb858 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -127,6 +127,12 @@ mdio0@12A200 {
+ 	status = "okay";
+ };
+ 
++sar-reg {
++	compatible = "marvell,sample-at-reset-common", "marvell,sample-at-reset-cp110";
++	reg = <0x400200 0x8>;
++};
++
++
+ pcie-controller {
+ 	#address-cells = <1>;
+ 	#size-cells = <1>;
+diff --git a/arch/arm/include/asm/arch-mvebu/sar.h b/arch/arm/include/asm/arch-mvebu/sar.h
+index ea7cda5..ff3f5e6 100644
+--- a/arch/arm/include/asm/arch-mvebu/sar.h
++++ b/arch/arm/include/asm/arch-mvebu/sar.h
+@@ -41,7 +41,10 @@ enum mvebu_sar_opts {
+ enum mvebu_bootsrc_type {
+ 	BOOTSRC_NAND,
+ 	BOOTSRC_SPI,
++	BOOTSRC_AP_SPI,
+ 	BOOTSRC_SD_EMMC,
++	BOOTSRC_AP_SD_EMMC,
++	BOOTSRC_NOR,
+ 	BOOTSRC_MAX_IDX
+ };
+ 
+diff --git a/drivers/misc/mvebu_sar/Makefile b/drivers/misc/mvebu_sar/Makefile
+index 114328f..5d54e10 100644
+--- a/drivers/misc/mvebu_sar/Makefile
++++ b/drivers/misc/mvebu_sar/Makefile
+@@ -1,4 +1,4 @@
+ 
+ obj-$(CONFIG_MVEBU_CHIP_SAR) += chip_sar.o
+ obj-$(CONFIG_TARGET_ARMADA_8K) += ap806_sar.o
+-
++obj-$(CONFIG_TARGET_ARMADA_8K) += cp110_sar.o
+diff --git a/drivers/misc/mvebu_sar/chip_sar.c b/drivers/misc/mvebu_sar/chip_sar.c
+index ec03424..baa244f 100644
+--- a/drivers/misc/mvebu_sar/chip_sar.c
++++ b/drivers/misc/mvebu_sar/chip_sar.c
+@@ -36,9 +36,9 @@ struct sar_chip_info sar_chip_info[] = {
+ 	{.compat = COMPAT_MVEBU_SAR_REG_AP806,
+ 	 .sar_init_func = ap806_sar_init,
+ 	},
+-/*	{.compat = COMPAT_MVEBU_SAR_REG_CP110,
+-	 .sar_init_func = sar_cp110_init,
+-	},*/
++	{.compat = COMPAT_MVEBU_SAR_REG_CP110,
++	 .sar_init_func = cp110_sar_init,
++	},
+ #endif
+ 	{.compat = COMPAT_UNKNOWN}
+ };
+diff --git a/drivers/misc/mvebu_sar/chip_sar.h b/drivers/misc/mvebu_sar/chip_sar.h
+index b8fcd98..6a52af5 100644
+--- a/drivers/misc/mvebu_sar/chip_sar.h
++++ b/drivers/misc/mvebu_sar/chip_sar.h
+@@ -35,5 +35,5 @@ int mvebu_sar_id_register(uintptr_t chip_id, u32 sar_id);
+ /* AP806 SAR functions. */
+ int ap806_sar_init(const void *blob, int node);
+ 
+-
+-
++/* CP110 SAR functions. */
++int cp110_sar_init(const void *blob, int node);
+diff --git a/drivers/misc/mvebu_sar/cp110_sar.c b/drivers/misc/mvebu_sar/cp110_sar.c
+new file mode 100644
+index 0000000..e4e044f
+--- /dev/null
++++ b/drivers/misc/mvebu_sar/cp110_sar.c
+@@ -0,0 +1,144 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG */
++#include <common.h>
++#include <asm/io.h>
++#include <errno.h>
++#include <libfdt.h>
++#include <asm/arch-mvebu/fdt.h>
++#include <asm/arch-mvebu/clock.h>
++#include <asm/arch-mvebu/sar.h>
++
++#include "chip_sar.h"
++
++/* SAR CP110 registers */
++#define SAR1_RST_BOOT_MODE_AP_CP0_OFFSET	(4)
++#define SAR1_RST_BOOT_MODE_AP_CP0_MASK		(0x3f << SAR1_RST_BOOT_MODE_AP_CP0_OFFSET)
++
++static void __iomem *__attribute__((section(".data")))sar_base;
++
++struct sar_info {
++	char *name;
++	u32 offset;
++	u32 mask;
++};
++
++struct sar_info cp110_sar_0[] = {
++	{"Reset Boot Mode     ", SAR1_RST_BOOT_MODE_AP_CP0_OFFSET, SAR1_RST_BOOT_MODE_AP_CP0_MASK },
++	{"",			-1,			-1},
++};
++
++struct bootsrc_idx_info {
++	int start;
++	int end;
++	enum mvebu_bootsrc_type src;
++};
++
++static struct bootsrc_idx_info bootsrc_list[] = {
++	{0x0,	0x5,	BOOTSRC_NOR},
++	{0xA,	0x25,	BOOTSRC_NAND},
++	{0x28,	0x28,	BOOTSRC_AP_SD_EMMC},
++	{0x29,	0x29,	BOOTSRC_SD_EMMC},
++	{0x2A,	0x2A,	BOOTSRC_AP_SD_EMMC},
++	{0x2B,	0x2B,	BOOTSRC_SD_EMMC},
++	{0x30,	0x31,	BOOTSRC_AP_SPI},
++	{0x32,	0x35,	BOOTSRC_NOR},
++	{-1,	-1,	-1}
++};
++
++int cp110_sar_value_get(enum mvebu_sar_opts sar_opt, u32 *val)
++{
++	u32 reg, mode;
++	int i;
++
++	if (sar_opt != SAR_BOOT_SRC) {
++		error("AP806-SAR: Unsupported SAR option %d.\n", sar_opt);
++		return -EINVAL;
++	}
++
++	reg = readl(sar_base);
++	mode = (reg & SAR1_RST_BOOT_MODE_AP_CP0_MASK) >> SAR1_RST_BOOT_MODE_AP_CP0_OFFSET;
++
++	i = 0;
++	while (bootsrc_list[i].start != -1) {
++		if ((mode >= bootsrc_list[i].start) && (mode <= bootsrc_list[i].end)) {
++			*val = bootsrc_list[i].src;
++			break;
++		}
++		i++;
++	}
++
++	if (bootsrc_list[i].start == -1) {
++		error("Bad CP110 sample at reset mode (%d).\n", mode);
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
++
++static int cp110_sar_dump(void)
++{
++	u32 reg, val;
++	struct sar_info *sar;
++
++	reg = readl(sar_base);
++	printf("\nCP110 SAR register 0 [0x%08x]:\n", reg);
++	printf("----------------------------------\n");
++	sar = cp110_sar_0;
++	while (sar->offset != -1) {
++		val = (reg & sar->mask) >> sar->offset;
++		printf("%s  0x%x\n", sar->name, val);
++		sar++;
++	}
++	return 0;
++}
++
++int cp110_sar_init(const void *blob, int node)
++{
++	uintptr_t chip_id;
++	int ret, i;
++	struct sar_chip_info info;
++
++	u32 sar_list[] = {
++		SAR_BOOT_SRC
++	};
++
++	sar_base = fdt_get_regs_offs(blob, node, "reg");
++
++	info.sar_dump_func = cp110_sar_dump;
++	info.sar_value_get_func = cp110_sar_value_get;
++
++	ret = mvebu_sar_chip_register(COMPAT_MVEBU_SAR_REG_CP110, &info, &chip_id);
++	if (ret) {
++		error("Failed to register AP806 SAR functions.\n");
++		return ret;
++	}
++
++	for (i = 0; i < ARRAY_SIZE(sar_list); i++) {
++		ret = mvebu_sar_id_register(chip_id, sar_list[i]);
++		if (ret) {
++			error("Failed to register SAR %d, for CP110.\n", sar_list[i]);
++			return ret;
++		}
++	}
++
++	return 0;
++}
++
+-- 
+1.9.1
+

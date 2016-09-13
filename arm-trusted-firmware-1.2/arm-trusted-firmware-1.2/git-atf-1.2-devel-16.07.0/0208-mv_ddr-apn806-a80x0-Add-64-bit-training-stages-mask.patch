@@ -1,0 +1,49 @@
+From abd3c4dc2594ac761f432238a9baacbe488be903 Mon Sep 17 00:00:00 2001
+From: Victor Axelrod <victora@marvell.com>
+Date: Thu, 9 Jun 2016 20:04:44 +0300
+Subject: [PATCH 208/239] mv_ddr: apn806: a80x0: Add 64-bit training stages
+ mask
+
+This patch is required to exclude wl supp stage, which is not supported
+for 64-bit yet, from the training stages mask.
+
+Change-Id: Ie090de941c0f671829558e686f7e5e1a040086ae
+Signed-off-by: Victor Axelrod <victora@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30399
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+index 77db828..b24f10b 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+@@ -537,6 +537,15 @@ static int ddr3_tip_init_apn806_silicon(u32 dev_num, u32 board_id)
+ 	ddr3_tip_dev_attr_set(dev_num, MV_ATTR_INTERLEAVE_WA, 0);
+ 
+ #if defined(CONFIG_DDR4)
++#if defined(CONFIG_64BIT)
++	mask_tune_func = (SET_LOW_FREQ_MASK_BIT |
++			  LOAD_PATTERN_MASK_BIT |
++			  SET_TARGET_FREQ_MASK_BIT |
++			  WRITE_LEVELING_TF_MASK_BIT |
++			  READ_LEVELING_TF_MASK_BIT |
++			  RECEIVER_CALIBRATION_MASK_BIT |
++			  DQ_VREF_CALIBRATION_MASK_BIT);
++#else
+ 	mask_tune_func = (SET_LOW_FREQ_MASK_BIT |
+ 			  LOAD_PATTERN_MASK_BIT |
+ 			  SET_TARGET_FREQ_MASK_BIT |
+@@ -545,6 +554,7 @@ static int ddr3_tip_init_apn806_silicon(u32 dev_num, u32 board_id)
+ 			  READ_LEVELING_TF_MASK_BIT |
+ 			  RECEIVER_CALIBRATION_MASK_BIT |
+ 			  DQ_VREF_CALIBRATION_MASK_BIT);
++#endif
+ 	rl_mid_freq_wa = 0;
+ #else /* CONFIG_DDR4 */
+ 	mask_tune_func = (SET_LOW_FREQ_MASK_BIT |
+-- 
+1.9.1
+

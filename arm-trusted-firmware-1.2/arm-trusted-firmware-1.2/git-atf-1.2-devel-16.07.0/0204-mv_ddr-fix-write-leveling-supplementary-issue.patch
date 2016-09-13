@@ -1,0 +1,73 @@
+From 45fa17a1695dfccdcd92c8645746431f8d90f235 Mon Sep 17 00:00:00 2001
+From: Victor Axelrod <victora@marvell.com>
+Date: Wed, 1 Jun 2016 14:07:30 +0300
+Subject: [PATCH 204/239] mv_ddr: fix: write leveling supplementary issue
+
+The patch resolves the write leveling supplementary issue by
+immediate return on success in the align phase shift function.
+
+Change-Id: I0509eaba471368f570e689e850108020ef0c664c
+Signed-off-by: Victor Axelrod <victora@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30243
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Ofir Fedida <ofedida@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/ddr3_training_leveling.c | 20 ++++++++++++--------
+ 1 file changed, 12 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/marvell/mv_ddr/ddr3_training_leveling.c b/drivers/marvell/mv_ddr/ddr3_training_leveling.c
+index 62dbbf0..93c86ea 100644
+--- a/drivers/marvell/mv_ddr/ddr3_training_leveling.c
++++ b/drivers/marvell/mv_ddr/ddr3_training_leveling.c
+@@ -1556,8 +1556,9 @@ static int ddr3_tip_wl_supp_align_phase_shift(u32 dev_num, u32 if_id,
+ 				   ACCESS_TYPE_UNICAST, bus_id, DDR_PHY_DATA,
+ 				   WL_PHY_REG + effective_cs *
+ 				   CS_REGISTER_ADDR_OFFSET, write_data);
+-		CHECK_STATUS(ddr3_tip_xsb_compare_test(dev_num, if_id,
+-						       bus_id, -2));
++		if (ddr3_tip_xsb_compare_test
++		    (dev_num, if_id, bus_id, -2) == MV_OK)
++			return MV_OK;
+ 	}
+ 
+ 	/* Set phase (0x0[6-8]) +2 */
+@@ -1568,8 +1569,9 @@ static int ddr3_tip_wl_supp_align_phase_shift(u32 dev_num, u32 if_id,
+ 				   ACCESS_TYPE_UNICAST, bus_id, DDR_PHY_DATA,
+ 				   WL_PHY_REG + effective_cs *
+ 				   CS_REGISTER_ADDR_OFFSET, write_data);
+-		CHECK_STATUS(ddr3_tip_xsb_compare_test(dev_num, if_id,
+-						       bus_id, 2));
++		if (ddr3_tip_xsb_compare_test
++		    (dev_num, if_id, bus_id, 2) == MV_OK)
++			return MV_OK;
+ 	}
+ 
+ 	/* Set phase (0x0[6-8]) +4 */
+@@ -1580,8 +1582,9 @@ static int ddr3_tip_wl_supp_align_phase_shift(u32 dev_num, u32 if_id,
+ 				   ACCESS_TYPE_UNICAST, bus_id, DDR_PHY_DATA,
+ 				   WL_PHY_REG + effective_cs *
+ 				   CS_REGISTER_ADDR_OFFSET, write_data);
+-		CHECK_STATUS(ddr3_tip_xsb_compare_test(dev_num, if_id,
+-						       bus_id, 4));
++		if (ddr3_tip_xsb_compare_test
++		    (dev_num, if_id, bus_id, 4) == MV_OK)
++			return MV_OK;
+ 	}
+ 
+ 	/* Set phase (0x0[6-8]) +6 */
+@@ -1592,8 +1595,9 @@ static int ddr3_tip_wl_supp_align_phase_shift(u32 dev_num, u32 if_id,
+ 				   ACCESS_TYPE_UNICAST, bus_id, DDR_PHY_DATA,
+ 				   WL_PHY_REG + effective_cs *
+ 				   CS_REGISTER_ADDR_OFFSET, write_data);
+-		CHECK_STATUS(ddr3_tip_xsb_compare_test(dev_num, if_id,
+-						       bus_id, 6));
++		if (ddr3_tip_xsb_compare_test
++		    (dev_num, if_id, bus_id, 6) == MV_OK)
++			return MV_OK;
+ 	}
+ 
+ 	/* Write original WL result back */
+-- 
+1.9.1
+

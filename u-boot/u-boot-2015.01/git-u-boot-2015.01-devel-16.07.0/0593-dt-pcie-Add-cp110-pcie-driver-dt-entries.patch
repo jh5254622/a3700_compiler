@@ -1,0 +1,78 @@
+From 2c6f4517a5ece0c089f41159330b4ab8db0c4ad8 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Sun, 13 Dec 2015 14:38:38 +0200
+Subject: [PATCH 0593/1240] dt: pcie: Add cp110 pcie driver dt entries
+
+	- Set default PCIe address map for cp110.
+	- Override cp110-slave with corresponding pcie address map.
+
+Change-Id: I7701ab070279ad6f290eddb6e52076f61ef7058c
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25856
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/cp110-slave.dtsi | 17 +++++++++++++++++
+ arch/arm/dts/cp110.dtsi       | 23 +++++++++++++++++++++++
+ 2 files changed, 40 insertions(+)
+
+diff --git a/arch/arm/dts/cp110-slave.dtsi b/arch/arm/dts/cp110-slave.dtsi
+index 4da4cde..6253fdd 100644
+--- a/arch/arm/dts/cp110-slave.dtsi
++++ b/arch/arm/dts/cp110-slave.dtsi
+@@ -33,4 +33,21 @@
+ 			#include "cp110.dtsi"
+ 		};
+ 	};
++
++	/* Override the above configurations taken from cp110.dtsi */
++	cp110-slave {
++		internal-regs {
++			pcie-controller {
++				pcie@0,0 {
++					mem = <0xf9000000 0x1000000>;
++				};
++				pcie@1,0 {
++					mem = <0xfa000000 0x1000000>;
++				};
++				pcie@2,0 {
++					mem = <0xfb000000 0x1000000>;
++				};
++			};
++		};
++	};
+ };
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index 93295fc..be5fd3c 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -41,3 +41,26 @@ pinctl@440000 {
+ 	pin-count = <63>;
+ 	max-func = <0xf>;
+ };
++
++pcie-controller {
++	#address-cells = <1>;
++	#size-cells = <1>;
++	compatible = "marvell,mvebu-dw-pcie";
++
++	pcie@0,0 {
++		reg = <0x00600000 0x20000>;
++		mem = <0xf5000000 0x1000000>;
++		status = "disabled";
++	};
++	pcie@1,0 {
++		reg = <0x00620000 0x20000>;
++		mem = <0xf6000000 0x1000000>;
++		status = "disabled";
++	};
++	pcie@2,0 {
++		reg = <0x00640000 0x20000>;
++		mem = <0xf7000000 0x1000000>;
++		status = "disabled";
++	};
++};
++
+-- 
+1.9.1
+

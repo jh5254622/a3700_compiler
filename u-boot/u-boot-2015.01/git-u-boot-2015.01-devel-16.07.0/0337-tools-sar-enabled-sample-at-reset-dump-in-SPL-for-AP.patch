@@ -1,0 +1,30 @@
+From 1c9524db5e2e74f11ce3c777ba3ae5cdfb18c2ab Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 19 Aug 2015 11:20:48 +0300
+Subject: [PATCH 0337/1240] tools: sar: enabled sample at reset dump in SPL for
+ AP-806
+
+Change-Id: Iff688fce48068edb1381c3844cb09e5d424a6618
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22940
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ configs/mvebu_apn806_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/configs/mvebu_apn806_defconfig b/configs/mvebu_apn806_defconfig
+index 07cd9b7..cd1ed7e 100644
+--- a/configs/mvebu_apn806_defconfig
++++ b/configs/mvebu_apn806_defconfig
+@@ -7,6 +7,7 @@ CONFIG_MVEBU_SPI=y
+ CONFIG_MVEBU_PCI=y
+ CONFIG_MVEBU_MPP_BUS=y
+ CONFIG_MVEBU_I2C=y
++CONFIG_MVEBU_SPL_SAR_DUMP=y
+ +S:CONFIG_DEVEL_BOARD=y
+ CONFIG_APN_806_DB=y
+ CONFIG_CMD_BOOTD=y
+-- 
+1.9.1
+

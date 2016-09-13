@@ -1,0 +1,30 @@
+From 3e4555baa5f6ba8864959ebdbaa2701e798e4f8e Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 15 Oct 2015 17:31:42 +0300
+Subject: [PATCH 0435/1240] fix: ddr: update DDR size to 8GB instead of 4GB
+
+Change-Id: I35c292e15918cb21afc5d00026eb261dd9ee9906
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24030
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ drivers/ddr/ddr_mckinley6.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/ddr/ddr_mckinley6.c b/drivers/ddr/ddr_mckinley6.c
+index 2e65100..7e96de2 100644
+--- a/drivers/ddr/ddr_mckinley6.c
++++ b/drivers/ddr/ddr_mckinley6.c
+@@ -897,7 +897,7 @@ struct mvebu_mckinley_config mckinley_phy_config[] = {
+ 	{ 0x8c0, { 0xc1000000} },
+ 	{ 0x98 , { 0x0040004e} },
+ 	{ 0x108, { 0xffff0002} },
+-	{ 0x200, { 0x00100001} },
++	{ 0x200, { 0x00110001} },
+ 	{ 0x204, { 0x00000000} },
+ 	{ 0x220, { 0x11000642} },
+ 	{ 0x44 , { 0x00030300} },
+-- 
+1.9.1
+

@@ -1,0 +1,58 @@
+From facec47bd8e3cf4e4d995ebcd8e68634612efd5f Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Mon, 25 Jan 2016 17:21:00 +0200
+Subject: [PATCH 0731/1240] doc: mvebu: Add device-tree-bindings template file
+
+Change-Id: Iec88faffda91662956438e109f8fc27650ce8bd1
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27011
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ doc/device-tree-bindings/mvebu-template.txt | 34 +++++++++++++++++++++++++++++
+ 1 file changed, 34 insertions(+)
+ create mode 100644 doc/device-tree-bindings/mvebu-template.txt
+
+diff --git a/doc/device-tree-bindings/mvebu-template.txt b/doc/device-tree-bindings/mvebu-template.txt
+new file mode 100644
+index 0000000..8d51b89
+--- /dev/null
++++ b/doc/device-tree-bindings/mvebu-template.txt
+@@ -0,0 +1,34 @@
++Marvell "template" bindings
++===========================
++
++Description of the driver (1-2 sentences)
++
++Mandatory properties:
++	- compatible = "marvell,mvebu-template";
++	- reg = <0x511000 0x4>;
++		base address of Template driver
++	- clock = <&tclk>;
++		This property points to the used clock for the ...
++	- status = "okay";
++		Set if the "template" interface is enabled/disabled.
++
++Device specific properties:
++	[Specify any SoC specific properties]
++	[In complex cases, duplicate the Mandatory & Optional propertien per SoC]
++	- Armada-3700:
++		- prop1
++		- prop2
++		- ...
++
++Optional properties:
++	- debug
++		Enable debug info printouts in the driver
++
++Example for ...:
++	template@11000 {
++		compatible = "marvell,mvebu-template";
++		reg = <0x11000 0x4>;
++		clock = <&tclk>;
++		status = "okay";
++	};
++
+-- 
+1.9.1
+

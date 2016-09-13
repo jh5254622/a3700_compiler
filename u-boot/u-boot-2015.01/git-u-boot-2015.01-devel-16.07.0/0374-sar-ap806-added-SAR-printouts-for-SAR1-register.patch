@@ -1,0 +1,90 @@
+From bb1c890a227ab889d59e2876ae4be515c00d9bca Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Thu, 27 Aug 2015 15:26:02 +0300
+Subject: [PATCH 0374/1240] sar: ap806: added SAR printouts for SAR1 register
+
+- Added printouts of Sample-at-Reset reg1 during SPL boot.
+- Fixed Sample-at-Reset Addresses
+
+Change-Id: Iab499165b9f05d5d62573a0feeaf51e6c74b892f
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23251
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/tools/mvebu_sar.c |  6 +++---
+ arch/arm/include/asm/arch-armada8k/sar.h    | 18 ++++++++++++++++--
+ 2 files changed, 19 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/tools/mvebu_sar.c b/arch/arm/cpu/mvebu-common/tools/mvebu_sar.c
+index f31016f..59c96d2 100644
+--- a/arch/arm/cpu/mvebu-common/tools/mvebu_sar.c
++++ b/arch/arm/cpu/mvebu-common/tools/mvebu_sar.c
+@@ -26,9 +26,9 @@ void mvebu_sar_dump_reg(void)
+ 	u32 reg, val;
+ 	struct sar_info *sar;
+ 
+-	printf("| SAR Name    | Mask       | Offset     | Value      |\n");
+-	printf("Sample at reset register 0:\n");
++	printf("| SAR Name            | Mask       | Offset     | Value      |\n");
+ 	reg = readl(SAMPLE_AT_RESET_REG_0);
++	printf("Sample at reset register 0 [0x%08x]:\n", reg);
+ 	sar = sar_0;
+ 	while (sar->offset != -1) {
+ 		val = (reg & sar->mask) >> sar->offset;
+@@ -37,8 +37,8 @@ void mvebu_sar_dump_reg(void)
+ 		sar++;
+ 	}
+ 
+-	printf("Sample at reset register 1:\n");
+ 	reg = readl(SAMPLE_AT_RESET_REG_1);
++	printf("Sample at reset register 1 [0x%08x]:\n", reg);
+ 	sar = sar_1;
+ 	while (sar->offset != -1) {
+ 		val = (reg & sar->mask) >> sar->offset;
+diff --git a/arch/arm/include/asm/arch-armada8k/sar.h b/arch/arm/include/asm/arch-armada8k/sar.h
+index efac14f..cef5b1f 100644
+--- a/arch/arm/include/asm/arch-armada8k/sar.h
++++ b/arch/arm/include/asm/arch-armada8k/sar.h
+@@ -21,7 +21,7 @@
+ 
+ #include <asm/arch/memory-map.h>
+ 
+-#define SAMPLE_AT_RESET_REG_0		(MVEBU_REGS_BASE + 0x7F0200)
++#define SAMPLE_AT_RESET_REG_0		(MVEBU_REGS_BASE + 0x6F8200)
+ 
+ #define SAR_DUAL_AP_MODE_OFFSET		0
+ #define SAR_DUAL_AP_MODE_MASK		(0x1 << SAR_DUAL_AP_MODE_OFFSET)
+@@ -40,7 +40,17 @@
+ #define SAR_AVS_MASTER_OFFSET		11
+ #define SAR_AVS_MASTER_MASK		(0x1 << SAR_AVS_MASTER_OFFSET)
+ 
+-#define SAMPLE_AT_RESET_REG_1		(MVEBU_REGS_BASE + 0x7F0204)
++#define SAMPLE_AT_RESET_REG_1		(MVEBU_REGS_BASE + 0x6F8204)
++
++#define SAR1_PLL2_CONFIG_OFFSET		(15)
++#define SAR1_PLL2_CONFIG_MASK		(0x7 << SAR1_PLL2_CONFIG_OFFSET)
++#define SAR1_PLL1_CONFIG_OFFSET		(18)
++#define SAR1_PLL1_CONFIG_MASK		(0x7 << SAR1_PLL1_CONFIG_OFFSET)
++#define SAR1_PLL0_CONFIG_OFFSET		(21)
++#define SAR1_PLL0_CONFIG_MASK		(0x7 << SAR1_PLL0_CONFIG_OFFSET)
++#define SAR1_STANDALONE_OFFSET		(24)
++#define SAR1_STANDALONE_MASK		(1 << SAR1_STANDALONE_OFFSET)
++
+ 
+ struct sar_info {
+ 	char *name;
+@@ -61,6 +71,10 @@ struct sar_info sar_0[] = {
+ };
+ 
+ struct sar_info sar_1[] = {
++	{"Standalone AP      ", SAR1_STANDALONE_OFFSET, SAR1_STANDALONE_MASK},
++	{"PLL0 Config        ", SAR1_PLL0_CONFIG_OFFSET, SAR1_PLL0_CONFIG_MASK },
++	{"PLL1 Config        ", SAR1_PLL1_CONFIG_OFFSET, SAR1_PLL1_CONFIG_MASK },
++	{"PLL2 Config        ", SAR1_PLL2_CONFIG_OFFSET, SAR1_PLL2_CONFIG_MASK },
+ 	{"",			-1,			-1},
+ };
+ 
+-- 
+1.9.1
+

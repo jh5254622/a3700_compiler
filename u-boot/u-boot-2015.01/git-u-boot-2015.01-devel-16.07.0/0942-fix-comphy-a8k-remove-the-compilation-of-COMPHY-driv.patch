@@ -1,0 +1,45 @@
+From 10ed62a9e0004dbbfbbed57d07e79e17eb345c91 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 13 Mar 2016 13:08:46 +0200
+Subject: [PATCH 0942/1240] fix: comphy: a8k: remove the compilation of COMPHY
+ driver in SPL
+
+Change-Id: I5b218d9616a90244c26d6a79f7a0e76d3b6e46c8
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28192
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ configs/mvebu_apn806_defconfig     | 2 +-
+ configs/mvebu_armada70x0_defconfig | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/configs/mvebu_apn806_defconfig b/configs/mvebu_apn806_defconfig
+index a07ed7f..fdbd014 100644
+--- a/configs/mvebu_apn806_defconfig
++++ b/configs/mvebu_apn806_defconfig
+@@ -34,7 +34,7 @@ CONFIG_ENC28J60=y
+ +S:CONFIG_MVEBU_I2C=y
+ CONFIG_MVEBU_SPI=y
+ CONFIG_MVEBU_PINCTL=y
+-+S:CONFIG_MVEBU_COMPHY_SUPPORT=y
++CONFIG_MVEBU_COMPHY_SUPPORT=y
+ CONFIG_MVEBU_THERMAL_SENSOR=y
+ CONFIG_MVEBU_THERMAL_SENSOR_28NM_V2=y
+ +S:CONFIG_MVEBU_MK6_SUPPORT=y
+diff --git a/configs/mvebu_armada70x0_defconfig b/configs/mvebu_armada70x0_defconfig
+index b9a55ce..f1e1003 100644
+--- a/configs/mvebu_armada70x0_defconfig
++++ b/configs/mvebu_armada70x0_defconfig
+@@ -49,7 +49,7 @@ CONFIG_MVEBU_SPI=y
+ CONFIG_MVEBU_PINCTL=y
+ CONFIG_USB=y
+ CONFIG_USB_XHCI_HCD=y
+-+S:CONFIG_MVEBU_COMPHY_SUPPORT=y
++CONFIG_MVEBU_COMPHY_SUPPORT=y
+ CONFIG_MVEBU_THERMAL_SENSOR=y
+ CONFIG_MVEBU_THERMAL_SENSOR_28NM_V2=y
+ +S:CONFIG_MVEBU_MK6_SUPPORT=y
+-- 
+1.9.1
+

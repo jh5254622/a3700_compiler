@@ -1,0 +1,30 @@
+From 45455ee00f8880f6170aebf90f8036c3adb02bf8 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 2 Sep 2015 13:03:10 +0300
+Subject: [PATCH 0394/1240] fix: mvebu: fixed ethaddr define
+
+Change-Id: I210198a8e9fdcb5b84cf44252860c7faf2230a31
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23366
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ include/configs/mvebu-common.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index b2a910a..aadccfb 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -307,7 +307,7 @@
+ 	#define CONFIG_IPADDR           10.4.50.154
+ 	#define CONFIG_SERVERIP         10.4.50.3
+ 	#define CONFIG_NETMASK          255.255.255.0
+-	#define ETHADDR                 "00:00:00:00:51:81"
++	#define CONFIG_ETHADDR          00:00:00:00:51:81
+ 	#define ENV_ETH_PRIME           "e1000#0"
+ #endif /* CONFIG_CMD_NET */
+ 
+-- 
+1.9.1
+

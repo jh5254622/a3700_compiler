@@ -1,0 +1,777 @@
+From a8baeecdce4d75cb12b82d4e245d9baa87ed8da2 Mon Sep 17 00:00:00 2001
+From: Jing Hua <jinghua@marvell.com>
+Date: Wed, 12 Aug 2015 16:12:50 +0800
+Subject: [PATCH 0424/1240] fix: arlp: neta: add supoort of neta driver for
+ armadaLP
+
+	1. Added support NETA driver for ArmadaLP.
+	2. Added NETA node in armadaLP Device tree file.
+	3. NETA driver got base address and phy address from device tree.
+	4. There is no MMU_SECTION_SHIFT define in Aarch64, so add new
+	   neta define MVNETA_BUFFER_ALIGN_SIZE to replace it.
+	5. This driver has been tested in Palladium.
+	6. update mvebu-common.h
+		a. remove CONFIG_MV_ETH_NETA, replace it with MVNETA.
+		b. remove CONFIG_MV_INCLUDE_GIC_ETH, since no one uses it.
+		c. remove MVNETA, and put it into drivers/net/Kconfig.
+		d. put PHYLIB define into drviers/net/Kconfig, and selected
+		   by MVNETA by default.
+	NOTE: neta driver needs 1MB memory for Buffer, now u-boot only
+	malloc 1MB memory in total, so we need another patch to increase
+	u-boot memory size for neta driver to run successfully.
+
+Change-Id: I2b123d71c8845b8860deb46c20916cbb7fe72605
+Signed-off-by: Jing Hua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22773
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armadalp/soc-init.c         |  33 ++++
+ arch/arm/dts/armada-lp-db.dts                  |   6 +
+ arch/arm/dts/armada-lp-palladium.dts           |   6 +
+ arch/arm/dts/armada-lp.dtsi                    |  14 ++
+ arch/arm/include/asm/arch-armadalp/regs-base.h |   4 +
+ board/mvebu/common/eth_init.c                  |   4 +
+ configs/mvebu_armadalp_defconfig               |   4 +
+ configs/mvebu_armadalp_palladium_defconfig     |   4 +
+ doc/device-tree-bindings/README.mvebu          |   2 +
+ doc/device-tree-bindings/net/mvebu-gbe.txt     |  34 +++++
+ drivers/net/Kconfig                            |  44 ++++++
+ drivers/net/mvneta.c                           | 203 ++++++++++++++++++++++---
+ include/configs/armadalp.h                     |   1 -
+ include/configs/mvebu-common.h                 |   7 -
+ include/fdtdec.h                               |   1 +
+ include/netdev.h                               |   5 +
+ lib/fdtdec.c                                   |   1 +
+ 17 files changed, 346 insertions(+), 27 deletions(-)
+ create mode 100644 doc/device-tree-bindings/net/mvebu-gbe.txt
+
+diff --git a/arch/arm/cpu/armv8/armadalp/soc-init.c b/arch/arm/cpu/armv8/armadalp/soc-init.c
+index f155c71..de02246 100644
+--- a/arch/arm/cpu/armv8/armadalp/soc-init.c
++++ b/arch/arm/cpu/armv8/armadalp/soc-init.c
+@@ -22,6 +22,8 @@
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/soc.h>
+ #include <asm/arch-armadalp/armadalp.h>
++#include <netdev.h>
++
+ 
+ int soc_early_init_f(void)
+ {
+@@ -50,6 +52,37 @@ void soc_init(void)
+ 	return;
+ }
+ 
++#ifdef CONFIG_MVNETA
++/**
++ * cpu_eth_init()
++ *	invoke mvneta_initialize for each port, which is the initialization
++ *	entrance of mvneta driver.
++ *
++ * Input:
++ *	bis - db_info
++ *
++ * Return:
++ *	0 - cool
++ */
++int cpu_eth_init(bd_t *bis)
++{
++	/* init neta module */
++	if (1 != mvneta_initialize(bis)) {
++		error("failed to init mvneta\n");
++		return 1;
++	}
++	/* in ArmadaLP, there is a new register, internal Register Base Address, for GBE to
++	    access other internal Register. since GBE is on South bridge, not the same island
++	    as CPU, here we set internal reg base value 0xf100000 into it.
++	    NETA drvier initialization does not rely on this configuration, so do it after
++	    mvneta_initialize() */
++	writel(MVEBU_REGS_BASE, MVEBU_ARLP_GBE0_INTERNAL_REG_BASE);
++	writel(MVEBU_REGS_BASE, MVEBU_ARLP_GBE1_INTERNAL_REG_BASE);
++
++	return 0;
++}
++#endif /* CONFIG_MVNETA */
++
+ int dram_init(void)
+ {
+ #ifdef CONFIG_PALLADIUM
+diff --git a/arch/arm/dts/armada-lp-db.dts b/arch/arm/dts/armada-lp-db.dts
+index 2ed8bab..8342c18 100644
+--- a/arch/arm/dts/armada-lp-db.dts
++++ b/arch/arm/dts/armada-lp-db.dts
+@@ -15,6 +15,12 @@
+ 			spi0: spi@10600 {
+ 				status = "okay";
+ 			};
++			neta0: neta@30000 {
++				status = "okay";
++			};
++			neta1: neta@40000 {
++				status = "okay";
++			};
+ 		};
+ 	};
+ };
+diff --git a/arch/arm/dts/armada-lp-palladium.dts b/arch/arm/dts/armada-lp-palladium.dts
+index da56f26..cf54086 100644
+--- a/arch/arm/dts/armada-lp-palladium.dts
++++ b/arch/arm/dts/armada-lp-palladium.dts
+@@ -17,6 +17,12 @@
+ 			spi0: spi@10600 {
+ 				status = "okay";
+ 			};
++			neta0: neta@30000 {
++				status = "okay";
++			};
++			neta1: neta@40000 {
++				status = "okay";
++			};
+ 		};
+ 	};
+ };
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index 8441710..c8990b9 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -48,6 +48,20 @@
+ 					0xF0000000 0x20000 ATTR(0x1, 0x7, 0x0)
+ 					0x80000000 0x10000000 ATTR(0x1, 0x3, 0x0)>;
+ 			};
++			neta0: neta@30000 {
++				compatible = "marvell,armadalp-neta";
++				reg = <0x30000 0x20>;
++				phy_addr = <0x0>;
++				phy_mode = "rgmii";
++				status = "disabled";
++			};
++			neta1: neta@40000 {
++				compatible = "marvell,armadalp-neta";
++				reg = <0x40000 0x20>;
++				phy_addr = <0x1>;
++				phy_mode = "rgmii";
++				status = "disabled";
++			};
+ 		};
+ 	};
+ };
+diff --git a/arch/arm/include/asm/arch-armadalp/regs-base.h b/arch/arm/include/asm/arch-armadalp/regs-base.h
+index 785bd89..522e85b 100644
+--- a/arch/arm/include/asm/arch-armadalp/regs-base.h
++++ b/arch/arm/include/asm/arch-armadalp/regs-base.h
+@@ -37,4 +37,8 @@
+ #define MVEBU_GICR_BASE		(MVEBU_GIC_BASE + 0x40000)
+ #define MVEBU_GICC_BASE		(MVEBU_GIC_BASE + 0x80000)
+ 
++/* GBE register base address */
++#define MVEBU_ARLP_GBE0_INTERNAL_REG_BASE	MVEBU_REGS_BASE + 0xc364
++#define MVEBU_ARLP_GBE1_INTERNAL_REG_BASE	MVEBU_REGS_BASE + 0xc464
++
+ #endif	/* _REGS_BASE_H_ */
+diff --git a/board/mvebu/common/eth_init.c b/board/mvebu/common/eth_init.c
+index 896dea8..4510966 100644
+--- a/board/mvebu/common/eth_init.c
++++ b/board/mvebu/common/eth_init.c
+@@ -37,6 +37,10 @@ int board_eth_init(bd_t *bis)
+ 	enc28j60_initialize(0, 1, 1000, SPI_MODE_0);
+ #endif
+ 
++#ifdef CONFIG_MVNETA
++	cpu_eth_init(bis);
++#endif
++
+ #ifdef CONFIG_EEPRO100
+ 	eepro100_initialize(bis);
+ #endif
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index 1152dbe..eb26062 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -3,6 +3,8 @@ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_ARMADA_LP=y
+ CONFIG_MVEBU_SPI=y
++CONFIG_MVNETA=y
++CONFIG_MVEBU_NETA_BYPASS_DEC_WIN=y
+ +S:CONFIG_MVEBU_UART_ARLP=y
+ +S:CONFIG_DEVEL_BOARD=y
+ CONFIG_CUSTOMER_BOARD=y
+@@ -15,6 +17,8 @@ CONFIG_CMD_RUN=y
+ CONFIG_CMD_EDITENV=y
+ CONFIG_CMD_SAVEENV=y
+ CONFIG_CMD_MEMORY=y
++CONFIG_CMD_NET=y
++CONFIG_CMD_PING=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-lp-db"
+diff --git a/configs/mvebu_armadalp_palladium_defconfig b/configs/mvebu_armadalp_palladium_defconfig
+index aa0ce46..78c739c 100644
+--- a/configs/mvebu_armadalp_palladium_defconfig
++++ b/configs/mvebu_armadalp_palladium_defconfig
+@@ -3,6 +3,8 @@ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_ARMADA_LP=y
+ CONFIG_MVEBU_SPI=y
++CONFIG_MVNETA=y
++CONFIG_MVEBU_NETA_BYPASS_DEC_WIN=y
+ +S:CONFIG_MVEBU_UART_ARLP=y
+ +S:CONFIG_DEVEL_BOARD=y
+ CONFIG_MVEBU_MBUS=y
+@@ -14,6 +16,8 @@ CONFIG_CMD_RUN=y
+ CONFIG_CMD_EDITENV=y
+ CONFIG_CMD_SAVEENV=y
+ CONFIG_CMD_MEMORY=y
++CONFIG_CMD_NET=y
++CONFIG_CMD_PING=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-lp-palladium"
+diff --git a/doc/device-tree-bindings/README.mvebu b/doc/device-tree-bindings/README.mvebu
+index ece934e..59bcb9e 100644
+--- a/doc/device-tree-bindings/README.mvebu
++++ b/doc/device-tree-bindings/README.mvebu
+@@ -53,6 +53,8 @@ Group Ltd.
+ 				Specify the COMPHY interface, check doc/device-tree-bindings/comphy/mvebu_comphy.txt
+ 			2.1.6 /soc/internal-regs/serial/ node;
+ 				Specify the UART interface for armadaLP, check doc/device-tree-bindings/serial/mvebu-serial.txt
++			2.1.7 /soc/internal-regs/neta/ node;
++				Specify the GBE interface for armadaLP, check doc/device-tree-bindings/net/mvebu-gbe.txt
+ 
+ 3) /sar/ node:
+ 	Specify the sample at reset database, check
+diff --git a/doc/device-tree-bindings/net/mvebu-gbe.txt b/doc/device-tree-bindings/net/mvebu-gbe.txt
+new file mode 100644
+index 0000000..605218b
+--- /dev/null
++++ b/doc/device-tree-bindings/net/mvebu-gbe.txt
+@@ -0,0 +1,34 @@
++Marvell ArmadaLP GBE bindings
++====================
++
++This GBE driver supports Marvell ArmadaLP SoC, which implements the GBE core operations.
++The node name is neta0 to show that it's GBE-0, for GBE-1 should be neta1.
++
++The GBE node for ArmadaLP requires the following properties:
++	- compatible
++		should be "marvell,armadalp-neta".
++	- reg: the base address of the GBE unit.
++	- phy_addr: the phy address for the GBE interface.
++	- phy_mode: the phy mode for the GBE interface, which should be one of the following:
++		"mii",
++		"gmii",
++		"sgmii",
++		"sgmii_2500",
++		"qsgmii",
++		"tbi",
++		"rmii",
++		"rgmii",
++		"rgmii_id",
++		"rgmii_rxid",
++		"rgmii_txid",
++		"rtbi",
++		"xgmii",
++
++Example for GBE-0 node:
++	neta0: neta@30000 {
++		compatible = "marvell,armadalp-neta";
++		reg = <0x30000 0x20>;
++		phy_addr = <0x0>;
++		phy_mode = "rgmii";
++		status = "disabled";
++	};
+diff --git a/drivers/net/Kconfig b/drivers/net/Kconfig
+index f146802..1985f94 100644
+--- a/drivers/net/Kconfig
++++ b/drivers/net/Kconfig
+@@ -8,4 +8,48 @@ config ENC28J60
+ 	  for eth-spi (enc28j60) which
+ 	  enable receiving ethernet packets
+ 	  using spi interface.
++
++config PHYLIB
++	bool "common phy libary"
++	default n
++	help
++	  Choose this option to add support
++	  for common phy libary which
++	  includes some basic PHY util
++	  that are widely used.
++
++config MVNETA
++	bool "marvell neta driver"
++	default n
++	select PHYLIB
++	help
++	  Choose this option to add support
++	  for marvell neta eth driver which
++	  enable RX/TX ethernet packets
++	  using gbe interface on marvell SoC.
++
++config MVEBU_NETA_BYPASS_DEC_WIN
++	bool "bypass decode window of neta driver"
++	depends on MVNETA
++	default n
++	help
++	  Choose this option to bypass decode window configuration
++	  of neta eth driver. For some marvell Soc, there are two
++	  layers of decode window for GBE:
++	  1. GbE Address window that resides inside the GBE unit.
++	  2. Fabric address window which is located in the NIC400.
++	  In this case, to simplify address decode window,
++	  bypass the first layer of GBE decode window by
++	  setting the first window to 4GB.
++
++config MAX_NETA_PORT_NUM
++	int "max port number in neta driver"
++	depends on MVNETA
++	default 2
++	help
++	  Define the max number of
++	  ethernet ports that need
++	  to be supported in marvell
++	  neta driver.
++
+ endmenu
+diff --git a/drivers/net/mvneta.c b/drivers/net/mvneta.c
+index a2a69b4..cba07a6 100644
+--- a/drivers/net/mvneta.c
++++ b/drivers/net/mvneta.c
+@@ -23,10 +23,10 @@
+ #include <phy.h>
+ #include <miiphy.h>
+ #include <watchdog.h>
+-#include <asm/arch/cpu.h>
+-#include <asm/arch/soc.h>
+ #include <linux/compat.h>
+ #include <linux/mbus.h>
++#include <fdtdec.h>
++#include <asm/arch-mvebu/fdt.h>
+ 
+ #if !defined(CONFIG_PHYLIB)
+ # error Marvell mvneta requires PHYLIB
+@@ -89,7 +89,10 @@
+ #define MVNETA_WIN_BASE(w)                      (0x2200 + ((w) << 3))
+ #define MVNETA_WIN_SIZE(w)                      (0x2204 + ((w) << 3))
+ #define MVNETA_WIN_REMAP(w)                     (0x2280 + ((w) << 2))
++#define MVNETA_WIN_SIZE_MASK			(0xffff0000)
+ #define MVNETA_BASE_ADDR_ENABLE                 0x2290
++#define MVNETA_PORT_ACCESS_PROTECT              0x2294
++#define MVNETA_PORT_ACCESS_PROTECT_WIN0_RW      0x3
+ #define MVNETA_PORT_CONFIG                      0x2400
+ #define      MVNETA_UNI_PROMISC_MODE            BIT(0)
+ #define      MVNETA_DEF_RXQ(q)                  ((q) << 1)
+@@ -190,7 +193,7 @@
+ #define      MVNETA_GMAC_AN_SPEED_EN             BIT(7)
+ #define      MVNETA_GMAC_CONFIG_FULL_DUPLEX      BIT(12)
+ #define      MVNETA_GMAC_AN_DUPLEX_EN            BIT(13)
+-#define MVNETA_MIB_COUNTERS_BASE                 0x3080
++#define MVNETA_MIB_COUNTERS_BASE                 0x3000
+ #define      MVNETA_MIB_LATE_COLLISION           0x7c
+ #define MVNETA_DA_FILT_SPEC_MCAST                0x3400
+ #define MVNETA_DA_FILT_OTH_MCAST                 0x3500
+@@ -212,6 +215,15 @@
+ #define MVNETA_TXQ_TOKEN_SIZE_REG(q)             (0x3e40 + ((q) << 2))
+ #define      MVNETA_TXQ_TOKEN_SIZE_MAX           0x7fffffff
+ 
++/* NETA AUTO_NEG_CFG_REG mapping */
++#define MVNETA_AUTONEG_CFG_FORCE_LINK_UP	(3 << 0)
++#define MVNETA_AUTONEG_CFG_BYPASS_AUTO_NEG	(1 << 3)
++#define MVNETA_AUTONEG_CFG_FORCE_LINK_1G	(1 << 6)
++#define MVNETA_AUTONEG_CFG_FLOW_CTRL_EN		(1 << 8)
++#define MVNETA_AUTONEG_CFG_FLOW_CTRL_ADVERTIZE	(1 << 9)
++#define MVNETA_AUTONEG_CFG_FORCE_FULL_DPLX	(1 << 12)
++#define MVNETA_AUTONEG_CFG_RESERVED		(1 << 15)
++
+ /* Descriptor ring Macros */
+ #define MVNETA_QUEUE_NEXT_DESC(q, index)	\
+ 	(((index) < (q)->last_desc) ? ((index) + 1) : 0)
+@@ -383,7 +395,7 @@ static int rxq_def;
+ struct buffer_location {
+ 	struct mvneta_tx_desc *tx_descs;
+ 	struct mvneta_rx_desc *rx_descs;
+-	u32 rx_buffers;
++	dma_addr_t rx_buffers;
+ };
+ 
+ /*
+@@ -398,6 +410,9 @@ static struct buffer_location buffer_loc;
+  */
+ #define BD_SPACE	(1 << 20)
+ 
++/* buffer has to be aligned to 1M */
++#define MVNETA_BUFFER_ALIGN_SIZE	(1 << 20)
++
+ /* Utility/helper methods */
+ 
+ /* Write helper method */
+@@ -1020,7 +1035,7 @@ static int mvneta_txq_init(struct mvneta_port *pp,
+ 	txq->size = pp->tx_ring_size;
+ 
+ 	/* Allocate memory for TX descriptors */
+-	txq->descs_phys = (u32)txq->descs;
++	txq->descs_phys = (dma_addr_t)txq->descs;
+ 	if (txq->descs == NULL)
+ 		return -ENOMEM;
+ 
+@@ -1239,6 +1254,29 @@ static int mvneta_init(struct mvneta_port *pp)
+ }
+ 
+ /* platform glue : initialize decoding windows */
++
++#ifdef CONFIG_MVEBU_NETA_BYPASS_DEC_WIN
++/* not like A380, in ArmadaLP, there are two layers of decode window for GBE,
++ * first layer is: GbE Address window that resides inside the GBE unit,
++ * second layer is: Fabric address window which is located in the NIC400 (South Fabric).
++ * to simple the address decode configuration for ArmadaLP,
++ * we bypass the first layer of GBE decode window by setting the first window to 4GB.
++ */
++static void mvneta_bypass_mbus_windows(struct mvneta_port *pp)
++{
++	u32 tmp_value;
++	/* set window size to 4GB, to bypass GBE address decode, leave the work to MBUS decode window */
++	mvreg_write(pp, MVNETA_WIN_SIZE(0), MVNETA_WIN_SIZE_MASK);
++	/* enable GBE address decode window 0 by set bit 0 to 0 */
++	tmp_value = mvreg_read(pp, MVNETA_BASE_ADDR_ENABLE);
++	tmp_value = tmp_value & ~(1);
++	mvreg_write(pp, MVNETA_BASE_ADDR_ENABLE, tmp_value);
++	/* set GBE address decode window 0 to full Access (read or write) */
++	tmp_value = mvreg_read(pp, MVNETA_PORT_ACCESS_PROTECT);
++	tmp_value = tmp_value | MVNETA_PORT_ACCESS_PROTECT_WIN0_RW;
++	mvreg_write(pp, MVNETA_PORT_ACCESS_PROTECT, tmp_value);
++}
++#else
+ static void mvneta_conf_mbus_windows(struct mvneta_port *pp)
+ {
+ 	const struct mbus_dram_target_info *dram;
+@@ -1272,7 +1310,7 @@ static void mvneta_conf_mbus_windows(struct mvneta_port *pp)
+ 
+ 	mvreg_write(pp, MVNETA_BASE_ADDR_ENABLE, win_enable);
+ }
+-
++#endif /* CONFIG_MVEBU_NETA_BYPASS_DEC_WIN */
+ /* Power up the port */
+ static int mvneta_port_power_up(struct mvneta_port *pp, int phy_mode)
+ {
+@@ -1329,7 +1367,11 @@ static int mvneta_probe(struct eth_device *dev)
+ 		return err;
+ 	}
+ 
++#ifdef CONFIG_MVEBU_NETA_BYPASS_DEC_WIN
++	mvneta_bypass_mbus_windows(pp);
++#else
+ 	mvneta_conf_mbus_windows(pp);
++#endif /* CONFIG_MVEBU_NETA_BYPASS_DEC_WIN */
+ 
+ 	mvneta_mac_addr_set(pp, dev->enetaddr, rxq_def);
+ 
+@@ -1465,13 +1507,25 @@ static int smi_reg_write(const char *devname, u8 phy_adr, u8 reg_ofs, u16 data)
+ static int mvneta_init_u_boot(struct eth_device *dev, bd_t *bis)
+ {
+ 	struct mvneta_port *pp = dev->priv;
++#ifdef CONFIG_PALLADIUM
++	unsigned long auto_neg_value;
++#else
+ 	struct phy_device *phydev;
++#endif /* CONFIG_PALLADIUM */
+ 
+ 	mvneta_port_power_up(pp, pp->phy_interface);
+ 
+ 	if (!pp->init || pp->link == 0) {
+ 		/* Set phy address of the port */
+ 		mvreg_write(pp, MVNETA_PHY_ADDR, pp->phyaddr);
++#ifdef CONFIG_PALLADIUM
++		/* on Palladium, there is no PHY, need to hardcode Link configuration */
++		pp->init = 1;
++		pp->link = 1;
++		mvneta_probe(dev);
++		mvneta_port_up(pp);
++		mvneta_port_enable(pp);
++#else
+ 		phydev = phy_connect(pp->bus, pp->phyaddr, dev,
+ 				     pp->phy_interface);
+ 
+@@ -1482,15 +1536,22 @@ static int mvneta_init_u_boot(struct eth_device *dev, bd_t *bis)
+ 			printf("%s: No link.\n", phydev->dev->name);
+ 			return -1;
+ 		}
+-
+ 		/* Full init on first call */
+ 		mvneta_probe(dev);
+-		pp->init = 1;
++#endif
+ 	} else {
+ 		/* Upon all following calls, this is enough */
+ 		mvneta_port_up(pp);
+ 		mvneta_port_enable(pp);
+ 	}
++#ifdef CONFIG_PALLADIUM
++	/* on Palladium, there is no PHY, need to hardcode speed to 1G */
++	auto_neg_value = MVNETA_AUTONEG_CFG_FORCE_LINK_UP | MVNETA_AUTONEG_CFG_BYPASS_AUTO_NEG
++			| MVNETA_AUTONEG_CFG_FORCE_LINK_1G | MVNETA_AUTONEG_CFG_FLOW_CTRL_EN
++			| MVNETA_AUTONEG_CFG_FLOW_CTRL_ADVERTIZE | MVNETA_AUTONEG_CFG_FORCE_FULL_DPLX
++			| MVNETA_AUTONEG_CFG_RESERVED;
++	mvreg_write(pp, MVNETA_GMAC_AUTONEG_CONFIG, auto_neg_value);
++#endif
+ 
+ 	return 0;
+ }
+@@ -1505,10 +1566,9 @@ static int mvneta_send(struct eth_device *dev, void *ptr, int len)
+ 
+ 	/* Get a descriptor for the first part of the packet */
+ 	tx_desc = mvneta_txq_next_desc_get(txq);
+-
+-	tx_desc->buf_phys_addr = (u32)ptr;
++	tx_desc->buf_phys_addr = (phys_addr_t)ptr;
+ 	tx_desc->data_size = len;
+-	flush_dcache_range((u32)ptr, (u32)ptr + len);
++	flush_dcache_range((unsigned long)ptr, (unsigned long)ptr + len);
+ 
+ 	/* First and Last descriptor */
+ 	tx_desc->command = MVNETA_TX_L4_CSUM_NOT | MVNETA_TXD_FLZ_DESC;
+@@ -1526,7 +1586,6 @@ static int mvneta_send(struct eth_device *dev, void *ptr, int len)
+ 
+ 	/* txDone has increased - hw sent packet */
+ 	mvneta_txq_sent_desc_dec(pp, txq, sent_desc);
+-	return 0;
+ 
+ 	return 0;
+ }
+@@ -1567,7 +1626,7 @@ static int mvneta_recv(struct eth_device *dev)
+ 		rx_bytes = rx_desc->data_size - 6;
+ 
+ 		/* give packet to stack - skip on first 2 bytes */
+-		data = (u8 *)rx_desc->buf_cookie + 2;
++		data = (u8 *)((uintptr_t)rx_desc->buf_cookie) + 2;
+ 		/*
+ 		 * No cache invalidation needed here, since the rx_buffer's are
+ 		 * located in a uncached memory region
+@@ -1590,7 +1649,7 @@ static void mvneta_halt(struct eth_device *dev)
+ 	mvneta_port_disable(pp);
+ }
+ 
+-int mvneta_initialize(bd_t *bis, int base_addr, int devnum, int phy_addr)
++int mvneta_initialize_dev(bd_t *bis, unsigned long base_addr, int devnum, int phy_addr, phy_interface_t phy_type)
+ {
+ 	struct eth_device *dev;
+ 	struct mvneta_port *pp;
+@@ -1613,14 +1672,16 @@ int mvneta_initialize(bd_t *bis, int base_addr, int devnum, int phy_addr)
+ 	 */
+ 	if (!buffer_loc.tx_descs) {
+ 		/* Align buffer area for descs and rx_buffers to 1MiB */
+-		bd_space = memalign(1 << MMU_SECTION_SHIFT, BD_SPACE);
++		bd_space = memalign(MVNETA_BUFFER_ALIGN_SIZE, BD_SPACE);
++#ifndef CONFIG_SYS_DCACHE_OFF
+ 		mmu_set_region_dcache_behaviour((u32)bd_space, BD_SPACE,
+ 						DCACHE_OFF);
++#endif
+ 		buffer_loc.tx_descs = (struct mvneta_tx_desc *)bd_space;
+ 		buffer_loc.rx_descs = (struct mvneta_rx_desc *)
+-			((u32)bd_space +
++			((unsigned long)bd_space +
+ 			 MVNETA_MAX_TXD * sizeof(struct mvneta_tx_desc));
+-		buffer_loc.rx_buffers = (u32)
++		buffer_loc.rx_buffers = (unsigned long)
+ 			(bd_space +
+ 			 MVNETA_MAX_TXD * sizeof(struct mvneta_tx_desc) +
+ 			 MVNETA_MAX_RXD * sizeof(struct mvneta_rx_desc));
+@@ -1635,13 +1696,18 @@ int mvneta_initialize(bd_t *bis, int base_addr, int devnum, int phy_addr)
+ 	dev->send = mvneta_send;
+ 	dev->recv = mvneta_recv;
+ 	dev->write_hwaddr = NULL;
+-
++#ifdef CONFIG_PALLADIUM
++	/* on Palladium, there is no mac address in env, so put a value to skip the validation
++	 * otherwise u-boot would fail at common net driver validation.
++	 */
++	dev->enetaddr[1] = 51;
++#endif
+ 	/*
+ 	 * The PHY interface type is configured via the
+ 	 * board specific CONFIG_SYS_NETA_INTERFACE_TYPE
+ 	 * define.
+ 	 */
+-	pp->phy_interface = CONFIG_SYS_NETA_INTERFACE_TYPE;
++	pp->phy_interface = phy_type;
+ 
+ 	eth_register(dev);
+ 
+@@ -1651,3 +1717,102 @@ int mvneta_initialize(bd_t *bis, int base_addr, int devnum, int phy_addr)
+ 
+ 	return 1;
+ }
++
++#ifdef CONFIG_OF_CONTROL
++
++DECLARE_GLOBAL_DATA_PTR;
++
++char *phy_mode_str[] = {
++	"mii",
++	"gmii",
++	"sgmii",
++	"sgmii_2500",
++	"qsgmii",
++	"tbi",
++	"rmii",
++	"rgmii",
++	"rgmii_id",
++	"rgmii_rxid",
++	"rgmii_txid",
++	"rtbi",
++	"xgmii",
++	"none"	/* Must be last */
++};
++
++/* get all configuration from FDT file */
++int mvneta_initialize(bd_t *bis)
++{
++	int node_list[CONFIG_MAX_NETA_PORT_NUM], node;
++	int i, count, phy_addr, phy_mode;
++	unsigned long neta_reg_base;
++	const char **phy_mode_name = 0;
++	int err, loop;
++
++	/* in dts file, go through all the 'neta' nodes.
++	 */
++	count = fdtdec_find_aliases_for_id(gd->fdt_blob, "neta",
++			COMPAT_MVEBU_NETA, node_list, 2);
++	if (count == 0) {
++		error("could not find neta node in FDT, initialization skipped!\n");
++		return 0;
++	}
++	for (i = 0; i < count ; i++) {
++		node = node_list[i];
++
++		if (node <= 0)
++			continue;
++
++		/* in dts file, there should be several "neta" nodes that are enabled, and in
++		 * dtsi file there are the 'reg' attribute for register base of GBE unit, and 'phy_addr'
++		 * attribute for phy address for each 'neta' node.
++		 */
++		/* fetch 'reg' propertiy from 'neta' node */
++		neta_reg_base = (unsigned long)fdt_get_regs_offs(gd->fdt_blob, node, "reg");
++		if (neta_reg_base == FDT_ADDR_T_NONE) {
++			error("could not find reg in neta node, initialization skipped!\n");
++			return 0;
++		}
++
++		/* fetch 'phy address' propertiy from 'neta' node */
++		phy_addr = (unsigned int)fdtdec_get_addr(gd->fdt_blob, node, "phy_addr");
++		if (phy_addr == FDT_ADDR_T_NONE) {
++			error("could not find phy_addr in neta node, initialization skipped!\n");
++			return 0;
++		}
++		/* fetch 'phy mode' propertiy from 'neta' node */
++		err = fdt_get_string(gd->fdt_blob, node, "phy_mode", phy_mode_name);
++		if (err < 0) {
++			error("failed to get phy_mode_name, initialization skipped!\n");
++			return 0;
++		}
++
++		/* translate phy_mode from phy_mode_name */
++		for (loop = 0; loop < (sizeof(phy_mode_str) / sizeof(char *)); loop++)
++			if (!strcmp(*phy_mode_name, phy_mode_str[loop])) {
++				phy_mode = loop;
++				break;
++			}
++
++		if (loop >= (sizeof(phy_mode_str) / sizeof(char *))) {
++			error("could not find phy_mode by str: %s\n", *phy_mode_name);
++			return 0;
++		}
++
++		/* call 'real' mvneta init routine */
++		if (1 != mvneta_initialize_dev(bis, neta_reg_base, i, phy_addr, phy_mode)) {
++			error("mvneta_initialize_dev failed, initialization skipped!\n");
++			return 0;
++		}
++		debug("%s, %x, neta_reg_base: %lx, i: %x, phy_addr: %x, phy_mode: %x\n",
++		      __func__, __LINE__, neta_reg_base, i, phy_addr, phy_mode);
++	}
++
++	return 1;
++}
++#else
++int mvneta_initialize(bd_t *bis, int base_addr, int devnum, int phy_addr)
++{
++	return mvneta_initialize_dev(bis, base_addr, devnum, phy_addr, CONFIG_SYS_NETA_INTERFACE_TYPE);
++}
++#endif /* CONFIG_OF_CONTROL */
++
+diff --git a/include/configs/armadalp.h b/include/configs/armadalp.h
+index c43eed6..fcc7a04 100644
+--- a/include/configs/armadalp.h
++++ b/include/configs/armadalp.h
+@@ -69,7 +69,6 @@ extern char __end_of_spl[];
+ #endif /* CONFIG_SPL_BUILD */
+ #define CONFIG_SPL_LDSCRIPT		"arch/arm/cpu/mvebu-common/u-boot-armv8-spl.lds"
+ 
+-
+ /* SPI flash for Palladium */
+ #ifdef CONFIG_MVEBU_SPI
+ 
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index c1a953f..48b6e36 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -291,13 +291,6 @@
+ 
+ #endif /* CONFIG_MVEBU_PCI */
+ 
+-/* Neta */
+-#ifdef CONFIG_MV_ETH_NETA
+-	#define MV_INCLUDE_GIG_ETH
+-	#define CONFIG_MV_INCLUDE_GIG_ETH
+-	#define MV_ETH_NETA
+-#endif /* CONFIG_MV_ETH_NETA */
+-
+ /* Add network parameters when network command is enabled */
+ #ifdef CONFIG_CMD_NET
+ 	/* Environment */
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 9c30c24..d225bbe 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -124,6 +124,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_SPI,
+ 	COMPAT_MVEBU_ARLP_SPI,
+ 	COMPAT_MVEBU_UART,
++	COMPAT_MVEBU_NETA,
+ 	COMPAT_MVEBU_TCLOCK,
+ 	COMPAT_MVEBU_I2C,
+ 	COMPAT_MVEBU_SAR,
+diff --git a/include/netdev.h b/include/netdev.h
+index 34651ab..9b1704e 100644
+--- a/include/netdev.h
++++ b/include/netdev.h
+@@ -65,7 +65,12 @@ int mpc512x_fec_initialize(bd_t *bis);
+ int mpc5xxx_fec_initialize(bd_t *bis);
+ int mpc82xx_scc_enet_initialize(bd_t *bis);
+ int mvgbe_initialize(bd_t *bis);
++
++#ifdef CONFIG_OF_CONTROL
++int mvneta_initialize(bd_t *bis);
++#else
+ int mvneta_initialize(bd_t *bis, int base_addr, int devnum, int phy_addr);
++#endif
+ int natsemi_initialize(bd_t *bis);
+ int ne2k_register(void);
+ int npe_initialize(bd_t *bis);
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 64c066b..991b71a 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -86,6 +86,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_SPI, "marvell,orion-spi"),
+ 	COMPAT(MVEBU_ARLP_SPI, "marvell,armadalp-spi"),
+ 	COMPAT(MVEBU_UART, "marvell,armadalp-uart"),
++	COMPAT(MVEBU_NETA, "marvell,armadalp-neta"),
+ 	COMPAT(MVEBU_TCLOCK, "marvell,tclk"),
+ 	COMPAT(MVEBU_I2C, "marvell,mvebu-i2c"),
+ 	COMPAT(MVEBU_SAR, "marvell,sample-at-reset"),
+-- 
+1.9.1
+

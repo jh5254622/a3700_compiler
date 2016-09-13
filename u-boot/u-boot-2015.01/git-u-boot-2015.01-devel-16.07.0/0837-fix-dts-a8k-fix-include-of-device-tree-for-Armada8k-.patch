@@ -1,0 +1,71 @@
+From a8383abfc96e2f850bce2e8c39f148abe8f4ad90 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 8 Feb 2016 17:58:24 +0200
+Subject: [PATCH 0837/1240] fix: dts: a8k: fix include of device tree for
+ Armada8k devices
+
+- Armada70x0 include by mistake AP-806 development board.
+- Add AP-806 board parameter to 7040 board information
+
+Change-Id: Ie5722ef5d8a96fa9ee5296afbe148ec2153c6730
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27360
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/armada-70x0-dev-info.dtsi | 23 ++++++++++++++++++++++-
+ arch/arm/dts/armada-70x0.dtsi          |  2 +-
+ 2 files changed, 23 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/dts/armada-70x0-dev-info.dtsi b/arch/arm/dts/armada-70x0-dev-info.dtsi
+index 43cd698..4e971ee 100644
+--- a/arch/arm/dts/armada-70x0-dev-info.dtsi
++++ b/arch/arm/dts/armada-70x0-dev-info.dtsi
+@@ -16,9 +16,30 @@
+  * ***************************************************************************
+  */
+ 
++#include <dt-bindings/ddr/ddr_data.h>
++
+ / {
+-	compatible = "marvell,cp110";
+ 	/* This should go only into devel boards */
++	compatible = "marvell,cp110";
++
++	ap-806 {
++		internal-regs {
++
++			ddr-mac {
++				cs_count = <1>;
++				bus_width = <DDR_BUS_WIDTH_64>;
++				cs0 {
++					size = <0x00000002 0x00000000>;
++				};
++			};
++			pinctl@6F008C {
++					  /* 0 1 2 3 4 5 6 7 8 9 */
++				pin-func = < 1 1 1 1 1 1 1 1 1 0
++					     0 0 0 1 0 0>;
++			};
++		};
++	};
++
+ /*
+ 	sar {
+ 		compatible = "marvell,sample-at-reset";
+diff --git a/arch/arm/dts/armada-70x0.dtsi b/arch/arm/dts/armada-70x0.dtsi
+index a10389e..87cfab5 100644
+--- a/arch/arm/dts/armada-70x0.dtsi
++++ b/arch/arm/dts/armada-70x0.dtsi
+@@ -16,7 +16,7 @@
+  * ***************************************************************************
+  */
+ 
+-#include "apn-806-db.dtsi"
++#include "apn-806-z1.dtsi"
+ #include "cp110-master.dtsi"
+ 
+ / {
+-- 
+1.9.1
+

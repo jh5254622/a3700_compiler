@@ -1,0 +1,77 @@
+From f43196abd4ba82a7c0d3cb68b0d518eb3117cc02 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Thu, 25 Feb 2016 16:02:05 +0200
+Subject: [PATCH 033/239] fix: a3700: gicv3: fix the GIC3 calls on A3700
+ platform
+
+- Add definition CONFIG_GICV3 to platform make file
+- Call GICV3 driver functions for setting up secondary
+  CPU after power on.
+- Fix the platform definitions for G0 and G1S interrupt
+  groups on A3700 platform.
+- tested functionality with Linux kernel 4.1.
+
+Change-Id: I2300ecd17aba41f920e7d77975defd53e19b27b4
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27893
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ plat/marvell/a3700/a3700_z/aarch64/plat_psci.S    | 6 +++++-
+ plat/marvell/a3700/a3700_z/include/platform_def.h | 4 ++--
+ plat/marvell/a3700/a3700_z/platform.mk            | 3 +++
+ 3 files changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/plat/marvell/a3700/a3700_z/aarch64/plat_psci.S b/plat/marvell/a3700/a3700_z/aarch64/plat_psci.S
+index ab8123e..aa862af 100644
+--- a/plat/marvell/a3700/a3700_z/aarch64/plat_psci.S
++++ b/plat/marvell/a3700/a3700_z/aarch64/plat_psci.S
+@@ -106,11 +106,15 @@ _armada3700_cpu_entry:
+ 	mov	x0, #3 << 20
+ 	msr	cpacr_el1, x0			/* Enable FP/SIMD */
+ 0:
+-	/* Add correct GICV3 initialization code here */
++
++	bl	plat_marvell_gic_pcpu_init
++
++	bl	plat_marvell_gic_cpuif_enable
+ 
+ 	bl	psci_build_stack
+ 
+ 	bl	armv8_switch_to_el2
++
+ #ifdef CONFIG_ARMV8_SWITCH_TO_EL1
+ 	bl	armv8_switch_to_el1
+ #endif
+diff --git a/plat/marvell/a3700/a3700_z/include/platform_def.h b/plat/marvell/a3700/a3700_z/include/platform_def.h
+index f6aff2e..ca2214f 100644
+--- a/plat/marvell/a3700/a3700_z/include/platform_def.h
++++ b/plat/marvell/a3700/a3700_z/include/platform_def.h
+@@ -125,8 +125,8 @@ Trusted SRAM section 0x4000000..0x4200000:
+ #define PLAT_MARVELL_GICR_BASE			(MVEBU_REGS_BASE + MVEBU_GICR_BASE)
+ #define PLAT_MARVELL_GICC_BASE			(MVEBU_REGS_BASE + MVEBU_GICC_BASE)
+ 
+-#define PLAT_MARVELL_G0_IRQS			0
+-#define PLAT_MARVELL_G1S_IRQS			0
++#define PLAT_MARVELL_G0_IRQS			MARVELL_G1S_IRQS
++#define PLAT_MARVELL_G1S_IRQS			MARVELL_G0_IRQS
+ 
+ #define PLAT_MARVELL_SHARED_RAM_CACHED		1
+ 
+diff --git a/plat/marvell/a3700/a3700_z/platform.mk b/plat/marvell/a3700/a3700_z/platform.mk
+index b3b1fc6..6ff2874 100644
+--- a/plat/marvell/a3700/a3700_z/platform.mk
++++ b/plat/marvell/a3700/a3700_z/platform.mk
+@@ -40,6 +40,9 @@ CALL_DOIMAGE		:= y
+ # the PSCI code is alligned to 64KB
+ $(eval $(call add_define,PLAT_MARVELL_7000_Z0))
+ 
++# GICV3
++$(eval $(call add_define,CONFIG_GICV3))
++
+ MARVELL_GIC_SOURCES	:=	drivers/arm/gic/common/gic_common.c	\
+ 				drivers/arm/gic/v3/gicv3_main.c		\
+ 				drivers/arm/gic/v3/gicv3_helpers.c	\
+-- 
+1.9.1
+

@@ -1,0 +1,28 @@
+From 127e950df565b21ac8059dac8bd047e9614b2f1b Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Sun, 28 Feb 2016 21:03:04 +0200
+Subject: [PATCH 034/239] misc: update gitignore file to ignore only doimage
+ objects
+
+Change-Id: I196524d701ec2b9d5be0203ac8a7551326bcbfd9
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27922
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ .gitignore | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/.gitignore b/.gitignore
+index c748b95..0254df4 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -17,4 +17,4 @@ tools/fip_create/fip_create
+ tools/cert_create/src/*.o
+ tools/cert_create/src/**/*.o
+ tools/cert_create/cert_create
+-tools/doimage
++tools/doimage/doimage
+-- 
+1.9.1
+

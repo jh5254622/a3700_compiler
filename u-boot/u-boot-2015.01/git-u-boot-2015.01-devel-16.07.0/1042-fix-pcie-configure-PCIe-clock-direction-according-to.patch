@@ -1,0 +1,72 @@
+From b35921e3c91f481d0baa4ec87437b769530972fa Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 14 Apr 2016 11:08:12 +0300
+Subject: [PATCH 1042/1240] fix: pcie: configure PCIe clock direction according
+ to sample-at-reset
+
+- Read PCIe clock direction from sample-at-reset
+- Configure the PCIe clock by the sample-at-reset configuration
+
+Change-Id: I52dca268386e8a64c58debc4749043e66ff362da
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29030
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/misc/mvebu_sar/cp110_sar.c |  2 +-
+ drivers/phy/comphy_cp110.c         | 16 ++++++++++++++--
+ 2 files changed, 15 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/misc/mvebu_sar/cp110_sar.c b/drivers/misc/mvebu_sar/cp110_sar.c
+index 311653f..a7cf81f 100644
+--- a/drivers/misc/mvebu_sar/cp110_sar.c
++++ b/drivers/misc/mvebu_sar/cp110_sar.c
+@@ -31,7 +31,7 @@
+ #define SAR1_RST_PCIE0_CLOCK_CONFIG_CP0_OFFSET	(2)
+ #define SAR1_RST_PCIE0_CLOCK_CONFIG_CP0_MASK	(0x1 << SAR1_RST_PCIE0_CLOCK_CONFIG_CP0_OFFSET)
+ #define SAR1_RST_PCIE1_CLOCK_CONFIG_CP0_OFFSET	(3)
+-#define SAR1_RST_PCIE1_CLOCK_CONFIG_CP0_MASK	(0x1 << SAR1_RST_PCIE0_CLOCK_CONFIG_CP0_OFFSET)
++#define SAR1_RST_PCIE1_CLOCK_CONFIG_CP0_MASK	(0x1 << SAR1_RST_PCIE1_CLOCK_CONFIG_CP0_OFFSET)
+ 
+ #define SAR1_RST_BOOT_MODE_AP_CP0_OFFSET	(4)
+ #define SAR1_RST_BOOT_MODE_AP_CP0_MASK		(0x3f << SAR1_RST_BOOT_MODE_AP_CP0_OFFSET)
+diff --git a/drivers/phy/comphy_cp110.c b/drivers/phy/comphy_cp110.c
+index 15875ef..51bb9e1 100644
+--- a/drivers/phy/comphy_cp110.c
++++ b/drivers/phy/comphy_cp110.c
+@@ -19,6 +19,7 @@
+ /* #define DEBUG */
+ #include <common.h>
+ #include <asm/io.h>
++#include <mvebu_chip_sar.h>
+ #include <asm/arch-mvebu/sata.h>
+ #include <asm/arch-mvebu/comphy.h>
+ #include <asm/arch-mvebu/comphy_hpipe.h>
+@@ -78,11 +79,22 @@ static int comphy_pcie_power_up(u32 lane, u32 pcie_width, void __iomem *hpipe_ba
+ 	void __iomem *hpipe_addr = HPIPE_ADDR(hpipe_base, lane);
+ 	void __iomem *comphy_addr = COMPHY_ADDR(comphy_base, lane);
+ 	void __iomem *addr;
+-	u32 pcie_clk = 0; /* input */
++	struct sar_val sar;
++	u32 pcie_clk = 0; /* set input by default */
+ 
+ 	debug_enter();
+ 
+-	debug("\nPCIe Width %d\n", pcie_width);
++	/* SerDes Lane 4/5 got the PCIe ref-clock #1, and SerDes Lane 0 got
++	** PCIe ref-clock #0 */
++	if (lane == 4 || lane == 5)
++		mvebu_sar_value_get(SAR_CP_PCIE1_CLK, &sar);
++	else
++		mvebu_sar_value_get(SAR_CP_PCIE0_CLK, &sar);
++
++	pcie_clk = sar.clk_direction;
++	debug("PCIe clock = %x\n", pcie_clk);
++
++	debug("PCIe Width = %d\n", pcie_width);
+ 	/* enable PCIe by4 and by2 */
+ 	if (lane == 0) {
+ 		if (pcie_width == 4) {
+-- 
+1.9.1
+

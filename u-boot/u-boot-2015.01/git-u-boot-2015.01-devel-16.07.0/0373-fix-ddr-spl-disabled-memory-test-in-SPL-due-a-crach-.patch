@@ -1,0 +1,33 @@
+From 4fe44de0954fa2a68f334ee8aa7b78b9a370a60d Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 27 Aug 2015 03:04:34 +0300
+Subject: [PATCH 0373/1240] fix: ddr: spl: disabled memory test in SPL due a
+ crach in AP806
+
+- Disabled memory test in SPL due a crash in AP806
+- Need to debug and enable it again
+
+Change-Id: I83771f50fc8c968cfe6bb4a2f753a74f23ee55bf
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23244
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/tools/Kconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/tools/Kconfig b/arch/arm/cpu/mvebu-common/tools/Kconfig
+index 7687103..5bcea73 100644
+--- a/arch/arm/cpu/mvebu-common/tools/Kconfig
++++ b/arch/arm/cpu/mvebu-common/tools/Kconfig
+@@ -5,7 +5,7 @@ depends on MVEBU_TOOLS_SUPPORT
+ config MVEBU_SPL_MEMORY_TEST
+ 	bool "Memory test"
+ 	depends on SPL
+-	default y
++	default n
+ 	help
+ 	To add this option you need to edit the
+ 	defconfig and add the following line:
+-- 
+1.9.1
+

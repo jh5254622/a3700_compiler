@@ -1,0 +1,59 @@
+From af9ffa81f41ff6dbe176950e0c58fa8b9d33d651 Mon Sep 17 00:00:00 2001
+From: Ahmad Abbas <ahmada@marvell.com>
+Date: Mon, 15 Feb 2016 19:57:21 +0200
+Subject: [PATCH 44/66] Bump Buildroot 2015.11 to release 16.02.00 ED
+
+Signed-off-by: Ahmad Abbas <ahmada@marvell.com>
+
+Change-Id: I7a55ca53bb1ffb2ee4d19fd5d4f27de018413fb2
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27528
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ configs/mvebu_armv8_be_defconfig      | 2 +-
+ configs/mvebu_armv8_le_defconfig      | 2 +-
+ configs/mvebu_armv8_tiny_le_defconfig | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/configs/mvebu_armv8_be_defconfig b/configs/mvebu_armv8_be_defconfig
+index 68b16f1..98172ac 100644
+--- a/configs/mvebu_armv8_be_defconfig
++++ b/configs/mvebu_armv8_be_defconfig
+@@ -6,7 +6,7 @@ BR2_TOOLCHAIN_EXTERNAL_GCC_5=y
+ BR2_TOOLCHAIN_EXTERNAL_HEADERS_3_18=y
+ BR2_TOOLCHAIN_EXTERNAL_CUSTOM_GLIBC=y
+ BR2_TOOLCHAIN_EXTERNAL_CXX=y
+-BR2_MVEBU_RELEASE_NAME="2016_T1.0.eng_drop_v2"
++BR2_MVEBU_RELEASE_NAME="16.02.0 ED"
+ BR2_TARGET_GENERIC_GETTY_PORT="ttyS0"
+ BR2_ROOTFS_OVERLAY="user_files/"
+ BR2_PACKAGE_BUSYBOX_SHOW_OTHERS=y
+diff --git a/configs/mvebu_armv8_le_defconfig b/configs/mvebu_armv8_le_defconfig
+index 39eec97..128fccf 100644
+--- a/configs/mvebu_armv8_le_defconfig
++++ b/configs/mvebu_armv8_le_defconfig
+@@ -8,7 +8,7 @@ BR2_TOOLCHAIN_EXTERNAL_GCC_5=y
+ BR2_TOOLCHAIN_EXTERNAL_HEADERS_3_18=y
+ BR2_TOOLCHAIN_EXTERNAL_CUSTOM_GLIBC=y
+ BR2_TOOLCHAIN_EXTERNAL_CXX=y
+-BR2_MVEBU_RELEASE_NAME="2016_T1.0.eng_drop_v2"
++BR2_MVEBU_RELEASE_NAME="16.02.0 ED"
+ BR2_TARGET_GENERIC_GETTY_PORT="ttyS0"
+ BR2_ROOTFS_OVERLAY="user_files/"
+ BR2_LINUX_KERNEL=y
+diff --git a/configs/mvebu_armv8_tiny_le_defconfig b/configs/mvebu_armv8_tiny_le_defconfig
+index 63220da..d7cd142 100644
+--- a/configs/mvebu_armv8_tiny_le_defconfig
++++ b/configs/mvebu_armv8_tiny_le_defconfig
+@@ -6,7 +6,7 @@ BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="aarch64-marvell-linux-gnu"
+ BR2_TOOLCHAIN_EXTERNAL_GCC_5=y
+ BR2_TOOLCHAIN_EXTERNAL_HEADERS_3_18=y
+ BR2_TOOLCHAIN_EXTERNAL_CUSTOM_GLIBC=y
+-BR2_MVEBU_RELEASE_NAME="2016_T1.0.eng_drop_v2"
++BR2_MVEBU_RELEASE_NAME="16.02.0 ED"
+ BR2_TARGET_GENERIC_GETTY_PORT="ttyS0"
+ BR2_ROOTFS_OVERLAY="user_files"
+ BR2_ROOTFS_POST_IMAGE_SCRIPT="board/marvell/scripts/filesystem-post-script.sh"
+-- 
+1.9.1
+

@@ -1,0 +1,29 @@
+From 7845b46fd492479f5fcc59b660862a22d333c8c6 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 13 Oct 2015 11:24:58 +0300
+Subject: [PATCH 0429/1240] fix: ap-806: set Palladium config by default no
+
+Change-Id: Iefea2104e6a60560ee5a25454a036d6990aedd62
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23963
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/Kconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/Kconfig b/arch/arm/cpu/armv8/armada8k/Kconfig
+index 5fcb0a6..3314b92 100644
+--- a/arch/arm/cpu/armv8/armada8k/Kconfig
++++ b/arch/arm/cpu/armv8/armada8k/Kconfig
+@@ -26,6 +26,6 @@ config ARMV8_PSCI
+ 
+ config PALLADIUM
+ 	bool "Support palladium emulation"
+-	default y
++	default n
+ endif
+ 
+-- 
+1.9.1
+

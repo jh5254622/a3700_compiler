@@ -1,0 +1,39 @@
+From 441f8da8f9f306d628ae3b1ea84882b75f0baf34 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 2 Feb 2016 21:23:07 +0200
+Subject: [PATCH 0774/1240] cp110: Temporarily remove sar entry in A7040 DB dts
+
+	The sar feature is still not enabled yet.
+
+Change-Id: I565d08d9f4bdfefac7cc752662cd42c9ae5ed231
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27157
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/armada-70x0-dev-info.dtsi | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/arm/dts/armada-70x0-dev-info.dtsi b/arch/arm/dts/armada-70x0-dev-info.dtsi
+index d2075af..43cd698 100644
+--- a/arch/arm/dts/armada-70x0-dev-info.dtsi
++++ b/arch/arm/dts/armada-70x0-dev-info.dtsi
+@@ -19,6 +19,7 @@
+ / {
+ 	compatible = "marvell,cp110";
+ 	/* This should go only into devel boards */
++/*
+ 	sar {
+ 		compatible = "marvell,sample-at-reset";
+ 		#address-cells = <1>;
+@@ -86,6 +87,7 @@
+ 			status = "okay";
+ 		};
+ 	};
++*/
+ 	mpp-buses {
+ 		cp-mpp-bus0 {
+ 			compatible = "marvell,mvebu-mpp-bus";
+-- 
+1.9.1
+

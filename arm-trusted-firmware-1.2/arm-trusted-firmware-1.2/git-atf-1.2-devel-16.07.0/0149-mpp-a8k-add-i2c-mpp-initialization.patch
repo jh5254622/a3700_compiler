@@ -1,0 +1,67 @@
+From 8540f85100e008bb01b5292566ab991a70dbaf02 Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Mon, 16 May 2016 11:04:28 +0300
+Subject: [PATCH 149/239] mpp: a8k: add i2c mpp initialization
+
+- A8K U-Boot rely on proper I2C MPP settings
+  for initial board ID detection from EEPROM
+- ATF will also require I2C usage
+  (for DDR dimms, EEPROM board configuration, etc..)
+- for A3700 do nothing, since A3700 use different MPP/GPIO approach:
+	each pin is MPP with single function or GPIO
+
+Change-Id: Ic7b450c6174d4010dd26e94cfb0e6d1bfbe8468f
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29723
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ plat/marvell/a8k/a70x0/plat_bl31_setup.c | 13 +++++++++++++
+ plat/marvell/a8k/a70x0/plat_def.h        |  1 +
+ 2 files changed, 14 insertions(+)
+
+diff --git a/plat/marvell/a8k/a70x0/plat_bl31_setup.c b/plat/marvell/a8k/a70x0/plat_bl31_setup.c
+index 1b3571d..1845148 100644
+--- a/plat/marvell/a8k/a70x0/plat_bl31_setup.c
++++ b/plat/marvell/a8k/a70x0/plat_bl31_setup.c
+@@ -35,12 +35,25 @@
+ #include <plat_marvell.h>
+ #include <apn806_setup.h>
+ #include <cp110_setup.h>
++#include <mmio.h>
++
++void marvell_bl31_mpp_init(void)
++{
++	uint32_t reg;
++
++	/* Enable CP I2C MPPs (MPP: 37-38)
++	 * U-Boot rely on proper MPP settings for I2C EEPROM usage */
++	reg = mmio_read_32(MVEBU_CP_MPP_REGS(4));
++	mmio_write_32(MVEBU_CP_MPP_REGS(4), reg | 0x2200000);
++}
+ 
+ /* This function overruns the same function in marvell_bl31_setup.c */
+ void bl31_plat_arch_setup(void)
+ {
+ 	marvell_bl31_plat_arch_setup();
+ 
++	marvell_bl31_mpp_init();
++
+ 	/* configure apn806 */
+ 	apn806_init();
+ 
+diff --git a/plat/marvell/a8k/a70x0/plat_def.h b/plat/marvell/a8k/a70x0/plat_def.h
+index 70e621d..bf5ec2e 100644
+--- a/plat/marvell/a8k/a70x0/plat_def.h
++++ b/plat/marvell/a8k/a70x0/plat_def.h
+@@ -57,6 +57,7 @@
+ #define MVEBU_AMB_IP_BASE		(MVEBU_CP0_REGS_BASE + 0x13ff00)
+ #define MVEBU_AMB_ADEC_BASE		(MVEBU_CP0_REGS_BASE + 0x70ff00)
+ #define MVEBU_SMMU_BASE			(MVEBU_REGS_BASE + 0x100000)
++#define MVEBU_CP_MPP_REGS(n)		(MVEBU_CP0_REGS_BASE + 0x440000 + ((n) << 2))
+ 
+ /*******************************************************************************
+  * MVEBU memory map related constants
+-- 
+1.9.1
+

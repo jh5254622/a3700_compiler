@@ -1,0 +1,95 @@
+From 0ef53aa4cda8a837c3d821faab9435f73280029d Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 2 Feb 2016 10:14:12 +0200
+Subject: [PATCH 0764/1240] dop: a70x0: fix DRAM over PCIe to work without PCIe
+ switch
+
+Change-Id: Ia76f07067804a0e1f6a06ee9f624831ba25f2e45
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27122
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Kconfig         | 11 +++++++++++
+ arch/arm/cpu/mvebu-common/dram_over_pci.c |  5 +++++
+ drivers/pci/pci_mvebu.c                   | 12 +++++++++++-
+ 3 files changed, 27 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index 9a9a239..fbeacca 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -63,6 +63,17 @@ config MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+ 	  Choose this option to add support
+ 	  for DDR over PCIE support
+ 
++config MVEBU_SPL_DDR_OVER_PCI_SWITCH
++	bool "DDR over PCIE switch support in SPL"
++	depends on MVEBU_SPL_DDR_OVER_PCI_SUPPORT
++	default n
++	help
++	  Support DDR over PCIe switch, this should be selected in case the DDR
++	  PCIe addon card (PCAC) is located over a pcie switch (The first port of the
++	  switch).
++	  To add this option need to edit the defconfig and add the following line:
++	  +S:CONFIG_MVEBU_SPL_DDR_OVER_PCI_SWITCH=y
++
+ config DDR_OVER_PCI_SIZE
+ 	int "size of DDR over PCI"
+ 	depends on MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+diff --git a/arch/arm/cpu/mvebu-common/dram_over_pci.c b/arch/arm/cpu/mvebu-common/dram_over_pci.c
+index 0761c38..3694ca4 100644
+--- a/arch/arm/cpu/mvebu-common/dram_over_pci.c
++++ b/arch/arm/cpu/mvebu-common/dram_over_pci.c
+@@ -159,6 +159,7 @@ void dram_over_pci_init(const void *fdt_blob)
+ 
+ 	pci_init();
+ 
++#ifdef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SWITCH
+ 	/* open 0 - 2G for address space beyound the main switch */
+ 	hose = pci_bus_to_hose(1);
+ 	bdf  = PCI_BDF(1, 0, 0);
+@@ -175,6 +176,10 @@ void dram_over_pci_init(const void *fdt_blob)
+ 	   bar 1  address = 0x0 - dram address */
+ 	hose = pci_bus_to_hose(3);
+ 	bdf  = PCI_BDF(3, 0, 0);
++#else
++	hose = pci_bus_to_hose(1);
++	bdf  = PCI_BDF(1, 0, 0);
++#endif
+ 	hose->write_dword(hose, bdf, BAR0_LOW_ADDR_OFFSET, PCI_DEVICE_CONFIG_SPACE);
+ 	hose->write_dword(hose, bdf, BAR0_HIGH_ADDR_OFFSET, 0);
+ 	hose->write_dword(hose, bdf, BAR1_LOW_ADDR_OFFSET, DRAM_OFFSET);
+diff --git a/drivers/pci/pci_mvebu.c b/drivers/pci/pci_mvebu.c
+index 4a4170c..f412cfa 100644
+--- a/drivers/pci/pci_mvebu.c
++++ b/drivers/pci/pci_mvebu.c
+@@ -291,14 +291,24 @@ static void mvebu_pcie_hw_init(void __iomem *reg_base, int first_busno)
+  */
+ int pci_skip_dev(struct pci_controller *hose, pci_dev_t dev)
+ {
+-#if defined(CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT) && !defined(CONFIG_SPL_BUILD)
++#ifndef CONFIG_SPL_BUILD
++#ifdef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SWITCH
+ 	/* skip the switch port connected to the DRAM
+ 	 * PCIe controller to retain its configuration */
+ 	if (dev == PCI_BDF(3, 0, 0)) {
+ 		debug_cfg("Skipping (b,d,f)=(%2ld,%2ld,%2ld)\n", PCI_BUS(dev), PCI_DEV(dev), PCI_FUNC(dev));
+ 		return 1;
+ 	}
++#elif defined(CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT)
++	/* skip the DRAM PCIe controller to retain
++	** its configuration */
++	if (dev == PCI_BDF(1, 0, 0)) {
++		debug_cfg("Skipping (b,d,f)=(%2ld,%2ld,%2ld)\n", PCI_BUS(dev), PCI_DEV(dev), PCI_FUNC(dev));
++		return 1;
++	}
++
+ #endif
++#endif /* !SPL_BUILD */
+ 	return 0;
+ }
+ 
+-- 
+1.9.1
+

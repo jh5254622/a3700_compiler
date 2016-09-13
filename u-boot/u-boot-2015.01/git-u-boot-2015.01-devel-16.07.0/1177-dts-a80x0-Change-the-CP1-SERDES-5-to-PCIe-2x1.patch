@@ -1,0 +1,59 @@
+From a132092c1d56df0fa4d7f195ba9ad88530ed4de0 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Tue, 31 May 2016 12:01:18 +0300
+Subject: [PATCH 1177/1240] dts: a80x0: Change the CP1 SERDES-5 to PCIe-2x1
+
+- Enable PCI2 on CP1 IO module (CON5) in the same way as
+  it defined for CP0. SERDES-5 is always connected to this
+  PCB connector and not MUXed.
+
+Change-Id: I3ad6aca7e7e75d09bd0b9a05ad8f46a8a8f57674
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30209
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/armada-80x0-db.dtsi | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/dts/armada-80x0-db.dtsi b/arch/arm/dts/armada-80x0-db.dtsi
+index adaab93..9f95b09 100644
+--- a/arch/arm/dts/armada-80x0-db.dtsi
++++ b/arch/arm/dts/armada-80x0-db.dtsi
+@@ -221,7 +221,7 @@
+ 					status = "disabled";
+ 				};
+ 				pcie@2,0 {
+-					status = "disabled";
++					status = "okay";
+ 				};
+ 			};
+ 			nand@720000 {
+@@ -246,8 +246,12 @@
+ 
+ 			comphy {
+ 				/* Serdes Configuration:
+-					Lane 0,1,3,4,5: UNCONNECTED
+-					Lane 2: 10G (KR)
++					Lane 0: Unconnected
++					Lane 1: Unconnected
++					Lane 2: KR (10G)
++					Lane 3: SATA1
++					Lane 4: Unconnected
++					Lane 5: PEX2x1
+ 				*/
+ 				phy0 {
+ 					phy-type = <PHY_TYPE_UNCONNECTED>;
+@@ -270,7 +274,7 @@
+ 					phy-speed = <PHY_SPEED_5G>;
+ 				};
+ 				phy5 {
+-					phy-type = <PHY_TYPE_UNCONNECTED>;
++					phy-type = <PHY_TYPE_PEX2>;
+ 					phy-speed = <PHY_SPEED_5G>;
+ 				};
+ 			};
+-- 
+1.9.1
+

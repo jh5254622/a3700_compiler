@@ -1,0 +1,59 @@
+From ffc6fe299d7480ea625d4953f8407e31bb3649eb Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Tue, 31 May 2016 10:16:18 +0300
+Subject: [PATCH 1187/1240] fix: utmi: a80x0: power UTMI PLL down and up per
+ port
+
+added UTMI PLL power down and PLL power up sequence to be done per port.
+
+Change-Id: I3e8f5395b8bbbd14a4a0e4f68f6ea3848b5bd86e
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30186
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/phy/comphy_cp110.c | 13 +++++++++----
+ 1 file changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/phy/comphy_cp110.c b/drivers/phy/comphy_cp110.c
+index 87d706e..181dceb 100644
+--- a/drivers/phy/comphy_cp110.c
++++ b/drivers/phy/comphy_cp110.c
+@@ -1347,15 +1347,19 @@ static void comphy_utmi_phy_init(u32 utmi_phy_count, struct utmi_phy_data *cp110
+ 	u32 i;
+ 
+ 	debug_enter();
++	/* UTMI Power down */
+ 	for (i = 0; i < utmi_phy_count; i++)
+ 		comphy_utmi_power_down(i, cp110_utmi_data[i].utmi_base_addr, cp110_utmi_data[i].usb_cfg_addr,
+ 				       cp110_utmi_data[i].utmi_cfg_addr, cp110_utmi_data[i].utmi_phy_port);
+-	/* Power down PLL */
++	/* PLL Power down */
+ 	debug("stage: UTMI PHY power down PLL\n");
+-	reg_set(cp110_utmi_data[0].usb_cfg_addr, 0x0 << UTMI_USB_CFG_PLL_OFFSET, UTMI_USB_CFG_PLL_MASK);
++	for (i = 0; i < utmi_phy_count; i++)
++		reg_set(cp110_utmi_data[i].usb_cfg_addr, 0x0 << UTMI_USB_CFG_PLL_OFFSET, UTMI_USB_CFG_PLL_MASK);
++	/* UTMI configure */
+ 	for (i = 0; i < utmi_phy_count; i++)
+ 		comphy_utmi_phy_config(i, cp110_utmi_data[i].utmi_base_addr, cp110_utmi_data[i].usb_cfg_addr,
+ 				       cp110_utmi_data[i].utmi_cfg_addr, cp110_utmi_data[i].utmi_phy_port);
++	/* UTMI Power up */
+ 	for (i = 0; i < utmi_phy_count; i++) {
+ 		if (!comphy_utmi_power_up(i, cp110_utmi_data[i].utmi_base_addr, cp110_utmi_data[i].usb_cfg_addr,
+ 					  cp110_utmi_data[i].utmi_cfg_addr, cp110_utmi_data[i].utmi_phy_port)) {
+@@ -1368,9 +1372,10 @@ static void comphy_utmi_phy_init(u32 utmi_phy_count, struct utmi_phy_data *cp110
+ 		else
+ 			printf("USB Host%d\n", cp110_utmi_data[i].utmi_phy_port);
+ 	}
+-	/* Power up PLL */
++	/* PLL Power up */
+ 	debug("stage: UTMI PHY power up PLL\n");
+-	reg_set(cp110_utmi_data[0].usb_cfg_addr, 0x1 << UTMI_USB_CFG_PLL_OFFSET, UTMI_USB_CFG_PLL_MASK);
++	for (i = 0; i < utmi_phy_count; i++)
++		reg_set(cp110_utmi_data[i].usb_cfg_addr, 0x1 << UTMI_USB_CFG_PLL_OFFSET, UTMI_USB_CFG_PLL_MASK);
+ 
+ 	debug_exit();
+ 	return;
+-- 
+1.9.1
+

@@ -1,0 +1,30 @@
+From ddb2565d6393bb9abc27daff9a5a8766848d52a3 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 17 Jun 2015 15:16:21 +0300
+Subject: [PATCH 0202/1240] mpp_bus: disabled mpp_bus for non devel boards
+
+Change-Id: I1d2eef19b8ed826d5d891b1c3482825561f8188b
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20250
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Kconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index 17a7f26..ef5324b 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -68,7 +68,7 @@ config MVEBU_MPP
+ 
+ config MVEBU_MPP_BUS
+ 	bool "MPP bus support"
+-	depends on MVEBU_PINCTL
++	depends on (DEVEL_BOARD && MVEBU_PINCTL)
+ 	default n
+ 	help
+ 	  Choose this option to add support
+-- 
+1.9.1
+

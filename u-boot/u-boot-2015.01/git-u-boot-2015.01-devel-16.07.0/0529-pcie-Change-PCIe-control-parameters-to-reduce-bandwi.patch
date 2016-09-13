@@ -1,0 +1,71 @@
+From 522aaebc6b0506fd0c45651ff6b1c0b79754287e Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 24 Nov 2015 11:31:41 +0200
+Subject: [PATCH 0529/1240] pcie: Change PCIe control parameters to reduce
+ bandwidth
+
+	- Set Posted/Nonposted requests to 1.
+	- Set outstanding requests to 0.
+
+Change-Id: I9a35c82e738db02d290c746a0e2775303620a37c
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25214
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/pci/pci_mvebu.c | 24 ++++++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+
+diff --git a/drivers/pci/pci_mvebu.c b/drivers/pci/pci_mvebu.c
+index 86dfc8e..4a4170c 100644
+--- a/drivers/pci/pci_mvebu.c
++++ b/drivers/pci/pci_mvebu.c
+@@ -53,6 +53,15 @@
+ #define PCIE_BAR_ENABLE			(0x1)
+ #define PCIE_BAR_CNT			(3)
+ 
++#define PCIE_CONTROL			(0x1A00)
++#define PCIE_OUTSTANDING_REQ_MASK	(3 << 8)
++
++#define PCIE_FLOW_CONTROL		(0x1A20)
++#define POSTED_CREDIT_MASK		(0xFF)
++#define POSTED_CREDIT(x)		(0xFF)
++#define NONPOSTED_CREDIT_MASK		(0xFF << 8)
++#define NONPOSTED_CREDIT(x)		(x << 8)
++
+ /* Memory access control */
+ #define PCIE_WIN_OFF(n)			((n < 5) ? (0x0) : (0x10))
+ #define PCIE_WIN_CTRL_OFF(x, n)		(x + 0x1820 + PCIE_WIN_OFF(n) + (0x10 * n))
+@@ -245,6 +254,20 @@ static void mvebu_pcie_hw_init(void __iomem *reg_base, int first_busno)
+ {
+ 	u32 cmd;
+ 
++#ifdef CONFIG_MVEBU_PCI_BURST_RELAX
++	u32 reg;
++	/* Set posted / non-posted credits to 0x0. */
++	reg = readl(reg_base + PCIE_FLOW_CONTROL);
++	reg &= ~(POSTED_CREDIT_MASK | NONPOSTED_CREDIT_MASK);
++	reg |= (POSTED_CREDIT(1) | NONPOSTED_CREDIT(1));
++	writel(reg, reg_base + PCIE_FLOW_CONTROL);
++
++	/* Set outstanding requests to 1 */
++	reg = readl(reg_base + PCIE_CONTROL);
++	reg &= ~PCIE_OUTSTANDING_REQ_MASK;
++	writel(reg, reg_base + PCIE_CONTROL);
++#endif /* CONFIG_MVEBU_PCI_BURST_RELAX */
++
+ 	/*
+ 	 * Set our controller as device No 1 to avoid
+ 	 * Answering CFG cycle by our host (memory controller)
+@@ -365,6 +388,7 @@ void pci_init_board(void)
+ 	if (count <= 0)
+ 		return;
+ 
++
+ 	fdt_for_each_subnode(blob, port_node, bus_node) {
+ 		host_id++;
+ 
+-- 
+1.9.1
+

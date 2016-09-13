@@ -1,0 +1,50 @@
+From 1045f53fdaf32272568fe9e3fa1c7158640057d0 Mon Sep 17 00:00:00 2001
+From: zachary <zhangzg@marvell.com>
+Date: Wed, 9 Mar 2016 17:18:39 +0800
+Subject: [PATCH 1013/1240] hash: mvebu: Add hash256 and hash160 option in
+ kconfig file
+
+-add hash256 and hash160 option in kconfig file
+-a3700 uboot image uses hash256 or hash160 algorithm to calculate
+ hash value before writing uboot image to spi flash
+
+Change-Id: I16fca8f4a0923574919220576fcef1e56e81f2ba
+Signed-off-by: zachary <zhangzg@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28134
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ lib/Kconfig | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/lib/Kconfig b/lib/Kconfig
+index 8460439..fb8400c 100644
+--- a/lib/Kconfig
++++ b/lib/Kconfig
+@@ -27,4 +27,23 @@ config SYS_HZ
+ 	  get_timer() must operate in milliseconds and this option must be
+ 	  set to 1000.
+ 
++config SHA256
++	bool "hash_256"
++	default n
++	help
++	  sha256 - Calculate hash values with hash_256 algorithm.
++	  Enabling this option will use sha256 to calculate hash value
++	  when codes try to call sha256_start,sha256_update and
++	  sha256_finish functions.
++
++
++config SHA1
++	bool "hash_160"
++	default n
++	help
++	  sha1 - Caculate hash values with hash_160 algorithm.
++	  Enabling this option will use sha1 to calculate hash value
++	  when codes try to call sha1_start,sha1_update and
++	  sha1_finish functions.
++
+ endmenu
+-- 
+1.9.1
+

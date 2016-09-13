@@ -1,0 +1,44 @@
+From 1b2748dbd593c33497c41da8029bf56ad0e42546 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 5 Aug 2015 12:02:37 +0300
+Subject: [PATCH 0304/1240] thermal: added support for thermal sensor in A38x
+
+Change-Id: I0f1aba28e60a41eb53e179af0db01002882e25fd
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22545
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/dts/armada-385-db.dts    | 6 ++++++
+ configs/mvebu_armada38x_defconfig | 1 +
+ 2 files changed, 7 insertions(+)
+
+diff --git a/arch/arm/dts/armada-385-db.dts b/arch/arm/dts/armada-385-db.dts
+index 550fd87..d7c2fc5 100644
+--- a/arch/arm/dts/armada-385-db.dts
++++ b/arch/arm/dts/armada-385-db.dts
+@@ -91,6 +91,12 @@
+ 				status = "disabled";
+ 			};
+ 
++			thermal: thermal@e4070 {
++				compatible = "marvell,thermal-sensor";
++				reg = <0xE4070 0x12>;
++				status = "okay";
++			};
++
+ 			comphy {
+ 				compatible = "marvell,mvebu-comphy", "marvell,comphy-armada38x";
+ 				mux-bitcount = <4>;
+diff --git a/configs/mvebu_armada38x_defconfig b/configs/mvebu_armada38x_defconfig
+index 82dc69e..46a58b3 100644
+--- a/configs/mvebu_armada38x_defconfig
++++ b/configs/mvebu_armada38x_defconfig
+@@ -36,3 +36,4 @@ CONFIG_MVEBU_MBUS=y
+ +S:CONFIG_SYS_NS16550=y
+ CONFIG_MVEBU_PINCTL=y
+ +S:CONFIG_MVEBU_COMPHY_SUPPORT=y
++CONFIG_MVEBU_THERMAL_SENSOR_28NM=y
+-- 
+1.9.1
+

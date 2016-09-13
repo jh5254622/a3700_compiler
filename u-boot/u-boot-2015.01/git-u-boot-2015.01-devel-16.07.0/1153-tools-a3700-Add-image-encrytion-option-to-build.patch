@@ -1,0 +1,539 @@
+From 9d6a74ae179dd47975b131e8fe80a7998b64d981 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Thu, 21 Apr 2016 14:45:28 +0300
+Subject: [PATCH 1153/1240] tools: a3700: Add image encrytion option to build
+
+- Add ability to encrypt the u-boot image using AES-256
+  symmetric key with help of OpenSSL commads.
+- Add new configuration option CONFIG_MVEBU_IMAGE_ENCRYPT
+- Add example symmetric key and initial vector (IV) under
+  tool/wtp/trusted folder.
+- Once the encryption option selected, the main u-boot binary
+  is encrypted using AES-256 key (aes-256.txt file).
+  The initial vector for the encryption is defined by file iv.txt.
+  Both files contains 256-bit HEX numbers in text format.
+
+Change-Id: I27f46210718deca3554e4339457fe0aad2630e1e
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29259
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ Makefile                          |  33 ++++-
+ arch/arm/cpu/mvebu-common/Kconfig |  14 ++
+ scripts/buildtim.sh               | 263 +++++++++++++++++++++++++++-----------
+ tools/wtp/trusted/aes-256.txt     |   1 +
+ tools/wtp/trusted/img-2.txt       |   2 +-
+ tools/wtp/trusted/iv.txt          |   1 +
+ 6 files changed, 231 insertions(+), 83 deletions(-)
+ create mode 100644 tools/wtp/trusted/aes-256.txt
+ create mode 100644 tools/wtp/trusted/iv.txt
+
+diff --git a/Makefile b/Makefile
+index 70102fd..a68580e 100644
+--- a/Makefile
++++ b/Makefile
+@@ -881,6 +881,11 @@ DOIMAGE		:= $(shell which tbb_linux.exe)
+ DOIMAGE_CFG	:= $(srctree)/tools/wtp/u-boot-tim.txt
+ IMAGESPATH	:= $(srctree)/tools/wtp/trusted
+ SECURE		:= 1
++ifdef CONFIG_MVEBU_IMAGE_ENCRYPT
++ENCRYPT		:= 1
++else
++ENCRYPT		:= 0
++endif
+ TIMNCFG		:= $(srctree)/tools/wtp/u-boot-timN.txt
+ TIMNSIG		:= $(IMAGESPATH)/timnsign.txt
+ TIM2IMGARGS	:= -i $(DOIMAGE_CFG) -n $(TIMNCFG)
+@@ -893,11 +898,11 @@ SECURE		:= 0
+ TIM2IMGARGS	:= -i $(DOIMAGE_CFG)
+ endif #CONFIG_MVEBU_SECURE_BOOT
+ 
+-TIM_IMAGE	:= $(shell grep "Image Filename:" -m 1 $(DOIMAGE_CFG) | cut -c 17-)
++TIM_IMAGE	:= $$(grep "Image Filename:" -m 1 $(DOIMAGE_CFG) | cut -c 17-)
+ TIMBLDARGS	:= $(SECURE) $(BOOTDEV) $(IMAGESPATH) $(CLOCKSPATH) $(CLOCKSPRESET) \
+-			$(PARTNUM) $(DOIMAGE_CFG) $(TIMNCFG) $(TIMNSIG)
++			$(PARTNUM) $(DOIMAGE_CFG) $(TIMNCFG) $(TIMNSIG) $(ENCRYPT)
+ TIMBLDUARTARGS	:= $(SECURE) UART $(IMAGESPATH) $(CLOCKSPATH) $(CLOCKSPRESET) \
+-			0 $(DOIMAGE_CFG) $(TIMNCFG) $(TIMNSIG)
++			0 $(DOIMAGE_CFG) $(TIMNCFG) $(TIMNSIG) $(ENCRYPT)
+ UARTIMGARCH	:= $(srctree)/uart-images
+ 
+ DOIMAGE_FLAGS := -r $(DOIMAGE_CFG) -v -D
+@@ -919,7 +924,7 @@ DOIMAGE_LIBS_CHECK = \
+ # - Collect all UART downloadable images into archive
+ # - Create TIM descriptor(s) with final boot signature according
+ #   to defconfig for the next build stage (SPI.eMMC,etc.)
+-uartimage: $(obj)/u-boot.bin $(SPLIMAGE) wtmi
++uartimage: $(obj)/u-boot.bin $(SPLIMAGE) wtmi encrypt
+ 	@$(DOIMAGE_LIBS_CHECK)
+ 	@echo -e "\n\t=====================================\n"
+ 	@echo -e "\t=====        UART IMAGES        =====\n"
+@@ -933,19 +938,37 @@ uartimage: $(obj)/u-boot.bin $(SPLIMAGE) wtmi
+ 	@cp -t $(UARTIMGARCH) $(TIM_IMAGE) $(TIMN_IMAGE) $(TIMNCFG) $(DOIMAGE_CFG)
+ 	@tar czf $(UARTIMGARCH).tgz $(UARTIMGARCH)
+ 
+-doimage: uartimage
++doimage: uartimage encrypt
+ 	@echo -e "\n\t=====================================\n"
+ 	@echo -e "\t=====        BOOT IMAGES         =====\n"
+ 	@echo -e "\t=====================================\n"
+ 	$(TIMBUILD) $(TIMBLDARGS)
+ 	$(DOIMAGE) $(DOIMAGE_FLAGS)
+ 	@if [ -e "$(TIMNCFG)" ]; then $(DOIMAGE) -r $(TIMNCFG) -v -D; fi
++	@if [ "$(ENCRYPT)" = "1" ]; then sed -i 's|u-boot.bin|u-boot-enc.bin|1' $(TIMNCFG); fi
+ 	$(TIM2IMG) $(TIM2IMGARGS) -o u-boot-spl.img
+ 
+ bin2phex: doimage
+ 	$(TIM2PHEX) -i $(DOIMAGE_CFG) -o u-boot-$(CONFIG_SYS_SOC).hex
+ 	$(BIN2PHEX) -w 16 -i u-boot.bin -o u-boot.hex -b 0x0
+ 
++encrypt:
++	@if [ "$(ENCRYPT)" = "1" ]; then \
++		echo -e "\n\t=======================================================\n";\
++		echo -e "\t  Secure boot. Encrypting u-boot.bin \n";\
++		echo -e "\t=======================================================\n";\
++		truncate -s %16 u-boot.bin; \
++		openssl enc -aes-256-cbc -e -in u-boot.bin -out u-boot-enc.bin \
++		-K `cat $(IMAGESPATH)/aes-256.txt` -k 0 -nosalt \
++		-iv `cat $(IMAGESPATH)/iv.txt` -p; \
++	else \
++		if [ "$(SECURE)" = "1" ]; then \
++			echo -e "\n\t=======================================================\n";\
++			echo -e "\t  Secure boot. U-boot image is not encrypted \n";\
++			echo -e "\t=======================================================\n";\
++		fi; \
++	fi
++
+ wtmi:
+ 	@echo "  =====WTMI====="
+ 	@$(MAKE) -C $(WTMIPATH)
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index 043163d..38cba54 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -15,6 +15,20 @@ config MVEBU_SECURE_BOOT
+ 	  boot flow algorithm described in details
+ 	  in appropriate device specification.
+ 
++config MVEBU_IMAGE_ENCRYPT
++	bool "Encrypt Boot Image in Trusted Boot mode"
++	depends on MVEBU_SECURE_BOOT
++	default n
++	help
++	  Instructs the u-boot to use AES-256 encryption
++	  when building image for the trusted boot mode on
++	  MVEBU device.
++	  The AES-256 symmetric key should be burned in
++	  the device eFuse for allowing BootROM to decrypt
++	  the boot image upon startup.
++	  Refer to the appropriate device specification
++	  and eFuse module help for detailes about this feature
++
+ config MVEBU_SPL_DIFFRENT_BASE_ADDR
+ 	bool "Use SPL different registers base address"
+ 	depends on MVEBU && TARGET_ARMADA_38X
+diff --git a/scripts/buildtim.sh b/scripts/buildtim.sh
+index ecd0c90..37c9a54 100755
+--- a/scripts/buildtim.sh
++++ b/scripts/buildtim.sh
+@@ -11,6 +11,7 @@
+ # $7 - Output TIM/NTIM file name
+ # $8 - Output TIMN file name (valid for trusted mode only)
+ # $9 - TIMN CSK sign key file name (valid for trusted mode only)
++# $10 - Encrypt the image (valid for trusted mode only)
+ #
+ 
+ DATE=`date +%d%m%Y`
+@@ -55,11 +56,15 @@ GPP2PREF="gpp2"
+ GPP1FILE="$IMGPATH/$GPP1PREF.$FILEEXT"
+ GPP2FILE="$IMGPATH/$GPP2PREF.$FILEEXT"
+ 
++ENCRYPT=${10}
++
++BYPASS_CSK=0
++
+ usage () {
+ 	echo ""
+ 	echo "$0 - script for creating TIM/NTIM/TIMN image descriptors"
+ 	echo ""
+-	echo "$0 <trusted> <boot_device> <files_path> <clocks_path> <clocks_preset> <output> [timN_out] [timN_key]"
++	echo "$0 <trusted> <boot_device> <files_path> <clocks_path> <clocks_preset> <output> [timN_out] [timN_key] [E]"
+ 	echo " <trusted>     - trusted/non trusted (supported values 0 and 1)"
+ 	echo " <boot_device> - Boot device (Supported values SPINOR/SPINAND/EMMCNORM/EMMCALT/SATA/UART)"
+ 	echo " <files_path>  - Path to image and keys descriptors text files"
+@@ -68,6 +73,7 @@ usage () {
+ 	echo " <output>      - Output TIM/NTIM file name"
+ 	echo " [timN_out]    - Output TIMN file name (required for trusted boot only)"
+ 	echo " [timN_key]    - TIMN CSK sign key file name (required for trusted boot only)"
++	echo " [E]           - Encrypt or not the binary image (supported values 0 and 1, trusted boot only)"
+ 	echo ""
+ 	exit 1
+ }
+@@ -82,9 +88,15 @@ case "$1" in
+ 			usage
+ 		fi
+ 
+-		# Values required for trusted boot mode
+-		KEYSNUM=`ls -l $IMGPATH/$CSKPREF*.$FILEEXT | wc -l`
+ 		RSRVD2LEN=`wc -l < $IMGPATH/$RSRVD2PREF.$FILEEXT`
++
++		# Values required for trusted boot mode
++		if [ "$BYPASS_CSK" -eq 1 ]; then
++			KEYSNUM="0"
++			RSRVDLEN=$RSRVD2LEN
++		else
++			KEYSNUM=`ls -l $IMGPATH/$CSKPREF*.$FILEEXT | wc -l`
++		fi
+ 	fi
+ 	;;
+ *)
+@@ -163,9 +175,15 @@ echo "Boot Flash Signature:           $FLASH" >> $OUTFILE
+ if [ "$TRUSTED" = "0x00000000" ]; then
+ 	echo "Number of Images:               $IMGSNUM" >> $OUTFILE
+ else
+-	# Trusted TIM has only TIMH image
+-	echo "Number of Images:                1" >> $OUTFILE
+-	echo "Number of Keys:                  $KEYSNUM		; DSIG KAK key is not counted" >> $OUTFILE
++	if [ "$BYPASS_CSK" -eq 1 ]; then
++		# When CSK is bypassed, all images are going into TIMH
++		# as in case of non-trusted boot
++		echo "Number of Images:               $IMGSNUM" >> $OUTFILE
++	else
++		# Trusted TIM has only TIMH image
++		echo "Number of Images:               1" >> $OUTFILE
++	fi
++	echo "Number of Keys:                 $KEYSNUM			; DSIG KAK key is not counted" >> $OUTFILE
+ fi
+ echo "Size of Reserved in bytes:      $RSRVDLEN" >> $OUTFILE
+ echo ""  >> $OUTFILE
+@@ -181,9 +199,22 @@ else
+ 	echo "" >> $OUTFILE
+ fi
+ 
++# When CSK is bypassed, the image following TIMH should be OBMI
++if [[ "$TRUSTED" = "0x00000001" && "$BYPASS_CSK" -eq 1 ]]; then
++	mv $OUTFILE $OUTFILE.temp
++	while IFS='' read -r line; do
++		if [[ "$line" == *"Next Image ID:"* ]]; then
++			echo "Next Image ID:               0x4F424d49" >> $OUTFILE
++		else
++			echo "$line" >> $OUTFILE
++		fi
++	done < $OUTFILE.temp
++	rm $OUTFILE.temp
++fi
++
+ # Images or CSK keys block
+ 
+-if [ "$TRUSTED" = "0x00000000" ]; then
++if [[ "$TRUSTED" = "0x00000000" || "$BYPASS_CSK" -eq 1 ]]; then
+ 	# Untrusted (NTIM) lists images before reserved area
+ 	i=1
+ 	while [ "$i" -lt "$IMGSNUM" ]; do
+@@ -197,7 +228,7 @@ if [ "$TRUSTED" = "0x00000000" ]; then
+ 		let i=i+1
+ 	done
+ else
+-	# Trusted (TIM) has keys block before reserved area
++	# Trusted (TIM) has CSK keys block before reserved area
+ 	i=1
+ 	while [ "$i" -le "$KEYSNUM" ]; do
+ 		IMAGE="$IMGPATH/$CSKPREF-$i.$FILEEXT"
+@@ -212,8 +243,12 @@ else
+ fi
+ 
+ # Reserved area
++if [[ "$TRUSTED" = "0x00000001" && "$BYPASS_CSK" -eq 1 ]]; then
++	RSRVDFILE="$IMGPATH/$RSRVD2PREF.$FILEEXT"
++else
++	RSRVDFILE="$IMGPATH/$RSRVDPREF.$FILEEXT"
++fi
+ 
+-RSRVDFILE="$IMGPATH/$RSRVDPREF.$FILEEXT"
+ if [ ! -e "$RSRVDFILE" ]; then
+ 	echo "Cannot find $RSRVDFILE file!"
+ 	exit 1
+@@ -224,64 +259,70 @@ else
+ fi
+ 
+ # Extended reserved area - GPP actions and DDR init
+-if [ ! -e "$DDRFILE" ]; then
+-	# DDR init is mandatory
+-	echo "Cannot find $DDRFILE file!"
+-	exit 1
+-else
+-	echo "Extended Reserved Data:" >> $OUTFILE
+-	echo "Consumer ID:" >> $OUTFILE
+-	echo "CID: TBRI" >> $OUTFILE
++# For trusted mode move DDR init to TIMN for reducing
++# the TIMH size (limited to 12KB)
++# When CSK is bypassed, the DDR init is going into TIMH
++# as for non-trusted boot mode
++if [[ "$TRUSTED" = "0x00000000" || "$BYPASS_CSK" -eq 1 ]]; then
++	if [ ! -e "$DDRFILE" ]; then
++		# DDR init is mandatory
++		echo "Cannot find $DDRFILE file!"
++		exit 1
++	else
++		echo "Extended Reserved Data:" >> $OUTFILE
++		echo "Consumer ID:" >> $OUTFILE
++		echo "CID: TBRI" >> $OUTFILE
+ 
+-	# GPPn packages are optional
+-	if [ -e "$GPP1FILE" ]; then
+-		echo "PID: GPP1" >> $OUTFILE
+-	fi
+-	if [ -e "$GPP2FILE" ]; then
+-		echo "PID: GPP2" >> $OUTFILE
+-	fi
+-	echo "PID: DDR3" >> $OUTFILE
+-	echo "End Consumer ID:" >> $OUTFILE
+-
+-	# GPPn packages are optional
+-	if [ -e "$GPP1FILE" ]; then
+-		echo "GPP:" >> $OUTFILE
+-		echo "GPP_PID: GPP1" >> $OUTFILE
+-		echo "GPP Operations:" >> $OUTFILE
+-		echo "GPP_IGNORE_INST_TO: 0x0" >> $OUTFILE
+-		echo "End GPP Operations:" >> $OUTFILE
+-		echo "Instructions:" >> $OUTFILE
+-		cat $GPP1FILE >> $OUTFILE
+-		echo "End Instructions:" >> $OUTFILE
+-		echo "End GPP:" >> $OUTFILE
+-	fi
++		# GPPn packages are optional
++		if [ -e "$GPP1FILE" ]; then
++			echo "PID: GPP1" >> $OUTFILE
++		fi
++		if [ -e "$GPP2FILE" ]; then
++			echo "PID: GPP2" >> $OUTFILE
++		fi
++		echo "PID: DDR3" >> $OUTFILE
++		echo "End Consumer ID:" >> $OUTFILE
++
++		# GPPn packages are optional
++		if [ -e "$GPP1FILE" ]; then
++			echo "GPP:" >> $OUTFILE
++			echo "GPP_PID: GPP1" >> $OUTFILE
++			echo "GPP Operations:" >> $OUTFILE
++			echo "GPP_IGNORE_INST_TO: 0x0" >> $OUTFILE
++			echo "End GPP Operations:" >> $OUTFILE
++			echo "Instructions:" >> $OUTFILE
++			cat $GPP1FILE >> $OUTFILE
++			echo "End Instructions:" >> $OUTFILE
++			echo "End GPP:" >> $OUTFILE
++		fi
++
++		if [ -e "$GPP2FILE" ]; then
++			echo "GPP:" >> $OUTFILE
++			echo "GPP_PID: GPP2" >> $OUTFILE
++			echo "GPP Operations:" >> $OUTFILE
++			echo "GPP_IGNORE_INST_TO: 0x0" >> $OUTFILE
++			echo "End GPP Operations:" >> $OUTFILE
++			echo "Instructions:" >> $OUTFILE
++			cat $GPP2FILE >> $OUTFILE
++			echo "End Instructions:" >> $OUTFILE
++			echo "End GPP:" >> $OUTFILE
++		fi
+ 
+-	if [ -e "$GPP2FILE" ]; then
+-		echo "GPP:" >> $OUTFILE
+-		echo "GPP_PID: GPP2" >> $OUTFILE
+-		echo "GPP Operations:" >> $OUTFILE
+-		echo "GPP_IGNORE_INST_TO: 0x0" >> $OUTFILE
+-		echo "End GPP Operations:" >> $OUTFILE
++		echo "DDR Initialization:" >> $OUTFILE
++		echo "DDR_PID: DDR3" >> $OUTFILE
++		echo "Operations:" >> $OUTFILE
++		echo "DDR_INIT_ENABLE: 0x00000001" >> $OUTFILE
++		echo "End Operations:" >> $OUTFILE
+ 		echo "Instructions:" >> $OUTFILE
+-		cat $GPP2FILE >> $OUTFILE
++		cat $CLOCKSFILE >> $OUTFILE
++		cat $DDRFILE >> $OUTFILE
++		cat $DLLTUNFILE >> $OUTFILE
+ 		echo "End Instructions:" >> $OUTFILE
+-		echo "End GPP:" >> $OUTFILE
+-	fi
++		echo "End DDR Initialization:" >> $OUTFILE
+ 
+-	echo "DDR Initialization:" >> $OUTFILE
+-	echo "DDR_PID: DDR3" >> $OUTFILE
+-	echo "Operations:" >> $OUTFILE
+-	echo "DDR_INIT_ENABLE: 0x00000001" >> $OUTFILE
+-	echo "End Operations:" >> $OUTFILE
+-	echo "Instructions:" >> $OUTFILE
+-	cat $CLOCKSFILE >> $OUTFILE
+-	cat $DDRFILE >> $OUTFILE
+-	cat $DLLTUNFILE >> $OUTFILE
+-	echo "End Instructions:" >> $OUTFILE
+-	echo "End DDR Initialization:" >> $OUTFILE
+-
+-	echo "End Extended Reserved Data:" >> $OUTFILE
+-	echo "" >> $OUTFILE
++		echo "End Extended Reserved Data:" >> $OUTFILE
++		echo "" >> $OUTFILE
++	fi
+ fi
+ 
+ # Set correct partition number in the output
+@@ -308,6 +349,10 @@ if [ "$TRUSTED" = "0x00000001" ]; then
+ 	fi
+ 	# No more operations for TIM file
+ 
++	if [ "$BYPASS_CSK" -eq 1 ]; then
++		# When CSK is bypassed, the TIMN creation is skipped
++		exit 0
++	fi
+ 	# Now the TIMN file has to be created
+ 	# Reserved section is in rows (one row per word), we need it in bytes
+ 	let RSRVD2LEN=RSRVD2LEN*4
+@@ -322,7 +367,7 @@ if [ "$TRUSTED" = "0x00000001" ]; then
+ 	echo "Number of Images:               $IMGSNUM" >> $TIMNOUTFILE
+ 	echo "Number of Keys:                 0			; DSIG key is not counted" >> $TIMNOUTFILE
+ 	echo "Size of Reserved in bytes:      $RSRVD2LEN" >> $TIMNOUTFILE
+-	echo ""
++	echo "" >> $TIMNOUTFILE
+ 
+ 	# TIMN header
+ 
+@@ -344,7 +389,22 @@ if [ "$TRUSTED" = "0x00000001" ]; then
+ 			echo "Cannot find $IMAGE file!"
+ 			exit 1
+ 		fi
+-		cat $IMAGE >> $TIMNOUTFILE
++		BOOTIMG=`grep u-boot.bin $IMAGE`
++		if [ "$ENCRYPT" = "1" -a -n "$BOOTIMG" ]; then
++			# If the boot image has to be encrypted, change the algorithm ID and size
++			while IFS='' read -r line; do
++				if [[ "$line" == *"Encrypt Algorithm ID:"* ]]; then
++					echo -n "Encrypt Algorithm ID:           0x0001E005"  >> $TIMNOUTFILE
++					echo "		; AES_TB_CTS_CBC256" >> $TIMNOUTFILE
++				elif [[ "$line" == *"Encrypt Size:"* ]]; then
++					echo "Encrypt Size:                   0xFFFFFFFF" >> $TIMNOUTFILE
++				else
++					echo "$line" >> $TIMNOUTFILE
++				fi
++			done < $IMAGE
++		else
++			cat $IMAGE >> $TIMNOUTFILE
++		fi
+ 		echo "" >> $TIMNOUTFILE
+ 		let i=i+1
+ 	done
+@@ -361,7 +421,68 @@ if [ "$TRUSTED" = "0x00000001" ]; then
+ 		echo "" >> $TIMNOUTFILE
+ 	fi
+ 
+-	# Last TIMN component is the CSK key fir signature creation
++	# For trusted mode move DDR init to TIMN for reducing
++	# the TIMH size (limited to 12KB)
++	if [ ! -e "$DDRFILE" ]; then
++		# DDR init is mandatory
++		echo "Cannot find $DDRFILE file!"
++		exit 1
++	else
++		echo "Extended Reserved Data:" >> $TIMNOUTFILE
++		echo "Consumer ID:" >> $TIMNOUTFILE
++		echo "CID: TBRI" >> $TIMNOUTFILE
++
++		# GPPn packages are optional
++		if [ -e "$GPP1FILE" ]; then
++			echo "PID: GPP1" >> $TIMNOUTFILE
++		fi
++		if [ -e "$GPP2FILE" ]; then
++			echo "PID: GPP2" >> $TIMNOUTFILE
++		fi
++		echo "PID: DDR3" >> $TIMNOUTFILE
++		echo "End Consumer ID:" >> $TIMNOUTFILE
++
++		# GPPn packages are optional
++		if [ -e "$GPP1FILE" ]; then
++			echo "GPP:" >> $TIMNOUTFILE
++			echo "GPP_PID: GPP1" >> $TIMNOUTFILE
++			echo "GPP Operations:" >> $TIMNOUTFILE
++			echo "GPP_IGNORE_INST_TO: 0x0" >> $TIMNOUTFILE
++			echo "End GPP Operations:" >> $TIMNOUTFILE
++			echo "Instructions:" >> $TIMNOUTFILE
++			cat $GPP1FILE >> $TIMNOUTFILE
++			echo "End Instructions:" >> $TIMNOUTFILE
++			echo "End GPP:" >> $TIMNOUTFILE
++		fi
++
++		if [ -e "$GPP2FILE" ]; then
++			echo "GPP:" >> $TIMNOUTFILE
++			echo "GPP_PID: GPP2" >> $TIMNOUTFILE
++			echo "GPP Operations:" >> $TIMNOUTFILE
++			echo "GPP_IGNORE_INST_TO: 0x0" >> $TIMNOUTFILE
++			echo "End GPP Operations:" >> $TIMNOUTFILE
++			echo "Instructions:" >> $TIMNOUTFILE
++			cat $GPP2FILE >> $TIMNOUTFILE
++			echo "End Instructions:" >> $TIMNOUTFILE
++			echo "End GPP:" >> $TIMNOUTFILE
++		fi
++
++		echo "DDR Initialization:" >> $TIMNOUTFILE
++		echo "DDR_PID: DDR3" >> $TIMNOUTFILE
++		echo "Operations:" >> $TIMNOUTFILE
++		echo "DDR_INIT_ENABLE: 0x00000001" >> $TIMNOUTFILE
++		echo "End Operations:" >> $TIMNOUTFILE
++		echo "Instructions:" >> $TIMNOUTFILE
++		cat $CLOCKSFILE >> $TIMNOUTFILE
++		cat $DDRFILE >> $TIMNOUTFILE
++		cat $DLLTUNFILE >> $TIMNOUTFILE
++		echo "End Instructions:" >> $TIMNOUTFILE
++		echo "End DDR Initialization:" >> $TIMNOUTFILE
++		echo "End Extended Reserved Data:" >> $TIMNOUTFILE
++		echo "" >> $TIMNOUTFILE
++	fi
++
++	# Last TIMN component is the CSK key for signature creation
+ 
+ 	if [ ! -e "$SIGNFILE" ]; then
+ 		echo "Cannot find $SIGNFILE file!"
+@@ -374,17 +495,5 @@ if [ "$TRUSTED" = "0x00000001" ]; then
+ fi
+ 
+ # Replace partition number in the output for EMMC
+-if [[ "$2" = "EMMCNORM" || "$2" = "EMMCALT" ]]; then
+-	mv $TIMNOUTFILE $TIMNOUTFILE.temp
+-	while IFS='' read -r line; do
+-		if [[ "$line" == *"Partition Number:"* ]]; then
+-			echo "Partition Number:               $EMMCPART" >> $TIMNOUTFILE
+-		else
+-			echo "$line" >> $TIMNOUTFILE
+-		fi
+-	done < $TIMNOUTFILE.temp
+-	#rm $TIMNOUTFILE.temp
+-fi
+-
+ 
+ exit 0
+diff --git a/tools/wtp/trusted/aes-256.txt b/tools/wtp/trusted/aes-256.txt
+new file mode 100644
+index 0000000..3ddbf62
+--- /dev/null
++++ b/tools/wtp/trusted/aes-256.txt
+@@ -0,0 +1 @@
++0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF
+diff --git a/tools/wtp/trusted/img-2.txt b/tools/wtp/trusted/img-2.txt
+index d6ce288..d7506a6 100644
+--- a/tools/wtp/trusted/img-2.txt
++++ b/tools/wtp/trusted/img-2.txt
+@@ -8,4 +8,4 @@ Partition Number:               0x00000000
+ Encrypt Algorithm ID:           0x00000000
+ Encrypt Start Offset:           0x00000000
+ Encrypt Size:                   0x00000000
+-Image Filename: tools/wtp/wtmi.dummy
++Image Filename: tools/wtp/wtmi/build/wtmi.bin
+diff --git a/tools/wtp/trusted/iv.txt b/tools/wtp/trusted/iv.txt
+new file mode 100644
+index 0000000..72efd8a
+--- /dev/null
++++ b/tools/wtp/trusted/iv.txt
+@@ -0,0 +1 @@
++4d617276656c6c57544d335058413030
+-- 
+1.9.1
+

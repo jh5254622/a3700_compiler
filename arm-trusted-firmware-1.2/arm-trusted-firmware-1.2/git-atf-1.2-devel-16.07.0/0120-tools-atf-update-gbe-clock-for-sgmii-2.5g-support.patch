@@ -1,0 +1,63 @@
+From a491f9c79653ec376a1b1b040d6dae1a8d6dad41 Mon Sep 17 00:00:00 2001
+From: Wilson Ding <dingwei@marvell.com>
+Date: Sun, 17 Apr 2016 02:25:29 +0800
+Subject: [PATCH 120/239] tools: atf: update gbe clock for sgmii-2.5g support
+
+- This patch is to align the u-boot patch for gbe core clock
+  settings in TIM header.
+- The orginal u-boot patch changed the gbe clock to 250MHz in
+  order to suppport sgmii-2.5g mode.
+
+Change-Id: Ic5aeab6bd8b70ffd8344f4457955544bd16239b7
+Signed-off-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29094
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ tools/wtp/clocks-1000-800.txt | 2 +-
+ tools/wtp/clocks-600-600.txt  | 2 +-
+ tools/wtp/clocks-800-800.txt  | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/tools/wtp/clocks-1000-800.txt b/tools/wtp/clocks-1000-800.txt
+index 3ef7e86..16ca4b3 100644
+--- a/tools/wtp/clocks-1000-800.txt
++++ b/tools/wtp/clocks-1000-800.txt
+@@ -41,7 +41,7 @@ WRITE: 0xC001300C 0x20543082
+ WRITE: 0xC0013000 0x03CFCCF2
+ WRITE: 0xC0018014 0x00180000
+ WRITE: 0xC0018004 0x02515508
+-WRITE: 0xC0018008 0x00307880
++WRITE: 0xC0018008 0x00300880
+ WRITE: 0xC001800C 0x00000540
+ WRITE: 0xC0018000 0x003F8F40
+ WRITE: 0xC0013210 0x0014B014A
+diff --git a/tools/wtp/clocks-600-600.txt b/tools/wtp/clocks-600-600.txt
+index ccf944f..a2df961 100644
+--- a/tools/wtp/clocks-600-600.txt
++++ b/tools/wtp/clocks-600-600.txt
+@@ -41,7 +41,7 @@ WRITE: 0xC001300C 0x208B3482
+ WRITE: 0xC0013000 0x0333C0FE
+ WRITE: 0xC0018014 0x00180000
+ WRITE: 0xC0018004 0x053154C8
+-WRITE: 0xC0018008 0x00307880
++WRITE: 0xC0018008 0x00300880
+ WRITE: 0xC001800C 0x00000940
+ WRITE: 0xC0018000 0x003F8F40
+ WRITE: 0xC0013210 0x0014B014D
+diff --git a/tools/wtp/clocks-800-800.txt b/tools/wtp/clocks-800-800.txt
+index bcfc41b..52a0c19 100644
+--- a/tools/wtp/clocks-800-800.txt
++++ b/tools/wtp/clocks-800-800.txt
+@@ -41,7 +41,7 @@ WRITE: 0xC001300C 0x20543082
+ WRITE: 0xC0013000 0x0003C0F2
+ WRITE: 0xC0018014 0x00180000
+ WRITE: 0xC0018004 0x02515508
+-WRITE: 0xC0018008 0x00307880
++WRITE: 0xC0018008 0x00300880
+ WRITE: 0xC001800C 0x00000540
+ WRITE: 0xC0018000 0x003F8F40
+ WRITE: 0xC0013210 0x0014B014A
+-- 
+1.9.1
+

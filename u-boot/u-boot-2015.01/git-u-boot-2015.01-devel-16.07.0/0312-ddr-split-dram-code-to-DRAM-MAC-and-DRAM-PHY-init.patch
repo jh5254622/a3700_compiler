@@ -1,0 +1,240 @@
+From b1493b771716f60d30a7c179aa44ffe8b6c33acb Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 10 Aug 2015 12:40:04 +0300
+Subject: [PATCH 0312/1240] ddr: split dram code to DRAM MAC and DRAM PHY init
+
+Change-Id: I3890e44e7dd37a309fae2d6e91a1f4697290cd25
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22699
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Kconfig     | 31 -------------------------------
+ arch/arm/include/asm/arch-mvebu/ddr.h |  2 ++
+ drivers/Kconfig                       |  2 ++
+ drivers/ddr/Kconfig                   | 31 +++++++++++++++++++++++++++++++
+ drivers/ddr/Makefile                  |  1 +
+ drivers/ddr/ddr_dunit.c               | 10 +++++-----
+ drivers/ddr/ddr_mckinley6.c           | 11 +++++------
+ drivers/ddr/mvebu_ddr.c               | 32 ++++++++++++++++++++++++++++++++
+ 8 files changed, 78 insertions(+), 42 deletions(-)
+ create mode 100644 drivers/ddr/Kconfig
+ create mode 100644 drivers/ddr/mvebu_ddr.c
+
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index 8c85f52..86b2151 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -104,37 +104,6 @@ config MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+ 	  Choose this option to add support
+ 	  for DDR over PCIE support
+ 
+-menu "DDR support"
+-
+-config MVEBU_SPL_DDR_SUPPORT
+-	bool "DDR SPL support"
+-	depends on SPL
+-	default y
+-	help
+-	  Choose this option to add support
+-	  for DDR controllers driver. need to
+-	  choose one of the controllers in the
+-	  list below.
+-
+-choice
+-	prompt "Controller select"
+-
+-config MVEBU_DUNIT_SUPPORT
+-	bool "DUNIT controller support"
+-	depends on MVEBU_SPL_DDR_SUPPORT
+-	help
+-	  Choose this option to add support
+-	  for DUNIT controller.
+-
+-config MVEBU_MK6_SUPPORT
+-	bool "MK6 controller support"
+-	depends on MVEBU_SPL_DDR_SUPPORT
+-	help
+-	  Choose this option to add support
+-	  for MK6 controller.
+-
+-endchoice
+-endmenu
+ endmenu
+ 
+ 
+diff --git a/arch/arm/include/asm/arch-mvebu/ddr.h b/arch/arm/include/asm/arch-mvebu/ddr.h
+index 0ba69b0..7306098 100644
+--- a/arch/arm/include/asm/arch-mvebu/ddr.h
++++ b/arch/arm/include/asm/arch-mvebu/ddr.h
+@@ -20,5 +20,7 @@
+ #define _MVEBU_DDR_H_
+ 
+ void static_dram_init(void);
++void mvebu_dram_mac_init(void);
++void mvebu_dram_phy_init(void);
+ 
+ #endif /* _MVEBU_DDR_H_ */
+diff --git a/drivers/Kconfig b/drivers/Kconfig
+index 7fdb815..b9b5dc1 100644
+--- a/drivers/Kconfig
++++ b/drivers/Kconfig
+@@ -52,4 +52,6 @@ source "drivers/phy/Kconfig"
+ 
+ source "drivers/thermal/Kconfig"
+ 
++source "drivers/ddr/Kconfig"
++
+ endmenu
+diff --git a/drivers/ddr/Kconfig b/drivers/ddr/Kconfig
+new file mode 100644
+index 0000000..08bcbf6
+--- /dev/null
++++ b/drivers/ddr/Kconfig
+@@ -0,0 +1,31 @@
++menu "DDR support"
++
++config MVEBU_SPL_DDR_SUPPORT
++	bool "DDR SPL support"
++	depends on SPL
++	default y
++	help
++	  Choose this option to add support
++	  for DDR controllers driver. need to
++	  choose one of the controllers in the
++	  list below.
++
++choice
++	prompt "Controller select"
++
++config MVEBU_DUNIT_SUPPORT
++	bool "DUNIT controller support"
++	depends on MVEBU_SPL_DDR_SUPPORT
++	help
++	  Choose this option to add support
++	  for DUNIT controller.
++
++config MVEBU_MK6_SUPPORT
++	bool "MK6 controller support"
++	depends on MVEBU_SPL_DDR_SUPPORT
++	help
++	  Choose this option to add support
++	  for MK6 controller.
++
++endchoice
++endmenu
+diff --git a/drivers/ddr/Makefile b/drivers/ddr/Makefile
+index 17370d0..79119bc 100644
+--- a/drivers/ddr/Makefile
++++ b/drivers/ddr/Makefile
+@@ -1,2 +1,3 @@
++obj-y += mvebu_ddr.o
+ obj-$(CONFIG_MVEBU_DUNIT_SUPPORT) += ddr_dunit.o
+ obj-$(CONFIG_MVEBU_MK6_SUPPORT) += ddr_mckinley6.o
+diff --git a/drivers/ddr/ddr_dunit.c b/drivers/ddr/ddr_dunit.c
+index fe5d85e..1b86397 100644
+--- a/drivers/ddr/ddr_dunit.c
++++ b/drivers/ddr/ddr_dunit.c
+@@ -20,10 +20,8 @@
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/ddr.h>
+ 
+-void static_dram_init(void)
++void mvebu_dram_mac_init(void)
+ {
+-	u32 reg;
+-
+ 	writel(0x7B004a28, 0xD0001400);
+ 	udelay(2000);
+ 	writel(0x36301820, 0xD0001404);
+@@ -94,7 +92,11 @@ void static_dram_init(void)
+ 	udelay(2000);
+ 	writel(0xf810001f, 0xD00016A0);
+ 	udelay(2000);
++}
+ 
++void mvebu_dram_phy_init(void)
++{
++	u32 reg;
+ 	writel(0xC0005847, 0xD00016A0);
+ 	udelay(2000);
+ 	reg = readl(0xD00016A0);
+@@ -184,6 +186,4 @@ void static_dram_init(void)
+ 	udelay(2000);
+ 	writel(0xfffdffff, 0xD00182e4);
+ 	udelay(2000);
+-
+-	printf("Static DRAM initialization is DONE..\n");
+ }
+diff --git a/drivers/ddr/ddr_mckinley6.c b/drivers/ddr/ddr_mckinley6.c
+index 3a9a489..9bc9f69 100644
+--- a/drivers/ddr/ddr_mckinley6.c
++++ b/drivers/ddr/ddr_mckinley6.c
+@@ -20,11 +20,8 @@
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/ddr.h>
+ 
+-void static_dram_init(void)
++void mvebu_dram_mac_init(void)
+ {
+-	u32 reg;
+-
+-
+ 	writel(0x7fbfdfef, 0xf0020340);
+ 	writel(0x020000aa, 0xf0020344);
+ 	writel(0x00200000, 0xf0020310);
+@@ -200,10 +197,12 @@ void static_dram_init(void)
+ 	writel(0x40000000, 0xf0020820);
+ 	writel(0x80000000, 0xf0020820);
+ 	writel(0x1f000001, 0xf0020020);
++}
+ 
++void mvebu_dram_phy_init(void)
++{
++	u32 reg;
+ 	reg = readl(0xf0020008);
+ 	while (reg != 0x00001111)
+ 		reg = readl(0xf0020008);
+-
+-	printf("Static DRAM initialization is DONE..\n");
+ }
+diff --git a/drivers/ddr/mvebu_ddr.c b/drivers/ddr/mvebu_ddr.c
+new file mode 100644
+index 0000000..308da09
+--- /dev/null
++++ b/drivers/ddr/mvebu_ddr.c
+@@ -0,0 +1,32 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2015 Marvell International Ltd.
++* ***************************************************************************
++* This program is free software: you can redistribute it and/or modify it
++* under the terms of the GNU General Public License as published by the Free
++* Software Foundation, either version 2 of the License, or any later version.
++*
++* This program is distributed in the hope that it will be useful,
++* but WITHOUT ANY WARRANTY; without even the implied warranty of
++* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++* GNU General Public License for more details.
++*
++* You should have received a copy of the GNU General Public License
++* along with this program.  If not, see <http://www.gnu.org/licenses/>.
++* ***************************************************************************
++*/
++
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch-mvebu/ddr.h>
++#include <asm/arch-mvebu/mvebu.h>
++
++void static_dram_init(void)
++{
++	debug_enter();
++	mvebu_dram_mac_init();
++	mvebu_dram_phy_init();
++
++	printf("Static DRAM initialization is DONE..\n");
++	debug_exit();
++}
+-- 
+1.9.1
+

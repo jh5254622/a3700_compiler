@@ -1,0 +1,55 @@
+From 18dce3228dc0e7f7e0bfd4a9e55134bbe56c5105 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 19 Apr 2016 17:13:47 +0300
+Subject: [PATCH 1061/1240] fix: xenon: add weak function in MMC xenon driver
+ for voltage change
+
+- Add weak function that print an error that need to implement voltage change
+  in SOC code
+- Need this change to enable xenon driver without voltage changes
+
+Change-Id: Id1757e45752e2f3b1ea33d47e0712f426f4fb76d
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29209
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/mmc/xenon_mmc.c | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/drivers/mmc/xenon_mmc.c b/drivers/mmc/xenon_mmc.c
+index af9e8d1..5e969b5 100644
+--- a/drivers/mmc/xenon_mmc.c
++++ b/drivers/mmc/xenon_mmc.c
+@@ -44,6 +44,14 @@ DECLARE_GLOBAL_DATA_PTR;
+ static const char driver_name[] = "XENON-SDHCI";
+ const u32 block_size[4] = {512, 1024, 2048, 512};
+ 
++/* GPIO output set to 1 to be 1.8v and 0 to be 3.3v */
++#ifndef MVEBU_GPIO_SDIO_VOLTAGE_1_8V
++#define MVEBU_GPIO_SDIO_VOLTAGE_1_8V 1
++#endif
++#ifndef MVEBU_GPIO_SDIO_VOLTAGE_3_3V
++#define MVEBU_GPIO_SDIO_VOLTAGE_3_3V 0
++#endif
++
+ static void xenon_mmc_writel(struct xenon_mmc_cfg *mmc_cfg, u32 offs, u32 val)
+ {
+ 	writel(val, mmc_cfg->reg_base + (offs));
+@@ -91,6 +99,13 @@ static void xenon_mmc_reset(struct xenon_mmc_cfg *mmc_cfg, u8 mask)
+ 	}
+ }
+ 
++void __weak mvebu_set_sdio(int voltage)
++{
++	error("Voltage not changed to %x, need to implement %s in SOC code\n", voltage, __func__);
++	printf("In addition need to define MVEBU_GPIO_SDIO_VOLTAGE_1_8V,\n");
++	printf("and MVEBU_GPIO_SDIO_VOLTAGE_3_3V according to SOC configuration\n");
++}
++
+ int xenon_mmc_phy_init(struct xenon_mmc_cfg *mmc_cfg)
+ {
+ 	u32 var;
+-- 
+1.9.1
+

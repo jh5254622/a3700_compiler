@@ -1,0 +1,32 @@
+From 07375970f604767d558bbcef2337b418fa85a814 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Mon, 27 Jul 2015 10:17:28 +0300
+Subject: [PATCH 0268/1240] configs: pci: a8k: enable 64-bit PCI resources
+
+Add define of CONFIG_SYS_PCI_64BIT
+
+Change-Id: I5d4ee52bdc84afe3f00e3a0f2404cc2f88a95390
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22190
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/armada8k.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index 4ffe9ea..9eb7029 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -68,6 +68,8 @@ extern char __end_of_spl[];
+  */
+ #include "mvebu-common.h"
+ 
++#define CONFIG_SYS_PCI_64BIT	/* enable 64-bit PCI resources */
++
+ /*
+  * SOC specific overrides
+  * Add here all config values that differ
+-- 
+1.9.1
+

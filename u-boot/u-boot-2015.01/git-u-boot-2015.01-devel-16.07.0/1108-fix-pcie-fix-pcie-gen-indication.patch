@@ -1,0 +1,42 @@
+From be10b94ccbbc6b4ea03bc9fabded9a87c8d91ef2 Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Mon, 9 May 2016 15:25:26 +0300
+Subject: [PATCH 1108/1240] fix: pcie: fix pcie gen indication
+
+the indication was incorrect since the MAC didn't complete
+the negotiation.
+100us delay was added to allow it.
+
+Change-Id: Ia5fa292f1e1a6c3ad9c1a207e1c9d06b42b5084b
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29653
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/pci/pcie_mvebu_dw.c | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/pci/pcie_mvebu_dw.c b/drivers/pci/pcie_mvebu_dw.c
+index f44c47e..60f4d8e 100644
+--- a/drivers/pci/pcie_mvebu_dw.c
++++ b/drivers/pci/pcie_mvebu_dw.c
+@@ -97,7 +97,15 @@ int dw_pcie_link_up(uintptr_t regs_base, u32 cap_speed)
+ 	reg |= PCIE_APP_LTSSM_EN;
+ 	writel(reg, regs_base + PCIE_GLOBAL_CONTROL);
+ 
+-	return mvebu_pcie_link_up(regs_base);
++	/* Check that link was established */
++	if (!mvebu_pcie_link_up(regs_base))
++		return 0;
++
++	/* Link can be established in Gen 1. still need to wait
++	   till MAC nagaotiation is completed */
++	udelay(100);
++
++	return 1;
+ }
+ 
+ void pci_init_board(void)
+-- 
+1.9.1
+

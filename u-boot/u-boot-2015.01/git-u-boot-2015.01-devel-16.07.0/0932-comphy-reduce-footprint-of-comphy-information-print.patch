@@ -1,0 +1,62 @@
+From 0594ecb9269af1d67a80b3b646fab21dfee9cc0f Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 9 Mar 2016 13:12:18 +0200
+Subject: [PATCH 0932/1240] comphy: reduce footprint of comphy information
+ print
+
+new print looks like this:
+
+Comphy-0: SGMII2        1.25 Gbps
+Comphy-1: USB3_HOST0    5 Gbps
+Comphy-2: SGMII0        1.25 Gbps
+Comphy-3: SATA1         5 Gbps
+Comphy-4: USB3_HOST1    5 Gbps
+Comphy-5: PEX2          5 Gbps
+
+Change-Id: I6c3ccc32c4a6317a23f2283ab5ea2fda7eaf9cf8
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28139
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/phy/comphy_core.c | 12 ++++--------
+ 1 file changed, 4 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/phy/comphy_core.c b/drivers/phy/comphy_core.c
+index ccd346e..77b1630 100644
+--- a/drivers/phy/comphy_core.c
++++ b/drivers/phy/comphy_core.c
+@@ -57,9 +57,9 @@ struct chip_serdes_phy_config *get_chip_config(enum fdt_compat_id compat)
+ 
+ static char *get_speed_string(u32 speed)
+ {
+-	char *speed_strings[] = {"1.25Gbps", "1.5Gbps", "2.5Gbps", "3.0Gbps",
+-				"3.25Gbps", "5Gbps", "6Gbps", "6.25Gbps",
+-				"10.315Gbps" };
++	char *speed_strings[] = {"1.25 Gbps", "1.5 Gbps", "2.5 Gbps", "3.0 Gbps",
++				"3.125 Gbps", "5 Gbps", "6 Gbps", "6.25 Gbps",
++				"10.31 Gbps" };
+ 	if (speed < 0 || speed > PHY_SPEED_MAX)
+ 		return "invalid";
+ 	return speed_strings[speed];
+@@ -116,15 +116,11 @@ void comphy_print(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy_map
+ 	u32 lane;
+ 	char *speed_str, *type_str;
+ 
+-	printf("COMPHY setup:\n");
+-	printf("Lane #   Speed       Type\n");
+-	printf("-----------------------------------\n");
+ 	for (lane = 0; lane < ptr_chip_cfg->comphy_lanes_count; lane++, comphy_map_data++) {
+ 		speed_str = get_speed_string(comphy_map_data->speed);
+ 		type_str = get_type_string(comphy_map_data->type);
+-		printf("%s %-4d  %-10s  %-13s\n", " ", lane, speed_str, type_str);
++		printf("Comphy-%d: %-13s %-10s\n", lane, type_str, speed_str);
+ 	}
+-	printf("\n");
+ }
+ 
+ u32 comphy_init(const void *blob)
+-- 
+1.9.1
+

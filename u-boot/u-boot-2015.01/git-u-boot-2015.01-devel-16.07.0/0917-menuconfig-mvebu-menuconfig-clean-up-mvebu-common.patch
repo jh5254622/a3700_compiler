@@ -1,0 +1,107 @@
+From 7ad149020bbb419252126c91399ad4d7e357e8e5 Mon Sep 17 00:00:00 2001
+From: Ahmad Abbas <ahmada@marvell.com>
+Date: Wed, 2 Mar 2016 12:22:44 +0200
+Subject: [PATCH 0917/1240] menuconfig: mvebu: menuconfig clean up -
+ mvebu-common
+
+moved mvebu-common Kconfig include out of Arm architecture to under
+marvell platform options.
+
+Change-Id: I3cdcdf625d5a0e9aac3d0ce9d216fbd60d188457
+Signed-off-by: Ahmad Abbas <ahmada@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27526
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/Kconfig                      |  1 -
+ arch/arm/cpu/armv8/armada3700/Kconfig | 10 ----------
+ arch/arm/cpu/armv8/armada8k/Kconfig   |  4 ----
+ arch/arm/cpu/mvebu-common/Kconfig     |  2 +-
+ board/mvebu/Kconfig                   | 14 ++++++++++++++
+ 5 files changed, 15 insertions(+), 16 deletions(-)
+
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index a8edc92..fa16c03 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -857,7 +857,6 @@ source "arch/arm/cpu/armv7/zynq/Kconfig"
+ 
+ source "arch/arm/cpu/armv7/Kconfig"
+ 
+-source "arch/arm/cpu/mvebu-common/Kconfig"
+ 
+ source "board/aristainetos/Kconfig"
+ source "board/BuR/kwb/Kconfig"
+diff --git a/arch/arm/cpu/armv8/armada3700/Kconfig b/arch/arm/cpu/armv8/armada3700/Kconfig
+index 4e3d7d7..a92edd1 100644
+--- a/arch/arm/cpu/armv8/armada3700/Kconfig
++++ b/arch/arm/cpu/armv8/armada3700/Kconfig
+@@ -24,16 +24,6 @@ config ARMV8_PSCI
+ 	bool
+ 	default y
+ 
+-config PALLADIUM
+-	bool "Support palladium emulation"
+-	default n
+-	help
+-	  Choose this option to enable
+-	  Palladium support.
+-	  There are certain differences
+-	  between palladium and real SoC,
+-	  like Clock and PHY, this should
+-	  not be enabled for real SoC.
+ 
+ endif
+ 
+diff --git a/arch/arm/cpu/armv8/armada8k/Kconfig b/arch/arm/cpu/armv8/armada8k/Kconfig
+index 62a09f5..d7de3c9e 100644
+--- a/arch/arm/cpu/armv8/armada8k/Kconfig
++++ b/arch/arm/cpu/armv8/armada8k/Kconfig
+@@ -24,8 +24,4 @@ config ARMV8_PSCI
+ 	bool
+ 	default y
+ 
+-config PALLADIUM
+-	bool "Support palladium emulation"
+-	default n
+-
+ endif
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index ab9931a..a2bc066 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -17,7 +17,7 @@ config MVEBU_SECURE_BOOT
+ 
+ config MVEBU_SPL_DIFFRENT_BASE_ADDR
+ 	bool "Use SPL different registers base address"
+-	depends on MVEBU
++	depends on MVEBU && TARGET_ARMADA_38X
+ 	default n
+ 	help
+ 	  Choose this option to enable setting of a different
+diff --git a/board/mvebu/Kconfig b/board/mvebu/Kconfig
+index c64c5b5..2eb26ec 100644
+--- a/board/mvebu/Kconfig
++++ b/board/mvebu/Kconfig
+@@ -76,4 +76,18 @@ config MVEBU_A3700_CLOCK
+ 
+ endmenu
+ 
++config PALLADIUM
++	bool "Support palladium emulation"
++	depends on TARGET_ARMADA_3700 || TARGET_ARMADA_8K
++	default n
++	help
++	  Choose this option to enable
++	  Palladium support.
++	  There are certain differences
++	  between palladium and real SoC,
++	  like Clock and PHY, this should
++	  not be enabled for real SoC.
++
++source "arch/arm/cpu/mvebu-common/Kconfig"
++
+ endmenu
+-- 
+1.9.1
+

@@ -1,0 +1,31 @@
+From 8435e8a3b2a85ac420226e713dd7c0454ae22d55 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 18 Mar 2015 16:40:51 +0200
+Subject: [PATCH 0151/1240] enable print of new running address of u-boot after
+ relocation
+
+Change-Id: Id958d821062855b9a9b380e6bf41cc9036a678b4
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17622
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ common/board_r.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/common/board_r.c b/common/board_r.c
+index a301cc2..6391c8d 100644
+--- a/common/board_r.c
++++ b/common/board_r.c
+@@ -290,7 +290,7 @@ __weak int power_init_board(void)
+ 
+ static int initr_announce(void)
+ {
+-	debug("Now running in RAM - U-Boot at: %08lx\n", gd->relocaddr);
++	printf("Now running in RAM - U-Boot at: %08lx\n", gd->relocaddr);
+ 	return 0;
+ }
+ 
+-- 
+1.9.1
+

@@ -1,0 +1,53 @@
+From 11ce5c3bbf89046da0e5a04ffdaec2e3a52113ff Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Mon, 15 Feb 2016 22:30:20 +0800
+Subject: [PATCH 0855/1240] fix: mmc: a3700: adjust voltage to SD/SDIO only
+
+issue: the Xenon mmc driver is shared by emmc IP
+    and SD/SDIO IP in A3700, there is a bug that
+    the SD/SDIO voltage will be changed by
+    eMMC during eMMC voltage switch.
+fix: only adjust the input voltage for SD/SDIO
+    IP.
+
+Change-Id: I6b04d1e8206f2130633738c54cb8e1518b4a60a1
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27497
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ drivers/mmc/xenon_mmc.c | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/mmc/xenon_mmc.c b/drivers/mmc/xenon_mmc.c
+index acf69f9..23b8451 100644
+--- a/drivers/mmc/xenon_mmc.c
++++ b/drivers/mmc/xenon_mmc.c
+@@ -326,17 +326,20 @@ static void xenon_mmc_set_power(struct xenon_mmc_cfg *mmc_cfg, u32 vcc, u32 vccq
+ 	switch (vcc) {
+ 	case MMC_VDD_165_195:
+ 		pwr = SDHCI_POWER_180;
+-		mvebu_set_sdio(MVEBU_GPIO_SDIO_VOLTAGE_1_8V);
++		if (mmc_cfg->mmc_mode == XENON_MMC_MODE_SD_SDIO)
++			mvebu_set_sdio(MVEBU_GPIO_SDIO_VOLTAGE_1_8V);
+ 		break;
+ 	case MMC_VDD_29_30:
+ 	case MMC_VDD_30_31:
+ 		pwr = SDHCI_POWER_300;
+-		mvebu_set_sdio(MVEBU_GPIO_SDIO_VOLTAGE_3_3V);
++		if (mmc_cfg->mmc_mode == XENON_MMC_MODE_SD_SDIO)
++			mvebu_set_sdio(MVEBU_GPIO_SDIO_VOLTAGE_3_3V);
+ 		break;
+ 	case MMC_VDD_32_33:
+ 	case MMC_VDD_33_34:
+ 		pwr = SDHCI_POWER_330;
+-		mvebu_set_sdio(MVEBU_GPIO_SDIO_VOLTAGE_3_3V);
++		if (mmc_cfg->mmc_mode == XENON_MMC_MODE_SD_SDIO)
++			mvebu_set_sdio(MVEBU_GPIO_SDIO_VOLTAGE_3_3V);
+ 		break;
+ 	default:
+ 		error("Does not support power mode(0x%X)\n", vcc);
+-- 
+1.9.1
+

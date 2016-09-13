@@ -1,0 +1,39 @@
+From 996d6f34686e34e60a4e5ec749c209d2cc9ce9eb Mon Sep 17 00:00:00 2001
+From: Ofer Heifetz <oferh@marvell.com>
+Date: Wed, 13 Apr 2016 18:16:50 +0300
+Subject: [PATCH 54/66] busybox: add ping6 support
+
+Change-Id: I7d697c417c8a9940fc331e09dc65e43ec53799e5
+Signed-off-by: Ofer Heifetz <oferh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29017
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ package/busybox/busybox.config | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/package/busybox/busybox.config b/package/busybox/busybox.config
+index cb3bcd8..1b37e85 100644
+--- a/package/busybox/busybox.config
++++ b/package/busybox/busybox.config
+@@ -1,7 +1,7 @@
+ #
+ # Automatically generated make config: don't edit
+ # Busybox version: 1.24.1
+-# Tue Feb  9 11:21:45 2016
++# Wed Apr 13 18:11:53 2016
+ #
+ CONFIG_HAVE_DOT_CONFIG=y
+ 
+@@ -772,7 +772,7 @@ CONFIG_NAMEIF=y
+ # CONFIG_NC_EXTRA is not set
+ # CONFIG_NC_110_COMPAT is not set
+ CONFIG_PING=y
+-# CONFIG_PING6 is not set
++CONFIG_PING6=y
+ CONFIG_FEATURE_FANCY_PING=y
+ CONFIG_WGET=y
+ CONFIG_FEATURE_WGET_STATUSBAR=y
+-- 
+1.9.1
+

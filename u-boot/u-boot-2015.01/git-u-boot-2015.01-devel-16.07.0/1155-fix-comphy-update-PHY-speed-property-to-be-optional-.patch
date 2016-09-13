@@ -1,0 +1,111 @@
+From 3e4f996d3732eb040b981ea8dd0ce9a46b36f1e2 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 23 May 2016 19:44:40 +0300
+Subject: [PATCH 1155/1240] fix: comphy: update PHY speed property to be
+ optional in FDT nodes
+
+Part of the COMPHY configuration speed is unused in COMPHY init except
+SGMII configuration.
+This patch moved the PHY speed property to be optional in the device tree
+and set the default of SGMII speed if not set as 1.25G
+Update documentation according to this patch
+
+Change-Id: Ia77efef689b8f8967cc18e3d9ae273bd3e7b445f
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29901
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ doc/device-tree-bindings/phy/mvebu_comphy.txt | 12 +++++-------
+ drivers/phy/comphy_core.c                     | 16 ++++++++++------
+ drivers/phy/comphy_cp110.c                    |  4 ++++
+ 3 files changed, 19 insertions(+), 13 deletions(-)
+
+diff --git a/doc/device-tree-bindings/phy/mvebu_comphy.txt b/doc/device-tree-bindings/phy/mvebu_comphy.txt
+index 7a91bd9..7597f61 100644
+--- a/doc/device-tree-bindings/phy/mvebu_comphy.txt
++++ b/doc/device-tree-bindings/phy/mvebu_comphy.txt
+@@ -20,11 +20,11 @@ Board specific:
+ 	- phy: Entry that include the configuration of the phy.
+ 	  Every phy should have the below parameters:
+ 	  - phy-type: PHY type (SGMII0/SATA1/PEX2...), the posible modes under include/dt-bindings/comphy/comphy_data.h
+-	  - phy-speed: PHY speed (1G/1.5G...), the posible speeds under include/dt-bindings/comphy/comphy_data.h
+ 	Optional properties:
+-	  - phy-invert : Polarity invert (PHY_POLARITY_TXD_INVERT/PHY_POLARITY_RXD_INVERT), the
++	  - phy-speed: PHY speed (1G/1.5G...), the posible speeds under include/dt-bindings/comphy/comphy_data.h
++	  - phy-invert: Polarity invert (PHY_POLARITY_TXD_INVERT/PHY_POLARITY_RXD_INVERT), the
+ 	  	posible bits under include/dt-bindings/comphy/comphy_data.h
+-	  - clk-src : Set the clock source of PCIe, if configured to PCIe clock output
++	  - clk-src: Set the clock source of PCIe, if configured to PCIe clock output
+ 		This relevant for SerDes lane 5 only (by default, lane 4 is the clock source)
+ 		for Armada-7040 boards.
+ 
+@@ -37,14 +37,12 @@ Example:
+ 		reg-hpipe3 = <0xa0000 0x800>;
+ 		phy0 {
+ 			phy-type = <PHY_TYPE_SATA0>;
+-			phy-speed = <PHY_SPEED_1_25G>;
+ 		};
+ 		phy1 {
+ 			phy-type = <PHY_TYPE_PEX0>;
+-			phy-speed = <PHY_SPEED_5G>;
+ 		};
+ 		phy2 {
+-			phy-type = <PHY_TYPE_PEX1>;
+-			phy-speed = <PHY_SPEED_5G>;
++			phy-type = <PHY_TYPE_SGMII0>;
++			phy-speed = <PHY_SPEED_3_125G>;
+ 		};
+ 	};
+diff --git a/drivers/phy/comphy_core.c b/drivers/phy/comphy_core.c
+index ef73386..d006f4f 100644
+--- a/drivers/phy/comphy_core.c
++++ b/drivers/phy/comphy_core.c
+@@ -119,9 +119,14 @@ void comphy_print(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy_map
+ 	for (lane = 0; lane < ptr_chip_cfg->comphy_lanes_count; lane++, comphy_map_data++) {
+ 		if (comphy_map_data->type == PHY_TYPE_UNCONNECTED)
+ 			continue;
+-		speed_str = get_speed_string(comphy_map_data->speed);
+-		type_str = get_type_string(comphy_map_data->type);
+-		printf("Comphy-%d: %-13s %-10s\n", lane, type_str, speed_str);
++		if (comphy_map_data->speed == PHY_SPEED_INVALID) {
++			type_str = get_type_string(comphy_map_data->type);
++			printf("Comphy-%d: %-13s\n", lane, type_str);
++		} else {
++			speed_str = get_speed_string(comphy_map_data->speed);
++			type_str = get_type_string(comphy_map_data->type);
++			printf("Comphy-%d: %-13s %-10s\n", lane, type_str, speed_str);
++		}
+ 	}
+ }
+ 
+@@ -187,9 +192,8 @@ u32 comphy_init(const void *blob)
+ 			comphy_map_data[lane].invert = fdtdec_get_int(blob, sub_node, "phy-invert",
+ 												PHY_POLARITY_NO_INVERT);
+ 			comphy_map_data[lane].clk_src = fdtdec_get_bool(blob, sub_node, "clk-src");
+-			if ((comphy_map_data[lane].speed == PHY_TYPE_INVALID) ||
+-			    (comphy_map_data[lane].type == PHY_SPEED_INVALID))
+-				printf("no phy speed or type for lane %d, setting lane as unconnedted\n", lane + 1);
++			if (comphy_map_data[lane].type == PHY_TYPE_INVALID)
++				printf("no phy type for lane %d, setting lane as unconnedted\n", lane + 1);
+ 			sub_node = fdt_next_subnode(blob, sub_node);
+ 			lane++;
+ 		} while (sub_node > 0);
+diff --git a/drivers/phy/comphy_cp110.c b/drivers/phy/comphy_cp110.c
+index 49b46ff..1a914e8 100644
+--- a/drivers/phy/comphy_cp110.c
++++ b/drivers/phy/comphy_cp110.c
+@@ -1457,6 +1457,10 @@ int comphy_cp110_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy
+ 		case PHY_TYPE_SGMII1:
+ 		case PHY_TYPE_SGMII2:
+ 		case PHY_TYPE_SGMII3:
++			if (ptr_comphy_map->speed == PHY_SPEED_INVALID) {
++				debug("Warning: SGMII PHY speed in lane %d is invalid, set PHY speed to 1.25G\n", lane);
++				ptr_comphy_map->speed = PHY_SPEED_1_25G;
++			}
+ 			ret = comphy_sgmii_power_up(lane, ptr_comphy_map->speed, hpipe_base_addr, comphy_base_addr);
+ 			break;
+ 		case PHY_TYPE_KR:
+-- 
+1.9.1
+

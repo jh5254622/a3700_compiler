@@ -1,0 +1,864 @@
+From a5fb6c7c4ac88c8f4a0ceee4e53cff69b038761f Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 21 Jun 2015 13:55:48 +0300
+Subject: [PATCH 0208/1240] address decoding: add MBUS driver, with FDT support
+
+Change-Id: Ib20f6ac03a2eeed54bff2567277bcfcc1b14632f
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20308
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv7/armada38x/soc-init.c      |  40 ++++
+ arch/arm/cpu/armv7/armadalp/soc-init.c       |  40 ++++
+ arch/arm/cpu/mvebu-common/soc-init.c         |   6 +-
+ arch/arm/dts/armada-385-db.dts               |  13 ++
+ arch/arm/dts/armada-lp.dtsi                  |   1 +
+ arch/arm/include/asm/arch-mvebu/adec_mbus.h  | 116 -----------
+ arch/arm/include/asm/arch-mvebu/mbus.h       |  27 +++
+ arch/arm/include/asm/arch-mvebu/mvebu.h      |   7 +
+ common/mvebu/cmd_misc.c                      |  10 +-
+ configs/mvebu_armada38x_defconfig            |   3 +-
+ configs/mvebu_armadalp_defconfig             |   2 +-
+ doc/device-tree-bindings/README.mvebu        |   6 +-
+ doc/device-tree-bindings/misc/mvebu-mbus.txt |  83 ++++++++
+ drivers/misc/Kconfig                         |   8 +
+ drivers/misc/Makefile                        |   1 +
+ drivers/misc/mvebu_mbus.c                    | 275 +++++++++++++++++++++++++++
+ include/fdtdec.h                             |   2 +-
+ lib/fdtdec.c                                 |   1 +
+ 18 files changed, 519 insertions(+), 122 deletions(-)
+ delete mode 100644 arch/arm/include/asm/arch-mvebu/adec_mbus.h
+ create mode 100644 arch/arm/include/asm/arch-mvebu/mbus.h
+ create mode 100644 doc/device-tree-bindings/misc/mvebu-mbus.txt
+ create mode 100644 drivers/misc/mvebu_mbus.c
+
+diff --git a/arch/arm/cpu/armv7/armada38x/soc-init.c b/arch/arm/cpu/armv7/armada38x/soc-init.c
+index c545698..421fd84 100644
+--- a/arch/arm/cpu/armv7/armada38x/soc-init.c
++++ b/arch/arm/cpu/armv7/armada38x/soc-init.c
+@@ -25,6 +25,12 @@
+ #include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-armada38x/armada38x.h>
+ 
++#define MBUS_SDRAM_WIN_ENABLE			0x1
++#define MBUS_SDRAM_BASE_REG(win)		(MVEBU_ADEC_BASE + 0x180 + (win * 0x8))
++#define MBUS_SDRAM_CTRL_REG(win)		(MVEBU_ADEC_BASE + 0x184 + (win * 0x8))
++#define MBUS_SDRAM_SIZE_MASK			(0xFF << 24)
++#define MBUS_SDRAM_SIZE_ALIGN			(1 << 24)
++
+ int soc_early_init_f(void)
+ {
+ 	return 0;
+@@ -41,3 +47,37 @@ struct mvebu_soc_family *soc_init(void)
+ 
+ 	return &a38x_family_info;
+ }
++
++int dram_init(void)
++{
++	int cs;
++	u32 ctrl, size, base;
++
++	gd->ram_size = 0;
++	/*
++	* We assume the DDR training code has configured
++	* The SDRAM adec windows so we pull our info from there
++	*/
++
++	for (cs = 0; cs < CONFIG_NR_DRAM_BANKS; cs++) {
++		ctrl = readl(MBUS_SDRAM_CTRL_REG(cs));
++		if (ctrl & MBUS_SDRAM_WIN_ENABLE) {
++			base = readl(MBUS_SDRAM_BASE_REG(cs));
++			size = (ctrl & MBUS_SDRAM_SIZE_MASK) + MBUS_SDRAM_SIZE_ALIGN;
++			gd->bd->bi_dram[cs].start = base;
++			gd->bd->bi_dram[cs].size = size;
++
++			gd->ram_size += size;
++
++			debug("DRAM bank %d base 0x%08x size 0x%x ", cs, base, size);
++		}
++	}
++
++	if (gd->ram_size == 0) {
++		error("No DRAM banks detected");
++		return 1;
++	}
++
++	return 0;
++}
++
+diff --git a/arch/arm/cpu/armv7/armadalp/soc-init.c b/arch/arm/cpu/armv7/armadalp/soc-init.c
+index 4a16a54..61b8cdd 100644
+--- a/arch/arm/cpu/armv7/armadalp/soc-init.c
++++ b/arch/arm/cpu/armv7/armadalp/soc-init.c
+@@ -44,3 +44,43 @@ struct mvebu_soc_family *soc_init(void)
+ 
+ 	return &armadalp_family_info;
+ }
++
++int dram_init(void)
++{
++#ifdef CONFIG_PALLADIUM
++	/* NO DRAM init sequence in Pallaidum, so set static DRAM size of 256MB */
++	gd->bd->bi_dram[0].start = 0;
++	gd->bd->bi_dram[0].size = 0x10000000;
++	gd->ram_size = gd->bd->bi_dram[0].size;
++#else
++	int cs;
++	u32 ctrl, size, base;
++
++	gd->ram_size = 0;
++	/*
++	* We assume the DDR training code has configured
++	* The SDRAM adec windows so we pull our info from there
++	*/
++
++	for (cs = 0; cs < CONFIG_NR_DRAM_BANKS; cs++) {
++		ctrl = readl(MBUS_SDRAM_CTRL_REG(cs));
++		if (ctrl & MBUS_SDRAM_WIN_ENABLE) {
++			base = readl(MBUS_SDRAM_BASE_REG(cs));
++			size = (ctrl & MBUS_SDRAM_SIZE_MASK) + MBUS_SDRAM_SIZE_ALIGN;
++			gd->bd->bi_dram[cs].start = base;
++			gd->bd->bi_dram[cs].size = size;
++
++			gd->ram_size += size;
++
++			debug("DRAM bank %d base 0x%08x size 0x%x ", cs, base, size);
++		}
++	}
++
++	if (gd->ram_size == 0) {
++		error("No DRAM banks detected");
++		return 1;
++	}
++#endif
++
++	return 0;
++}
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index 7b54d80..74d06e3 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -27,6 +27,9 @@
+ #include <asm/arch-mvebu/soc.h>
+ #include <asm/arch-mvebu/tables.h>
+ 
++#ifdef CONFIG_MVEBU_MBUS
++#include <asm/arch-mvebu/mbus.h>
++#endif
+ 
+ /* Weak function for boards who need specific init seqeunce */
+ int __soc_late_init(void)
+@@ -89,8 +92,9 @@ int mvebu_soc_init()
+ 	/* Update SOC info according to family */
+ 	update_soc_units(soc);
+ 
+-#ifndef CONFIG_PALLADIUM
+ 	/* Initialize physical memory map */
++#ifdef CONFIG_MVEBU_MBUS
++	init_mbus();
+ #endif
+ 
+ 	/* Soc specific init */
+diff --git a/arch/arm/dts/armada-385-db.dts b/arch/arm/dts/armada-385-db.dts
+index 969c53a..a9bcc7a 100644
+--- a/arch/arm/dts/armada-385-db.dts
++++ b/arch/arm/dts/armada-385-db.dts
+@@ -1,5 +1,6 @@
+ 
+ /dts-v1/;
++#define ATTR(remapped, target, attributes) (((remapped) << 12) | ((target) << 8) | (attributes))
+ 
+ / {
+ 	model = "Marvell Armada 385 Development Board";
+@@ -85,6 +86,18 @@
+ 				#size-cells = <0>;
+ 				status = "disabled";
+ 			};
++			mbus {
++				compatible = "marvell,mvebu-mbus";
++				reg = <0x20000 0x50>;
++				max-win = <19>;
++				max-remap = <8>;
++				internal-win = <20>;
++				windows = <0xE0000000 0x2000000 ATTR(0x1, 0x8, 0xE8)
++					0xE2000000 0x2000000 ATTR(0x1, 0x4, 0xE8)
++					0xE4000000 0x2000000 ATTR(0x1, 0x4, 0xD8)
++					0xE6000000 0x2000000 ATTR(0x1, 0x4, 0xB8)
++					0xfd000000 0x1000000 ATTR(0x0, 0x1, 0x2F)>;
++			};
+ 		};
+ 	};
+ 
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index b81e88b..913ae43 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -1,3 +1,4 @@
++#define ATTR(remapped, target, attributes) (((remapped) << 12) | ((target) << 8) | (attributes))
+ 
+ / {
+ 	model = "Marvell Armada_LP Development Board";
+diff --git a/arch/arm/include/asm/arch-mvebu/adec_mbus.h b/arch/arm/include/asm/arch-mvebu/adec_mbus.h
+deleted file mode 100644
+index ca8559d..0000000
+--- a/arch/arm/include/asm/arch-mvebu/adec_mbus.h
++++ /dev/null
+@@ -1,116 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
+- * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
+- *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
+- * ***************************************************************************
+- */
+-
+-struct adec_win {
+-	u32 target;
+-	uintptr_t base_addr;
+-	uintptr_t win_size;
+-	u32 attribute;
+-	u32 remapped;
+-	u32 enabled;
+-};
+-
+-enum mbus_target_id {
+-	TBL_TERM		= -1,
+-	DRAM_TARGET_ID		= 0,	/* Port 0 -> DRAM interface             */
+-	DEV_TARGET_ID		= 1,	/* Port 1 -> Device port, BootROM, SPI  */
+-	PEX_1_3_TARGET_ID	= 4,	/* Port 4 -> PCI Express 1 and 3        */
+-	PEX_0_TARGET_ID		= 8,	/* Port 4 -> PCI Express 0 and 2        */
+-	CRYPT_TARGET_ID		= 10,	/* Port 9 --> Crypto Engine SRAM        */
+-	PNC_BM_TARGET_ID	= 12,	/* Port 12 -> PNC + BM Unit             */
+-	INVALID_TARGET_ID	= 0xFF,
+-	MAX_TARGETS_ID
+-};
+-
+-enum mbus_attribute {
+-	/* Memory chip select */
+-	MEM_CS_0_ATTR		= 0x0E,
+-	MEM_CS_1_ATTR		= 0x0D,
+-	MEM_CS_2_ATTR		= 0x0B,
+-	MEM_CS_3_ATTR		= 0x07,
+-	CS_DEC_BY_ATTR		= 0x0F,
+-	/* Device bus interface */
+-	SPI0_CS0_ATTR		= 0x1E,
+-	SPI0_CS1_ATTR		= 0x5E,
+-	SPI0_CS2_ATTR		= 0x9E,
+-	SPI0_CS3_ATTR		= 0xDE,
+-	SPI1_CS0_ATTR		= 0x1A,
+-	SPI1_CS1_ATTR		= 0x5A,
+-	SPI1_CS2_ATTR		= 0x9A,
+-	SPI1_CS3_ATTR		= 0xDA,
+-	DEVICE_CS0_ATTR		= 0x3E,
+-	DEVICE_CS1_ATTR		= 0x3D,
+-	DEVICE_CS2_ATTR		= 0x3B,
+-	DEVICE_CS3_ATTR		= 0x37,
+-	BOOT_CS_ATTR		= 0x2F,
+-	BOOTROM_ATTR		= 0x1D,
+-	/* PCI Express interface */
+-	PCI_0_IO_ATTR		= 0xE0,
+-	PCI_0_MEM_ATTR		= 0xE8,
+-	PCI_1_IO_ATTR		= 0xE0,
+-	PCI_1_MEM_ATTR		= 0xE8,
+-	PCI_2_IO_ATTR		= 0xD0,
+-	PCI_2_MEM_ATTR		= 0xD8,
+-	PCI_3_IO_ATTR		= 0xB0,
+-	PCI_3_MEM_ATTR		= 0xB8,
+-	/* Security Accelerator SRAM */
+-	ENGINE_0_BYTES_ATTR	= 0x04,
+-	ENGINE_0_NOS_ATTR	= 0x05,
+-	ENGINE_0_BYTE_WORDS_ATTR= 0x06,
+-	ENGINE_0_WORDS_ATTR	= 0x07,
+-	ENGINE_1_BYTES_ATTR	= 0x08,
+-	ENGINE_1_NOS_ATTR	= 0x09,
+-	ENGINE_1_BYTE_WORDS_ATTR= 0x0A,
+-	ENGINE_1_WORDS_ATTR	= 0x0B,
+-	NOT_VALID_ATTR		= 0xFF,
+-};
+-
+-#define MBUS_WIN_CTRL_REG(win_num)		((win_num < MAX_MBUS_REMAP_WINS) ? \
+-		(win_num * 0x10) : (0x90 + (win_num-8)*0x08))
+-#define MBUS_CR_WIN_ENABLE			0x1
+-#define MBUS_CR_WIN_TARGET_OFFS			4
+-#define MBUS_CR_WIN_TARGET_MASK			(0xf << MBUS_CR_WIN_TARGET_OFFS)
+-#define MBUS_CR_WIN_ATTR_OFFS			8
+-#define MBUS_CR_WIN_ATTR_MASK			(0xff << MBUS_CR_WIN_ATTR_OFFS)
+-#define MBUS_CR_WIN_SIZE_OFFS			16
+-#define MBUS_CR_WIN_SIZE_MASK			(0xffff << MBUS_CR_WIN_SIZE_OFFS)
+-#define MBUS_CR_WIN_SIZE_ALIGNMENT		0x10000
+-
+-#define MBUS_WIN_BASE_REG(win_num)		((win_num < MAX_MBUS_REMAP_WINS) ? \
+-		(0x4 + win_num*0x10) :	(0x94 + (win_num-8)*0x08))
+-#define MBUS_BR_BASE_OFFS			16
+-#define MBUS_BR_BASE_MASK			(0xffff << 	MBUS_BR_BASE_OFFS)
+-
+-#define MBUS_WIN_REMAP_LOW_REG(win_num)		((win_num < MAX_MBUS_REMAP_WINS) ? \
+-		(0x8 + win_num*0x10) : (0))
+-#define MBUS_RLR_REMAP_LOW_OFFS			16
+-#define MBUS_RLR_REMAP_LOW_MASK			(0xffff << MBUS_RLR_REMAP_LOW_OFFS)
+-
+-#define MBUS_WIN_REMAP_HIGH_REG(win_num)	((win_num < MAX_MBUS_REMAP_WINS) ? \
+-		(0xC + win_num*0x10) : (0))
+-#define MBUS_RHR_REMAP_HIGH_OFFS		0
+-#define MBUS_RHR_REMAP_HIGH_MASK		(0xffffffff << MBUS_RHR_REMAP_HIGH_OFFS)
+-
+-#define MBUS_WIN_INTEREG_REG			(0x80)
+-
+-#define MBUS_SDRAM_BASE_REG(win)		(MVEBU_ADEC_BASE + 0x180 + (win * 0x8))
+-#define MBUS_SDRAM_CTRL_REG(win)		(MVEBU_ADEC_BASE + 0x184 + (win * 0x8))
+-#define MBUS_SDRAM_SIZE_MASK			(0xFF << 24)
+-#define MBUS_SDRAM_SIZE_ALIGN			(1 << 24)
+-
+diff --git a/arch/arm/include/asm/arch-mvebu/mbus.h b/arch/arm/include/asm/arch-mvebu/mbus.h
+new file mode 100644
+index 0000000..c30255c
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/mbus.h
+@@ -0,0 +1,27 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _MBUS_H_
++#define _MBUS_H_
++
++void dump_mbus(void);
++int init_mbus(void);
++int remap_mbus(phys_addr_t input, phys_addr_t output);
++
++#endif /* _MBUS_H_ */
++
+diff --git a/arch/arm/include/asm/arch-mvebu/mvebu.h b/arch/arm/include/asm/arch-mvebu/mvebu.h
+index 4d5fdcf..fc21006 100644
+--- a/arch/arm/include/asm/arch-mvebu/mvebu.h
++++ b/arch/arm/include/asm/arch-mvebu/mvebu.h
+@@ -64,4 +64,11 @@
+ #define debug_exit()
+ #endif
+ 
++/* Macro for testing alignment. Positive if number is NOT aligned */
++#define IS_NOT_ALIGN(number, align)	((number) & ((align) - 1))
++
++/* Macro for alignment up. For example, ALIGN_UP(0x0330, 0x20) = 0x0340 */
++#define ALIGN_UP(number, align) (((number) & ((align) - 1)) ? \
++		(((number) + (align)) & ~((align)-1)) : (number))
++
+ #endif	/* MVEBU_H */
+diff --git a/common/mvebu/cmd_misc.c b/common/mvebu/cmd_misc.c
+index 8de5c85..d4c1d25 100644
+--- a/common/mvebu/cmd_misc.c
++++ b/common/mvebu/cmd_misc.c
+@@ -25,9 +25,16 @@
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/unit-info.h>
+ 
++#ifdef CONFIG_MVEBU_MBUS
++#include <asm/arch-mvebu/mbus.h>
++#endif
++
+ int do_map_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+ 			char * const argv[])
+ {
++#ifdef CONFIG_MVEBU_MBUS
++	dump_mbus();
++#endif
+ 	return 0;
+ }
+ 
+@@ -52,7 +59,8 @@ int do_remap_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+ 	input = simple_strtoul(argv[1], NULL, 16);
+ 	output = simple_strtoul(argv[2], NULL, 16);
+ 
+-	if (adec_remap(input, output)) {
++#ifdef CONFIG_MVEBU_MBUS
++	if (remap_mbus(input, output)) {
+ 		printf("Error: Failed to remap 0x%08x->0x%08x\n", (uint)input, (uint)output);
+ 		return 1;
+ 	}
+diff --git a/configs/mvebu_armada38x_defconfig b/configs/mvebu_armada38x_defconfig
+index ff28c54..e6140c1 100644
+--- a/configs/mvebu_armada38x_defconfig
++++ b/configs/mvebu_armada38x_defconfig
+@@ -31,5 +31,6 @@ CONFIG_CMD_MVEBU_BUBT=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-385-db"
+-+S:CONFIG_SYS_NS16550=y
+ CONFIG_MVEBU_PINCTL=y
++CONFIG_MVEBU_MBUS=y
+++S:CONFIG_SYS_NS16550=y
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index 3a735f6..b7bf483 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -11,4 +11,4 @@ CONFIG_CMD_SAVEENV=y
+ CONFIG_CMD_MEMORY=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+-+S:CONFIG_DEFAULT_DEVICE_TREE="armada-lp-db"
+++S:CONFIG_DEFAULT_DEVICE_TREE="armada-lp-db"
+\ No newline at end of file
+diff --git a/doc/device-tree-bindings/README.mvebu b/doc/device-tree-bindings/README.mvebu
+index dc6083a..ee3bb7a 100644
+--- a/doc/device-tree-bindings/README.mvebu
++++ b/doc/device-tree-bindings/README.mvebu
+@@ -44,8 +44,12 @@ Group Ltd.
+ 				Specify the SPI interface, check doc/device-tree-bindings/spi/mvebu-spi.txt
+ 			2.1.2 /soc/internal-regs/tclock/ node:
+ 				Specify the clock interface, check doc/device-tree-bindings/clock/mvebu-clock.txt
+-			2.1.3 /soc/internal-regs/i2c/ node;
++			2.1.3 /soc/internal-regs/i2c/ node:
+ 				Specify the I2C interface, check doc/device-tree-bindings/i2c/mvebu-i2c.txt
++			2.1.4 /soc/internal-regs/map-<DRIVER>:
++				Specify the address decoding interface, check doc/device-tree-bindings/misc/mvebu-bus-DRIVER.txt
++				DRIVER = ccu/iob/rfu/mbus
++
+ 3) /sar/ node:
+ 	Specify the sample at reset database, check
+ 	doc/device-tree-bindings/misc/mvebu-sar.txt
+diff --git a/doc/device-tree-bindings/misc/mvebu-mbus.txt b/doc/device-tree-bindings/misc/mvebu-mbus.txt
+new file mode 100644
+index 0000000..2361be4
+--- /dev/null
++++ b/doc/device-tree-bindings/misc/mvebu-mbus.txt
+@@ -0,0 +1,83 @@
++Marvell MBUS address decoding bindings
++=====================================
++
++The MBUS node include describtion about the address decoding configuration.
++
++The MBUS node requires the following properties:
++	- compatible
++		should be "marvell,mvebu-mbus"
++	- reg: the base address of the MBUS unit
++	- max-win: number of the max mbus windows
++	- max-remap: number of the max remap windows
++	- internal-win: number of the internal register window
++	- windows: entry that include the configuration of the windows
++	  every window should have 3 parameters:
++	  - base address of the window
++	  - size of the window
++	  - ATTR: attributes + target-ID + remmap flag (build by bitmask:
++		(((remapped) << 12) | ((target) << 8) | (attributes))
++
++Target ID options:
++	0 = DRAM interface
++	1 = Device port, BootROM, SPI
++	4 = PCI Express 1 and 3
++	8 = PCI Express 0 and 2
++	10 = Crypto Engine SRAM
++	12 = PNC + BM Unit
++
++Attribute options:
++	/* Memory chip select */
++	0x0E = MEM_CS_0_ATTR
++	0x0D = MEM_CS_1_ATTR
++	0x0B = MEM_CS_2_ATTR
++	0x07 = MEM_CS_3_ATTR
++	0x0F = CS_DEC_BY_ATTR
++	/* Device bus interface */
++	0x1E = SPI0_CS0_ATTR
++	0x5E = SPI0_CS1_ATTR
++	0x9E = SPI0_CS2_ATTR
++	0xDE = SPI0_CS3_ATTR
++	0x1A = SPI1_CS0_ATTR
++	0x5A = SPI1_CS1_ATTR
++	0x9A = SPI1_CS2_ATTR
++	0xDA = SPI1_CS3_ATTR
++	0x3E = DEVICE_CS0_ATTR
++	0x3D = DEVICE_CS1_ATTR
++	0x3B = DEVICE_CS2_ATTR
++	0x37 = DEVICE_CS3_ATTR
++	0x2F = BOOT_CS_ATTR
++	0x1D = BOOTROM_ATTR
++	/* PCI Express interface */
++	0xE0 = PCI_0_IO_ATTR
++	0xE8 = PCI_0_MEM_ATTR
++	0xE0 = PCI_1_IO_ATTR
++	0xE8 = PCI_1_MEM_ATTR
++	0xD0 = PCI_2_IO_ATTR
++	0xD8 = PCI_2_MEM_ATTR
++	0xB0 = PCI_3_IO_ATTR
++	0xB8 = PCI_3_MEM_ATTR
++	/* Security Accelerator SRAM */
++	0x04 = ENGINE_0_BYTES_ATTR
++	0x05 = ENGINE_0_NOS_ATTR
++	0x06 = ENGINE_0_BYTE_WORDS_ATTR
++	0x07 = ENGINE_0_WORDS_ATTR
++	0x08 = ENGINE_1_BYTES_ATTR
++	0x09 = ENGINE_1_NOS_ATTR
++	0x0A = ENGINE_1_BYTE_WORDS_ATTR
++	0x0B = ENGINE_1_WORDS_ATTR
++
++
++Example:
++	mbus {
++		compatible = "marvell,mvebu-mbus";
++		reg = <0x20000 0x50>;
++		max-win = <19>;
++		max-remap = <8>;
++		internal-win = <20>;
++		windows = <0xE0000000 0x2000000 ATTR(0x1, 0x8, 0xE8)
++			0xE2000000 0x2000000 ATTR(0x1, 0x4, 0xE8)
++			0xE4000000 0x2000000 ATTR(0x1, 0x4, 0xD8)
++			0xE6000000 0x2000000 ATTR(0x1, 0x4, 0xB8)
++			0xfd000000 0x1000000 ATTR(0x0, 0x1, 0x2F)>;
++	};
++
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index e69de29..135612b 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -0,0 +1,8 @@
++config MVEBU_MBUS
++	bool "MBUS address decoding driver"
++	default n
++	help
++	  Choose this option to add support
++	  for MBUS address decoding driver.
++	  This driver initialize the MBUS windows
++	  only.
+diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
+index a34972d..39a6997 100644
+--- a/drivers/misc/Makefile
++++ b/drivers/misc/Makefile
+@@ -28,3 +28,4 @@ obj-$(CONFIG_SMSC_LPC47M) += smsc_lpc47m.o
+ obj-$(CONFIG_STATUS_LED) += status_led.o
+ obj-$(CONFIG_TWL4030_LED) += twl4030_led.o
+ obj-$(CONFIG_FSL_IFC) += fsl_ifc.o
++obj-$(CONFIG_MVEBU_MBUS) += mvebu_mbus.o
+diff --git a/drivers/misc/mvebu_mbus.c b/drivers/misc/mvebu_mbus.c
+new file mode 100644
+index 0000000..ae9c931
+--- /dev/null
++++ b/drivers/misc/mvebu_mbus.c
+@@ -0,0 +1,275 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#define DEBUG
++/* #define DEBUG_REG */
++
++#include <common.h>
++#include <asm/system.h>
++#include <asm/io.h>
++#include <fdtdec.h>
++#include <malloc.h>
++#include <asm/arch-mvebu/mvebu.h>
++#include <asm/arch-mvebu/mbus.h>
++#include <asm/arch-mvebu/fdt.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++struct mbus_configuration {
++	void __iomem *mbus_base;
++	u32 max_win;
++	u32 max_remap;
++	u32 internal_win;
++};
++struct mbus_configuration __attribute__((section(".data")))mbus_config;
++struct mbus_configuration __attribute__((section(".data")))*mbus_info = &mbus_config;
++
++struct mbus_fdt_info {
++	u32 base;
++	u32 size;
++	u32 flags;
++};
++
++struct mbus_win {
++	u32 target;
++	uintptr_t base_addr;
++	uintptr_t win_size;
++	u32 attribute;
++	u32 remapped;
++	u32 enabled;
++};
++
++#define MBUS_WIN_CTRL_REG(win_num)		((win_num < mbus_info->max_remap) ? \
++		(win_num * 0x10) : (0x90 + (win_num-8)*0x08))
++#define MBUS_CR_WIN_ENABLE			0x1
++#define MBUS_CR_WIN_TARGET_OFFS			4
++#define MBUS_CR_WIN_TARGET_MASK			(0xf << MBUS_CR_WIN_TARGET_OFFS)
++#define MBUS_CR_WIN_ATTR_OFFS			8
++#define MBUS_CR_WIN_ATTR_MASK			(0xff << MBUS_CR_WIN_ATTR_OFFS)
++#define MBUS_CR_WIN_SIZE_OFFS			16
++#define MBUS_CR_WIN_SIZE_MASK			(0xffff << MBUS_CR_WIN_SIZE_OFFS)
++#define MBUS_CR_WIN_SIZE_ALIGNMENT		0x10000
++
++#define MBUS_WIN_BASE_REG(win_num)		((win_num < mbus_info->max_remap) ? \
++		(0x4 + win_num*0x10) :	(0x94 + (win_num-8)*0x08))
++#define MBUS_BR_BASE_OFFS			16
++#define MBUS_BR_BASE_MASK			(0xffff <<  MBUS_BR_BASE_OFFS)
++
++#define MBUS_WIN_REMAP_LOW_REG(win_num)		((win_num < mbus_info->max_remap) ? \
++		(0x8 + win_num*0x10) : (0))
++#define MBUS_RLR_REMAP_LOW_OFFS			16
++#define MBUS_RLR_REMAP_LOW_MASK			(0xffff << MBUS_RLR_REMAP_LOW_OFFS)
++
++#define MBUS_WIN_REMAP_HIGH_REG(win_num)	((win_num < mbus_info->max_remap) ? \
++		(0xC + win_num*0x10) : (0))
++#define MBUS_RHR_REMAP_HIGH_OFFS		0
++#define MBUS_RHR_REMAP_HIGH_MASK		(0xffffffff << MBUS_RHR_REMAP_HIGH_OFFS)
++
++#define MBUS_WIN_INTEREG_REG			(0x80)
++
++static void mbus_win_check(struct mbus_win *win, u32 win_num)
++{
++	/* check if address is aligned to the size */
++	if (IS_NOT_ALIGN(win->base_addr, win->win_size)) {
++		win->base_addr = ALIGN_UP(win->base_addr, win->win_size);
++		error("Window %d: base address unaligned to size\n", win_num);
++		printf("Align up base address to 0x%lx\n", win->base_addr);
++	}
++	/* size parameter validity check */
++	if (IS_NOT_ALIGN(win->win_size, MBUS_CR_WIN_SIZE_ALIGNMENT)) {
++		win->win_size = ALIGN_UP(win->win_size, MBUS_CR_WIN_SIZE_ALIGNMENT);
++		error("Window %d: window size unaligned to 0x%x\n", win_num, MBUS_CR_WIN_SIZE_ALIGNMENT);
++		printf("Align up the size to 0x%lx\n", win->win_size);
++	}
++}
++
++static void mbus_win_set(struct mbus_win *win, u32 win_num)
++{
++	u32 base_reg, ctrl_reg, size_to_reg, remap_low;
++
++	base_reg = (win->base_addr & MBUS_BR_BASE_MASK);
++	size_to_reg = (win->win_size / MBUS_CR_WIN_SIZE_ALIGNMENT) - 1;
++
++	ctrl_reg = (size_to_reg << MBUS_CR_WIN_SIZE_OFFS);
++	ctrl_reg |= MBUS_CR_WIN_ENABLE;
++	ctrl_reg |= win->attribute << MBUS_CR_WIN_ATTR_OFFS;
++	ctrl_reg |= win->target << MBUS_CR_WIN_TARGET_OFFS;
++
++	writel(ctrl_reg, mbus_info->mbus_base + MBUS_WIN_CTRL_REG(win_num));
++	writel(base_reg, mbus_info->mbus_base + MBUS_WIN_BASE_REG(win_num));
++
++	if (win->remapped) {
++		remap_low = win->base_addr & MBUS_RLR_REMAP_LOW_MASK;
++		writel(remap_low, mbus_info->mbus_base + MBUS_WIN_REMAP_LOW_REG(win_num));
++		writel(0x0, mbus_info->mbus_base + MBUS_WIN_REMAP_HIGH_REG(win_num));
++	}
++	return;
++}
++
++void dump_mbus(void)
++{
++	int win_id;
++	u32 mbus_win_cr, mbus_win_br;
++	u32 target_id, size, attribute;
++
++	printf("bank    id    target    start       end         attribute\n");
++	printf("---------------------------------------------------------\n");
++
++	/* Dump all MBUS windows */
++	for (win_id = 0; win_id < mbus_info->max_win; win_id++) {
++		mbus_win_cr = readl(mbus_info->mbus_base + MBUS_WIN_CTRL_REG(win_id));
++		if (mbus_win_cr & MBUS_CR_WIN_ENABLE) {
++			target_id = (mbus_win_cr & MBUS_CR_WIN_TARGET_MASK) >> MBUS_CR_WIN_TARGET_OFFS;
++			attribute = (mbus_win_cr & MBUS_CR_WIN_ATTR_MASK) >> MBUS_CR_WIN_ATTR_OFFS;
++			size = (mbus_win_cr & MBUS_CR_WIN_SIZE_MASK) >> MBUS_CR_WIN_SIZE_OFFS;
++			mbus_win_br = readl(mbus_info->mbus_base + MBUS_WIN_BASE_REG(win_id));
++			size = (size + 1) * MBUS_CR_WIN_SIZE_ALIGNMENT;
++			printf("mbus    %02d    0x%02x      0x%08x  0x%08x  0x%02x\n",
++			       win_id, target_id, mbus_win_br, mbus_win_br + size, attribute);
++		}
++	}
++	mbus_win_br = readl(mbus_info->mbus_base + MBUS_WIN_INTEREG_REG);
++	printf("mbus    %02d    0x%02x      0x%08x  0x%08x  0x%02x\n",
++	       mbus_info->internal_win, 0xFF, mbus_win_br, mbus_win_br + MVEBU_REGS_SIZE, 0xFF);
++
++	return;
++}
++
++int remap_mbus(phys_addr_t input, phys_addr_t output)
++{
++	int win;
++	u32 ctrl, base;
++
++	for (win = 0; win < mbus_info->max_win; win++) {
++		ctrl = readl(mbus_info->mbus_base + MBUS_WIN_CTRL_REG(win));
++		base = readl(mbus_info->mbus_base + MBUS_WIN_BASE_REG(win));
++
++		if ((ctrl & MBUS_CR_WIN_ENABLE) && (base == input)) {
++			if (win >= mbus_info->max_remap) {
++				printf("Window %d with base addres 0x%08x is not remapable\n",
++				       win, (uint)base);
++				return 1;
++			}
++			writel(output & MBUS_RLR_REMAP_LOW_MASK, mbus_info->mbus_base + MBUS_WIN_REMAP_LOW_REG(win));
++			writel(0x0, mbus_info->mbus_base + MBUS_WIN_REMAP_HIGH_REG(win));
++			return 0;
++		}
++	}
++
++	printf("Couldn't find XBAR window with base address 0x%08x\n", (uint)input);
++	return 0;
++}
++
++int init_mbus(void)
++{
++	u32 win_id, index, mbus_win, count, node;
++	struct mbus_fdt_info *fdt_info;
++	struct mbus_win *memory_map, *win;
++	const void *blob = gd->fdt_blob;
++
++	debug("Initializing MBUS address decoding\n");
++	debug_enter();
++
++	/* Get address decoding node from the FDT blob */
++	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_MBUS));
++	if (node < 0) {
++		error("No MBUS address decoding node found in FDT blob\n");
++		return -1;
++	}
++	/* Get the base address of the address decoding MBUS */
++	mbus_info->mbus_base = (void *)fdt_get_regs_offs(blob, node, "reg");
++
++	/* Get the maximum number of MBUS windows supported */
++	mbus_info->max_win = fdtdec_get_int(blob, node, "max-win", 0);
++	if (mbus_info->max_win == 0)
++		error("failed reading max windows number\n");
++
++	/* Get the maximum number of MBUS remap windows */
++	mbus_info->max_remap = fdtdec_get_int(blob, node, "max-remap", 0);
++	if (mbus_info->max_remap == 0)
++		error("failed reading max remap windows number\n");
++
++	/* Get the internal register window number */
++	mbus_info->internal_win = fdtdec_get_int(blob, node, "internal-win", 0);
++	if (mbus_info->internal_win == 0)
++		error("failed reading internal windows number\n");
++
++	memory_map = malloc(mbus_info->max_win * sizeof(struct mbus_win));
++	if (memory_map == 0)
++		error("failed allocating struct to init windows configuration\n");
++
++	fdt_info = malloc(mbus_info->max_win * sizeof(struct mbus_fdt_info));
++	if (fdt_info == 0)
++		error("failed allocating struct to get windows configuration from FDT\n");
++
++	/* Get the array of the windows and fill the map data */
++	count = fdtdec_get_int_array_count(blob, node, "windows", (u32 *)fdt_info, mbus_info->max_win * 3);
++	if (count <= 0) {
++		debug("no windows configurations found\n");
++		return 0;
++	}
++
++	count = count/3; /* every window had 3 variables in FDT (base, size, flag) */
++	for (index = 0, win = memory_map; index < count; index++, fdt_info++, win++) {
++		win->base_addr = fdt_info->base;
++		win->win_size = fdt_info->size;
++		win->attribute = fdt_info->flags & 0xFF;
++		win->target = (fdt_info->flags & 0xF00) >> 8;
++		win->remapped = (fdt_info->flags & 0xF000) >> 12;
++		win->enabled = 1;
++	}
++	win->enabled = -1;
++
++	/* disable all windows */
++	for (win_id = 0; win_id < mbus_info->max_win; win_id++) {
++		mbus_win = readl(mbus_info->mbus_base + MBUS_WIN_CTRL_REG(win_id));
++		mbus_win &= ~MBUS_CR_WIN_ENABLE;
++		writel(mbus_win, mbus_info->mbus_base + MBUS_WIN_CTRL_REG(win_id));
++	}
++
++	/* enable the remapped windows first, the remap windows is at the first 8 windows */
++	for (win_id = 0, win = memory_map; win->enabled != -1; win++) {
++		if ((win->win_size == 0) || (win->enabled == 0) || (win->remapped == 0))
++			continue;
++
++		mbus_win_check(win, win_id);
++		debug("set window %d: target %d, base = 0x%lx, size = 0x%lx, attribute = 0x%x, remapped\n",
++		      win_id, win->target, win->base_addr, win->win_size, win->attribute);
++
++		mbus_win_set(win, win_id);
++		win_id++;
++	}
++
++	/* enable the rest of the windows */
++	for (win = memory_map; win->enabled != -1; win++) {
++		if ((win->win_size == 0) || (win->enabled == 0) || (win->remapped))
++			continue;
++
++		mbus_win_check(win, win_id);
++		debug("set window %d: target = %d, base = 0x%lx, size = 0x%lx, attribute = 0x%x\n",
++		      win_id, win->target, win->base_addr, win->win_size, win->attribute);
++
++		mbus_win_set(win, win_id);
++		win_id++;
++	}
++
++	debug("Done MBUS address decoding initializing\n");
++	debug_exit();
++	return 0;
++}
++
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 0a06249..d356728 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -128,7 +128,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_SAR,
+ 	COMPAT_MVEBU_PINCTL,
+ 	COMPAT_MVEBU_MPP_BUS,
+-
++	COMPAT_MVEBU_MBUS,
+ 	COMPAT_COUNT,
+ };
+ 
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 6f74ae8..4630d80 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -90,6 +90,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_SAR, "marvell,sample-at-reset"),
+ 	COMPAT(MVEBU_PINCTL, "marvell,mvebu-pinctl"),
+ 	COMPAT(MVEBU_MPP_BUS, "marvell,mvebu-mpp-bus"),
++	COMPAT(MVEBU_MBUS, "marvell,mvebu-mbus"),
+ };
+ 
+ const char *fdtdec_get_compatible(enum fdt_compat_id id)
+-- 
+1.9.1
+

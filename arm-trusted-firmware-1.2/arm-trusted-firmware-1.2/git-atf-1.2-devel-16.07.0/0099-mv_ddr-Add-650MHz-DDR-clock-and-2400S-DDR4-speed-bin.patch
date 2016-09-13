@@ -1,0 +1,42 @@
+From 32298a3b0ef925f26524e80302db9783847c96b8 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Thu, 31 Mar 2016 21:01:29 +0300
+Subject: [PATCH 099/239] mv_ddr: Add 650MHz DDR clock and 2400S DDR4 speed bin
+ support
+
+Change-Id: I8c97ee548d0c22ea2b13e342782469fc5926035a
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28717
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28855
+---
+ drivers/marvell/mv_ddr/ddr3_topology_def.h | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/marvell/mv_ddr/ddr3_topology_def.h b/drivers/marvell/mv_ddr/ddr3_topology_def.h
+index d299de8..940756e 100644
+--- a/drivers/marvell/mv_ddr/ddr3_topology_def.h
++++ b/drivers/marvell/mv_ddr/ddr3_topology_def.h
+@@ -112,18 +112,19 @@ enum hws_speed_bin {
+ 	SPEED_BIN_DDR_2133R,
+ 	SPEED_BIN_DDR_2400P,
+ 	SPEED_BIN_DDR_2400R,
++	SPEED_BIN_DDR_2400S,
+ 	SPEED_BIN_DDR_2400U,
+ };
+ 
+ enum hws_ddr_freq {
+ 	DDR_FREQ_LOW_FREQ,
++	DDR_FREQ_650,
+ 	DDR_FREQ_667,
+ 	DDR_FREQ_800,
+ 	DDR_FREQ_933,
+ 	DDR_FREQ_1066,
+ 	DDR_FREQ_900,
+ 	DDR_FREQ_1000,
+-	DDR_FREQ_650,
+ 	DDR_FREQ_1050,
+ 	DDR_FREQ_1200,
+ 	DDR_FREQ_LAST
+-- 
+1.9.1
+

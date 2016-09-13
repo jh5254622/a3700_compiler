@@ -1,0 +1,34 @@
+From c7a06cb8e9fd8e7436ff69e19875906ce2bd2a66 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Tue, 30 Dec 2014 12:39:47 +0200
+Subject: [PATCH 0663/1240] usb, eth: added support for new USB-ETH adapter
+ device (ASIX 887E2B)
+
+Change-Id: I03d968b3f0a55421074f0b185a37d54d73cc5461
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/15683
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/15806
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26710
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/usb/eth/asix.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/usb/eth/asix.c b/drivers/usb/eth/asix.c
+index 1181109..ac6baae 100644
+--- a/drivers/usb/eth/asix.c
++++ b/drivers/usb/eth/asix.c
+@@ -578,6 +578,8 @@ static const struct asix_dongle asix_dongles[] = {
+ 	{ 0x1557, 0x7720, FLAG_TYPE_AX88772 },	/* 0Q0 cable ethernet */
+ 	/* DLink DUB-E100 H/W Ver B1 Alternate */
+ 	{ 0x2001, 0x3c05, FLAG_TYPE_AX88772 },
++	/* ASIX 887E2B */
++	{ 0x0b95, 0x7e2b, FLAG_TYPE_AX88772B | FLAG_EEPROM_MAC },
+ 	/* ASIX 88772B */
+ 	{ 0x0b95, 0x772b, FLAG_TYPE_AX88772B | FLAG_EEPROM_MAC },
+ 	{ 0x0b95, 0x7e2b, FLAG_TYPE_AX88772B },
+-- 
+1.9.1
+

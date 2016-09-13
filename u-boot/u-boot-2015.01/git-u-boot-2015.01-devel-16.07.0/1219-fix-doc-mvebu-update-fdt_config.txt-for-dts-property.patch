@@ -1,0 +1,48 @@
+From 8d340ff9efd30725a87c5e282d4322d1859659af Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Thu, 23 Jun 2016 00:51:01 +0800
+Subject: [PATCH 1219/1240] fix: doc: mvebu: update fdt_config.txt for dts
+ property modify example
+
+- now for Armada3700, preset could not be set in dts file, has been
+  moved to kconfig as menuconfig options, so it could not be used
+  as an example for fdt_config command to change dts property value.
+- use comphy type dts property instead as an example.
+- SYSTEMSW-2622 u-boot document was not updated for freq preset configurations
+
+Change-Id: Ie4ac865ccb4f18ab5d3a628458912325d105f0e4
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30662
+Reviewed-by: Victor Gu <xigu@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ doc/mvebu/commands/fdt_config.txt | 13 ++++++-------
+ 1 file changed, 6 insertions(+), 7 deletions(-)
+
+diff --git a/doc/mvebu/commands/fdt_config.txt b/doc/mvebu/commands/fdt_config.txt
+index 04f64b2..1b5b45e 100644
+--- a/doc/mvebu/commands/fdt_config.txt
++++ b/doc/mvebu/commands/fdt_config.txt
+@@ -61,13 +61,12 @@ Example:
+ 	 Marvell>> fdt_config load 2
+ 	 To save the changes, please run the command fdt_config save.
+       c) Run "fdt print" command to see the entire dtb file in DRAM.
+-      d) Edit any property, for example, the preset value in the A3700 dts file.
+-         Following are all the valid values for the property "preset":
+-	 PRESET_CPU_600_DDR_600:  0
+-	 PRESET_CPU_400_DDR_600:  1
+-	 PRESET_CPU_1000_DDR_800: 2
+-	 PRESET_CPU_800_DDR_800:  3
+-	 Marvell>> fdt set /soc/freq preset "<1>"
++      d) Edit any property, for example, the comphy 0 type value in the A3700 dts file.
++         Following are two valid values for the property "phy-type":
++	 PHY_TYPE_SGMII0:	9
++	 PHY_TYPE_SGMII1:	10
++	 The following command sets comphy 0 type to SGMII1:
++	 Marvell>> fdt set /soc/internal-regs/comphy phy0 "<10>"
+       e) Save the dtb file into EEPROM.
+ 	 Marvell>> fdt_config save
+ 	 FDT is saved in EEPROM, to boot from customized FDT please select it from list
+-- 
+1.9.1
+

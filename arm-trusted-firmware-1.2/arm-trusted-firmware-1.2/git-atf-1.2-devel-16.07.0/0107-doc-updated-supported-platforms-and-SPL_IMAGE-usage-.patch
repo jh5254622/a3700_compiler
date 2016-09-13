@@ -1,0 +1,43 @@
+From 437f72fcbf49cbb1a5fc5e0f4fb2b12c464b97fb Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Mon, 11 Apr 2016 14:17:04 +0300
+Subject: [PATCH 107/239] doc: updated supported platforms and SPL_IMAGE usage
+ in build doc
+
+- SPL_IMAGE is relevant only for A3700
+- updated supported platforms (added a70x0 and a70x0_cust)
+
+Change-Id: I2b0e8676d1d628d264aee92a527def0fcb4ad8bd
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28920
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+---
+ docs/marvell/build.txt | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/docs/marvell/build.txt b/docs/marvell/build.txt
+index 602b4cd..a481fe9 100644
+--- a/docs/marvell/build.txt
++++ b/docs/marvell/build.txt
+@@ -31,7 +31,7 @@ Build Instruction:
+ 	For example: if U-Boot project (and its images) is located at ~/project/u-boot, BL33
+ 				 should be ~/project/u-boot/u-boot.bin
+ 	Note: u-boot.bin should be used and not u-boot-spl.bin
+-6. Set SPL image location (relativly to ATF root or absolute path)
++6. A3700 Only: Set SPL image location (relativly to ATF root or absolute path)
+ 	# export SPL_IMAGE=path/to/u-boot-spl.bin
+ 	For example: if U-Boot project (and its images) is located at ~/project/u-boot, SPL_IMAGE
+ 				 should be ~/project/u-boot/spl/u-boot-spl.bin
+@@ -56,6 +56,8 @@ Build Instruction:
+ 	Supported MARVELL_PLATFORM are:
+ 		apn806
+ 		a7040_rz
++		a70x0
++		a70x0_cust (for customers)
+ 		a3700_z
+ 
+ Special Build Flags:
+-- 
+1.9.1
+

@@ -1,0 +1,109 @@
+From 49c7a594b1c772844a18531f6a35af22de568586 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Thu, 31 Mar 2016 16:46:26 +0300
+Subject: [PATCH 097/239] mv_ddr: Add dq reg & subphy mapping per plat
+
+This patch adds dq req & subphy mapping to be per platform.
+
+Change-Id: I166e9ee82bfff45b729ee27f3a931ab8155b6cf0
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28705
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28854
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/marvell/mv_ddr/ddr3_training_ip_engine.c | 37 ++++++++++++++++++++++--
+ 1 file changed, 35 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/marvell/mv_ddr/ddr3_training_ip_engine.c b/drivers/marvell/mv_ddr/ddr3_training_ip_engine.c
+index 1669be8..d7d8fa2 100644
+--- a/drivers/marvell/mv_ddr/ddr3_training_ip_engine.c
++++ b/drivers/marvell/mv_ddr/ddr3_training_ip_engine.c
+@@ -129,14 +129,39 @@ u16 mask_results_dq_reg_map[] = {
+ 	RESULT_CONTROL_PUP_4_BIT_2_REG, RESULT_CONTROL_PUP_4_BIT_3_REG,
+ 	RESULT_CONTROL_PUP_4_BIT_4_REG, RESULT_CONTROL_PUP_4_BIT_5_REG,
+ 	RESULT_CONTROL_PUP_4_BIT_6_REG, RESULT_CONTROL_PUP_4_BIT_7_REG,
++#if MAX_BUS_NUM == 9
++	RESULT_CONTROL_PUP_5_BIT_0_REG, RESULT_CONTROL_PUP_5_BIT_1_REG,
++	RESULT_CONTROL_PUP_5_BIT_2_REG, RESULT_CONTROL_PUP_5_BIT_3_REG,
++	RESULT_CONTROL_PUP_5_BIT_4_REG, RESULT_CONTROL_PUP_5_BIT_5_REG,
++	RESULT_CONTROL_PUP_5_BIT_6_REG, RESULT_CONTROL_PUP_5_BIT_7_REG,
++	RESULT_CONTROL_PUP_6_BIT_0_REG, RESULT_CONTROL_PUP_6_BIT_1_REG,
++	RESULT_CONTROL_PUP_6_BIT_2_REG, RESULT_CONTROL_PUP_6_BIT_3_REG,
++	RESULT_CONTROL_PUP_6_BIT_4_REG, RESULT_CONTROL_PUP_6_BIT_5_REG,
++	RESULT_CONTROL_PUP_6_BIT_6_REG, RESULT_CONTROL_PUP_6_BIT_7_REG,
++	RESULT_CONTROL_PUP_7_BIT_0_REG, RESULT_CONTROL_PUP_7_BIT_1_REG,
++	RESULT_CONTROL_PUP_7_BIT_2_REG, RESULT_CONTROL_PUP_7_BIT_3_REG,
++	RESULT_CONTROL_PUP_7_BIT_4_REG, RESULT_CONTROL_PUP_7_BIT_5_REG,
++	RESULT_CONTROL_PUP_7_BIT_6_REG, RESULT_CONTROL_PUP_7_BIT_7_REG,
++	RESULT_CONTROL_PUP_8_BIT_0_REG, RESULT_CONTROL_PUP_8_BIT_1_REG,
++	RESULT_CONTROL_PUP_8_BIT_2_REG, RESULT_CONTROL_PUP_8_BIT_3_REG,
++	RESULT_CONTROL_PUP_8_BIT_4_REG, RESULT_CONTROL_PUP_8_BIT_5_REG,
++	RESULT_CONTROL_PUP_8_BIT_6_REG, RESULT_CONTROL_PUP_8_BIT_7_REG,
++#endif
++	0xffff
+ };
+ 
+ u16 mask_results_pup_reg_map[] = {
+ 	RESULT_CONTROL_BYTE_PUP_0_REG, RESULT_CONTROL_BYTE_PUP_1_REG,
+ 	RESULT_CONTROL_BYTE_PUP_2_REG, RESULT_CONTROL_BYTE_PUP_3_REG,
+-	RESULT_CONTROL_BYTE_PUP_4_REG
++	RESULT_CONTROL_BYTE_PUP_4_REG,
++#if MAX_BUS_NUM == 9
++	RESULT_CONTROL_BYTE_PUP_5_REG, RESULT_CONTROL_BYTE_PUP_6_REG,
++	RESULT_CONTROL_BYTE_PUP_7_REG, RESULT_CONTROL_BYTE_PUP_8_REG,
++#endif
++	0xffff
+ };
+ 
++#if MAX_BUS_NUM == 5
+ u16 mask_results_dq_reg_map_pup3_ecc[] = {
+ 	RESULT_CONTROL_PUP_0_BIT_0_REG, RESULT_CONTROL_PUP_0_BIT_1_REG,
+ 	RESULT_CONTROL_PUP_0_BIT_2_REG, RESULT_CONTROL_PUP_0_BIT_3_REG,
+@@ -157,14 +182,18 @@ u16 mask_results_dq_reg_map_pup3_ecc[] = {
+ 	RESULT_CONTROL_PUP_3_BIT_0_REG, RESULT_CONTROL_PUP_3_BIT_1_REG,
+ 	RESULT_CONTROL_PUP_3_BIT_2_REG, RESULT_CONTROL_PUP_3_BIT_3_REG,
+ 	RESULT_CONTROL_PUP_3_BIT_4_REG, RESULT_CONTROL_PUP_3_BIT_5_REG,
+-	RESULT_CONTROL_PUP_3_BIT_6_REG, RESULT_CONTROL_PUP_3_BIT_7_REG,
++	RESULT_CONTROL_PUP_3_BIT_6_REG, RESULT_CONTROL_PUP_3_BIT_7_REG
+ };
++#endif
+ 
++#if MAX_BUS_NUM == 5
+ u16 mask_results_pup_reg_map_pup3_ecc[] = {
+ 	RESULT_CONTROL_BYTE_PUP_0_REG, RESULT_CONTROL_BYTE_PUP_1_REG,
+ 	RESULT_CONTROL_BYTE_PUP_2_REG, RESULT_CONTROL_BYTE_PUP_4_REG,
+ 	RESULT_CONTROL_BYTE_PUP_4_REG
+ };
++#endif
++
+ #if defined(CONFIG_DDR4)
+ struct pattern_info pattern_table_16[] = {
+ 	/*
+@@ -1600,20 +1629,24 @@ struct pattern_info *ddr3_tip_get_pattern_table()
+ 
+ u16 *ddr3_tip_get_mask_results_dq_reg()
+ {
++#if MAX_BUS_NUM == 5
+ 	struct hws_topology_map *tm = ddr3_get_topology_map();
+ 
+ 	if (DDR3_IS_ECC_PUP3_MODE(tm->bus_act_mask))
+ 		return mask_results_dq_reg_map_pup3_ecc;
+ 	else
++#endif
+ 		return mask_results_dq_reg_map;
+ }
+ 
+ u16 *ddr3_tip_get_mask_results_pup_reg_map()
+ {
++#if MAX_BUS_NUM == 5
+ 	struct hws_topology_map *tm = ddr3_get_topology_map();
+ 
+ 	if (DDR3_IS_ECC_PUP3_MODE(tm->bus_act_mask))
+ 		return mask_results_pup_reg_map_pup3_ecc;
+ 	else
++#endif
+ 		return mask_results_pup_reg_map;
+ }
+-- 
+1.9.1
+

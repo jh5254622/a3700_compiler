@@ -1,0 +1,31 @@
+From 146cd850cead49d4adf739e9cfb77d3104c14562 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Tue, 14 Apr 2015 13:27:57 +0300
+Subject: [PATCH 0172/1240] cache: enabled icache for A8K
+
+Change-Id: Ib323f3ab84d639941e49af33996da95c306a5ff0
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/18255
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/armada8k.h | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index 4a29e2f..ea7ce52 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -75,9 +75,6 @@
+  */
+ #ifdef CONFIG_PALLADIUM
+ 
+-/* Disable I-CACHE for palladium */
+-#define CONFIG_SYS_ICACHE_OFF
+-
+ #undef CONFIG_BOOTDELAY
+ #define CONFIG_BOOTDELAY                -1
+ 
+-- 
+1.9.1
+

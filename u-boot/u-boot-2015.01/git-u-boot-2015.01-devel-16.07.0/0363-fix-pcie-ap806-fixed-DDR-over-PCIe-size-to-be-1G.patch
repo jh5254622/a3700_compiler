@@ -1,0 +1,34 @@
+From 6df63aef7793a99ce319ae95bf2f606b56f88154 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 27 Aug 2015 00:55:50 +0300
+Subject: [PATCH 0363/1240] fix: pcie: ap806: fixed DDR over PCIe size to be 1G
+
+Change-Id: Ideab6eb0ca88e13cd80ef59ef4a02c8ceb06b463
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23237
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Neta Zur Hershkovits <neta@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/dram_over_pci.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/dram_over_pci.c b/arch/arm/cpu/mvebu-common/dram_over_pci.c
+index 95e527e..609ae34 100644
+--- a/arch/arm/cpu/mvebu-common/dram_over_pci.c
++++ b/arch/arm/cpu/mvebu-common/dram_over_pci.c
+@@ -22,9 +22,9 @@
+ #include <asm/arch-mvebu/comphy.h>
+ 
+ /* mapping addresses */
+-#define DRAM_OFFSET					0
+-#define PCI_CONFIGURATION_OFFSET	0x50000000
+-#define DRAM_WIN_SIZE				0x10000000
++#define DRAM_OFFSET				0
++#define PCI_CONFIGURATION_OFFSET		0x50000000
++#define DRAM_WIN_SIZE				0x80000000
+ 
+ /* BARs offset */
+ #define BAR0_LOW_ADDR_OFFSET	0x10
+-- 
+1.9.1
+

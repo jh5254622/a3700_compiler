@@ -1,0 +1,45 @@
+From 019dcc1e3b7647929c02ea2b1ead84b0ab01a2a2 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Thu, 17 Mar 2016 08:24:25 +0200
+Subject: [PATCH 066/239] a70x0: Enable compilation for a70x0 platforms
+
+This is a temporary solution till we add dram init code for
+a70x0 platforms.
+
+Change-Id: I9606f446d34cb2dd4c5254efc85ef0312bfb9a64
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28313
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/marvell/dram/ddr_mckinley6.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/drivers/marvell/dram/ddr_mckinley6.c b/drivers/marvell/dram/ddr_mckinley6.c
+index 09d8895..2322e4f 100644
+--- a/drivers/marvell/dram/ddr_mckinley6.c
++++ b/drivers/marvell/dram/ddr_mckinley6.c
+@@ -2028,6 +2028,20 @@ struct mk6_reg_data mk6_phy_setup[] = {
+ 	{ 0x8d0, 0x00000019},
+ 	{-1, -1},
+ };
++#elif defined(a7040_cust) || defined(a70x0)
++/* The below definitions are needed in order to enable temporary compilation
++** of a7040_cust & a70x0 platforms, till the relevat ddr code for these platforms
++** is added
++*/
++struct mk6_reg_data mk6_mac_setup[] = {
++	{-1, -1},
++};
++
++struct mk6_reg_data mk6_phy_setup[] = {
++	{-1, -1},
++};
++
++
+ #endif
+ 
+ 
+-- 
+1.9.1
+

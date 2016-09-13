@@ -1,0 +1,42 @@
+From cc1f53bd9c8c97ac96852f5eab87e8a75c2f37d5 Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Tue, 10 May 2016 09:47:05 +0300
+Subject: [PATCH 1104/1240] doc: update pcie documentation for new force_gen
+ entry
+
+Change-Id: Iff898b89a2ba4f4eeeba9c5918accd3c81061a0a
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29667
+Reviewed-by: Gina Tadmore <gina@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ doc/device-tree-bindings/pci/mvebu-pci.txt | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/doc/device-tree-bindings/pci/mvebu-pci.txt b/doc/device-tree-bindings/pci/mvebu-pci.txt
+index 5cc7344..5b446e8 100644
+--- a/doc/device-tree-bindings/pci/mvebu-pci.txt
++++ b/doc/device-tree-bindings/pci/mvebu-pci.txt
+@@ -22,6 +22,10 @@ SoC specific:
+ Board specific:
+ 		- status
+ 			PCIe port's status. can be "okay" or "disabled".
++		- force_cap_speed
++			Optional int which specifies the PCIe generation
++			capability. Valid values are 1 to 3.
++			If not specified, Gen 3 is set.
+ 
+ Example of a PCIe node:
+ 	pcie-controller {
+@@ -32,6 +36,7 @@ Example of a PCIe node:
+ 		pcie@1,0 {
+ 			reg = <0x80000 0x2000>;
+ 			mem = <0xe0000000 0x2000000>;
++			force_cap_speed = <2>
+ 			status = "okay";
+ 		};
+ 
+-- 
+1.9.1
+

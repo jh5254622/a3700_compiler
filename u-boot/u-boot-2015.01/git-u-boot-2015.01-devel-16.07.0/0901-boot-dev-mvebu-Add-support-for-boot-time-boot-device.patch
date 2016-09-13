@@ -1,0 +1,216 @@
+From ca9fe9a8e16476e17e11314f35919871847f47d2 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 23 Feb 2016 14:52:40 +0200
+Subject: [PATCH 0901/1240] boot-dev: mvebu: Add support for boot time boot
+ device selection
+
+- Add support for boot time boot device selection in run time.
+- The device is selected depending on sample-at-reset mode.
+- Enable the boot device selection for Armada-70x0
+
+Change-Id: I883f115f5b546136c569a716e3035e73f5a7d1ac
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27791
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Kconfig  |  1 +
+ common/mvebu/cmd_bubt.c            | 19 ++++++++++++++++---
+ common/mvebu/cmd_misc.c            |  3 ++-
+ common/mvebu/env_bootdev.c         | 35 +++++++++++++++++++++++------------
+ configs/mvebu_armada70x0_defconfig |  1 +
+ drivers/misc/mvebu_sar/chip_sar.c  | 18 ++++++++++++++++++
+ include/mvebu_chip_sar.h           |  1 +
+ 7 files changed, 62 insertions(+), 16 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index b063570..95bcd6f 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -99,6 +99,7 @@ endmenu
+ choice
+ 	prompt "Flash for image"
+ 	default MVEBU_SPI_BOOT
++	depends on !ENV_IS_IN_BOOTDEV
+ 
+ config MVEBU_NAND_BOOT
+ 	bool "NAND flash boot"
+diff --git a/common/mvebu/cmd_bubt.c b/common/mvebu/cmd_bubt.c
+index 996d0fc..7e61db2 100644
+--- a/common/mvebu/cmd_bubt.c
++++ b/common/mvebu/cmd_bubt.c
+@@ -27,6 +27,8 @@
+ 
+ #include <nand.h>
+ 
++#include <mvebu_chip_sar.h>
++
+ #include <usb.h>
+ #include <fs.h>
+ #include <mmc.h>
+@@ -589,16 +591,27 @@ int do_bubt_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+ 	size_t image_size;
+ 	char src_dev_name[8];
+ 	char dst_dev_name[8];
++#ifdef CONFIG_ENV_IS_IN_BOOTDEV
++	struct sar_val sar;
++#endif
++	char *name;
+ 
+ 	if (argc < 2)
+ 		copy_filename(BootFile, CONFIG_MVEBU_UBOOT_DFLT_NAME, sizeof(BootFile));
+ 	else
+ 		copy_filename(BootFile, argv[1], sizeof(BootFile));
+ 
+-	if (argc >= 3)
++	if (argc >= 3) {
+ 		strncpy(dst_dev_name, argv[2], 8);
+-	else
+-		strncpy(dst_dev_name, DEFAULT_BUBT_DST, 8);
++	} else {
++#ifdef CONFIG_ENV_IS_IN_BOOTDEV
++		mvebu_sar_value_get(SAR_BOOT_SRC, &sar);
++		name = mvebu_sar_bootsrc_to_name(sar.bootsrc.type);
++#else
++		name = DEFAULT_BUBT_DST;
++#endif
++		strncpy(dst_dev_name, name, 8);
++	}
+ 
+ 	if (argc >= 4)
+ 		strncpy(src_dev_name, argv[3], 8);
+diff --git a/common/mvebu/cmd_misc.c b/common/mvebu/cmd_misc.c
+index 8ad12c8..9bf8d9e 100644
+--- a/common/mvebu/cmd_misc.c
++++ b/common/mvebu/cmd_misc.c
+@@ -121,7 +121,8 @@ U_BOOT_CMD(
+ );
+ #endif
+ 
+-#if defined(MV_INCLUDE_NOR) || defined(CONFIG_MVEBU_NAND_BOOT) || defined(CONFIG_MVEBU_SPI_BOOT)
++#if defined(MV_INCLUDE_NOR) || defined(CONFIG_MVEBU_NAND_BOOT) || defined(CONFIG_MVEBU_SPI_BOOT) || \
++	defined(CONFIG_ENV_IS_IN_BOOTDEV)
+ int resetenv_cmd(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+ {
+ 	set_default_env("## Resetting to default environment\n");
+diff --git a/common/mvebu/env_bootdev.c b/common/mvebu/env_bootdev.c
+index 8891cbc..39a5039 100644
+--- a/common/mvebu/env_bootdev.c
++++ b/common/mvebu/env_bootdev.c
+@@ -18,10 +18,11 @@
+ 
+ #include <common.h>
+ #include <environment.h>
++#include <mvebu_chip_sar.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+-char *env_name_spec = "SPI Flash";
++char *env_name_spec = "Undefined";
+ 
+ int saveenv(void)
+ {
+@@ -33,27 +34,37 @@ int saveenv(void)
+  */
+ int env_init(void)
+ {
++	struct sar_val sar;
++
++	mvebu_sar_value_get(SAR_BOOT_SRC, &sar);
+ 	/* Use ifdef as a temporary solution till we add sample-at-reset
+ 	** logic. */
+-#ifdef CONFIG_MVEBU_NAND_BOOT
+-	nand_env_init();
+-#else
+-	sf_env_init();
+-#endif
++	if (sar.bootsrc.type == BOOTSRC_NAND)
++		nand_env_init();
++	else if (sar.bootsrc.type == BOOTSRC_SPI)
++		sf_env_init();
++
+ 	return gd->arch.env_func.init_env();
+ }
+ 
+ void env_relocate_spec(void)
+ {
+-	/* sf_env_init is called again here because of the
++	struct sar_val sar;
++
++	mvebu_sar_value_get(SAR_BOOT_SRC, &sar);
++	/* env_init is called again here because of the
+ 	 * address relocation, the addreses need to be corrected
+ 	 */
+ 	/* Use ifdef as a temporary solution till we add sample-at-reset
+ 	** logic. */
+-#ifdef CONFIG_MVEBU_NAND_BOOT
+-	nand_env_init();
+-#else
+-	sf_env_init();
+-#endif
++	if (sar.bootsrc.type == BOOTSRC_NAND) {
++		nand_env_init();
++		env_name_spec = "NAND Flash";
++	} else if (sar.bootsrc.type == BOOTSRC_SPI) {
++		sf_env_init();
++		env_name_spec = "SPI Flash";
++	}
++
+ 	gd->arch.env_func.reloc_env();
+ }
++
+diff --git a/configs/mvebu_armada70x0_defconfig b/configs/mvebu_armada70x0_defconfig
+index 20dc166..b9a55ce 100644
+--- a/configs/mvebu_armada70x0_defconfig
++++ b/configs/mvebu_armada70x0_defconfig
+@@ -8,6 +8,7 @@ CONFIG_MVEBU_IOB=y
+ CONFIG_MVEBU_RFU=y
+ +S:CONFIG_AP806_Z_SUPPORT=y
+ CONFIG_MVEBU_MPP_BUS=y
++CONFIG_ENV_IS_IN_BOOTDEV=y
+ +S:CONFIG_MVEBU_ROM_SILENCE_FLAG_SUPPORT=y
+ +S:CONFIG_DEVEL_BOARD=y
+ +S:# CONFIG_MULTI_DT_FILE is not set
+diff --git a/drivers/misc/mvebu_sar/chip_sar.c b/drivers/misc/mvebu_sar/chip_sar.c
+index a0b3af5..c84627f 100644
+--- a/drivers/misc/mvebu_sar/chip_sar.c
++++ b/drivers/misc/mvebu_sar/chip_sar.c
+@@ -142,6 +142,24 @@ int mvebu_sar_value_get(enum mvebu_sar_opts opt, struct sar_val *val)
+ 	return -ENODEV;
+ }
+ 
++char *mvebu_sar_bootsrc_to_name(enum mvebu_bootsrc_type src)
++{
++	switch (src) {
++	case(BOOTSRC_NAND):
++		return "nand";
++	case(BOOTSRC_SPI):
++	case(BOOTSRC_AP_SPI):
++		return "spi";
++	case(BOOTSRC_SD_EMMC):
++	case(BOOTSRC_AP_SD_EMMC):
++		return "mmc";
++	case(BOOTSRC_NOR):
++		return "nor";
++	default:
++		return "unknown";
++	}
++}
++
+ void mvebu_sar_dump(void)
+ {
+ 	int i;
+diff --git a/include/mvebu_chip_sar.h b/include/mvebu_chip_sar.h
+index 9e2a2bc..9995829 100644
+--- a/include/mvebu_chip_sar.h
++++ b/include/mvebu_chip_sar.h
+@@ -76,5 +76,6 @@ struct sar_val {
+ int mvebu_sar_init(const void *blob);
+ int mvebu_sar_value_get(enum mvebu_sar_opts opt, struct sar_val *val);
+ void mvebu_sar_dump(void);
++char *mvebu_sar_bootsrc_to_name(enum mvebu_bootsrc_type src);
+ 
+ #endif	/* _MVEBU_CHIP_SAR_H_ */
+-- 
+1.9.1
+

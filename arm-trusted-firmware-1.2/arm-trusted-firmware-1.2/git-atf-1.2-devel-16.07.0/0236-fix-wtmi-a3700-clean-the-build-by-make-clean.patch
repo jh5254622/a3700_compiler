@@ -1,0 +1,37 @@
+From 6b89c7914a3c62b73bf8e8245c3909434a363157 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Wed, 29 Jun 2016 03:38:54 +0800
+Subject: [PATCH 236/239] fix: wtmi: a3700: clean the build by make clean
+
+This patch removes tools/wtp/wtmi/build when
+make clean or make distclean.
+
+Change-Id: Ic73e669be7010429484942ae0eaf8cd49d3d10b2
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30780
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ tools/wtp/wtmi/Makefile | 5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+
+diff --git a/tools/wtp/wtmi/Makefile b/tools/wtp/wtmi/Makefile
+index 6114940..12fc673 100644
+--- a/tools/wtp/wtmi/Makefile
++++ b/tools/wtp/wtmi/Makefile
+@@ -91,11 +91,8 @@ $(BINPATH):
+ 
+ clean:
+ 	$(ECHO) "  CLEAN"
++	@$(RM) -rf $(BINPATH)
+ 	@$(RM) -f *.o *.elf *.bin *dis
+ 
+ tools:
+ 	@$(TOOLCHAIN_CHECK)
+-
+-distclean: clean
+-	@$(RM) $(BINPATH)
+-
+-- 
+1.9.1
+

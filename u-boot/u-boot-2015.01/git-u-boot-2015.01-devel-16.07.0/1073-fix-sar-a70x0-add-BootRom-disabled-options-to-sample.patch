@@ -1,0 +1,36 @@
+From 09d3797d288b904f5375241fd51629921bf7f14d Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 28 Apr 2016 14:26:03 +0300
+Subject: [PATCH 1073/1240] fix: sar: a70x0: add BootRom disabled options to
+ sample at reset values for CP-110
+
+Change-Id: I5678c9623e39b190aa9f5d4685baedc635a6989b
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29408
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ drivers/misc/mvebu_sar/cp110_sar.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/misc/mvebu_sar/cp110_sar.c b/drivers/misc/mvebu_sar/cp110_sar.c
+index 9d5830f..34fda29 100644
+--- a/drivers/misc/mvebu_sar/cp110_sar.c
++++ b/drivers/misc/mvebu_sar/cp110_sar.c
+@@ -66,9 +66,11 @@ static struct bootsrc_idx_info bootsrc_list[] = {
+ 	{0x29,	0x29,	BOOTSRC_SD_EMMC,	0},
+ 	{0x2A,	0x2A,	BOOTSRC_AP_SD_EMMC,	0},
+ 	{0x2B,	0x2B,	BOOTSRC_SD_EMMC,	0},
+-	{0x30,	0x31,	BOOTSRC_AP_SPI,		0},
++	{0x30,	0x30,	BOOTSRC_AP_SPI,		0},
++	{0x31,	0x31,	BOOTSRC_AP_SPI,		0}, /* BootRom disabled */
+ 	{0x32,	0x33,	BOOTSRC_SPI,		1},
+ 	{0x34,	0x35,	BOOTSRC_SPI,		0},
++	{0x36,	0x37,	BOOTSRC_SPI,		1}, /* BootRom disabled */
+ 	{-1,	-1,	-1}
+ };
+ 
+-- 
+1.9.1
+

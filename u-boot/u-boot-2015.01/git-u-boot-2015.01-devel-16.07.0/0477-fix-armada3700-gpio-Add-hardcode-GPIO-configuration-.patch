@@ -1,0 +1,210 @@
+From c8d3afe970b6946a5dec9762b1a0ef0e96102a79 Mon Sep 17 00:00:00 2001
+From: Jing Hua <jinghua@marvell.com>
+Date: Thu, 5 Nov 2015 14:21:26 +0800
+Subject: [PATCH 0477/1240] fix: armada3700: gpio: Add hardcode GPIO
+ configuration for Armada3700 in SPL
+
+	This patch add hardcode GPIO configuration for Armada3700 in SPL
+	in routine mvebu_a3700_gpio in a new file mvebu_gpio.c, for neta
+	and I2C unit.
+	Later this patch will be revert, and use MPP/PIN_CTRL driver to do
+	GPIO configuration instead.
+
+Change-Id: Ibb411dca00cdb959edbcbbe85dd0d197ce78b373
+Signed-off-by: Jing Hua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24589
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/spl.c                |  6 +++
+ arch/arm/include/asm/arch-armadalp/regs-base.h |  7 ++++
+ arch/arm/include/asm/arch-mvebu/a3700_gpio.h   | 24 ++++++++++++
+ drivers/misc/Kconfig                           | 10 +++++
+ drivers/misc/Makefile                          |  1 +
+ drivers/misc/mvebu_gpio.c                      | 54 ++++++++++++++++++++++++++
+ scripts/Makefile.spl                           |  7 +++-
+ 7 files changed, 107 insertions(+), 2 deletions(-)
+ create mode 100644 arch/arm/include/asm/arch-mvebu/a3700_gpio.h
+ create mode 100644 drivers/misc/mvebu_gpio.c
+
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index 17acf27..076933b 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -41,6 +41,9 @@
+ #ifdef CONFIG_MVEBU_MBUS
+ #include <asm/arch-mvebu/mbus.h>
+ #endif
++#ifdef CONFIG_MVEBU_SPL_A3700_GPIO
++#include <asm/arch-mvebu/a3700_gpio.h>
++#endif
+ 
+ #ifdef CONFIG_MVEBU_SPL_SAR_DUMP
+ extern void mvebu_sar_dump_reg(void);
+@@ -74,6 +77,9 @@ void board_init_f(ulong silent)
+ #endif
+ 
+ 	setup_fdt();
++#ifdef CONFIG_MVEBU_SPL_A3700_GPIO
++	mvebu_a3700_gpio();
++#endif
+ 	preloader_console_init();
+ 
+ #ifdef CONFIG_MVEBU_SPL_SAR_DUMP
+diff --git a/arch/arm/include/asm/arch-armadalp/regs-base.h b/arch/arm/include/asm/arch-armadalp/regs-base.h
+index 46eeffd..a76b3fe 100644
+--- a/arch/arm/include/asm/arch-armadalp/regs-base.h
++++ b/arch/arm/include/asm/arch-armadalp/regs-base.h
+@@ -43,4 +43,11 @@
+ #define MVEBU_CCI_BASE			(MVEBU_REGS_BASE + 0x8000000)
+ #define MVEBU_CCI_S3_SNOOP_CTRL_REG	(MVEBU_CCI_BASE + 0x4000)
+ 
++/* GPIO register base address */
++#define MVEBU_A3700_GPIO_SB_SEL (MVEBU_REGS_BASE + 0x18830)
++#define MVEBU_A3700_GPIO_RGMII_GPIO_EN_OFF (3)
++
++#define MVEBU_A3700_GPIO_NB_SEL (MVEBU_REGS_BASE + 0x13830)
++#define MVEBU_A3700_GPIO_TW1_GPIO_EN_OFF (10)
++
+ #endif	/* _REGS_BASE_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/a3700_gpio.h b/arch/arm/include/asm/arch-mvebu/a3700_gpio.h
+new file mode 100644
+index 0000000..87e7ffe
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/a3700_gpio.h
+@@ -0,0 +1,24 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _A3700_GPIO_H_
++#define _A3700_GPIO_H_
++
++void mvebu_a3700_gpio(void);
++
++#endif /* _A3700_GPIO_H_ */
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index 474d17c..027275c 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -60,6 +60,16 @@ config MVEBU_MBUS_SKIP_DRAM_WIN
+ 	  be at the beginning, and could not be
+ 	  configured by anyway (keep the default value).
+ 
++config MVEBU_SPL_A3700_GPIO
++	bool "GPIO configuration for A3700 in SPL"
++	depends on TARGET_ARMADA_LP
++	default y
++	help
++	  Choose this option to enable GPIO
++	  configuration for A3700 in SPL.
++	  This will be removed later, and be
++	  implemented by MPP/PIN-CTRL driver.
++
+ config MVEBU_FLC
+ 	bool "MBUS Final Level Cache driver"
+ 	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
+index 9309389..2dfe363 100644
+--- a/drivers/misc/Makefile
++++ b/drivers/misc/Makefile
+@@ -34,3 +34,4 @@ obj-$(CONFIG_MVEBU_IOB) += mvebu_iob.o
+ obj-$(CONFIG_MVEBU_MBUS) += mvebu_mbus.o
+ obj-$(CONFIG_MVEBU_FLC) += mvebu_flc.o
+ obj-$(CONFIG_MVEBU_A3700_IO_ADDR_DEC) += mvebu_io_addr_dec.o
++obj-$(CONFIG_MVEBU_SPL_A3700_GPIO) += mvebu_gpio.o
+diff --git a/drivers/misc/mvebu_gpio.c b/drivers/misc/mvebu_gpio.c
+new file mode 100644
+index 0000000..9dbef60
+--- /dev/null
++++ b/drivers/misc/mvebu_gpio.c
+@@ -0,0 +1,54 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++
++#include <common.h>
++#include <asm/io.h>
++
++/*
++ * mvebu_a3700_gpio
++ *
++ * This function sets GPIO configuration for Armada3700
++ * by hardcoded value.
++ * And this routine (patch) will be removed (revert),
++ * and implemented by MPP/PIN-CTRL driver later.
++ *
++ */
++void mvebu_a3700_gpio(void)
++{
++	u32 reg_val;
++
++	/*
++	  * NETA GPIO
++	  * on Palladium, RGMII is used
++	  */
++	reg_val = readl(MVEBU_A3700_GPIO_SB_SEL);
++	reg_val = reg_val & (~(1 << MVEBU_A3700_GPIO_RGMII_GPIO_EN_OFF));
++	writel(reg_val, MVEBU_A3700_GPIO_SB_SEL);
++
++	/*
++	  * I2C GPIO
++	  */
++	reg_val = readl(MVEBU_A3700_GPIO_NB_SEL);
++	/* enable GPIO for I2C */
++	reg_val = reg_val & (~(1 << MVEBU_A3700_GPIO_TW1_GPIO_EN_OFF));
++	writel(reg_val, MVEBU_A3700_GPIO_NB_SEL);
++
++	return;
++}
++
+diff --git a/scripts/Makefile.spl b/scripts/Makefile.spl
+index 738a105..909e46f 100644
+--- a/scripts/Makefile.spl
++++ b/scripts/Makefile.spl
+@@ -84,8 +84,11 @@ libs-$(CONFIG_MVEBU_COMPHY_SUPPORT) += drivers/phy/
+ libs-$(CONFIG_OF_EMBED) += dts/
+ libs-$(CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT) += drivers/pci/
+ libs-$(CONFIG_MVEBU_FLC) += drivers/misc/
+-libs-$(CONFIG_MVEBU_A3700_IO_ADDR_DEC) += drivers/misc/
+-
++#libs-$(CONFIG_MVEBU_A3700_IO_ADDR_DEC) += drivers/misc/
++#libs-$(CONFIG_MVEBU_SPL_A3700_GPIO) += drivers/misc/
++#if defined(CONFIG_MVEBU_A3700_IO_ADDR_DEC) || defined(CONFIG_MVEBU_SPL_A3700_GPIO)
++libs-y += drivers/misc/
++#endif
+ head-y		:= $(addprefix $(obj)/,$(head-y))
+ libs-y		:= $(addprefix $(obj)/,$(libs-y))
+ u-boot-spl-dirs	:= $(patsubst %/,%,$(filter %/, $(libs-y)))
+-- 
+1.9.1
+

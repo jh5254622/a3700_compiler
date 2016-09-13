@@ -1,0 +1,66 @@
+From ac95d0c7faec41a0198ec061e04849e95f7e1f5f Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Mon, 14 Dec 2015 17:24:13 +0200
+Subject: [PATCH 0594/1240] iob: pcie: Add IOB windows for cp110 pcie
+
+Change-Id: Ie1e50c5bc8f4ce88934098bc221a5f144eb475cb
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25865
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/cp110-slave.dtsi               | 6 ++++++
+ arch/arm/dts/cp110.dtsi                     | 6 ++++--
+ doc/device-tree-bindings/misc/mvebu-iob.txt | 2 +-
+ 3 files changed, 11 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/dts/cp110-slave.dtsi b/arch/arm/dts/cp110-slave.dtsi
+index 6253fdd..04318c6 100644
+--- a/arch/arm/dts/cp110-slave.dtsi
++++ b/arch/arm/dts/cp110-slave.dtsi
+@@ -37,6 +37,12 @@
+ 	/* Override the above configurations taken from cp110.dtsi */
+ 	cp110-slave {
+ 		internal-regs {
++			map-iob {
++				windows = <0x0 0xfa000000 0x0 0x1000000 0x2 /* PEX1_X1 window */
++					0x0 0xfb000000 0x0 0x1000000 0x3 /* PEX2_X1 window */
++					0x0 0xf9000000 0x0 0x1000000 0x4 /* PEX0_X4 window */>;
++			};
++
+ 			pcie-controller {
+ 				pcie@0,0 {
+ 					mem = <0xf9000000 0x1000000>;
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index be5fd3c..314bb4f 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -19,8 +19,10 @@
+ map-iob {
+ 	compatible = "marvell,mvebu-iob";
+ 	reg = <0x190000 0x50>;
+-	max-win = <24>;
+-	windows = <0x0 0xf8000000 0x0 0x1000000 0x2 /* PEX1_X1 window */
++	max-win = <16>;
++	windows = <0x0 0xf6000000 0x0 0x1000000 0x2 /* PEX1_X1 window */
++		0x0 0xf7000000 0x0 0x1000000 0x3 /* PEX2_X1 window */
++		0x0 0xf5000000 0x0 0x1000000 0x4 /* PEX0_X4 window */
+ 		0x0 0xf9000000 0x0 0x1000000 0x5 /* NAND window */>;
+ };
+ 
+diff --git a/doc/device-tree-bindings/misc/mvebu-iob.txt b/doc/device-tree-bindings/misc/mvebu-iob.txt
+index 86683c6..d1159ca 100644
+--- a/doc/device-tree-bindings/misc/mvebu-iob.txt
++++ b/doc/device-tree-bindings/misc/mvebu-iob.txt
+@@ -12,7 +12,7 @@ The IOB node requires the following properties:
+ 	- compatible
+ 		should be "marvell,mvebu-iob"
+ 	- reg: the base address of the IOB unit
+-	- max-win: number of the max mbus windows
++	- max-win: number of the max iob windows
+ 	- windows: entry that include the configuration of the windows
+ 	  every window should have 5 parameters:
+ 	  - high base address of the window
+-- 
+1.9.1
+

@@ -1,0 +1,968 @@
+From f2f5701354deb817671a59258252fb54d997f47f Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 25 Nov 2015 17:30:31 +0200
+Subject: [PATCH 0534/1240] board: clean-up board specific code, structs, and
+ functions
+
+- Our target that all the porting of the board will be in the FDT
+
+Change-Id: Ie0c8edbd2395aef6b81138697f85ed731e406828
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25268
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv7/armada38x/soc-init.c  | 16 ++++++++
+ board/mvebu/Kconfig                      |  3 --
+ board/mvebu/armada38x/Kconfig            | 34 -----------------
+ board/mvebu/armada38x/Makefile           |  3 --
+ board/mvebu/armada38x/armada38x.c        | 33 +++--------------
+ board/mvebu/armada38x/board-info.h       | 36 ------------------
+ board/mvebu/armada38x/customer-board.c   | 27 --------------
+ board/mvebu/armada38x/db-88f6820-info.c  | 46 -----------------------
+ board/mvebu/armada38x/rd-88f6820-info.c  | 37 -------------------
+ board/mvebu/armada8k/Kconfig             | 23 ------------
+ board/mvebu/armada8k/Makefile            |  2 -
+ board/mvebu/armada8k/armada8k.c          | 29 ++-------------
+ board/mvebu/armada8k/board-info.h        | 38 -------------------
+ board/mvebu/armada8k/db-a70x0-info.c     | 26 -------------
+ board/mvebu/armada8k/db-apn806-info.c    | 26 -------------
+ board/mvebu/armadalp/Kconfig             | 34 -----------------
+ board/mvebu/armadalp/Makefile            |  3 --
+ board/mvebu/armadalp/armadalp.c          | 63 ++++++++++----------------------
+ board/mvebu/armadalp/board-info.h        | 36 ------------------
+ board/mvebu/armadalp/customer-board.c    | 26 -------------
+ board/mvebu/armadalp/db0-armadalp-info.c | 26 -------------
+ board/mvebu/armadalp/db1-armadalp-info.c | 26 -------------
+ board/mvebu/common/devel-board.c         |  8 +---
+ board/mvebu/common/devel-board.h         |  2 +-
+ board/mvebu/common/init.c                | 37 ++++---------------
+ include/fdtdec.h                         |  9 -----
+ lib/fdtdec.c                             |  9 -----
+ 27 files changed, 52 insertions(+), 606 deletions(-)
+ delete mode 100644 board/mvebu/armada38x/Kconfig
+ delete mode 100644 board/mvebu/armada38x/board-info.h
+ delete mode 100644 board/mvebu/armada38x/customer-board.c
+ delete mode 100644 board/mvebu/armada38x/db-88f6820-info.c
+ delete mode 100644 board/mvebu/armada38x/rd-88f6820-info.c
+ delete mode 100644 board/mvebu/armada8k/Kconfig
+ delete mode 100644 board/mvebu/armada8k/board-info.h
+ delete mode 100644 board/mvebu/armada8k/db-a70x0-info.c
+ delete mode 100644 board/mvebu/armada8k/db-apn806-info.c
+ delete mode 100644 board/mvebu/armadalp/Kconfig
+ delete mode 100644 board/mvebu/armadalp/board-info.h
+ delete mode 100644 board/mvebu/armadalp/customer-board.c
+ delete mode 100644 board/mvebu/armadalp/db0-armadalp-info.c
+ delete mode 100644 board/mvebu/armadalp/db1-armadalp-info.c
+
+diff --git a/arch/arm/cpu/armv7/armada38x/soc-init.c b/arch/arm/cpu/armv7/armada38x/soc-init.c
+index f33f4e8..3ce63f5 100644
+--- a/arch/arm/cpu/armv7/armada38x/soc-init.c
++++ b/arch/arm/cpu/armv7/armada38x/soc-init.c
+@@ -21,6 +21,7 @@
+ #include <common.h>
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/soc.h>
++#include <asm/arch-mvebu/mpp.h>
+ #include <asm/arch-armada38x/armada38x.h>
+ 
+ #define MBUS_SDRAM_WIN_ENABLE			0x1
+@@ -29,8 +30,23 @@
+ #define MBUS_SDRAM_SIZE_MASK			(0xFF << 24)
+ #define MBUS_SDRAM_SIZE_ALIGN			(1 << 24)
+ 
++int a38x_configure_mpp(void)
++{
++#ifdef CONFIG_MVEBU_MPP_BUS
++#ifdef CONFIG_MVEBU_NAND_BOOT
++	mpp_enable_bus("nand");
++#endif
++#ifdef CONFIG_MVEBU_SPI_BOOT
++	mpp_enable_bus("spi0");
++#endif
++#endif
++	return 0;
++}
++
++
+ int soc_early_init_f(void)
+ {
++	a38x_configure_mpp();
+ 	return 0;
+ }
+ 
+diff --git a/board/mvebu/Kconfig b/board/mvebu/Kconfig
+index d2bc1c9..08d3a2e 100644
+--- a/board/mvebu/Kconfig
++++ b/board/mvebu/Kconfig
+@@ -20,8 +20,5 @@ config CUSTOMER_BOARD
+ 	  customer board.
+ 	  If not, keep this off to reduce code size
+ 
+-source "board/mvebu/armada8k/Kconfig"
+-source "board/mvebu/armada38x/Kconfig"
+-source "board/mvebu/armadalp/Kconfig"
+ source "board/mvebu/common/Kconfig"
+ endmenu
+diff --git a/board/mvebu/armada38x/Kconfig b/board/mvebu/armada38x/Kconfig
+deleted file mode 100644
+index 6250c44..0000000
+--- a/board/mvebu/armada38x/Kconfig
++++ /dev/null
+@@ -1,34 +0,0 @@
+-menu "Armada 38x boards"
+-	depends on TARGET_ARMADA_38X
+-
+-config ARMADA_38X_DB
+-	bool "Support Marvell Armada-38x DB board"
+-	depends on DEVEL_BOARD
+-	default y
+-	help
+-	  Choose this option to add
+-	  support for Marvell Armada-38x
+-	  DB board. Say N unless you really
+-	  work on this board
+-
+-config ARMADA_38X_RD
+-	bool "Support Marvell Armada-38x RD board"
+-	depends on DEVEL_BOARD
+-	default y
+-	help
+-	  Choose this option to add
+-	  support for Marvell Armada-38x
+-	  RD board. Say N unless you really
+-	  work on this board
+-
+-config ARMADA_38X_CUSTOMER
+-	bool "Support Marvell Armada-38x Customer board"
+-	depends on CUSTOMER_BOARD
+-	default y
+-	help
+-	  Choose this option to add
+-	  support for Marvell Armada-38x
+-	  Customer board. Say N unless you really
+-	  work on this board
+-
+-endmenu
+diff --git a/board/mvebu/armada38x/Makefile b/board/mvebu/armada38x/Makefile
+index 8acecdb..17bb4eb 100644
+--- a/board/mvebu/armada38x/Makefile
++++ b/board/mvebu/armada38x/Makefile
+@@ -17,6 +17,3 @@
+ #
+ 
+ obj-y	+= armada38x.o
+-obj-$(CONFIG_ARMADA_38X_DB)	+= db-88f6820-info.o
+-obj-$(CONFIG_ARMADA_38X_RD)	+= rd-88f6820-info.o
+-obj-$(CONFIG_ARMADA_38X_CUSTOMER) += customer-board.o
+diff --git a/board/mvebu/armada38x/armada38x.c b/board/mvebu/armada38x/armada38x.c
+index 5f5a16d..6f42ab5 100644
+--- a/board/mvebu/armada38x/armada38x.c
++++ b/board/mvebu/armada38x/armada38x.c
+@@ -16,36 +16,13 @@
+  * ***************************************************************************
+  */
+ 
++/* #define DEBUG*/
++
+ #include <common.h>
+-#include <malloc.h>
+-#include <errno.h>
+-#include <netdev.h>
+-#include <asm/io.h>
+-#include <asm/arch-armada38x/armada38x.h>
+ #include <linux/compiler.h>
+-#include "board-info.h"
+ 
+-struct mvebu_board_info *mvebu_board_info_get(enum fdt_compat_id compat_id)
++int mvebu_board_id_get(void)
+ {
+-	switch (compat_id) {
+-#ifdef CONFIG_ARMADA_38X_DB
+-	case COMPAT_MVEBU_ARMADA_38X_DB:
+-		return &a38x_db_info;
+-#endif
+-#ifdef CONFIG_ARMADA_38X_RD
+-	case COMPAT_MVEBU_ARMADA_38X_RD:
+-		return &a38x_rd_info;
+-#endif
+-#ifdef CONFIG_ARMADA_38X_CUSTOMER
+-	case COMPAT_MVEBU_ARMADA_38X_CUSTOMER:
+-		return &a38x_customer_info;
+-#endif
+-	default:
+-		error("Missing board information for compatible string = %d\n", compat_id);
+-#ifdef CONFIG_ARMADA_38X_DB
+-		return &a38x_db_info;
+-#else
+-		return NULL;
+-#endif
+-	}
++	/* stub function for future use */
++	return 0;
+ }
+diff --git a/board/mvebu/armada38x/board-info.h b/board/mvebu/armada38x/board-info.h
+deleted file mode 100644
+index 6dd33c3..0000000
+--- a/board/mvebu/armada38x/board-info.h
++++ /dev/null
+@@ -1,36 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#ifndef _BOARD_INFO_H_
+-#define _BOARD_INFO_H_
+-
+-#include "../common/board.h"
+-#include "../common/sar.h"
+-
+-enum a38x_board_types {
+-	ARMADA_38X_DB_ID = 0,
+-	ARMADA_38X_RD_ID,
+-	ARMADA_38X_CUSTOMER_ID,
+-	MAX_BOARD_ID
+-};
+-
+-extern struct mvebu_board_info a38x_db_info;
+-extern struct mvebu_board_info a38x_rd_info;
+-extern struct mvebu_board_info a38x_customer_info;
+-
+-#endif /* _BOARD_INFO_H_ */
+diff --git a/board/mvebu/armada38x/customer-board.c b/board/mvebu/armada38x/customer-board.c
+deleted file mode 100644
+index 21e6bb4..0000000
+--- a/board/mvebu/armada38x/customer-board.c
++++ /dev/null
+@@ -1,27 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#include <common.h>
+-#include <linux/compiler.h>
+-#include "board-info.h"
+-
+-struct mvebu_board_info a38x_customer_info = {
+-	.name = "CUSTOMER-BOARD",
+-	.id = ARMADA_38X_CUSTOMER_ID,
+-};
+-
+diff --git a/board/mvebu/armada38x/db-88f6820-info.c b/board/mvebu/armada38x/db-88f6820-info.c
+deleted file mode 100644
+index bc54112..0000000
+--- a/board/mvebu/armada38x/db-88f6820-info.c
++++ /dev/null
+@@ -1,46 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#include <common.h>
+-#include <linux/compiler.h>
+-#include <asm/arch-mvebu/mpp.h>
+-#include "board-info.h"
+-
+-int board_get_id(void)
+-{
+-	return ARMADA_38X_DB_ID;
+-}
+-
+-int db_a38x_configure_mpp(void)
+-{
+-#ifdef CONFIG_MVEBU_MPP_BUS
+-#ifdef CONFIG_MVEBU_NAND_BOOT
+-	mpp_enable_bus("nand");
+-#endif
+-#ifdef CONFIG_MVEBU_SPI_BOOT
+-	mpp_enable_bus("spi0");
+-#endif
+-#endif
+-	return 0;
+-}
+-
+-struct mvebu_board_info a38x_db_info = {
+-	.id = ARMADA_38X_DB_ID,
+-	.configure_mpp = &db_a38x_configure_mpp,
+-};
+-
+diff --git a/board/mvebu/armada38x/rd-88f6820-info.c b/board/mvebu/armada38x/rd-88f6820-info.c
+deleted file mode 100644
+index 6dad564..0000000
+--- a/board/mvebu/armada38x/rd-88f6820-info.c
++++ /dev/null
+@@ -1,37 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#include <common.h>
+-#include <linux/compiler.h>
+-#include <asm/arch-mvebu/mpp.h>
+-#include "board-info.h"
+-
+-int rd_a38x_configure_mpp(void)
+-{
+-#ifdef CONFIG_MVEBU_MPP_BUS
+-#ifdef CONFIG_MVEBU_SPI_BOOT
+-	mpp_enable_bus("spi0");
+-#endif
+-#endif
+-	return 0;
+-}
+-
+-struct mvebu_board_info a38x_rd_info = {
+-	.id = ARMADA_38X_RD_ID,
+-	.configure_mpp = &rd_a38x_configure_mpp,
+-};
+diff --git a/board/mvebu/armada8k/Kconfig b/board/mvebu/armada8k/Kconfig
+deleted file mode 100644
+index 383b8e5..0000000
+--- a/board/mvebu/armada8k/Kconfig
++++ /dev/null
+@@ -1,23 +0,0 @@
+-menu "Armada 8k boards"
+-	depends on TARGET_ARMADA_8K
+-
+-config APN_806_DB
+-	bool "Support Marvell Armada-8K DB board"
+-	depends on DEVEL_BOARD
+-	default y
+-	help
+-	  Choose this option to add
+-	  support for Marvell Armada-8K
+-	  DB board. Say N unless you really
+-	  work on this board
+-
+-config ARMADA_70X0_DB
+-	bool "Support Marvell Armada-70x0 board"
+-	depends on DEVEL_BOARD
+-	help
+-	  Choose this option to add
+-	  support for Marvell Armada-70x0
+-	  DB board. Say N unless you really
+-	  work on this board
+-
+-endmenu
+diff --git a/board/mvebu/armada8k/Makefile b/board/mvebu/armada8k/Makefile
+index 1b05ae0..da982d1 100644
+--- a/board/mvebu/armada8k/Makefile
++++ b/board/mvebu/armada8k/Makefile
+@@ -17,5 +17,3 @@
+ #
+ 
+ obj-y	+= armada8k.o
+-obj-$(CONFIG_APN_806_DB)	+= db-apn806-info.o
+-obj-$(CONFIG_ARMADA_70X0_DB)	+= db-a70x0-info.o
+diff --git a/board/mvebu/armada8k/armada8k.c b/board/mvebu/armada8k/armada8k.c
+index befe40c..6f42ab5 100644
+--- a/board/mvebu/armada8k/armada8k.c
++++ b/board/mvebu/armada8k/armada8k.c
+@@ -19,33 +19,10 @@
+ /* #define DEBUG*/
+ 
+ #include <common.h>
+-#include <malloc.h>
+-#include <errno.h>
+-#include <netdev.h>
+-#include <asm/io.h>
+-#include <asm/arch-armada8k/armada8k.h>
+ #include <linux/compiler.h>
+-#include "board-info.h"
+ 
+-struct mvebu_board_info *mvebu_board_info_get(enum fdt_compat_id compat_id)
++int mvebu_board_id_get(void)
+ {
+-	switch (compat_id) {
+-#ifdef CONFIG_APN_806_DB
+-	case COMPAT_MVEBU_APN_806_DB:
+-		return &a8021_db_info;
+-#endif
+-#ifdef CONFIG_ARMADA_70X0_DB
+-	case COMPAT_MVEBU_ARMADA_70X0_DB:
+-		return &a70x0_db_info;
+-#endif
+-	case COMPAT_MVEBU_APN_806_CUSTOMER:
+-	default:
+-		error("Missing board information for compatible string = %d\n", compat_id);
+-#ifdef CONFIG_APN_806_DB
+-		return &a8021_db_info;
+-#else
+-		return NULL;
+-#endif
+-	}
++	/* stub function for future use */
++	return 0;
+ }
+-
+diff --git a/board/mvebu/armada8k/board-info.h b/board/mvebu/armada8k/board-info.h
+deleted file mode 100644
+index 7536e88..0000000
+--- a/board/mvebu/armada8k/board-info.h
++++ /dev/null
+@@ -1,38 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#ifndef _BOARD_INFO_H_
+-#define _BOARD_INFO_H_
+-
+-#include "../common/board.h"
+-#include "../common/sar.h"
+-
+-enum a8k_board_types {
+-	ARMADA_8021_DB_ID = 0,
+-	ARMADA_8021_RD_ID,
+-	ARMADA_8022_DB_ID,
+-	ARMADA_8022_RD_ID,
+-	ARMADA_70x0_DB_ID,
+-	MAX_BOARD_ID
+-};
+-
+-extern struct mvebu_board_info a8021_db_info;
+-extern struct mvebu_board_info a70x0_db_info;
+-extern struct mvebu_board_family a8k_board_family;
+-
+-#endif /* _BOARD_INFO_H_ */
+diff --git a/board/mvebu/armada8k/db-a70x0-info.c b/board/mvebu/armada8k/db-a70x0-info.c
+deleted file mode 100644
+index c666e9a..0000000
+--- a/board/mvebu/armada8k/db-a70x0-info.c
++++ /dev/null
+@@ -1,26 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#include <common.h>
+-#include <linux/compiler.h>
+-#include "board-info.h"
+-
+-struct mvebu_board_info a70x0_db_info = {
+-	.id = ARMADA_70x0_DB_ID,
+-};
+-
+diff --git a/board/mvebu/armada8k/db-apn806-info.c b/board/mvebu/armada8k/db-apn806-info.c
+deleted file mode 100644
+index 29ee3fa..0000000
+--- a/board/mvebu/armada8k/db-apn806-info.c
++++ /dev/null
+@@ -1,26 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#include <common.h>
+-#include <linux/compiler.h>
+-#include "board-info.h"
+-
+-struct mvebu_board_info a8021_db_info = {
+-	.id = ARMADA_8021_DB_ID,
+-};
+-
+diff --git a/board/mvebu/armadalp/Kconfig b/board/mvebu/armadalp/Kconfig
+deleted file mode 100644
+index a48d9d6..0000000
+--- a/board/mvebu/armadalp/Kconfig
++++ /dev/null
+@@ -1,34 +0,0 @@
+-menu "Armada LP boards"
+-	depends on TARGET_ARMADA_LP
+-
+-config ARMADA_LP_DB0
+-	bool "Support Marvell Armada-8K DB0 board"
+-	depends on DEVEL_BOARD
+-	default y
+-	help
+-	  Choose this option to add
+-	  support for Marvell Armada-LP
+-	  DB0 board. Say N unless you really
+-	  work on this board
+-
+-config ARMADA_LP_DB1
+-	bool "Support Marvell Armada-8K DB1 board"
+-	depends on DEVEL_BOARD
+-	default y
+-	help
+-	  Choose this option to add
+-	  support for Marvell Armada-LP
+-	  DB1 board. Say N unless you really
+-	  work on this board
+-
+-config ARMADA_LP_CUSTOMER
+-	bool "Support Marvell Armada-8K Customer board"
+-	depends on CUSTOMER_BOARD
+-	default y
+-	help
+-	  Choose this option to add
+-	  support for Marvell Armada-LP
+-	  Customer board. Say N unless you really
+-	  work on this board
+-
+-endmenu
+diff --git a/board/mvebu/armadalp/Makefile b/board/mvebu/armadalp/Makefile
+index 920d906..9ed65cf 100644
+--- a/board/mvebu/armadalp/Makefile
++++ b/board/mvebu/armadalp/Makefile
+@@ -17,6 +17,3 @@
+ #
+ 
+ obj-y	+= armadalp.o
+-obj-$(CONFIG_ARMADA_LP_DB0)	+= db0-armadalp-info.o
+-obj-$(CONFIG_ARMADA_LP_DB1)	+= db1-armadalp-info.o
+-obj-$(CONFIG_ARMADA_LP_CUSTOMER)	+= customer-board.o
+diff --git a/board/mvebu/armadalp/armadalp.c b/board/mvebu/armadalp/armadalp.c
+index 1d74491..6f42ab5 100644
+--- a/board/mvebu/armadalp/armadalp.c
++++ b/board/mvebu/armadalp/armadalp.c
+@@ -1,53 +1,28 @@
+ /*
+-* ***************************************************************************
+-* Copyright (C) 2015 Marvell International Ltd.
+-* ***************************************************************************
+-* This program is free software: you can redistribute it and/or modify it
+-* under the terms of the GNU General Public License as published by the Free
+-* Software Foundation, either version 2 of the License, or any later version.
+-*
+-* This program is distributed in the hope that it will be useful,
+-* but WITHOUT ANY WARRANTY; without even the implied warranty of
+-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-* GNU General Public License for more details.
+-*
+-* You should have received a copy of the GNU General Public License
+-* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-* ***************************************************************************
+-*/
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
+ 
+ /* #define DEBUG*/
+ 
+ #include <common.h>
+-#include <malloc.h>
+-#include <errno.h>
+-#include <netdev.h>
+-#include <asm/io.h>
+-#include <asm/arch-armadalp/armadalp.h>
+ #include <linux/compiler.h>
+-#include "board-info.h"
+ 
+-struct mvebu_board_info *mvebu_board_info_get(enum fdt_compat_id compat_id)
++int mvebu_board_id_get(void)
+ {
+-	switch (compat_id) {
+-#ifdef CONFIG_ARMADA_LP_DB0
+-	case COMPAT_MVEBU_ARMADA_LP_DB0:
+-		return &db0_armadalp_info;
+-#endif
+-#ifdef CONFIG_ARMADA_LP_DB1
+-	case COMPAT_MVEBU_ARMADA_LP_DB1:
+-		return &db1_armadalp_info;
+-#endif
+-#ifdef CONFIG_ARMADA_LP_CUSTOMER
+-	case COMPAT_MVEBU_ARMADA_LP_CUSTOMER:
+-		return &armadalp_customer_info;
+-#endif
+-	default:
+-		error("Missing board information for compatible string = %d\n", compat_id);
+-#ifdef CONFIG_ARMADA_LP_DB0
+-		return &db0_armadalp_info;
+-#else
+-		return NULL;
+-#endif
+-	}
++	/* stub function for future use */
++	return 0;
+ }
+diff --git a/board/mvebu/armadalp/board-info.h b/board/mvebu/armadalp/board-info.h
+deleted file mode 100644
+index ece8b04..0000000
+--- a/board/mvebu/armadalp/board-info.h
++++ /dev/null
+@@ -1,36 +0,0 @@
+-/*
+-* ***************************************************************************
+-* Copyright (C) 2015 Marvell International Ltd.
+-* ***************************************************************************
+-* This program is free software: you can redistribute it and/or modify it
+-* under the terms of the GNU General Public License as published by the Free
+-* Software Foundation, either version 2 of the License, or any later version.
+-*
+-* This program is distributed in the hope that it will be useful,
+-* but WITHOUT ANY WARRANTY; without even the implied warranty of
+-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-* GNU General Public License for more details.
+-*
+-* You should have received a copy of the GNU General Public License
+-* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-* ***************************************************************************
+-*/
+-
+-#ifndef _BOARD_INFO_H_
+-#define _BOARD_INFO_H_
+-
+-#include "../common/board.h"
+-#include "../common/sar.h"
+-
+-enum a8k_board_types {
+-	ARMADA_LP_DB0_ID = 0,
+-	ARMADA_LP_DB1_ID,
+-	ARMADA_LP_CUSTOMER0_ID,
+-	MAX_BOARD_ID
+-};
+-
+-extern struct mvebu_board_info db0_armadalp_info;
+-extern struct mvebu_board_info db1_armadalp_info;
+-extern struct mvebu_board_info armadalp_customer_info;
+-extern struct mvebu_board_family armadalp_board_family;
+-#endif /* _BOARD_INFO_H_ */
+diff --git a/board/mvebu/armadalp/customer-board.c b/board/mvebu/armadalp/customer-board.c
+deleted file mode 100644
+index 582df5b..0000000
+--- a/board/mvebu/armadalp/customer-board.c
++++ /dev/null
+@@ -1,26 +0,0 @@
+-/*
+-* ***************************************************************************
+-* Copyright (C) 2015 Marvell International Ltd.
+-* ***************************************************************************
+-* This program is free software: you can redistribute it and/or modify it
+-* under the terms of the GNU General Public License as published by the Free
+-* Software Foundation, either version 2 of the License, or any later version.
+-*
+-* This program is distributed in the hope that it will be useful,
+-* but WITHOUT ANY WARRANTY; without even the implied warranty of
+-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-* GNU General Public License for more details.
+-*
+-* You should have received a copy of the GNU General Public License
+-* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-* ***************************************************************************
+-*/
+-
+-#include <common.h>
+-#include <linux/compiler.h>
+-#include "board-info.h"
+-
+-struct mvebu_board_info armadalp_customer_info = {
+-	.id = ARMADA_LP_CUSTOMER0_ID,
+-};
+-
+diff --git a/board/mvebu/armadalp/db0-armadalp-info.c b/board/mvebu/armadalp/db0-armadalp-info.c
+deleted file mode 100644
+index 439c82c..0000000
+--- a/board/mvebu/armadalp/db0-armadalp-info.c
++++ /dev/null
+@@ -1,26 +0,0 @@
+-/*
+-* ***************************************************************************
+-* Copyright (C) 2015 Marvell International Ltd.
+-* ***************************************************************************
+-* This program is free software: you can redistribute it and/or modify it
+-* under the terms of the GNU General Public License as published by the Free
+-* Software Foundation, either version 2 of the License, or any later version.
+-*
+-* This program is distributed in the hope that it will be useful,
+-* but WITHOUT ANY WARRANTY; without even the implied warranty of
+-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-* GNU General Public License for more details.
+-*
+-* You should have received a copy of the GNU General Public License
+-* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-* ***************************************************************************
+-*/
+-
+-#include <common.h>
+-#include <linux/compiler.h>
+-#include "board-info.h"
+-
+-struct mvebu_board_info db0_armadalp_info = {
+-	.id = ARMADA_LP_DB0_ID,
+-};
+-
+diff --git a/board/mvebu/armadalp/db1-armadalp-info.c b/board/mvebu/armadalp/db1-armadalp-info.c
+deleted file mode 100644
+index 9e46508..0000000
+--- a/board/mvebu/armadalp/db1-armadalp-info.c
++++ /dev/null
+@@ -1,26 +0,0 @@
+-/*
+-* ***************************************************************************
+-* Copyright (C) 2015 Marvell International Ltd.
+-* ***************************************************************************
+-* This program is free software: you can redistribute it and/or modify it
+-* under the terms of the GNU General Public License as published by the Free
+-* Software Foundation, either version 2 of the License, or any later version.
+-*
+-* This program is distributed in the hope that it will be useful,
+-* but WITHOUT ANY WARRANTY; without even the implied warranty of
+-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-* GNU General Public License for more details.
+-*
+-* You should have received a copy of the GNU General Public License
+-* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-* ***************************************************************************
+-*/
+-
+-#include <common.h>
+-#include <linux/compiler.h>
+-#include "board-info.h"
+-
+-struct mvebu_board_info db1_armadalp_info = {
+-	.id = ARMADA_LP_DB1_ID,
+-};
+-
+diff --git a/board/mvebu/common/devel-board.c b/board/mvebu/common/devel-board.c
+index e40db13..a57080a 100644
+--- a/board/mvebu/common/devel-board.c
++++ b/board/mvebu/common/devel-board.c
+@@ -25,17 +25,11 @@
+ 
+ #include "sar.h"
+ 
+-int mvebu_devel_board_init(struct mvebu_board_info *brd)
++int mvebu_devel_board_init(void)
+ {
+-
+ #ifdef CONFIG_MVEBU_SAR
+ 	sar_init();
+ #endif
+-
+-	/* Update MPP configurations */
+-	if (brd->configure_mpp)
+-		(*brd->configure_mpp)();
+-
+ 	return 0;
+ }
+ 
+diff --git a/board/mvebu/common/devel-board.h b/board/mvebu/common/devel-board.h
+index 2dccd34..a40bdae 100644
+--- a/board/mvebu/common/devel-board.h
++++ b/board/mvebu/common/devel-board.h
+@@ -22,6 +22,6 @@
+ #include <common.h>
+ #include "board.h"
+ 
+-int mvebu_devel_board_init(struct mvebu_board_info *brd);
++int mvebu_devel_board_init(void);
+ 
+ #endif /* _DEVEL_BOARD_H_ */
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index a432c07..eaa4a5e 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -100,52 +100,29 @@ int mvebu_io_init(void)
+ 	return 0;
+ }
+ 
+-int mvebu_print_info(char *board_name)
+-{
+-	printf("Board: %s\n", board_name);
+-	mvebu_print_soc_info();
+-
+-	return 0;
+-}
+-
+-struct mvebu_board_info *mvebu_fdt_get_board(void)
++int mvebu_print_info(void)
+ {
+ 	const void *blob = gd->fdt_blob;
+-	struct mvebu_board_info *brd;
+-	u32 compt_id;
++	char *brd_name;
+ 
+-	compt_id = fdtdec_lookup(blob, 0);
+-	brd = mvebu_board_info_get(compt_id);
+-
+-	return brd;
+-}
++	fdt_get_string(blob, 0, "model", (const char **)&brd_name);
++	printf("Board: %s\n", brd_name);
++	mvebu_print_soc_info();
+ 
+-int mvebu_fdt_board_info_update(struct mvebu_board_info *brd)
+-{
+-	const void *blob = gd->fdt_blob;
+-	fdt_get_string(blob, 0, "model", (const char **)&brd->name);
+ 	return 0;
+ }
+ 
+ int mvebu_board_init(void)
+ {
+-	struct mvebu_board_info *brd;
+-
+ 	debug("Initializing board\n");
+ 
+-	brd = mvebu_fdt_get_board();
+-	mvebu_fdt_board_info_update(brd);
+-
+-	mvebu_print_info(brd->name);
+-
++	mvebu_print_info();
+ #ifdef CONFIG_MVEBU_MPP_BUS
+ 	mpp_bus_probe();
+ #endif
+-
+ #ifdef CONFIG_DEVEL_BOARD
+-	mvebu_devel_board_init(brd);
++	mvebu_devel_board_init();
+ #endif
+-
+ 	return 0;
+ }
+ 
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 1d7fef1..a83d7a1 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -151,15 +151,6 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_FLC,
+ 	COMPAT_MVEBU_DDR_MAC,
+ 	COMPAT_MVEBU_DDR_PHY,
+-	COMPAT_MVEBU_ARMADA_38X_DB,
+-	COMPAT_MVEBU_ARMADA_38X_RD,
+-	COMPAT_MVEBU_ARMADA_38X_CUSTOMER,
+-	COMPAT_MVEBU_APN_806_DB,
+-	COMPAT_MVEBU_APN_806_CUSTOMER,
+-	COMPAT_MVEBU_ARMADA_70X0_DB,
+-	COMPAT_MVEBU_ARMADA_LP_DB0,
+-	COMPAT_MVEBU_ARMADA_LP_DB1,
+-	COMPAT_MVEBU_ARMADA_LP_CUSTOMER,
+ 	COMPAT_MVEBU_ADVK_PCIE,
+ 	COMPAT_MVEBU_XENON_MMC,
+ 
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index ce2031c..ea29e90 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -113,15 +113,6 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_FLC, "marvell,mvebu-flc"),
+ 	COMPAT(MVEBU_DDR_MAC, "marvell,mvebu-ddr-mac"),
+ 	COMPAT(MVEBU_DDR_PHY, "marvell,mvebu-ddr-phy"),
+-	COMPAT(MVEBU_ARMADA_38X_DB, "marvell,armada-38x-db"),
+-	COMPAT(MVEBU_ARMADA_38X_RD, "marvell,armada-38x-rd"),
+-	COMPAT(MVEBU_ARMADA_38X_CUSTOMER, "marvell,armada-38x-customer"),
+-	COMPAT(MVEBU_APN_806_DB, "marvell,apn-806-db"),
+-	COMPAT(MVEBU_APN_806_CUSTOMER, "marvell,apn-806-customer"),
+-	COMPAT(MVEBU_ARMADA_70X0_DB, "marvell,armada-70x0-db"),
+-	COMPAT(MVEBU_ARMADA_LP_DB0, "marvell,armada-lp-db0"),
+-	COMPAT(MVEBU_ARMADA_LP_DB1, "marvell,armada-lp-db1"),
+-	COMPAT(MVEBU_ARMADA_LP_CUSTOMER, "marvell,armada-lp-customer"),
+ 	COMPAT(MVEBU_ADVK_PCIE, "marvell,advk-pcie"),
+ 	COMPAT(MVEBU_XENON_MMC, "marvell,xenon-sdhci"),
+ 
+-- 
+1.9.1
+

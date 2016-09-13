@@ -1,0 +1,59 @@
+From 45c5d2a7497d8131902f5d458c15c860c02fdadc Mon Sep 17 00:00:00 2001
+From: Ofir Fedida <ofedida@marvell.com>
+Date: Wed, 25 May 2016 10:29:02 +0300
+Subject: [PATCH 185/239] mv_ddr: apn806: Set timing to mc6 after training
+
+set cl and cwl after training
+to mc6
+
+Change-Id: Ia3cd4e571b4c6552fed17e82b1851a653fbfa0c8
+Signed-off-by: Ofir Fedida <ofedida@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29963
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c |  4 ++++
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h | 12 ++++++++++++
+ 2 files changed, 16 insertions(+)
+
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+index 1c922c9..cb283a0 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+@@ -636,6 +636,10 @@ static void mv_ddr_convert_read_params_from_tip2mc6(void)
+ 		cl_val = cas_latency_table[speed_bin_index].cl_val[freq];
+ 		cwl_val = cas_write_latency_table[speed_bin_index].cl_val[freq];
+ 
++		reg_bit_clrset(MC6_REG_DRAM_CFG1,
++			cwl_val << MC6_CWL_OFFS | cl_val << MC6_CL_OFFS,
++			MC6_CWL_MASK << MC6_CWL_OFFS | MC6_CL_MASK << MC6_CL_OFFS);
++
+ 		for (cs = 0; cs < max_cs; cs++) {
+ 			ddr3_tip_apn806_if_read(DEV_NUM_0, PARAM_NOT_CARE, if_id, REG_READ_DATA_SAMPLE_DELAYS_ADDR,
+ 						&rd_smp_dly_tip, MASK_ALL_BITS);
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
+index 7d86e25..fb6ad90 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
+@@ -178,6 +178,18 @@ enum{
+ #define MB_READ_DATA_LATENCY_CH0_OFFS	0
+ #define MB_READ_DATA_LATENCY_CH0_MASK	0x3f
+ 
++#define MC6_REG_DRAM_CFG1			(MC6_BASE_ADDR + 0x300)
++#define MC6_CAP_LATENCY_OFFS		28
++#define MC6_CAP_LATENCY_MASK		0xf
++#define MC6_CA_LATENCY_OFFS			24
++#define MC6_CA_LATENCY_MASK			0xf
++#define MC6_WL_SELECT_OFFS			15
++#define MC6_WL_SELECT_MASK			0x1
++#define MC6_CWL_OFFS			8
++#define MC6_CWL_MASK			0x3f
++#define MC6_CL_OFFS				0
++#define MC6_CL_MASK				0x3f
++
+ #ifdef NO_EFUSE
+ #define	SAR_CPU1800_0X2	0x2
+ #define	SAR_CPU1800_0X3	0x3
+-- 
+1.9.1
+

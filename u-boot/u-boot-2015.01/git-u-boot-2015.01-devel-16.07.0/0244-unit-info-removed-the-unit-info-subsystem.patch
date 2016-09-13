@@ -1,0 +1,1028 @@
+From dcb00baad333253c939a145988542a7388adba91 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 12 Jul 2015 13:35:53 +0300
+Subject: [PATCH 0244/1240] unit-info: removed the unit info subsystem
+
+it is no longer needed now that we use device tree
+
+Change-Id: I31adf43b8541f98eb61796aabe690a3653f51549
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/21199
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv7/armada38x/soc-init.c     |   1 -
+ arch/arm/cpu/armv7/armada38x/tables.c       |  30 -----
+ arch/arm/cpu/armv7/armadalp/soc-init.c      |   1 -
+ arch/arm/cpu/armv7/armadalp/tables.c        |  29 -----
+ arch/arm/cpu/armv8/armada8k/soc-init.c      |   1 -
+ arch/arm/cpu/armv8/armada8k/tables.c        |  30 -----
+ arch/arm/cpu/mvebu-common/Makefile          |   1 -
+ arch/arm/cpu/mvebu-common/soc-init.c        |  20 ----
+ arch/arm/cpu/mvebu-common/unit-info.c       | 176 ----------------------------
+ arch/arm/include/asm/arch-mvebu/soc.h       |   5 -
+ arch/arm/include/asm/arch-mvebu/unit-info.h |  71 -----------
+ board/mvebu/armada38x/board-info.c          |   1 -
+ board/mvebu/armada38x/customer-board.c      |   9 --
+ board/mvebu/armada38x/db-88f6820-info.c     |   1 -
+ board/mvebu/armada38x/rd-88f6820-info.c     |   8 --
+ board/mvebu/armada8k/board-info.c           |   1 -
+ board/mvebu/armada8k/db-8210-info.c         |   1 -
+ board/mvebu/armada8k/rd-8210-info.c         |   8 --
+ board/mvebu/armadalp/board-info.c           |   1 -
+ board/mvebu/armadalp/customer-board.c       |   9 --
+ board/mvebu/armadalp/db0-armadalp-info.c    |   1 -
+ board/mvebu/armadalp/db1-armadalp-info.c    |   1 -
+ board/mvebu/common/board-common.c           |   1 -
+ board/mvebu/common/board.h                  |   3 -
+ board/mvebu/common/eth_init.c               |   1 -
+ board/mvebu/common/init.c                   |   6 -
+ board/mvebu/common/nand_init.c              |   9 +-
+ board/mvebu/common/pcie_init.c              |   1 -
+ common/mvebu/cmd_bubt.c                     |  22 ----
+ common/mvebu/cmd_misc.c                     |  23 ----
+ 30 files changed, 4 insertions(+), 468 deletions(-)
+ delete mode 100644 arch/arm/cpu/mvebu-common/unit-info.c
+ delete mode 100644 arch/arm/include/asm/arch-mvebu/unit-info.h
+
+diff --git a/arch/arm/cpu/armv7/armada38x/soc-init.c b/arch/arm/cpu/armv7/armada38x/soc-init.c
+index a88c83f..24e9603 100644
+--- a/arch/arm/cpu/armv7/armada38x/soc-init.c
++++ b/arch/arm/cpu/armv7/armada38x/soc-init.c
+@@ -21,7 +21,6 @@
+ #include <common.h>
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/soc.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-armada38x/armada38x.h>
+ 
+ #define MBUS_SDRAM_WIN_ENABLE			0x1
+diff --git a/arch/arm/cpu/armv7/armada38x/tables.c b/arch/arm/cpu/armv7/armada38x/tables.c
+index dd7e000..ba05209 100644
+--- a/arch/arm/cpu/armv7/armada38x/tables.c
++++ b/arch/arm/cpu/armv7/armada38x/tables.c
+@@ -19,52 +19,23 @@
+ #include <common.h>
+ #include <asm/io.h>
+ #include <asm/arch/regs-base.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/soc.h>
+ 
+-/* List the maximum amount of units for all devices and boards */
+-u16 base_unit_mask_table[MAX_UNIT_ID] = {
+-	[PCIE_UNIT_ID]		=  cnt_to_mask(4),
+-	[SATA_UNIT_ID]		=  cnt_to_mask(4),
+-	[ETH_GIG_UNIT_ID]	=  cnt_to_mask(4),
+-	[UART_UNIT_ID]		=  cnt_to_mask(2),
+-	[USB_UNIT_ID]		=  cnt_to_mask(1),
+-	[USB3_UNIT_ID]		=  cnt_to_mask(2),
+-	[SPI_UNIT_ID]		=  cnt_to_mask(2),
+-	[XOR_UNIT_ID]		=  cnt_to_mask(1),
+-	[CESA_UNIT_ID]		=  cnt_to_mask(1),
+-	[SDIO_UNIT_ID]		=  cnt_to_mask(1),
+-	[NAND_UNIT_ID]		=  cnt_to_mask(1)
+-};
+-
+-/* Per device unit info. List which units are disabled for this device */
+-u16 armada6280_unit_disable[MAX_UNIT_ID] = {
+-	[SATA_UNIT_ID]		=  id_to_mask(2) | id_to_mask(3)
+-};
+-
+-u16 armada6285_unit_disable[MAX_UNIT_ID] = {
+-	[ETH_GIG_UNIT_ID]	= id_to_mask(3),
+-	[USB3_UNIT_ID]		= id_to_mask(1)
+-};
+-
+ struct mvebu_soc_info a38x_soc_info[] = {
+ 	/* Armda 380 */
+ 	{
+ 		.name = "MV-6280",
+ 		.id = 0x6820,
+-		.unit_disable = armada6280_unit_disable,
+ 	},
+ 	/* Armda 385 */
+ 	{
+ 		.name = "MV-6285",
+ 		.id = 0x6825,
+-		.unit_disable = armada6285_unit_disable,
+ 	},
+ 	/* Armda 388 */
+ 	{
+ 		.name = "MV-6288",
+ 		.id = 0x6828,
+-		.unit_disable = armada6280_unit_disable,
+ 	},
+ 	/* Delimiter */
+ 	{.id = 0}
+@@ -74,6 +45,5 @@ struct mvebu_soc_family a38x_family_info = {
+ 	.name = "MV-80xx",
+ 	.id   = 8000,
+ 	.rev_name = {"Z1", "A0"},
+-	.base_unit_info = base_unit_mask_table,
+ 	.soc_table = a38x_soc_info,
+ };
+diff --git a/arch/arm/cpu/armv7/armadalp/soc-init.c b/arch/arm/cpu/armv7/armadalp/soc-init.c
+index 61b8cdd..d06b24b 100644
+--- a/arch/arm/cpu/armv7/armadalp/soc-init.c
++++ b/arch/arm/cpu/armv7/armadalp/soc-init.c
+@@ -21,7 +21,6 @@
+ #include <common.h>
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/soc.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-armadalp/armadalp.h>
+ 
+ int soc_early_init_f(void)
+diff --git a/arch/arm/cpu/armv7/armadalp/tables.c b/arch/arm/cpu/armv7/armadalp/tables.c
+index 71f3ed7..bb20039 100644
+--- a/arch/arm/cpu/armv7/armadalp/tables.c
++++ b/arch/arm/cpu/armv7/armadalp/tables.c
+@@ -19,46 +19,18 @@
+ #include <common.h>
+ #include <asm/io.h>
+ #include <asm/arch/regs-base.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/soc.h>
+ 
+-/* List the maximum amount of units for all devices and boards */
+-u16 base_unit_mask_table[MAX_UNIT_ID] = {
+-	/* the following entries are temporary examples only -  referenced from A38x */
+-	[PCIE_UNIT_ID]		=  cnt_to_mask(1),
+-	[SATA_UNIT_ID]		=  cnt_to_mask(1),
+-	[ETH_GIG_UNIT_ID]	=  cnt_to_mask(2),
+-	[UART_UNIT_ID]		=  cnt_to_mask(1),
+-	[USB_UNIT_ID]		=  cnt_to_mask(1),
+-	[USB3_UNIT_ID]		=  cnt_to_mask(1),
+-	[SPI_UNIT_ID]		=  cnt_to_mask(1),
+-	[XOR_UNIT_ID]		=  cnt_to_mask(1),
+-	[SDIO_UNIT_ID]		=  cnt_to_mask(1),
+-	[NAND_UNIT_ID]		=  cnt_to_mask(1)
+-};
+-
+-/* Per device unit info. List which units are disabled for this device */
+-u16 armadalp_A_unit_disable[MAX_UNIT_ID] = {
+-	[ETH_GIG_UNIT_ID]	=  id_to_mask(2)
+-};
+-
+-u16 armadalp_B_unit_disable[MAX_UNIT_ID] = {
+-	[ETH_GIG_UNIT_ID]	= id_to_mask(1),
+-	[USB3_UNIT_ID]		= id_to_mask(1)
+-};
+-
+ struct mvebu_soc_info armadalp_soc_info[] = {
+ 	/* Armada LP A */
+ 	{
+ 		.name = "MV-ARMADALP_A", /* temp SOC name and SOC ID */
+ 		.id = 0x9991,
+-		.unit_disable = armadalp_A_unit_disable,
+ 	},
+ 	/* Armada LP B */
+ 	{
+ 		.name = "MV-ARMADALP_B", /* temp SOC name and SOC ID */
+ 		.id = 0x9992,
+-		.unit_disable = armadalp_B_unit_disable,
+ 	},
+ 	/* Delimiter */
+ 	{.id = 0}
+@@ -68,6 +40,5 @@ struct mvebu_soc_family armadalp_family_info = {
+ 	.name = "MV-99xx", /* temp SOC name and SOC ID */
+ 	.id   = 9990,
+ 	.rev_name = {"Z1", "A0"},
+-	.base_unit_info = base_unit_mask_table,
+ 	.soc_table = armadalp_soc_info,
+ };
+diff --git a/arch/arm/cpu/armv8/armada8k/soc-init.c b/arch/arm/cpu/armv8/armada8k/soc-init.c
+index 085cb1b..3f57054 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc-init.c
++++ b/arch/arm/cpu/armv8/armada8k/soc-init.c
+@@ -21,7 +21,6 @@
+ #include <common.h>
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/soc.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-armada8k/armada8k.h>
+ #include <asm/arch/regs-base.h>
+ 
+diff --git a/arch/arm/cpu/armv8/armada8k/tables.c b/arch/arm/cpu/armv8/armada8k/tables.c
+index 7ec9349..7a2f7a3 100644
+--- a/arch/arm/cpu/armv8/armada8k/tables.c
++++ b/arch/arm/cpu/armv8/armada8k/tables.c
+@@ -18,47 +18,18 @@
+ 
+ #include <common.h>
+ #include <asm/io.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/soc.h>
+ 
+-/* List the maximum amount of units for all devices and boards */
+-u16 base_unit_mask_table[MAX_UNIT_ID] = {
+-	[PCIE_UNIT_ID]		=  cnt_to_mask(3),
+-	[SATA_UNIT_ID]		=  cnt_to_mask(4),
+-	[ETH_GIG_UNIT_ID]	=  cnt_to_mask(4),
+-	[UART_UNIT_ID]		=  cnt_to_mask(2),
+-	[USB_UNIT_ID]		=  cnt_to_mask(1),
+-	[USB3_UNIT_ID]		=  cnt_to_mask(2),
+-	[SPI_UNIT_ID]		=  cnt_to_mask(2),
+-	[XOR_UNIT_ID]		=  cnt_to_mask(1),
+-	[CESA_UNIT_ID]		=  cnt_to_mask(1),
+-	[SDIO_UNIT_ID]		=  cnt_to_mask(1),
+-	[NAND_UNIT_ID]		=  cnt_to_mask(1)
+-};
+-
+-/* Per device unit info. List which units are disabled for this device */
+-u16 armada8021_unit_disable[MAX_UNIT_ID] = {
+-	[PCIE_UNIT_ID]		=  id_to_mask(0) | id_to_mask(2),
+-	[SATA_UNIT_ID]		=  id_to_mask(2) | id_to_mask(3)
+-};
+-
+-u16 armada8022_unit_disable[MAX_UNIT_ID] = {
+-	[ETH_GIG_UNIT_ID]	= id_to_mask(3),
+-	[USB3_UNIT_ID]		= id_to_mask(1)
+-};
+-
+ struct mvebu_soc_info a8k_soc_info[] = {
+ 	/* Armda 8021 */
+ 	{
+ 		.name = "MV-8021",
+ 		.id = 8021,
+-		.unit_disable = armada8021_unit_disable,
+ 	},
+ 	/* Armda 8022 */
+ 	{
+ 		.name = "MV-8022",
+ 		.id = 8022,
+-		.unit_disable = armada8022_unit_disable,
+ 	},
+ 	/* Delimiter */
+ 	{.id = 0}
+@@ -67,6 +38,5 @@ struct mvebu_soc_info a8k_soc_info[] = {
+ struct mvebu_soc_family a8k_family_info = {
+ 	.name = "MV-80xx",
+ 	.id   = 8000,
+-	.base_unit_info = base_unit_mask_table,
+ 	.soc_table = a8k_soc_info,
+ };
+diff --git a/arch/arm/cpu/mvebu-common/Makefile b/arch/arm/cpu/mvebu-common/Makefile
+index 0791c21..4dad398 100644
+--- a/arch/arm/cpu/mvebu-common/Makefile
++++ b/arch/arm/cpu/mvebu-common/Makefile
+@@ -16,7 +16,6 @@
+ # ***************************************************************************
+ #
+ 
+-obj-y += unit-info.o
+ obj-y += soc-init.o
+ obj-y += misc.o
+ obj-$(CONFIG_MVEBU_MPP_BUS) += mpp-bus.o
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index 59c7138..60e9c8f 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -22,7 +22,6 @@
+ #include <asm/system.h>
+ #include <asm/bitops.h>
+ #include <asm/arch-mvebu/mvebu.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/soc.h>
+ #include <asm/arch-mvebu/tables.h>
+ 
+@@ -46,22 +45,6 @@ int __soc_late_init(void)
+ }
+ int soc_late_init(void) __attribute__((weak, alias("__soc_late_init")));
+ 
+-u16 *soc_get_unit_mask_table(void)
+-{
+-	struct mvebu_soc_family *soc_family = get_soc_family();
+-	return soc_family->base_unit_info;
+-}
+-
+-static int update_soc_units(struct mvebu_soc_info *soc)
+-{
+-	u16 *unit_mask = soc_get_unit_mask_table();
+-
+-	if (soc->unit_disable)
+-		update_unit_info(unit_mask, soc->unit_disable, UNIT_INFO_DISABLE);
+-
+-	return 0;
+-}
+-
+ int mvebu_soc_init()
+ {
+ 	struct mvebu_soc_info *soc;
+@@ -97,9 +80,6 @@ int mvebu_soc_init()
+ 	/* Store global variable to SOC */
+ 	debug("Current device name = %s %s\n", soc->name, soc_family->rev_name[soc_rev]);
+ 
+-	/* Update SOC info according to family */
+-	update_soc_units(soc);
+-
+ 	/* Initialize physical memory map */
+ #ifdef CONFIG_MVEBU_CCU
+ 	init_ccu();
+diff --git a/arch/arm/cpu/mvebu-common/unit-info.c b/arch/arm/cpu/mvebu-common/unit-info.c
+deleted file mode 100644
+index aadd99b..0000000
+--- a/arch/arm/cpu/mvebu-common/unit-info.c
++++ /dev/null
+@@ -1,176 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#include <config.h>
+-#include <common.h>
+-#include <asm/system.h>
+-#include <asm/bitops.h>
+-#include <asm/arch-mvebu/unit-info.h>
+-#include <asm/arch-mvebu/tables.h>
+-#include <asm/arch-mvebu/soc.h>
+-
+-const char *mvebu_unit_names[MAX_UNIT_ID + 1] = {
+-	[DRAM_UNIT_ID] =	"dram",
+-	[CPU_UNIT_ID] =		"cpu",
+-	[PCIE_UNIT_ID] =	"pcie",
+-	[ETH_GIG_UNIT_ID] =	"eth",
+-	[USB_UNIT_ID] =		"usb2",
+-	[USB3_UNIT_ID] =	"usb3",
+-	[IDMA_UNIT_ID] =	"idma",
+-	[IDMA_CHAN_UNIT_ID] =	"idma channel",
+-	[XOR_UNIT_ID] =		"xor",
+-	[XOR_CHAN_UNIT_ID] =	"xor channel",
+-	[SATA_UNIT_ID] =	"sata",
+-	[TDM_32CH_UNIT_ID] =	"tdm32",
+-	[TDM_PORTS_UNIT_ID] =	"tdm",
+-	[UART_UNIT_ID] =	"uart",
+-	[CESA_UNIT_ID] =	"cesa",
+-	[SPI_UNIT_ID] =		"spi",
+-	[SDIO_UNIT_ID] =	"sdio",
+-	[BM_UNIT_ID] =		"bm",
+-	[PNC_UNIT_ID] =		"pnc",
+-	[NAND_UNIT_ID] =	"nand",
+-	[SERDES_LANES_UNIT_ID] =	"serdes-lane",
+-	[MAX_UNIT_ID] =		"NA"
+-};
+-
+-const char *unit_info_get_name(enum mvebu_unit_id id)
+-{
+-	if ((id < 0) || (id > MAX_UNIT_ID)) {
+-		printf("Error: %s: Illegal unit id %d\n", __func__, id);
+-		return NULL;
+-	}
+-
+-	return mvebu_unit_names[id];
+-}
+-
+-static u16 *unit_info_get_mask_ref(enum mvebu_unit_id id)
+-{
+-	u16 *unit_mask;
+-
+-	if ((id < 0) || (id > MAX_UNIT_ID)) {
+-		printf("Error: %s: Illegal unit id %d\n", __func__, id);
+-		return NULL;
+-	}
+-
+-	unit_mask = soc_get_unit_mask_table();
+-	unit_mask += id;
+-
+-	return unit_mask;
+-}
+-
+-u16 unit_info_get_mask(enum mvebu_unit_id id)
+-{
+-	return *unit_info_get_mask_ref(id);
+-}
+-
+-void unit_info_disable_units(enum mvebu_unit_id id, u16 mask)
+-{
+-	u16 *unit_mask;
+-
+-	unit_mask = unit_info_get_mask_ref(id);
+-	if (!unit_mask)
+-		return;
+-
+-	disable_unit(unit_mask, mask);
+-}
+-
+-void unit_info_disable_unit_instance(enum mvebu_unit_id id, int index)
+-{
+-	unit_info_disable_units(id, (1 << index));
+-}
+-
+-bool unit_info_is_active(enum mvebu_unit_id id, int index)
+-{
+-	u16 *unit_mask;
+-	bool active;
+-
+-	unit_mask = unit_info_get_mask_ref(id);
+-	if (!unit_mask)
+-		return -1;
+-
+-	/* TODO - is this BE safe, should i use test_bit ??*/
+-	active = (bool)(((*unit_mask) >> index) & 0x1);
+-	return active;
+-}
+-
+-int unit_info_get_count(enum mvebu_unit_id id)
+-{
+-	u16 *unit_mask;
+-
+-	unit_mask = unit_info_get_mask_ref(id);
+-	if (!unit_mask)
+-		return -1;
+-
+-	return hweight32(*unit_mask);
+-}
+-
+-static void unit_mask_to_list(u16 mask, char *list)
+-{
+-	int i;
+-	char str[8];
+-
+-	sprintf(list, " ");
+-
+-	for (i = 0; i < 16; i++) {
+-		if ((mask >> i) & 0x1) {
+-			sprintf(str, "%d ", i);
+-			strcat(list, str);
+-		}
+-	}
+-}
+-
+-void dump_unit_info(void)
+-{
+-	u16 *unit_mask;
+-	char active_list[64];
+-	int unit_id;
+-
+-	unit_mask = soc_get_unit_mask_table();
+-
+-	printf("name      active\n");
+-	printf("-----------------------\n");
+-
+-	for (unit_id = 0; unit_id < MAX_UNIT_ID; unit_id++) {
+-		if (*unit_mask) {
+-			unit_mask_to_list(*unit_mask, active_list);
+-			printf("%-8s %s\n", unit_info_get_name(unit_id), active_list);
+-		}
+-		unit_mask++;
+-	}
+-}
+-
+-void update_unit_info(u16 *unit_mask, u16 *new_mask,
+-		      enum unit_update_mode update_mode)
+-{
+-	int unit_id;
+-
+-	debug("Updating unit info\n");
+-
+-	for (unit_id = 0; unit_id < MAX_UNIT_ID; unit_id++) {
+-		if (update_mode == UNIT_INFO_OVERRIDE)
+-			override_unit(unit_mask, (*new_mask));
+-		else if (update_mode == UNIT_INFO_DISABLE)
+-			disable_unit(unit_mask, (*new_mask));
+-		else if (update_mode == UNIT_INFO_ENABLE)
+-			enable_unit(unit_mask, (*new_mask));
+-
+-		unit_mask++;
+-		new_mask++;
+-	}
+-}
+diff --git a/arch/arm/include/asm/arch-mvebu/soc.h b/arch/arm/include/asm/arch-mvebu/soc.h
+index 7f6a6e6..f9de20b 100644
+--- a/arch/arm/include/asm/arch-mvebu/soc.h
++++ b/arch/arm/include/asm/arch-mvebu/soc.h
+@@ -19,7 +19,6 @@
+ #ifndef _SOC_H_
+ #define _SOC_H_
+ 
+-#include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch/soc-info.h>
+ 
+ #define MAX_SOC_NAME	32
+@@ -29,14 +28,12 @@
+ struct mvebu_soc_info {
+ 	char	name[MAX_SOC_NAME];
+ 	int	id;
+-	u16	*unit_disable;
+ };
+ 
+ struct mvebu_soc_family {
+ 	int	id;
+ 	char	name[MAX_SOC_NAME];
+ 	char	rev_name[MAX_SOC_REVS][MAX_REV_NAME];
+-	u16	*base_unit_info;
+ 	struct	mvebu_soc_info *soc_table;
+ 	struct	mvebu_soc_info *curr_soc;
+ 
+@@ -56,8 +53,6 @@ struct mvebu_soc_family *soc_init(void);
+ int mvebu_soc_init(void);
+ void mvebu_print_soc_info(void);
+ 
+-u16 *soc_get_unit_mask_table(void);
+-
+ /* MPP API */
+ char **soc_get_mpp_desc_table(void);
+ u32 *soc_get_mpp_update_mask(void);
+diff --git a/arch/arm/include/asm/arch-mvebu/unit-info.h b/arch/arm/include/asm/arch-mvebu/unit-info.h
+deleted file mode 100644
+index d000f09..0000000
+--- a/arch/arm/include/asm/arch-mvebu/unit-info.h
++++ /dev/null
+@@ -1,71 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#ifndef _UNIT_INFO_H_
+-#define _UNIT_INFO_H_
+-
+-enum mvebu_unit_id {
+-	DRAM_UNIT_ID,
+-	CPU_UNIT_ID,
+-	PCIE_UNIT_ID,
+-	ETH_GIG_UNIT_ID,
+-	USB_UNIT_ID,
+-	USB3_UNIT_ID,
+-	IDMA_UNIT_ID,
+-	IDMA_CHAN_UNIT_ID,
+-	XOR_UNIT_ID,
+-	XOR_CHAN_UNIT_ID,
+-	SATA_UNIT_ID,
+-	TDM_32CH_UNIT_ID,
+-	TDM_PORTS_UNIT_ID,
+-	UART_UNIT_ID,
+-	CESA_UNIT_ID,
+-	SPI_UNIT_ID,
+-	SDIO_UNIT_ID,
+-	BM_UNIT_ID,
+-	PNC_UNIT_ID,
+-	NAND_UNIT_ID,
+-	SERDES_LANES_UNIT_ID,
+-	DEVICE_BUS_UNIT_ID,
+-	MAX_UNIT_ID
+-};
+-
+-enum unit_update_mode {
+-	UNIT_INFO_DISABLE,
+-	UNIT_INFO_ENABLE,
+-	UNIT_INFO_OVERRIDE
+-};
+-
+-#define MAX_UNIT_COUNT		16
+-
+-#define disable_unit(dst, mask)		((*dst) &= (~mask))
+-#define enable_unit(dst, mask)		((*dst) |= mask)
+-#define override_unit(dst, mask)	((*dst) = mask)
+-
+-#define cnt_to_mask(count)	((1 << count) - 1)
+-#define id_to_mask(id)		(1 << id)
+-
+-void dump_unit_info(void);
+-void update_unit_info(u16 *unit_mask, u16 *new_mask, enum unit_update_mode);
+-int  unit_info_get_count(enum mvebu_unit_id id);
+-bool unit_info_is_active(enum mvebu_unit_id id, int index);
+-u16  unit_info_get_mask(enum mvebu_unit_id id);
+-void unit_info_disable_units(enum mvebu_unit_id id, u16 mask);
+-void unit_info_disable_unit_instance(enum mvebu_unit_id id, int index);
+-
+-#endif /* _UNIT_INFO_H_ */
+diff --git a/board/mvebu/armada38x/board-info.c b/board/mvebu/armada38x/board-info.c
+index 4a210b3..f8b5d99 100644
+--- a/board/mvebu/armada38x/board-info.c
++++ b/board/mvebu/armada38x/board-info.c
+@@ -18,7 +18,6 @@
+ 
+ #include <common.h>
+ #include <linux/compiler.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include "board-info.h"
+ 
+ #define SATR_EEPROM0_ADDR	0x22
+diff --git a/board/mvebu/armada38x/customer-board.c b/board/mvebu/armada38x/customer-board.c
+index f4bfcba..94494e4 100644
+--- a/board/mvebu/armada38x/customer-board.c
++++ b/board/mvebu/armada38x/customer-board.c
+@@ -18,20 +18,11 @@
+ 
+ #include <common.h>
+ #include <linux/compiler.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include "board-info.h"
+ 
+-/* Optionaly define which units to disable */
+-u16 a38x_customer_unit_disable[MAX_UNIT_ID] = {
+-	[NAND_UNIT_ID] = id_to_mask(0),
+-	[SDIO_UNIT_ID] = id_to_mask(0)
+-};
+-
+ struct mvebu_board_info a38x_customer_info = {
+ 	.name = "CUSTOMER-BOARD",
+ 	.id = ARMADA_38X_CUSTOMER_ID,
+-	.unit_mask = a38x_customer_unit_disable,
+-	.unit_update_mode = UNIT_INFO_DISABLE,
+ 	.mpp_regs = {0x11111111, 0x11111111, 0x55266011, 0x25252051,
+ 		     0x25255555, 0x40042565, 0x55550555, 0x00005550},
+ 	.configurable = 0,
+diff --git a/board/mvebu/armada38x/db-88f6820-info.c b/board/mvebu/armada38x/db-88f6820-info.c
+index 34dd04f..92e975b 100644
+--- a/board/mvebu/armada38x/db-88f6820-info.c
++++ b/board/mvebu/armada38x/db-88f6820-info.c
+@@ -18,7 +18,6 @@
+ 
+ #include <common.h>
+ #include <linux/compiler.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/mpp.h>
+ #include "board-info.h"
+ 
+diff --git a/board/mvebu/armada38x/rd-88f6820-info.c b/board/mvebu/armada38x/rd-88f6820-info.c
+index 28636bb..4a7b8ce 100644
+--- a/board/mvebu/armada38x/rd-88f6820-info.c
++++ b/board/mvebu/armada38x/rd-88f6820-info.c
+@@ -18,7 +18,6 @@
+ 
+ #include <common.h>
+ #include <linux/compiler.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/mpp.h>
+ #include "board-info.h"
+ 
+@@ -30,11 +29,6 @@ struct mvebu_board_config rd_a38x_config = {
+ 	.active_cfg = {BOARD_ID_CFG}
+ };
+ 
+-u16 a38x_rd_unit_disable[MAX_UNIT_ID] = {
+-	[NAND_UNIT_ID] = id_to_mask(0),
+-	[SDIO_UNIT_ID] = id_to_mask(0)
+-};
+-
+ int rd_a38x_configure_mpp(void)
+ {
+ #ifdef CONFIG_MVEBU_MPP_BUS
+@@ -48,8 +42,6 @@ int rd_a38x_configure_mpp(void)
+ struct mvebu_board_info a38x_rd_info = {
+ 	.name = "RD-88F6820-GP",
+ 	.id = ARMADA_38X_RD_ID,
+-	.unit_mask = a38x_rd_unit_disable,
+-	.unit_update_mode = UNIT_INFO_DISABLE,
+ 	.mpp_regs = {0x11111111, 0x11111111, 0x11266011, 0x22222011,
+ 				0x22200002, 0x40042022, 0x55550555, 0x00005550},
+ 	.configure_mpp = &rd_a38x_configure_mpp,
+diff --git a/board/mvebu/armada8k/board-info.c b/board/mvebu/armada8k/board-info.c
+index b6377de..6adbee0 100644
+--- a/board/mvebu/armada8k/board-info.c
++++ b/board/mvebu/armada8k/board-info.c
+@@ -18,7 +18,6 @@
+ 
+ #include <common.h>
+ #include <linux/compiler.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include "board-info.h"
+ 
+ #define SATR_EEPROM0_ADDR	0x22
+diff --git a/board/mvebu/armada8k/db-8210-info.c b/board/mvebu/armada8k/db-8210-info.c
+index 6062fd0..fcc5e11 100644
+--- a/board/mvebu/armada8k/db-8210-info.c
++++ b/board/mvebu/armada8k/db-8210-info.c
+@@ -18,7 +18,6 @@
+ 
+ #include <common.h>
+ #include <linux/compiler.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include "board-info.h"
+ 
+ struct mvebu_board_config db_a8021_config = {
+diff --git a/board/mvebu/armada8k/rd-8210-info.c b/board/mvebu/armada8k/rd-8210-info.c
+index 815615e..a38bf3c 100644
+--- a/board/mvebu/armada8k/rd-8210-info.c
++++ b/board/mvebu/armada8k/rd-8210-info.c
+@@ -18,7 +18,6 @@
+ 
+ #include <common.h>
+ #include <linux/compiler.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include "board-info.h"
+ 
+ 
+@@ -29,17 +28,10 @@ struct mvebu_board_config rd_a8021_config = {
+ 	.active_cfg = {BOARD_ID_CFG}
+ };
+ 
+-u16 a8021_rd_unit_disable[MAX_UNIT_ID] = {
+-	[NAND_UNIT_ID] = id_to_mask(0),
+-	[SDIO_UNIT_ID] = id_to_mask(0)
+-};
+-
+ struct mvebu_board_info a8021_rd_info = {
+ 	.name = "RD-MV8021",
+ 	.id = ARMADA_8021_RD_ID,
+ 	.mpp_regs = {0x11111111, 0x00100001},
+-	.unit_mask = a8021_rd_unit_disable,
+-	.unit_update_mode = UNIT_INFO_DISABLE,
+ 	.configurable = 1,
+ 	.config_data = &rd_a8021_config,
+ };
+diff --git a/board/mvebu/armadalp/board-info.c b/board/mvebu/armadalp/board-info.c
+index 7518f17..9e25fc3 100644
+--- a/board/mvebu/armadalp/board-info.c
++++ b/board/mvebu/armadalp/board-info.c
+@@ -18,7 +18,6 @@
+ 
+ #include <common.h>
+ #include <linux/compiler.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include "board-info.h"
+ 
+ #define SATR_EEPROM0_ADDR	0x22
+diff --git a/board/mvebu/armadalp/customer-board.c b/board/mvebu/armadalp/customer-board.c
+index f9199ac..b764e3f 100644
+--- a/board/mvebu/armadalp/customer-board.c
++++ b/board/mvebu/armadalp/customer-board.c
+@@ -18,20 +18,11 @@
+ 
+ #include <common.h>
+ #include <linux/compiler.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include "board-info.h"
+ 
+-/* Optionaly define which units to disable */
+-u16 armadalp_customer_unit_disable[MAX_UNIT_ID] = {
+-	[NAND_UNIT_ID] = id_to_mask(0),
+-	[SDIO_UNIT_ID] = id_to_mask(0)
+-};
+-
+ struct mvebu_board_info armadalp_customer_info = {
+ 	.name = "CUSTOMER-BOARD0-MV-ARMADA-LP",
+ 	.id = ARMADA_LP_CUSTOMER0_ID,
+-	.unit_mask = armadalp_customer_unit_disable,
+-	.unit_update_mode = UNIT_INFO_DISABLE,
+ 	.mpp_regs = {0x11111111, 0x00100001},
+ 	.configurable = 0,
+ };
+diff --git a/board/mvebu/armadalp/db0-armadalp-info.c b/board/mvebu/armadalp/db0-armadalp-info.c
+index d1264f8..873ed77 100644
+--- a/board/mvebu/armadalp/db0-armadalp-info.c
++++ b/board/mvebu/armadalp/db0-armadalp-info.c
+@@ -18,7 +18,6 @@
+ 
+ #include <common.h>
+ #include <linux/compiler.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include "board-info.h"
+ 
+ struct mvebu_board_config db0_armadalp_config = {
+diff --git a/board/mvebu/armadalp/db1-armadalp-info.c b/board/mvebu/armadalp/db1-armadalp-info.c
+index fb30eb3..633a282 100644
+--- a/board/mvebu/armadalp/db1-armadalp-info.c
++++ b/board/mvebu/armadalp/db1-armadalp-info.c
+@@ -18,7 +18,6 @@
+ 
+ #include <common.h>
+ #include <linux/compiler.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include "board-info.h"
+ 
+ struct mvebu_board_config db1_armadalp_config = {
+diff --git a/board/mvebu/common/board-common.c b/board/mvebu/common/board-common.c
+index 3d8c762..395c5c820 100644
+--- a/board/mvebu/common/board-common.c
++++ b/board/mvebu/common/board-common.c
+@@ -24,7 +24,6 @@
+ #include <netdev.h>
+ #include <asm/io.h>
+ #include <linux/compiler.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/soc.h>
+ #include "board.h"
+ 
+diff --git a/board/mvebu/common/board.h b/board/mvebu/common/board.h
+index 0012326..80b67d9 100644
+--- a/board/mvebu/common/board.h
++++ b/board/mvebu/common/board.h
+@@ -21,7 +21,6 @@
+ 
+ #include <common.h>
+ #include <asm/arch-mvebu/mvebu.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch/soc-info.h>
+ #include <linux/compiler.h>
+ #include "sar.h"
+@@ -62,8 +61,6 @@ struct mvebu_board_config {
+ struct mvebu_board_info {
+ 	char name[MAX_BOARD_NAME];
+ 	u32  id;
+-	u16  *unit_mask;
+-	enum unit_update_mode unit_update_mode;
+ 	/* Default MPP configurations */
+ 	u32 mpp_regs[MAX_MPP_REGS];
+ 
+diff --git a/board/mvebu/common/eth_init.c b/board/mvebu/common/eth_init.c
+index 4986ff2..896dea8 100644
+--- a/board/mvebu/common/eth_init.c
++++ b/board/mvebu/common/eth_init.c
+@@ -20,7 +20,6 @@
+ #include <errno.h>
+ #include <netdev.h>
+ #include <spi.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/driver_interface.h>
+ 
+ int board_eth_init(bd_t *bis)
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index 927eb97..ea2bf17 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -23,7 +23,6 @@
+ #include <errno.h>
+ #include <asm/io.h>
+ #include <linux/compiler.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/soc.h>
+ #include <asm/arch-mvebu/pinctl.h>
+ #include <asm/arch-mvebu/mpp.h>
+@@ -110,7 +109,6 @@ int mvebu_board_init(void)
+ 	int board_id;
+ 	struct mvebu_board_family *brd_fam;
+ 	struct mvebu_board_info *brd;
+-	u16 *unit_mask = soc_get_unit_mask_table();
+ 
+ 	debug("Initializing board\n");
+ 
+@@ -139,10 +137,6 @@ int mvebu_board_init(void)
+ 
+ 	mvebu_print_info(brd->name);
+ 
+-	/* Update active units list for board */
+-	if (brd->unit_mask)
+-		update_unit_info(unit_mask, brd->unit_mask, brd->unit_update_mode);
+-
+ #ifdef CONFIG_MVEBU_MPP_BUS
+ 	mpp_bus_probe();
+ #endif
+diff --git a/board/mvebu/common/nand_init.c b/board/mvebu/common/nand_init.c
+index 0ad9b46..47d4dd7 100644
+--- a/board/mvebu/common/nand_init.c
++++ b/board/mvebu/common/nand_init.c
+@@ -20,13 +20,12 @@
+ #include <nand.h>
+ 
+ #include <asm/arch-mvebu/clock.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/driver_interface.h>
+ 
+ void board_nand_init(void)
+ {
+-	if (unit_info_is_active(NAND_UNIT_ID, 0)) {
+-		debug("Activating NAND\n");
+-		pxa3xx_nand_init();
+-	}
++#ifdef CONFIG_NAND_PXA3XX
++	debug("Activating NAND\n");
++	pxa3xx_nand_init();
++#endif
+ }
+diff --git a/board/mvebu/common/pcie_init.c b/board/mvebu/common/pcie_init.c
+index aa1e742..519e23f 100644
+--- a/board/mvebu/common/pcie_init.c
++++ b/board/mvebu/common/pcie_init.c
+@@ -19,7 +19,6 @@
+ #include <common.h>
+ #include <errno.h>
+ #include <pci.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/driver_interface.h>
+ 
+ void pci_init_board(void)
+diff --git a/common/mvebu/cmd_bubt.c b/common/mvebu/cmd_bubt.c
+index ac301f3..7afd994 100644
+--- a/common/mvebu/cmd_bubt.c
++++ b/common/mvebu/cmd_bubt.c
+@@ -22,8 +22,6 @@
+ #include <vsprintf.h>
+ #include <errno.h>
+ 
+-#include <asm/arch-mvebu/unit-info.h>
+-
+ #include <spi_flash.h>
+ #include <spi.h>
+ 
+@@ -142,10 +140,6 @@ error:
+ 
+ int is_spi_active(void)
+ {
+-	if (unit_info_get_count(SPI_UNIT_ID) == 0) {
+-		printf("Error: SPI unit is inactive or doesn't exist\n");
+-		return 0;
+-	}
+ 	return 1;
+ }
+ #else
+@@ -194,10 +188,6 @@ error:
+ 
+ int is_nand_active(void)
+ {
+-	if (unit_info_get_count(NAND_UNIT_ID) == 0) {
+-		printf("Error: NAND unit is inactive or doesn't exist\n");
+-		return 0;
+-	}
+ 	return 1;
+ }
+ #else
+@@ -213,10 +203,6 @@ static int nor_burn_image(int image_size)
+ 
+ int is_nor_active(void)
+ {
+-	if (unit_info_get_count(DEVICE_BUS_UNIT_ID) == 0) {
+-		printf("Error: Device bus unit is inactive or doesn't exist\n");
+-		return 0;
+-	}
+ 	return 1;
+ }
+ #else
+@@ -252,14 +238,6 @@ static int usb_read_file(const char *file_name)
+ 
+ int is_usb_active(void)
+ {
+-	int unit_cnt;
+-
+-	unit_cnt  = unit_info_get_count(USB_UNIT_ID);
+-	unit_cnt += unit_info_get_count(USB3_UNIT_ID);
+-	if (!unit_cnt) {
+-		printf("Error: USB unit is inactive or doesn't exist\n");
+-		return 0;
+-	}
+ 	return 1;
+ }
+ #else
+diff --git a/common/mvebu/cmd_misc.c b/common/mvebu/cmd_misc.c
+index 015e8b0..903f7a6 100644
+--- a/common/mvebu/cmd_misc.c
++++ b/common/mvebu/cmd_misc.c
+@@ -22,7 +22,6 @@
+ #include <cli.h>
+ 
+ #include <asm/io.h>
+-#include <asm/arch-mvebu/unit-info.h>
+ 
+ #ifdef CONFIG_MVEBU_CCU
+ #include <asm/arch-mvebu/ccu.h>
+@@ -100,28 +99,6 @@ U_BOOT_CMD(
+ );
+ #endif
+ 
+-
+-int do_units_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+-			char * const argv[])
+-{
+-	const char *cmd = argv[1];
+-
+-	if (strcmp(cmd, "list") == 0)
+-		dump_unit_info();
+-	else
+-		printf("ERROR: unknown command to units: \"%s\"\n", cmd);
+-
+-	return 0;
+-}
+-
+-U_BOOT_CMD(
+-	units,      2,     1,      do_units_cmd,
+-	"units	- Display and modify active units\n",
+-	"\n"
+-	"Display and modufy units in current setup\n"
+-	"\tlist - Display current active units\n"
+-);
+-
+ int ir_cmd(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+ {
+ 	u32 offset = 0x0;
+-- 
+1.9.1
+

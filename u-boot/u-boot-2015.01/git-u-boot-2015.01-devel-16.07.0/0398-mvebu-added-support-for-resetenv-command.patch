@@ -1,0 +1,75 @@
+From 13eb046a96bbd5f13a951d244493c1ff6bf5be79 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 2 Sep 2015 19:31:38 +0300
+Subject: [PATCH 0398/1240] mvebu: added support for resetenv command
+
+- Added support for resetenv command.
+- The command will load the default environment variables and save them in the
+  flash
+
+Change-Id: I61fafb3d7b2d4090f584e56db8e0020a24c8863c
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23381
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ common/mvebu/Kconfig    |  9 +++++----
+ common/mvebu/cmd_misc.c | 18 ++++++++++++++++++
+ 2 files changed, 23 insertions(+), 4 deletions(-)
+
+diff --git a/common/mvebu/Kconfig b/common/mvebu/Kconfig
+index 4e5f65f..c3cd510 100644
+--- a/common/mvebu/Kconfig
++++ b/common/mvebu/Kconfig
+@@ -4,10 +4,11 @@ config CMD_MVEBU_MISC
+ 	bool "map, remap, units, ir"
+ 	default y
+ 	help
+-	  map   - Display address decode windows
+-	  remap - Remap the output address of a window
+-	  units	- Display and modify active units
+-	  ir    - Reading and changing internal register values
++	  map      - Display address decode windows
++	  remap    - Remap the output address of a window
++	  units	   - Display and modify active units
++	  ir       - Reading and changing internal register values
++	  resetenv - Reset the environment variables, and set to default
+ 
+ config CMD_MVEBU_SAR
+ 	bool "SatR"
+diff --git a/common/mvebu/cmd_misc.c b/common/mvebu/cmd_misc.c
+index c1e37e8..6b7dfc8 100644
+--- a/common/mvebu/cmd_misc.c
++++ b/common/mvebu/cmd_misc.c
+@@ -20,6 +20,7 @@
+ #include <common.h>
+ #include <command.h>
+ #include <cli.h>
++#include <environment.h>
+ 
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/thermal.h>
+@@ -205,3 +206,20 @@ U_BOOT_CMD(
+ 	"\n\tDisplay the SoC temperature as read from the on chip thermal sensor.\n"
+ );
+ #endif
++
++#if defined(MV_INCLUDE_NOR) || defined(CONFIG_MVEBU_NAND_BOOT) || defined(CONFIG_MVEBU_SPI_BOOT)
++int resetenv_cmd(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
++{
++	set_default_env("## Resetting to default environment\n");
++	saveenv();
++
++	return 1;
++}
++
++U_BOOT_CMD(
++	resetenv,      1,     1,      resetenv_cmd,
++	"resetenv - reset all variables to default\n",
++	"\n"
++	"\t Reset all variables to default, and save to the flash\n"
++);
++#endif
+-- 
+1.9.1
+

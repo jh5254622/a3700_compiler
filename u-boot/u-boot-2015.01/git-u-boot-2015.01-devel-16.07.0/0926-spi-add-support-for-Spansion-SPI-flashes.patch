@@ -1,0 +1,29 @@
+From 04108116c254432f779c7a7b221ed876c7e78215 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 7 Mar 2016 10:45:27 +0200
+Subject: [PATCH 0926/1240] spi: add support for Spansion SPI flashes
+
+Change-Id: If24e5bb7000c22895a0e11869fbb8491c9ef6394
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28070
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ include/configs/mvebu-common.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 9781993..07b45f2 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -420,6 +420,7 @@
+ 	#define CONFIG_SPI_FLASH_WINBOND
+ 	#define CONFIG_SPI_FLASH_STMICRO
+ 	#define CONFIG_SPI_FLASH_MACRONIX
++	#define CONFIG_SPI_FLASH_SPANSION
+ 	#define CONFIG_ENV_SPI_MAX_HZ           10000000        /*Max 50Mhz- will sattle on SPI bus max 41.5Mhz */
+ 	#define CONFIG_ENV_SPI_CS               0
+ 	#define CONFIG_ENV_SPI_BUS              0
+-- 
+1.9.1
+

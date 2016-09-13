@@ -1,0 +1,38 @@
+From 5932e54b1e23c5d5fac41de7ababa64906d69387 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 24 Jul 2014 11:10:30 +0300
+Subject: [PATCH 0043/1240] a8k: Disabled checksum test for palladium to save
+ boot time
+
+Change-Id: I35b942e5bb2ef386fb3a7838fce4e58cda078dbb
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/9604
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ common/image.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/common/image.c b/common/image.c
+index e691a51..94cee2c 100644
+--- a/common/image.c
++++ b/common/image.c
+@@ -177,11 +177,15 @@ int image_check_hcrc(const image_header_t *hdr)
+ 
+ int image_check_dcrc(const image_header_t *hdr)
+ {
++#ifndef CONFIG_PALLADIUM
+ 	ulong data = image_get_data(hdr);
+ 	ulong len = image_get_data_size(hdr);
+ 	ulong dcrc = crc32_wd(0, (unsigned char *)data, len, CHUNKSZ_CRC32);
+ 
+ 	return (dcrc == image_get_dcrc(hdr));
++#else
++	return 1;
++#endif
+ }
+ 
+ /**
+-- 
+1.9.1
+

@@ -1,0 +1,210 @@
+From c7723f7c3fa17dcd70c879ab9481716ce65e5869 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Tue, 28 Jul 2015 08:33:30 +0300
+Subject: [PATCH 0274/1240] fix: comphy: fixed compilation error for 64bit
+ platform
+
+Fix compilation warnings and errors under 64bit platforms
+Add APN806 declaration - COMPAT_COMPHY_AP806 and comphy_ap806_init
+
+Change-Id: I9b4647cdcdccb1f7fd71739296edd8f15af32ad1
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22244
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/include/asm/arch-mvebu/comphy.h | 14 +++++++++++---
+ drivers/phy/comphy_a38x.c                | 11 ++++++-----
+ drivers/phy/comphy_ap806_z1.c            |  8 ++++----
+ drivers/phy/comphy_core.c                |  8 ++++----
+ drivers/phy/comphy_pcie_config.c         |  5 +++--
+ include/fdtdec.h                         |  1 +
+ lib/fdtdec.c                             |  1 +
+ 7 files changed, 30 insertions(+), 18 deletions(-)
+
+diff --git a/arch/arm/include/asm/arch-mvebu/comphy.h b/arch/arm/include/asm/arch-mvebu/comphy.h
+index 8de250a..7899522 100644
+--- a/arch/arm/include/asm/arch-mvebu/comphy.h
++++ b/arch/arm/include/asm/arch-mvebu/comphy.h
+@@ -78,15 +78,23 @@ struct chip_serdes_phy_config {
+ 	enum fdt_compat_id compat;
+ 	struct comphy_mux_data *mux_data;
+ 	int (*ptr_comphy_chip_init)(struct chip_serdes_phy_config *, struct comphy_map *);
+-	u32 comphy_base_addr;
+-	u32 hpipe3_base_addr;
++	void __iomem *comphy_base_addr;
++	void __iomem *hpipe3_base_addr;
+ 	u32 comphy_lanes_count;
+ 	u32 comphy_mux_bitcount;
+ };
+ 
+-void reg_set(u32 addr, u32 mask, u32 data);
++void reg_set(void __iomem *addr, u32 mask, u32 data);
+ u32 comphy_init(const void *blob);
++
++#ifdef CONFIG_TARGET_ARMADA_38X
+ int comphy_a38x_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy_map *comphy_map_data);
++#elif defined(CONFIG_TARGET_ARMADA_8K)
++int comphy_ap806_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy_map *serdes_map);
++#endif
++
++
++
+ void comphy_pcie_config_set(u32 comphy_max_count, struct comphy_map *serdes_map);
+ void comphy_pcie_config_detect(u32 comphy_max_count, struct comphy_map *serdes_map);
+ void comphy_pcie_unit_general_config(u32 pex_index);
+diff --git a/drivers/phy/comphy_a38x.c b/drivers/phy/comphy_a38x.c
+index 23d091a..63867d9 100644
+--- a/drivers/phy/comphy_a38x.c
++++ b/drivers/phy/comphy_a38x.c
+@@ -82,10 +82,10 @@ static u32 comphy_mux_get_mux_value(struct comphy_mux_data *mux_data, enum phy_t
+ }
+ 
+ static void comphy_mux_reg_write(struct comphy_mux_data *mux_data,
+-		struct comphy_map *comphy_map_data, int comphy_max_lanes, u32 base_addr, u32 bitcount)
++		struct comphy_map *comphy_map_data, int comphy_max_lanes, void __iomem *base_addr, u32 bitcount)
+ {
+ 	u32 lane, value, offset, mask;
+-	u32 comphy_selector_base = base_addr + 0xfc;
++	void __iomem *comphy_selector_base = base_addr + 0xfc;
+ 
+ 	debug_enter();
+ 	for (lane = 0; lane < comphy_max_lanes; lane++, comphy_map_data++, mux_data++) {
+@@ -100,7 +100,8 @@ static void comphy_mux_reg_write(struct comphy_mux_data *mux_data,
+ static void comphy_mux_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy_map *comphy_map_data)
+ {
+ 	struct comphy_mux_data *mux_data;
+-	u32 comphy_base, mux_bitcount;
++	void __iomem *comphy_base;
++	u32 mux_bitcount;
+ 	u32 comphy_max_lanes;
+ 
+ 	debug_enter();
+@@ -118,7 +119,7 @@ static void comphy_mux_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct
+ 	debug_exit();
+ }
+ 
+-static int comphy_pcie_power_up(u32 pex_index, u32 comphy_addr, u32 hpipe_addr)
++static int comphy_pcie_power_up(u32 pex_index, void __iomem *comphy_addr, void __iomem *hpipe_addr)
+ {
+ 	debug_enter();
+ 
+@@ -184,7 +185,7 @@ static int comphy_pcie_power_up(u32 pex_index, u32 comphy_addr, u32 hpipe_addr)
+ int comphy_a38x_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy_map *serdes_map)
+ {
+ 	struct comphy_map *ptr_comphy_map;
+-	u32 comphy_base_addr, hpipe3_base_addr;
++	void __iomem *comphy_base_addr, *hpipe3_base_addr;
+ 	u32 comphy_max_count, lane, ret = 0;
+ 	bool is_pex_enabled = false;
+ 
+diff --git a/drivers/phy/comphy_ap806_z1.c b/drivers/phy/comphy_ap806_z1.c
+index 1af087f..c6ffe8b 100644
+--- a/drivers/phy/comphy_ap806_z1.c
++++ b/drivers/phy/comphy_ap806_z1.c
+@@ -30,7 +30,7 @@
+ #define COMPHY_RESET_CORE_OFFSET	13
+ #define COMPHY_RESET_CORE_MASK		(1 << COMPHY_RESET_CORE_OFFSET)
+ 
+-static void comphy_pcie_release_soft_reset(u32 hpipe_addr)
++static void comphy_pcie_release_soft_reset(void __iomem *hpipe_addr)
+ {
+ 	/* DFE reset sequence */
+ 	reg_set(hpipe_addr + HPIPE_PWR_CTR_REG,
+@@ -51,7 +51,7 @@ static void comphy_pcie_release_soft_reset(u32 hpipe_addr)
+ 		0x0 << HPIPE_RST_CLK_CTRL_PIPE_RST_OFFSET, HPIPE_RST_CLK_CTRL_PIPE_RST_MASK);
+ }
+ 
+-static int comphy_pcie_power_up(u32 lane, u32 pcie_by4, u32 hpipe_addr)
++static int comphy_pcie_power_up(u32 lane, u32 pcie_by4, void __iomem *hpipe_addr)
+ {
+ 	u32 start_val, break_val, master_val;
+ 	debug_enter();
+@@ -124,8 +124,8 @@ static int comphy_pcie_power_up(u32 lane, u32 pcie_by4, u32 hpipe_addr)
+ int comphy_ap806_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy_map *serdes_map)
+ {
+ 	struct comphy_map *ptr_comphy_map;
+-	u32 comphy_base_addr, hpipe_base_addr;
+-	u32 hpipe_addr;
++	void __iomem *comphy_base_addr, *hpipe_base_addr;
++	void __iomem *hpipe_addr;
+ 	u32 comphy_max_count, lane;
+ 	u32 pcie_by4 = 1;
+ 
+diff --git a/drivers/phy/comphy_core.c b/drivers/phy/comphy_core.c
+index 891e231..d0d5da3 100644
+--- a/drivers/phy/comphy_core.c
++++ b/drivers/phy/comphy_core.c
+@@ -73,10 +73,10 @@ static char *get_type_string(enum phy_type type)
+ 	return type_strings[type];
+ }
+ 
+-void reg_set(u32 addr, u32 mask, u32 data)
++void reg_set(void __iomem *addr, u32 mask, u32 data)
+ {
+ 	u32 reg_data;
+-	debug("Write to address = %#010x, data = %#010x (mask = %#010x) - ", addr, data, mask);
++	debug("Write to address = %#010lx, data = %#010x (mask = %#010x) - ", (unsigned long)addr, data, mask);
+ 	debug("old value = %#010x ==> ", readl(addr));
+ 	reg_data = readl(addr);
+ 	reg_data &= ~mask;
+@@ -136,12 +136,12 @@ u32 comphy_init(const void *blob)
+ 			error("comphy mux bitcount is wrong, skip PHY%d\n", i);
+ 			continue;
+ 		}
+-		ptr_chip_cfg->comphy_base_addr = (u32)fdt_get_regs_offs(blob, node, "reg-comphy");
++		ptr_chip_cfg->comphy_base_addr = fdt_get_regs_offs(blob, node, "reg-comphy");
+ 		if (ptr_chip_cfg->comphy_base_addr == 0) {
+ 			error("comphy base address is NULL, skip PHY%d\n", i);
+ 			continue;
+ 		}
+-		ptr_chip_cfg->hpipe3_base_addr = (u32)fdt_get_regs_offs(blob, node, "reg-hpipe3");
++		ptr_chip_cfg->hpipe3_base_addr = fdt_get_regs_offs(blob, node, "reg-hpipe3");
+ 		if (ptr_chip_cfg->hpipe3_base_addr == 0) {
+ 			error("comphy hpipe3 address is NULL, skip PHY%d\n", i);
+ 			continue;
+diff --git a/drivers/phy/comphy_pcie_config.c b/drivers/phy/comphy_pcie_config.c
+index fbeba1e..ba6b386 100644
+--- a/drivers/phy/comphy_pcie_config.c
++++ b/drivers/phy/comphy_pcie_config.c
+@@ -22,10 +22,11 @@
+ #include <asm/arch-mvebu/comphy.h>
+ #include <asm/arch-mvebu/mvebu.h>
+ 
+-#define SOC_CONTROL_REG                         0xd0018204
++#define SOC_CONTROL_REG                         (void __iomem *)0xd0018204
+ 
+ #define MV_PEX_IF_REGS_OFFSET(pex_if)			(pex_if > 0 ? (0x40000 + (pex_if-1)*0x4000) : 0x80000)
+-#define MV_PEX_IF_REGS_BASE(unit)				(0xd0000000 + MV_PEX_IF_REGS_OFFSET(unit))
++#define MV_PEX_IF_REGS_BASE(unit)				\
++	((void __iomem *)0xd0000000 + MV_PEX_IF_REGS_OFFSET(unit))
+ #define PEX_CAPABILITIES_REG(pex_if)			((MV_PEX_IF_REGS_BASE(pex_if)) + 0x60)
+ #define PEX_LINK_CAPABILITIES_REG(pex_if)		((MV_PEX_IF_REGS_BASE(pex_if)) + 0x6C)
+ #define PEX_LINK_CTRL_STATUS_REG(pex_if)		((MV_PEX_IF_REGS_BASE(pex_if)) + 0x70)
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 270a357..a837895 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -136,6 +136,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_DW_PCIE,
+ 	COMPAT_MVEBU_COMPHY,
+ 	COMPAT_COMPHY_ARMADA_38X,
++	COMPAT_COMPHY_AP806,
+ 
+ 	COMPAT_COUNT,
+ };
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index f2c59f4..fed8b86 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -98,6 +98,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_DW_PCIE, "marvell,mvebu-dw-pcie"),
+ 	COMPAT(MVEBU_COMPHY, "marvell,mvebu-comphy"),
+ 	COMPAT(COMPHY_ARMADA_38X, "marvell,comphy-armada38x"),
++	COMPAT(COMPAT_COMPHY_AP806, "marvell,comphy-ap806"),
+ };
+ 
+ const char *fdtdec_get_compatible(enum fdt_compat_id id)
+-- 
+1.9.1
+

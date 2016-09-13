@@ -1,0 +1,52 @@
+From 450d3c2c933bf0ff312ef8b5685072ceef3a9d89 Mon Sep 17 00:00:00 2001
+From: Stefan Chulski <stefanc@marvell.com>
+Date: Mon, 13 Jun 2016 13:57:48 +0300
+Subject: [PATCH 1205/1240] net: mvpp2x: disable check IDLE for link up
+ indication in XLG
+
+-disable check IDLE for link up indication in XLG and bring up
+ port without IDLE packets, no need in this feature and this
+ feature caused issue - port stuck in down mode under traffic
+ after reset
+
+Change-Id: Ic6e859d463f9ecbfa792c1b8b1305429811a5d98
+Signed-off-by: Stefan Chulski <stefanc@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30418
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/net/mv_pp2x.c | 2 ++
+ drivers/net/mv_pp2x.h | 4 +++-
+ 2 files changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/mv_pp2x.c b/drivers/net/mv_pp2x.c
+index 46d12a1..475adc3 100644
+--- a/drivers/net/mv_pp2x.c
++++ b/drivers/net/mv_pp2x.c
+@@ -1761,6 +1761,8 @@ static int mv_gop110_xlg_mac_mode_cfg(struct gop_hw *gop, int mac_num,
+ 					MV_XLG_MAC_CTRL4_FORWARD_PFC_EN_OFFS);
+ 	U32_SET_FIELD(val, MV_XLG_MAC_CTRL4_FORWARD_802_3X_FC_EN_MASK, 1 <<
+ 					MV_XLG_MAC_CTRL4_FORWARD_802_3X_FC_EN_OFFS);
++	U32_SET_FIELD(val, MV_XLG_MAC_CTRL4_EN_IDLE_CHECK_FOR_LINK_MASK, 0 <<
++				MV_XLG_MAC_CTRL4_EN_IDLE_CHECK_FOR_LINK_OFFS);
+ 	mv_gop110_xlg_mac_write(gop, mac_num, reg_addr, val);
+ 
+ 	/* Jumbo frame support - 0x1400*2= 0x2800 bytes */
+diff --git a/drivers/net/mv_pp2x.h b/drivers/net/mv_pp2x.h
+index 89bb03d..7ecdccf 100644
+--- a/drivers/net/mv_pp2x.h
++++ b/drivers/net/mv_pp2x.h
+@@ -1234,7 +1234,9 @@
+ #define MV_XLG_MAC_CTRL4_MAC_MODE_DMA_1G_OFFS		12
+ #define MV_XLG_MAC_CTRL4_MAC_MODE_DMA_1G_MASK    \
+ 		(0x00000001 << MV_XLG_MAC_CTRL4_MAC_MODE_DMA_1G_OFFS)
+-
++#define MV_XLG_MAC_CTRL4_EN_IDLE_CHECK_FOR_LINK_OFFS		14
++#define MV_XLG_MAC_CTRL4_EN_IDLE_CHECK_FOR_LINK_MASK    \
++		(0x00000001 << MV_XLG_MAC_CTRL4_EN_IDLE_CHECK_FOR_LINK_OFFS)
+ 
+ /* Port Mac Control5 */
+ #define MV_XLG_PORT_MAC_CTRL5_REG			(0x0088)
+-- 
+1.9.1
+

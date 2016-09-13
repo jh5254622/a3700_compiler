@@ -1,0 +1,45 @@
+From 74fb7b0e37a626ef5876299c5816e734914a9e27 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Thu, 23 Jun 2016 21:24:55 +0800
+Subject: [PATCH 1209/1240] fix: pcie: a3700: print link up and down
+ information
+
+This patch prints link up and down information
+in case that PCIe has or does not have link correspondingly.
+
+Change-Id: I7c3cddd81c0605c59c76b9d00ae6d16c021fcb8d
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30683
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ drivers/pci/pci_advk.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/pci/pci_advk.c b/drivers/pci/pci_advk.c
+index 408ccd8..0cda902 100644
+--- a/drivers/pci/pci_advk.c
++++ b/drivers/pci/pci_advk.c
+@@ -442,7 +442,7 @@ static int advk_pcie_init(int host_id,
+ 	/* start link training */
+ 	ret = advk_pcie_link_init(reg_base);
+ 	if (ret) {
+-		debug("%s(%d): ignore PCIe register since there is no link\n", __func__, __LINE__);
++		printf("PCIE-%d: Link down\n", host_id);
+ 		return hose->last_busno;
+ 	}
+ 
+@@ -503,7 +503,8 @@ static int advk_pcie_init(int host_id,
+ 	speed = (state >> PCIE_CORE_LINK_SPEED_SHIFT) & PCIE_CORE_LINK_SPEED_MASK;
+ 	width = (state >> PCIE_CORE_LINK_WIDTH_SHIFT) & PCIE_CORE_LINK_WIDTH_MASK;
+ 
+-	printf("PCIE-%d: Bus(%d) Link width(%s) Speed(%s)\n", host_id, first_busno, width_str[width], speed_str[speed]);
++	printf("PCIE-%d: Link up (Gen%d-%s %s, Bus%d)\n",
++	       host_id, speed, width_str[width], speed_str[speed], first_busno);
+ 
+ 	debug_exit();
+ 
+-- 
+1.9.1
+

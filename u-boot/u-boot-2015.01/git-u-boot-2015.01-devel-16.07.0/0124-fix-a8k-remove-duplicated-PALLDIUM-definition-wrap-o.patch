@@ -1,0 +1,54 @@
+From 8b0218c58bd4d059e7ec7fd506d09fe1a5df092d Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Mon, 23 Feb 2015 18:14:07 +0200
+Subject: [PATCH 0124/1240] fix: a8k: remove duplicated PALLDIUM definition
+ wrap of address decoding
+
+	Address map defined in tables.c, with some of the windows disabled
+	with #ifndef CONFIG_PALLADIUM.
+	- removed the duplicated #ifndef CONFIG_PALLADIUM which wraps the
+	  call for adec_init(soc->memory_map) in soc-init.c
+	- disabled all windows in address map in tables.c
+
+Change-Id: I1a0076493d9d51855003de18283000178c7f904f
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/16944
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/tables.c | 2 +-
+ arch/arm/cpu/mvebu-common/soc-init.c | 2 --
+ 2 files changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/tables.c b/arch/arm/cpu/armv8/armada8k/tables.c
+index 86137e3..3e42d12 100644
+--- a/arch/arm/cpu/armv8/armada8k/tables.c
++++ b/arch/arm/cpu/armv8/armada8k/tables.c
+@@ -25,8 +25,8 @@
+ #include <asm/arch-mvebu/mpp.h>
+ 
+ struct adec_win memory_map[] = {
+-	{DRAM_0_TID,	DRAM_0_BASE_ADDR,	DRAM_0_SIZE,	ADEC_AP_WIN,	1},
+ #ifndef CONFIG_PALLADIUM
++	{DRAM_0_TID,	DRAM_0_BASE_ADDR,	DRAM_0_SIZE,	ADEC_AP_WIN,	1},
+ 	{IO_0_TID,	IO_0_BASE_ADDR,		IO_0_SIZE,	ADEC_AP_WIN,	1},
+ 	{PEX0_TID,	PEX_BASE_ADDR(0),	PEX_SIZE(0),	ADEC_IOB_WIN,	1},
+ 	{PEX1_TID,	PEX_BASE_ADDR(1),	PEX_SIZE(1),	ADEC_IOB_WIN,	1},
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index d73b3d5..2753f05 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -120,9 +120,7 @@ int mvebu_soc_init()
+ 	update_soc_units(soc);
+ 
+ 	/* Initialize physical memory map */
+-#ifndef CONFIG_PALLADIUM
+ 	adec_init(soc->memory_map);
+-#endif
+ 
+ 	/* Soc specific init */
+ 	ret = soc_late_init();
+-- 
+1.9.1
+

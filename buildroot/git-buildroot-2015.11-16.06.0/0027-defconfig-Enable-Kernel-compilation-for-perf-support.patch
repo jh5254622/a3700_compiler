@@ -1,0 +1,29 @@
+From 0b7ca5111715f9299ed134ad2f1b6cde5b3d5ef2 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Mon, 28 Dec 2015 09:15:36 +0200
+Subject: [PATCH 27/66] defconfig: Enable Kernel compilation for perf support
+
+Change-Id: Ia9175cd7c178f26f191baadbf48a4f0d4a30721e
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26339
+Reviewed-by: Neta Zur Hershkovits <neta@marvell.com>
+---
+ configs/mvebu_armv8_le_defconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/configs/mvebu_armv8_le_defconfig b/configs/mvebu_armv8_le_defconfig
+index f6f932e..32bbc51 100644
+--- a/configs/mvebu_armv8_le_defconfig
++++ b/configs/mvebu_armv8_le_defconfig
+@@ -7,7 +7,7 @@ BR2_ROOTFS_OVERLAY="user_files/"
+ BR2_LINUX_KERNEL=y
+ BR2_LINUX_KERNEL_CUSTOM_VERSION=y
+ BR2_LINUX_KERNEL_CUSTOM_VERSION_VALUE="4.1.6"
+-BR2_LINUX_KERNEL_DEFCONFIG="defconfig"
++BR2_LINUX_KERNEL_USE_DEFAULT_DEFCONFIG=y
+ BR2_LINUX_KERNEL_TOOL_PERF=y
+ BR2_PACKAGE_BUSYBOX_SHOW_OTHERS=y
+ BR2_PACKAGE_BZIP2=y
+-- 
+1.9.1
+

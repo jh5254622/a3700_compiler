@@ -1,0 +1,313 @@
+From 5a9e3c36ef44f4ab840b12755bc83a7ab990dd08 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Wed, 4 May 2016 17:11:50 +0300
+Subject: [PATCH 1169/1240] misc: mvebu: added ihb unit selection support to
+ indirect command
+
+the following changes has been made:
+	- added support for reading/writing from/to multiple units using ihb.
+	- added initialization for both units.
+
+Change-Id: I67d81f5bf0eb45b50cf9e77c0f318069faf94496
+Signed-off-by: Ahmad Abbas <ahmada@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29659
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ .../include/asm/arch-mvebu/mvebu_phy_indirect.h    |  4 +-
+ common/mvebu/cmd_phy_indirect.c                    | 24 ++++---
+ drivers/misc/mvebu_phy_indirect.c                  | 80 +++++++++++++---------
+ 3 files changed, 63 insertions(+), 45 deletions(-)
+
+diff --git a/arch/arm/include/asm/arch-mvebu/mvebu_phy_indirect.h b/arch/arm/include/asm/arch-mvebu/mvebu_phy_indirect.h
+index aaad5fc..ce1d89f 100644
+--- a/arch/arm/include/asm/arch-mvebu/mvebu_phy_indirect.h
++++ b/arch/arm/include/asm/arch-mvebu/mvebu_phy_indirect.h
+@@ -29,8 +29,8 @@ enum phy_indirect_unit {
+  */
+ 
+ int mvebu_phy_indirect_init(void);
+-int mvebu_phy_indirect_read(enum phy_indirect_unit unit, int reg_ofs, u32 *val);
+-int mvebu_phy_indirect_write(enum phy_indirect_unit unit, int reg_ofs, u32 val);
++int mvebu_phy_indirect_read(enum phy_indirect_unit unit, int unit_id, int reg_ofs, u32 *val);
++int mvebu_phy_indirect_write(enum phy_indirect_unit unit, int unit_id, int reg_ofs, u32 val);
+ 
+ 
+ #endif /* __MVEBU_MMC_H__ */
+diff --git a/common/mvebu/cmd_phy_indirect.c b/common/mvebu/cmd_phy_indirect.c
+index 73c1fe7..b2dca4e 100644
+--- a/common/mvebu/cmd_phy_indirect.c
++++ b/common/mvebu/cmd_phy_indirect.c
+@@ -33,10 +33,11 @@ int do_indirect_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+ 			char * const argv[])
+ {
+ 	const char *unit = argv[1];
+-	const char *cmd = argv[2];
++	const char *cmd = argv[3];
+ 	enum phy_indirect_unit phy_unit;
+ 	u32 reg_ofs;
+ 	u32 value;
++	int unit_id = simple_strtoul(argv[2], NULL, 10);
+ 
+ 	phy_unit = parse_unit(unit);
+ 	if (phy_unit == INDIRECT_MAX) {
+@@ -44,29 +45,29 @@ int do_indirect_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+ 		return 1;
+ 	}
+ 
+-	if ((strcmp(cmd, "write") == 0) && (argc < 5)) {
++	if ((strcmp(cmd, "write") == 0) && (argc < 6)) {
+ 		error("missing parameters for 'write' command\n");
+ 		printf("make sure you specify both offset and value\n");
+ 		return 1;
+ 	}
+-	if ((strcmp(cmd, "read") == 0) && (argc < 4)) {
++	if ((strcmp(cmd, "read") == 0) && (argc < 5)) {
+ 		error("missing parameters for 'read' command\n");
+ 		printf("make sure you specify register offset\n");
+ 		return 1;
+ 	}
+ 
+ 	/* Get Offset */
+-	reg_ofs = simple_strtoul(argv[3], NULL, 16);
++	reg_ofs = simple_strtoul(argv[4], NULL, 16);
+ 
+ 	/* read commnad */
+ 	if (strcmp(cmd, "read") == 0) {
+-		if (mvebu_phy_indirect_read(phy_unit, reg_ofs, &value))
++		if (mvebu_phy_indirect_read(phy_unit, unit_id, reg_ofs, &value))
+ 			return 1;
+ 		printf("0x%x: 0x%x\n", reg_ofs, value);
+ 	} else if (strcmp(cmd, "write") == 0) {
+-		value = simple_strtoul(argv[4], NULL, 16);
++		value = simple_strtoul(argv[5], NULL, 16);
+ 
+-		if (mvebu_phy_indirect_write(phy_unit, reg_ofs, value))
++		if (mvebu_phy_indirect_write(phy_unit, unit_id, reg_ofs, value))
+ 			return 1;
+ 	} else {
+ 		error("unknown command \"%s\"\n", cmd);
+@@ -77,15 +78,16 @@ int do_indirect_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+ }
+ 
+ U_BOOT_CMD(
+-	indirect,      5,     0,      do_indirect_cmd,
++	indirect,      6,     0,      do_indirect_cmd,
+ 	"Access to PHY indirect registers\n",
+-	"<unit> <command> <offset> <value>\n"
++	"<unit> <unit id> <command> <offset> <value>\n"
+ 	"	- Read/Write from/to indirect registers\n"
+ 	"\n"
+ 	"Parameters:\n"
+ 	"\tunit		ihb\n"
+-	"\tcommand	read/write\n"
++	"\tunit id		0/1\n"
++	"\tcommand		read/write\n"
+ 	"\toffset		register address\n"
+ 	"\tvalue		register data to write\n"
+-	"Example: indirect ihb read 0x20\n"
++	"Example: indirect ihb 0 read 0x20\n"
+ );
+diff --git a/drivers/misc/mvebu_phy_indirect.c b/drivers/misc/mvebu_phy_indirect.c
+index 987b5b2..66ce389 100644
+--- a/drivers/misc/mvebu_phy_indirect.c
++++ b/drivers/misc/mvebu_phy_indirect.c
+@@ -22,9 +22,10 @@
+ 
+ 
+ /* IHB registers */
+-#define MVEBU_IHB_PHY_BASE					0xf6000000
++#define MVEBU_IHB_PHY_BASE(unit_id)			(0xfB000000 + ((uintptr_t)unit_id) * 0x2000000)
+ #define MVEBU_IHB_PHY_DATA_REG_OFF			0x0
+ #define MVEBU_IHB_PHY_CMD_REG_OFF			0x4
++#define MVEBU_IHB_MAX_UNIT_ID				2
+ 
+ /* IHB Address */
+ #define MVEBU_IHB_PHY_ADDR_LSB_OFF			0
+@@ -57,6 +58,8 @@
+ #define MVEBU_IHB_PHY_CTRL_REG_OFF			0x7
+ #define MVEBU_IHB_PHY_CTRL_ADDR_MSB_OFFS	27
+ #define MVEBU_IHB_PHY_CTRL_ADDR_MSB_MASK	(0x3 << 27)
++#define MVEBU_IHB_PHY_IF_MODE_OFFS		25
++#define MVEBU_IHB_PHY_IF_MODE_MASK		(1 << MVEBU_IHB_PHY_IF_MODE_OFFS)
+ 
+ /* IHB RFU PHY register fields */
+ #define MVEBU_IHB_RFU_REG_OFF				0x6F010C
+@@ -68,7 +71,6 @@
+ 
+ #define	MVEBU_IHB_BASE_HIGH_BYTE_OFF		24
+ 
+-
+ enum ihb_access_type {
+ 	IHB_WRITE = 0,
+ 	IHB_READ  = 1
+@@ -80,13 +82,13 @@ enum ihb_region {
+ };
+ 
+ 
+-static int mvebu_ihb_poll_read_done(int reg_ofs)
++static int mvebu_ihb_poll_read_done(int reg_ofs, int unit_id)
+ {
+ 	u32 ihb_cmd_reg = 0;
+ 	u32 timeout = 100;
+ 
+ 	do {
+-		ihb_cmd_reg = readl(MVEBU_IHB_PHY_BASE | MVEBU_IHB_PHY_CMD_REG_OFF);
++		ihb_cmd_reg = readl(MVEBU_IHB_PHY_BASE(unit_id) | MVEBU_IHB_PHY_CMD_REG_OFF);
+ 	} while (((ihb_cmd_reg & MVEBU_IHB_CMD_DONE_MASK) != MVEBU_IHB_CMD_DONE_MASK) &&
+ 			 (timeout-- > 0));
+ 
+@@ -111,7 +113,7 @@ static int mvebu_ihb_poll_read_done(int reg_ofs)
+  *      (MSB are set to IHB_PHY_CTRL register (0x7) bit [28:27]
+ */
+ 
+-static int mvebu_ihb_command_set(enum ihb_access_type access_type, int reg_ofs, u32 data)
++static int mvebu_ihb_command_set(enum ihb_access_type access_type, int reg_ofs,	u32 data, int unit_id)
+ {
+ 	u32 ihb_cmd_reg = 0;
+ 	u32 ihb_phy_ctrl_reg = 0;
+@@ -119,12 +121,12 @@ static int mvebu_ihb_command_set(enum ihb_access_type access_type, int reg_ofs,
+ 	/* Step 1 - set address MSB in IHB_PHY_CTRL (using RMW) */
+ 	/* read IHB_PHY_CTRL */
+ 	ihb_cmd_reg = MVEBU_IHB_CMD_GET(IHB_READ, IHB_CTRL_REGION, MVEBU_IHB_PHY_CTRL_REG_OFF);
+-	writel(ihb_cmd_reg, MVEBU_IHB_PHY_BASE | MVEBU_IHB_PHY_CMD_REG_OFF);
++	writel(ihb_cmd_reg, MVEBU_IHB_PHY_BASE(unit_id) | MVEBU_IHB_PHY_CMD_REG_OFF);
+ 	/* poll for read completion */
+-	if (mvebu_ihb_poll_read_done(reg_ofs))
++	if (mvebu_ihb_poll_read_done(reg_ofs, unit_id))
+ 		return 1;
+ 
+-	ihb_phy_ctrl_reg = readl(MVEBU_IHB_PHY_BASE | MVEBU_IHB_PHY_DATA_REG_OFF);
++	ihb_phy_ctrl_reg = readl(MVEBU_IHB_PHY_BASE(unit_id) | MVEBU_IHB_PHY_DATA_REG_OFF);
+ 
+ 	/* update msb in MVEBU_IHB_PHY_CTRL */
+ 	ihb_phy_ctrl_reg &= ~MVEBU_IHB_PHY_CTRL_ADDR_MSB_MASK; /* clear msb data */
+@@ -132,43 +134,43 @@ static int mvebu_ihb_command_set(enum ihb_access_type access_type, int reg_ofs,
+ 						 MVEBU_IHB_PHY_CTRL_ADDR_MSB_MASK);/* set msb data */
+ 
+     /* write IHB_PHY_CTRL */
+-	writel(ihb_phy_ctrl_reg, MVEBU_IHB_PHY_BASE | MVEBU_IHB_PHY_DATA_REG_OFF);	/* set data */
++	writel(ihb_phy_ctrl_reg, MVEBU_IHB_PHY_BASE(unit_id) | MVEBU_IHB_PHY_DATA_REG_OFF);	/* set data */
+ 	ihb_cmd_reg = (ihb_cmd_reg & ~MVEBU_IHB_CMD_OP_MASK) | IHB_WRITE;			/* set write command */
+-	writel(ihb_cmd_reg, MVEBU_IHB_PHY_BASE | MVEBU_IHB_PHY_CMD_REG_OFF);		/* set commnd */
++	writel(ihb_cmd_reg, MVEBU_IHB_PHY_BASE(unit_id) | MVEBU_IHB_PHY_CMD_REG_OFF);		/* set commnd */
+ 
+ 	/* Step 2 - set IHB command with LSB */
+ 	if (access_type == IHB_WRITE) {
+ 		/* set data in ihb data reg */
+-		writel(data, MVEBU_IHB_PHY_BASE | MVEBU_IHB_PHY_DATA_REG_OFF);
++		writel(data, MVEBU_IHB_PHY_BASE(unit_id) | MVEBU_IHB_PHY_DATA_REG_OFF);
+ 	}
+ 
+ 	ihb_cmd_reg = MVEBU_IHB_CMD_GET(access_type, IHB_PHY_REG_REGION, reg_ofs);
+-	writel(ihb_cmd_reg, MVEBU_IHB_PHY_BASE | MVEBU_IHB_PHY_CMD_REG_OFF);		/* set commnd */
++	writel(ihb_cmd_reg, MVEBU_IHB_PHY_BASE(unit_id) | MVEBU_IHB_PHY_CMD_REG_OFF);		/* set commnd */
+ 
+ 	return 0;
+ }
+ 
+-static int mvebu_ihb_read(int reg_ofs, u32 *val)
++static int mvebu_ihb_read(int reg_ofs, u32 *val, int unit_id)
+ {
+ 	/* set read command */
+-	if (mvebu_ihb_command_set(IHB_READ, reg_ofs, 0 /* dummy */)) {
++	if (mvebu_ihb_command_set(IHB_READ, reg_ofs, 0 /* dummy */, unit_id)) {
+ 		error("IHB read: set command failed\n");
+ 		return 1;
+ 	}
+ 
+ 	/* poll for read completion */
+-	if (mvebu_ihb_poll_read_done(reg_ofs))
++	if (mvebu_ihb_poll_read_done(reg_ofs, unit_id))
+ 		return 1;
+ 
+-	*val = readl(MVEBU_IHB_PHY_BASE | MVEBU_IHB_PHY_DATA_REG_OFF);
++	*val = readl(MVEBU_IHB_PHY_BASE(unit_id) | MVEBU_IHB_PHY_DATA_REG_OFF);
+ 
+ 	return 0;
+ }
+ 
+-static int mvebu_ihb_write(int reg_ofs, u32 data)
++static int mvebu_ihb_write(int reg_ofs, u32 data, int unit_id)
+ {
+ 	/* set write command */
+-	if (mvebu_ihb_command_set(IHB_WRITE, reg_ofs, data)) {
++	if (mvebu_ihb_command_set(IHB_WRITE, reg_ofs, data, unit_id)) {
+ 		error("IHB write: set command failed\n");
+ 		return 1;
+ 	}
+@@ -176,22 +178,22 @@ static int mvebu_ihb_write(int reg_ofs, u32 data)
+ 	return 0;
+ }
+ 
+-int mvebu_phy_indirect_read(enum phy_indirect_unit phy_unit, int reg_ofs, u32 *val)
++int mvebu_phy_indirect_read(enum phy_indirect_unit phy_unit, int unit_id, int reg_ofs, u32 *val)
+ {
+ 	switch (phy_unit) {
+ 	case INDIRECT_IHB:
+-		return mvebu_ihb_read(reg_ofs, val);
++		return mvebu_ihb_read(reg_ofs, val, unit_id);
+ 	default:
+ 		error("unit %d is not supported\n", phy_unit);
+ 		return 1;
+ 	}
+ }
+ 
+-int mvebu_phy_indirect_write(enum phy_indirect_unit phy_unit, int reg_ofs, u32 val)
++int mvebu_phy_indirect_write(enum phy_indirect_unit phy_unit, int unit_id, int reg_ofs, u32 val)
+ {
+ 	switch (phy_unit) {
+ 	case INDIRECT_IHB:
+-		return mvebu_ihb_write(reg_ofs, val);
++		return mvebu_ihb_write(reg_ofs, val, unit_id);
+ 	default:
+ 		error("unit %d is not supported\n", phy_unit);
+ 		return 1;
+@@ -201,20 +203,34 @@ int mvebu_phy_indirect_write(enum phy_indirect_unit phy_unit, int reg_ofs, u32 v
+ int mvebu_phy_indirect_init(void)
+ {
+ 	u8 *regs_base = (u8 *)MVEBU_REGS_BASE;
+-	u32 reg_data;
+-	u32 ihb_base_high_byte = MVEBU_IHB_PHY_BASE >> MVEBU_IHB_BASE_HIGH_BYTE_OFF;
++	u32 reg_data, i;
++	u32 ihb_base_high_byte;
++	u32 ihb_cmd_reg = 0, val;
+ 
+-	reg_data = readl(regs_base + MVEBU_IHB_RFU_REG_OFF);
++	for (i = 0; i < MVEBU_IHB_MAX_UNIT_ID; ++i) {
++		ihb_base_high_byte = MVEBU_IHB_PHY_BASE(i) >> MVEBU_IHB_BASE_HIGH_BYTE_OFF;
++		reg_data = readl(regs_base + MVEBU_IHB_RFU_REG_OFF);
+ 
+-	/* set configuration data */
+-	reg_data &= ~MVEBU_IHB_RFU_RESET_MASK; /* un-reset IHB PHY */
+-	reg_data |= (1 << MVEBU_IHB_RFU_TCELL_BYPASS_OFFS); /* enable TCELL bypass since
++		/* set configuration data */
++		reg_data &= ~MVEBU_IHB_RFU_RESET_MASK; /* un-reset IHB PHY */
++		reg_data |= (1 << MVEBU_IHB_RFU_TCELL_BYPASS_OFFS); /* enable TCELL bypass since
+ 											this bridge is not functional */
+-	reg_data = (ihb_base_high_byte << MVEBU_IHB_RFU_BASE_OFFS) |
+-				(reg_data & ~MVEBU_IHB_RFU_BASE_MASK); /* set IHB base address */
++		reg_data = (ihb_base_high_byte << MVEBU_IHB_RFU_BASE_OFFS) |
++					(reg_data & ~MVEBU_IHB_RFU_BASE_MASK); /* set IHB base address */
++
++		/* Configure IHB MAC base address RFU base and Un-reset IHB PHY */
++		writel(reg_data, regs_base + MVEBU_IHB_RFU_REG_OFF);
+ 
+-	/* Configure IHB MAC base address RFU base and Un-reset IHB PHY */
+-	writel(reg_data, regs_base + MVEBU_IHB_RFU_REG_OFF);
++		/* Set IF mode in phy control register */
++		ihb_cmd_reg = MVEBU_IHB_CMD_GET(IHB_READ, IHB_CTRL_REGION, MVEBU_IHB_PHY_CTRL_REG_OFF);
++		writel(ihb_cmd_reg, MVEBU_IHB_PHY_BASE(i) | MVEBU_IHB_PHY_CMD_REG_OFF);
+ 
++		val = readl(MVEBU_IHB_PHY_BASE(i) | MVEBU_IHB_PHY_DATA_REG_OFF);
++		val = val | MVEBU_IHB_PHY_IF_MODE_MASK;
++		writel(val, MVEBU_IHB_PHY_BASE(i) | MVEBU_IHB_PHY_DATA_REG_OFF);
++
++		ihb_cmd_reg = MVEBU_IHB_CMD_GET(IHB_WRITE, IHB_CTRL_REGION, MVEBU_IHB_PHY_CTRL_REG_OFF);
++		writel(ihb_cmd_reg, MVEBU_IHB_PHY_BASE(i) | MVEBU_IHB_PHY_CMD_REG_OFF);
++	}
+ 	return 0;
+ }
+-- 
+1.9.1
+

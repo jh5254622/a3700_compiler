@@ -1,0 +1,62 @@
+From 762ac7e996417a5b16e25adbfd933fcb1a624c56 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 6 Oct 2014 16:09:22 +0300
+Subject: [PATCH 0085/1240] config: updated config after rebase to 2014.10
+
+	- Added support for generic board
+	- Added define to indicate GICv2 support
+	- Modified CPU release address
+	- Added support for booti command
+
+Change-Id: I83125b3469ef1b09c16654b3ab34246b38580fea
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/13506
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/mvebu-common.h | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 7b95613..d3deec4 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -36,6 +36,8 @@
+ #define CONFIG_MVEBU_DEBUG_FUNC_IN_OUT
+ /* #define CONFIG_MV_DEBUG_PUTS */
+ 
++#define CONFIG_SYS_GENERIC_BOARD
++
+ /* Global definitions */
+ #ifndef CONFIG_SYS_TEXT_BASE
+ #define CONFIG_SYS_TEXT_BASE            0x00000000
+@@ -129,6 +131,9 @@
+ #define CONFIG_CMD_BSP		/* Enable board specfic commands */
+ #define CONFIG_CMD_ELF
+ #define CONFIG_CMD_STAGE_BOOT
++#ifdef CONFIG_ARM64
++#define CONFIG_CMD_BOOTI
++#endif
+ 
+ /* MVEBU Generic commands */
+ #define CONFIG_CMD_MVEBU_MAP
+@@ -174,6 +179,7 @@
+ 
+ 
+ /* Generic Interrupt Controller Definitions */
++#define CONFIG_GICV2
+ #define GICD_BASE                       MVEBU_GICD_BASE
+ #define GICC_BASE                       MVEBU_GICC_BASE
+ 
+@@ -181,7 +187,7 @@
+ #define CONFIG_OF_LIBFDT
+ 
+ /* SMP Spin Table Definitions */
+-#define CPU_RELEASE_ADDR               (CONFIG_SYS_SDRAM_BASE + 0x7fff0)
++#define CPU_RELEASE_ADDR               (CONFIG_SYS_SDRAM_BASE + 0x2000000)
+ 
+ /* Exception level */
+ /* define CONFIG_ARMV8_SWITCH_TO_EL1 */
+-- 
+1.9.1
+

@@ -1,0 +1,39 @@
+From e64e9800861fa2eeae132e3e4d6f028bf6b802df Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 22 Mar 2015 12:57:01 +0200
+Subject: [PATCH 0160/1240] uart: a8k: updated uart baudrate and clock
+
+Change-Id: I2ddd4e4aba4cc315df56bc078de94b18993ba294
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17708
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/armada8k.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index f020a4a..bae268c 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -47,7 +47,7 @@
+ 
+ /* Clock Definitions */
+ #define COUNTER_FREQUENCY	(8000)
+-#define CONFIG_MSS_FREQUENCY	(125000)
++#define CONFIG_MSS_FREQUENCY	(384000)
+ 
+ /* SPL */
+ /* Defines for SPL */
+@@ -82,7 +82,7 @@
+ #define CONFIG_BOOTDELAY                -1
+ 
+ #undef CONFIG_BAUDRATE
+-#define CONFIG_BAUDRATE                 4000
++#define CONFIG_BAUDRATE                 24000
+ 
+ #undef CONFIG_BOOTARGS
+ #define CONFIG_BOOTARGS			"console=ttyS0,5652 earlycon=uart8250,mmio32,0xf0512000 mem=128M"
+-- 
+1.9.1
+

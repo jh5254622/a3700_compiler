@@ -1,0 +1,64 @@
+From 7f2038114bdb36f4dc6380aa4c54732cbd309721 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 29 Jul 2015 15:20:39 +0300
+Subject: [PATCH 0289/1240] fix: located globals in .data section instead of
+ .bss
+
+these globals are modified before relocation and cannot
+exist in .bss section
+
+Change-Id: Ie50b27999ce47cdaea3bae431286bd4a7c182f10
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22310
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/timer_mvebu.c | 4 ++--
+ board/mvebu/common/sar.c                | 2 +-
+ drivers/misc/mvebu_rfu.c                | 2 +-
+ 3 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/timer_mvebu.c b/arch/arm/cpu/mvebu-common/timer_mvebu.c
+index de46bed..7fc6daa 100644
+--- a/arch/arm/cpu/mvebu-common/timer_mvebu.c
++++ b/arch/arm/cpu/mvebu-common/timer_mvebu.c
+@@ -41,8 +41,8 @@
+ 
+ #define TIMER_LOAD_VAL 0xFFFFFFFF
+ 
+-static ulong timestamp;
+-static ulong lastdec;
++static ulong  __attribute__((section(".data"))) timestamp;
++static ulong  __attribute__((section(".data"))) lastdec;
+ 
+ int timer_init_done = -1;
+ 
+diff --git a/board/mvebu/common/sar.c b/board/mvebu/common/sar.c
+index 6ff2eb8..41032b0 100644
+--- a/board/mvebu/common/sar.c
++++ b/board/mvebu/common/sar.c
+@@ -26,7 +26,7 @@
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+-struct sar_data sar_board;
++struct sar_data  __attribute__((section(".data"))) sar_board;
+ #define board_get_sar() (&sar_board)
+ #define board_get_sar_table() (sar_board.sar_lookup)
+ 
+diff --git a/drivers/misc/mvebu_rfu.c b/drivers/misc/mvebu_rfu.c
+index d10aa1d..e79f3e0 100644
+--- a/drivers/misc/mvebu_rfu.c
++++ b/drivers/misc/mvebu_rfu.c
+@@ -38,7 +38,7 @@
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+-void __iomem *rfu_base;
++void __attribute__((section(".data"))) __iomem *rfu_base;
+ 
+ struct rfu_win {
+ 	u32 base_addr_high;
+-- 
+1.9.1
+

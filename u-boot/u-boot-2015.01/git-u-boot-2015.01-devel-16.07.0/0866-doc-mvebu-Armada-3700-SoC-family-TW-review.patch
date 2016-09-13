@@ -1,0 +1,210 @@
+From 46a47fe901c93bbf7ac4a0cdf4729672dec83e9a Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Tue, 16 Feb 2016 16:07:16 +0200
+Subject: [PATCH 0866/1240] doc: mvebu: Armada-3700 SoC family - TW review
+
+Change-Id: I9fc2a53ee6a9925a120bfb512f9063e4cac352e2
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27560
+Reviewed-by: Gina Tadmore <gina@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ doc/device-tree-bindings/clock/mvebu-clock.txt    | 15 ++++++------
+ doc/device-tree-bindings/misc/mvebu-io-decode.txt | 29 +++++++++++------------
+ doc/device-tree-bindings/misc/mvebu-mbus.txt      | 19 +++++++--------
+ doc/device-tree-bindings/net/mvebu-gbe.txt        | 13 +++++-----
+ doc/device-tree-bindings/serial/mvebu-serial.txt  | 12 ++++++----
+ doc/device-tree-bindings/spi/mvebu-spi-arlp.txt   | 10 ++++----
+ 6 files changed, 50 insertions(+), 48 deletions(-)
+
+diff --git a/doc/device-tree-bindings/clock/mvebu-clock.txt b/doc/device-tree-bindings/clock/mvebu-clock.txt
+index f2c1144..fa1a899 100644
+--- a/doc/device-tree-bindings/clock/mvebu-clock.txt
++++ b/doc/device-tree-bindings/clock/mvebu-clock.txt
+@@ -1,17 +1,18 @@
+ Marvell Clock bindings
+ ======================
+ 
+-The Clock nodes is under internal-regs node.
++The Clock nodes are under the internal-regs node.
+ 
+-tclk: define the T-Clock address in the SoC
+-	- compatible = "marvell,tclk";
++tclk: Define the T-Clock address in the SoC
++SoC specific:
++	- compatible: Should be "marvell,tclk".
+ 	- reg = <0x18600 0x4>;
+-		base address of sample at reset register.
++		Base address and size of sample at reset register.
+ 
+-In case of Armada 3700 platform, the DT allows to select one of
+-CPU/DDR frequency presets under "soc" node.
++For the Armada 3700 platform, the DT allows selecting one of the
++CPU/DDR frequency presets under the SOC node.
+ 
+-freq: define the clock preset for CPU/DDR
++freq: Define the clock preset for CPU/DDR
+ 	compatible = "marvell,a3700-freq";
+ 	preset = <freq_preset>;
+ 		Supported presets:
+diff --git a/doc/device-tree-bindings/misc/mvebu-io-decode.txt b/doc/device-tree-bindings/misc/mvebu-io-decode.txt
+index 4e8efe6..2fd1782 100644
+--- a/doc/device-tree-bindings/misc/mvebu-io-decode.txt
++++ b/doc/device-tree-bindings/misc/mvebu-io-decode.txt
+@@ -1,22 +1,22 @@
+ Marvell IO address decoding bindings
+ =====================================
+ 
+-The io decode node includes description about the address decoding configuration.
++The IO Decode node includes a description of the address decoding configuration.
+ 
+-The MBUS I/O decode node requires the following properties:
+-	- compatible
+-		should be "marvell,mvebu-io-decode"
+-	- unit_io_decode_info: the IO unit information which should map their
++The I/O decode node requires the following properties:
++SoC specific:
++	- compatible: Should be "marvell,mvebu-io-decode".
++	- unit_io_decode_info: The IO unit information which should map their
+ 	decode window to DRAM.
+-		- reg_base: base address of this I/O unit decode window
+-		- range: range of this I/O unit decode window in unit of byte
+-		- IO_ATTR: describle the I/O attributes
+-			- max_win: the decode window number that this unit has
+-			- max_remap: the decode window number including remapping that this unit has
+-			- remap_size: remap window size in unit of bits, normally should be 32 or
+-			64
+-			- win_offset: the offset between continuous decode windows with the
+-			same unit, typically it is 0x10
++		- reg_base: Base address of this I/O unit decode window.
++		- range: Range of this I/O unit decode window in unit of byte.
++		- IO_ATTR: Describles the I/O attributes
++			- max_win: The unit's decode window number.
++			- max_remap: The decode window number including this unit's remapping.
++			- remap_size: Remap window size in unit of bits, normally should be 32 or
++			64.
++			- win_offset: The offset between the continuous decode windows with the
++			same unit, typically it is 0x10.
+ 
+ Example:
+ 	io-decode {
+@@ -29,4 +29,3 @@ Example:
+ 			<0xcb00 0x30 IO_ATTR(3, 0, 32, 0x10) /* eMMC */
+ 			0xc800 0x30 IO_ATTR(3, 0, 32, 0x10)> /* SATA */;
+ 	};
+-
+diff --git a/doc/device-tree-bindings/misc/mvebu-mbus.txt b/doc/device-tree-bindings/misc/mvebu-mbus.txt
+index 2361be4..3d0cf17 100644
+--- a/doc/device-tree-bindings/misc/mvebu-mbus.txt
++++ b/doc/device-tree-bindings/misc/mvebu-mbus.txt
+@@ -1,17 +1,17 @@
+ Marvell MBUS address decoding bindings
+ =====================================
+ 
+-The MBUS node include describtion about the address decoding configuration.
++The MBUS node includes a description of the address decoding configuration.
+ 
+ The MBUS node requires the following properties:
+-	- compatible
+-		should be "marvell,mvebu-mbus"
+-	- reg: the base address of the MBUS unit
+-	- max-win: number of the max mbus windows
+-	- max-remap: number of the max remap windows
+-	- internal-win: number of the internal register window
+-	- windows: entry that include the configuration of the windows
+-	  every window should have 3 parameters:
++SoC specific:
++	- compatible: Should be "marvell,mvebu-mbus".
++	- reg: The base address of the MBUS unit.
++	- max-win: Number of the max mbus windows.
++	- max-remap: Number of the max remap windows.
++	- internal-win: Number of the internal register window.
++	- windows: Entry that include the configuration of the windows.
++	  Every window should have 3 parameters:
+ 	  - base address of the window
+ 	  - size of the window
+ 	  - ATTR: attributes + target-ID + remmap flag (build by bitmask:
+@@ -80,4 +80,3 @@ Example:
+ 			0xE6000000 0x2000000 ATTR(0x1, 0x4, 0xB8)
+ 			0xfd000000 0x1000000 ATTR(0x0, 0x1, 0x2F)>;
+ 	};
+-
+diff --git a/doc/device-tree-bindings/net/mvebu-gbe.txt b/doc/device-tree-bindings/net/mvebu-gbe.txt
+index 605218b..b7511de 100644
+--- a/doc/device-tree-bindings/net/mvebu-gbe.txt
++++ b/doc/device-tree-bindings/net/mvebu-gbe.txt
+@@ -2,14 +2,15 @@ Marvell ArmadaLP GBE bindings
+ ====================
+ 
+ This GBE driver supports Marvell ArmadaLP SoC, which implements the GBE core operations.
+-The node name is neta0 to show that it's GBE-0, for GBE-1 should be neta1.
++The node name is neta0 to show that it's GBE-0, for GBE-1 it should be neta1.
+ 
+ The GBE node for ArmadaLP requires the following properties:
+-	- compatible
+-		should be "marvell,armadalp-neta".
+-	- reg: the base address of the GBE unit.
+-	- phy_addr: the phy address for the GBE interface.
+-	- phy_mode: the phy mode for the GBE interface, which should be one of the following:
++SoC specific:
++	- compatible: Should be "marvell,armadalp-neta".
++	- reg: The base address of the GBE unit.
++Board specific:
++	- phy_addr: The phy address for the GBE interface.
++	- phy_mode: The phy mode for the GBE interface, which should be one of the following:
+ 		"mii",
+ 		"gmii",
+ 		"sgmii",
+diff --git a/doc/device-tree-bindings/serial/mvebu-serial.txt b/doc/device-tree-bindings/serial/mvebu-serial.txt
+index 3a53636..356afe9 100644
+--- a/doc/device-tree-bindings/serial/mvebu-serial.txt
++++ b/doc/device-tree-bindings/serial/mvebu-serial.txt
+@@ -1,13 +1,15 @@
+ Marvell ArmadaLP UART bindings
+ ==============================
+ 
+-UART driver for Marvell ArmadaLP SoC's.
++UART driver for Marvell ArmadaLP SoCs.
+ 
+ Mandatory properties:
+-	- compatible: should be "marvell,armadalp-uart"
+-	- reg: the base address of the UART unit
+-	- clock_frequency: input clock frequency of UART unit
+-	- baudrate: the baudrate of the UART unit
++SoC specific:
++	- compatible: Should be "marvell,armadalp-uart".
++	- reg: The base address of the UART unit.
++	- clock_frequency: Input clock frequency of UART unit.
++Board specific:
++	- baudrate: The baudrate of the UART unit.
+ 
+ Example for armadaLP UART-0 node:
+ 	serial: serial@12000 {
+diff --git a/doc/device-tree-bindings/spi/mvebu-spi-arlp.txt b/doc/device-tree-bindings/spi/mvebu-spi-arlp.txt
+index 389b5d9..dd822c1 100644
+--- a/doc/device-tree-bindings/spi/mvebu-spi-arlp.txt
++++ b/doc/device-tree-bindings/spi/mvebu-spi-arlp.txt
+@@ -2,14 +2,14 @@ Marvell ArmadaLP SPI bindings
+ ====================
+ 
+ This SPI driver supports Marvell ArmadaLP SoC, which implements the SPI core operations.
+-The node name is spi0 to show that it's SPI-0, for SPI-1 should be spi1.
++The node name is spi0 to show that it's SPI-0, for SPI-1 it should be spi1.
+ 
+ The SPI node for ArmadaLP requires the following properties:
+-	- compatible
+-		should be "marvell,armadalp-spi".
+-	- reg: the base address of the SPI unit.
++SoC specific:
++	- compatible: Should be "marvell,armadalp-spi".
++	- reg: The base address of the SPI unit.
+ 	- spi-max-frequency: SPI max bus frequency.
+-	- clock-frequency: the input clock for the SPI interface.
++	- clock-frequency: The input clock for the SPI interface.
+ 
+ Example for SPI-0 node:
+ 	spi0: spi@10600 {
+-- 
+1.9.1
+

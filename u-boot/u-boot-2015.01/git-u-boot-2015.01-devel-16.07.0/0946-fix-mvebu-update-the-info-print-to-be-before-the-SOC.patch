@@ -1,0 +1,41 @@
+From 356535b29bdd4adba66a68eb330d306cd717d855 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 14 Mar 2016 17:30:43 +0200
+Subject: [PATCH 0946/1240] fix: mvebu: update the info print to be before the
+ SOC init
+
+- Update the info print of Marvell to be before all SOC/Board/IO init
+
+Change-Id: I2cf79d6bc86c4854e18e603ace7601fbd993b43b
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28227
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ board/mvebu/common/init.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index 6f4cf29..552fc8a 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -145,7 +145,6 @@ int mvebu_board_init(void)
+ {
+ 	debug("Initializing board\n");
+ 
+-	mvebu_print_info();
+ #ifdef CONFIG_MVEBU_MPP_BUS
+ 	mpp_bus_probe();
+ #endif
+@@ -158,6 +157,8 @@ int mvebu_board_init(void)
+ 
+ int board_init(void)
+ {
++	mvebu_print_info();
++
+ 	mvebu_soc_init();
+ 
+ 	mvebu_board_init();
+-- 
+1.9.1
+

@@ -1,0 +1,38 @@
+From 8ee437326188c91b1e2551acd4dffb5cf6243aa7 Mon Sep 17 00:00:00 2001
+From: zachary <zhangzg@marvell.com>
+Date: Sat, 14 May 2016 01:17:03 +0800
+Subject: [PATCH 1112/1240] ddr: a3700: disable dram init support in SPL
+
+This patch totally disabled the dram initialization
+procedure in SPL stage.
+- DDR (static) initialization has already been moved
+  to TIM header.
+- The dram size is supposed to be passed to u-boot
+  stage via sys_info in ATF stage.
+
+Change-Id: I65143aa549bf8836ba7a162e7f05fbbd4878ef97
+Signed-off-by: zachary <zhangzg@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29706
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ configs/mvebu_armada3700_defconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/configs/mvebu_armada3700_defconfig b/configs/mvebu_armada3700_defconfig
+index 39b7a33..50e3503 100644
+--- a/configs/mvebu_armada3700_defconfig
++++ b/configs/mvebu_armada3700_defconfig
+@@ -43,7 +43,7 @@ CONFIG_MVEBU_PINCTL=y
+ CONFIG_USB=y
+ CONFIG_USB_XHCI_HCD=y
+ CONFIG_MVEBU_COMPHY_SUPPORT=y
+-+S:CONFIG_MVEBU_MK6_SUPPORT=y
+++S:# CONFIG_MVEBU_SPL_DDR_SUPPORT is not set
+ CONFIG_SHA256=y
+ CONFIG_SHA1=y
+ +S:CONFIG_MVEBU_MBUS_SKIP_DRAM_WIN=y
+-- 
+1.9.1
+

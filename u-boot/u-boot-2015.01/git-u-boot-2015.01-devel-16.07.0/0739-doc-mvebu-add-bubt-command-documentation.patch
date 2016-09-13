@@ -1,0 +1,68 @@
+From e35ec773935c32767228e4c3944addabc43e552b Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 26 Jan 2016 17:29:26 +0200
+Subject: [PATCH 0739/1240] doc: mvebu: add bubt command documentation
+
+- add bubt command documentation
+- add bubt setp-by-setp howto
+
+Change-Id: Ie2fb8d0c54e0a6250404b57abc718af2b97a4bf5
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27038
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Neta Zur Hershkovits <neta@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ doc/mvebu/commands/bubt.txt | 40 ++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 40 insertions(+)
+ create mode 100644 doc/mvebu/commands/bubt.txt
+
+diff --git a/doc/mvebu/commands/bubt.txt b/doc/mvebu/commands/bubt.txt
+new file mode 100644
+index 0000000..7dcad7e
+--- /dev/null
++++ b/doc/mvebu/commands/bubt.txt
+@@ -0,0 +1,40 @@
++BUBT (Burn ATF) command
++--------------------------
++Bubt command is used to burn new ATF image to flash device.
++
++Bubt command get the ATF file name, destination device, source device as parametr
++bubt [file-name] [destination [source]]
++	- file-name		The image file name to burn.			default = flash-image.bin
++	- destination		Flash to burn to [spi, nor, nand].		defualt = active flash
++	- source		The source to load image from [tftp, usb].	default = tftp
++
++Examples:
++	bubt					-	Burn flash-image.bin from tftp to active flash
++	bubt latest-spi.bin nand		-	Burn latest-spi.bin from tftp to NAND flash
++	bubt backup-nor.bin nor usb		-	Burn backup-nor.bin from usb to NOR flash
++
++Notes:
++- for TFTP interface need to set serverip and ipaddr.
++
++Bubt command details (burn image step by-step)
++----------------------------------------------
++This section describe bubt implementation step-by-step:
++
++1. Fetch the requested ATF image from an available interface (USB/SD/SATA/XDB, etc.)
++   on the DRAM, and place it in <load_address>
++   Example: when using the FAT file system on USB flash device:
++   # usb reset
++   # fatls usb 0 (see files in device)
++   # fatload usb 0 <load_address> <file_name>
++
++2. Erase the flash device:
++	- NAND:		# nand erase 0 100000
++	- NOR:		# protect off all
++			# erase bank 1
++	- SPI:		# sf probe 0
++			# sf erase 0 100000
++
++3. Write the ATF image:
++	- NAND:		# nand write <load_address> 0 <ATF Size>
++	- NOR:		# cp.b <load_address> fd000000 <ATF Size>
++	- SPI:		# sf write <load_address> 0 <ATF Size>
+-- 
+1.9.1
+

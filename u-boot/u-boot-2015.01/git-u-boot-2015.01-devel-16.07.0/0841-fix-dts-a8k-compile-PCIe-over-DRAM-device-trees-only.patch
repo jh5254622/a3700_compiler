@@ -1,0 +1,35 @@
+From e701505a0b472d3553bbfae9b804e09485a2a2bf Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 9 Feb 2016 19:47:40 +0200
+Subject: [PATCH 0841/1240] fix: dts: a8k: compile PCIe over DRAM device trees
+ only if DOP is enabled
+
+Change-Id: I98ab439fbcc6470401fa577e085d8ce1a037d045
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27405
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ arch/arm/dts/Makefile | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index efe286c..8c68543 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -67,10 +67,10 @@ ifdef CONFIG_TARGET_ARMADA_8K
+ dtb-$(CONFIG_PALLADIUM) += apn-806-pd.dtb \
+ 			   apn-806-pd-a0.dtb \
+ 			   armada-70x0-pd.dtb
++dtb-$(CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT) += apn-806-db-dop.dtb \
++						armada-7040-rz-db_dop.dtb
+ dtb-$(CONFIG_DEVEL_BOARD) += apn-806-db.dtb \
+-			     apn-806-db-dop.dtb \
+ 			     armada-80x0-db.dtb \
+-			     armada-7040-rz-db_dop.dtb \
+ 			     armada-7040-rz-db_nand.dtb \
+ 			     armada-7040-rz-db_router.dtb \
+ 			     armada-7040-rz-db_all_pci.dtb \
+-- 
+1.9.1
+

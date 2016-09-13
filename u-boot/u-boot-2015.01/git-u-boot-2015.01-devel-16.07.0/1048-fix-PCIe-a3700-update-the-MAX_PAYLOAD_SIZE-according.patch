@@ -1,0 +1,108 @@
+From 122d2099b401ba5d3971c6bfdbc0a8f086bae966 Mon Sep 17 00:00:00 2001
+From: Terry Zhou <bjzhou@marvell.com>
+Date: Mon, 21 Mar 2016 16:05:12 +0800
+Subject: [PATCH 1048/1240] fix: PCIe: a3700: update the MAX_PAYLOAD_SIZE
+ according to EP
+
+- The MAX_PAYLOAD_SIZE must align to the capacity of the EndPoint,
+  add new function to read the MPS settings of EP, then update the
+  setting according to the result.
+- Fix JIRA: SYSTEMSW-2179
+
+Change-Id: I5a8047b1201d07ccf288372f4e46059e986cff07
+Signed-off-by: Terry Zhou <bjzhou@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28426
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Wilson Ding <dingwei@marvell.com>
+---
+ drivers/pci/pci_advk.c         | 44 ++++++++++++++++++++++++++++++++++++++++++
+ include/configs/armada3700.h   |  5 +++++
+ include/configs/mvebu-common.h |  4 ++++
+ 3 files changed, 53 insertions(+)
+
+diff --git a/drivers/pci/pci_advk.c b/drivers/pci/pci_advk.c
+index 2746cfe..089521b 100644
+--- a/drivers/pci/pci_advk.c
++++ b/drivers/pci/pci_advk.c
+@@ -539,3 +539,47 @@ void pci_init_board(void)
+ 		first_busno = advk_pcie_init(host_id, reg_base, &win, first_busno);
+ 	}
+ }
++
++#ifdef CONFIG_PCI_CHECK_EP_PAYLOAD
++#define PCIE_CAP_DCR1			0x4
++#define MAX_PAYLOAD_SIZE_MASK	0x7
++#define PCIE_CORE_MAX_PAYLAOD_SIZE_SHIFT 5
++
++/* Update the MAX_PAYLOAD_SIZE, use the minimal value between RC and EP */
++static void advk_pcie_set_payload(struct pci_controller *hose, u32 payload)
++{
++	u32 reg, tmp;
++
++	/* Get the MAX_PAYLOAD_SIZE of hose */
++	reg = readl(PCIE_CORE_CONFIG_REG_ADDR(hose->cfg_addr, PCIE_CORE_DEV_CTRL_STATS_REG));
++	tmp = (reg >> PCIE_CORE_MAX_PAYLAOD_SIZE_SHIFT) & MAX_PAYLOAD_SIZE_MASK;
++
++	/* Update the setting to the minimal value */
++	reg &= ~(MAX_PAYLOAD_SIZE_MASK << PCIE_CORE_MAX_PAYLAOD_SIZE_SHIFT);
++	reg |= (min(tmp, payload) << PCIE_CORE_MAX_PAYLAOD_SIZE_SHIFT);
++	writel(reg, PCIE_CORE_CONFIG_REG_ADDR(hose->cfg_addr, PCIE_CORE_DEV_CTRL_STATS_REG));
++}
++
++void board_pci_fixup_dev(struct pci_controller *hose, pci_dev_t dev,
++			 unsigned short vendor, unsigned short device,
++			 unsigned short class)
++{
++	int pcie_cap_pos, pci_dcr1;
++	u32 tmp;
++
++	/* Get PCIe capability structure. */
++	pcie_cap_pos = pci_hose_find_capability(hose, dev, PCI_CAP_ID_EXP);
++	if (pcie_cap_pos == 0) {
++		error("Could not find PCIE CAP structure.\n");
++		return;
++	}
++
++	/* Get supported MAX_PAYLOAD_SIZE from EP */
++	pci_dcr1 = pcie_cap_pos + PCIE_CAP_DCR1;
++	pci_hose_read_config_dword(hose, dev, pci_dcr1, &tmp);
++	tmp &= MAX_PAYLOAD_SIZE_MASK;
++
++	/* Set the MAX_PAYLOAD_SIZE of hose according to EP */
++	advk_pcie_set_payload(hose, tmp);
++}
++#endif /* CONFIG_PCI_CHECK_EP_PAYLOAD */
+diff --git a/include/configs/armada3700.h b/include/configs/armada3700.h
+index 04c9a2b..6645ece 100644
+--- a/include/configs/armada3700.h
++++ b/include/configs/armada3700.h
+@@ -106,6 +106,11 @@ extern char __end_of_spl[];
+ 
+ #endif /* CONFIG_MVEBU_SPI */
+ 
++/* The MAX_PAYLOAD_SIZE of A3700 should be aligned with the capability
++   of the EndPoint.
++ */
++#define CONFIG_PCI_CHECK_EP_PAYLOAD
++
+ /* The EEPROM ST M24C64 has 32 byte page write mode and takes up to 10 msec.
+  */
+ #define CONFIG_MVEBU_EEPROM_PAGE_WRITE_DELAY_MS	10
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 9fdbd71..46eb0b5 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -364,6 +364,10 @@
+ 	#define CONFIG_PCI_ADDR_PREFIX
+ 	#define CONFIG_PCIE_RC_MODE
+ 
++	#if defined(CONFIG_PCIE_RC_MODE) && defined(CONFIG_PCI_CHECK_EP_PAYLOAD)
++	#define CONFIG_PCI_FIXUP_DEV
++	#endif
++
+ 	/* Enable PCIE NIC for devel boards */
+ 	#ifdef CONFIG_DEVEL_BOARD
+ 		#define CONFIG_E1000
+-- 
+1.9.1
+

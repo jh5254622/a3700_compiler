@@ -1,0 +1,39 @@
+From 5ca2d0c8d4b70266ad3309d8286916063b94360a Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 27 Oct 2015 16:55:48 +0200
+Subject: [PATCH 0452/1240] ddr: Set device width to 8 bit instead of 4
+
+Change-Id: I3e74e32a04e3ec4bfaebf49b4cc83813c020f34e
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24402
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ drivers/ddr/ddr_mckinley6.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/ddr/ddr_mckinley6.c b/drivers/ddr/ddr_mckinley6.c
+index f4ec6dd..ba1669d 100644
+--- a/drivers/ddr/ddr_mckinley6.c
++++ b/drivers/ddr/ddr_mckinley6.c
+@@ -169,7 +169,7 @@ struct mvebu_mckinley_config mckinley_mac_config[] = {
+ 	{ 0x214, { 0x00000000} },
+ 	{ 0x218, { 0x00000000} },
+ 	{ 0x21c, { 0x00000000} },
+-	{ 0x220, { 0x11000642} },
++	{ 0x220, { 0x11010642} },
+ 	{ 0x224, { 0x02000332} },
+ 	{ 0x228, { 0x02000332} },
+ 	{ 0x22c, { 0x02000332} },
+@@ -899,7 +899,7 @@ struct mvebu_mckinley_config mckinley_phy_config[] = {
+ 	{ 0x108, { 0xffff0002} },
+ 	{ 0x200, { 0x00110001} },
+ 	{ 0x204, { 0x00000000} },
+-	{ 0x220, { 0x11000642} },
++	{ 0x220, { 0x11010642} },
+ 	{ 0x044, { 0x00030400} },
+ 	{ 0x2c0, { 0x0000e000} },
+ 	{ 0x2c4, { 0x00000020} },
+-- 
+1.9.1
+

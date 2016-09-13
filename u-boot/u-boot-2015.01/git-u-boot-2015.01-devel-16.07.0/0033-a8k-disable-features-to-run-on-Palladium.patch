@@ -1,0 +1,87 @@
+From 31bc87177f9a28b8021e6958ec8f8b4aeec970dd Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 10 Jun 2014 18:35:15 +0300
+Subject: [PATCH 0033/1240] a8k: disable features to run on Palladium
+
+	- disable MPP's init
+	- disable ADEC windows init
+	- disable Cache/TLB invalidate
+	- spin the CPU in u-boot entry point for easy debugger attach
+
+Change-Id: I183f57b8063f7e934c143e0fd166460f7a948b54
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/8456
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv8/start.S           | 8 ++++++++
+ arch/arm/cpu/mvebu-common/soc-init.c | 2 ++
+ board/mvebu/common/init.c            | 2 ++
+ 3 files changed, 12 insertions(+)
+
+diff --git a/arch/arm/cpu/armv8/start.S b/arch/arm/cpu/armv8/start.S
+index 6b7aad9..af1a4f9 100644
+--- a/arch/arm/cpu/armv8/start.S
++++ b/arch/arm/cpu/armv8/start.S
+@@ -20,7 +20,9 @@
+ 
+ .globl	_start
+ _start:
++#ifdef CONFIG_PALLADIUM
+ 	b .
++#endif
+ 	b	reset
+ 
+ 	.align 3
+@@ -74,6 +76,12 @@ reset:
+ 	 * tlb is invalidated before mmu is enabled in dcache_enable()
+ 	 * d-cache is invalidated before enabled in dcache_enable()
+ 	 */
++#ifndef CONFIG_PALLADIUM
++	/* Cache/BPB/TLB Invalidate */
++	bl	__asm_flush_dcache_all		/* dCache clean&invalidate */
++	bl	__asm_invalidate_icache_all	/* iCache invalidate */
++	bl	__asm_invalidate_tlb_all	/* invalidate TLBs */
++#endif
+ 
+ 	/* Processor specific initialization */
+ 	bl	lowlevel_init
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index 4aa7e70..abe818e 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -83,6 +83,7 @@ static int update_soc_units(struct mvebu_soc_info *soc)
+ 
+ static int soc_init_memory_map(struct mvebu_soc_info *soc)
+ {
++#ifndef CONFIG_PALLADIUM
+ 	struct mvebu_soc_family *soc_family = get_soc_family();
+ 	struct adec_win *memory_map = soc->memory_map;
+ 
+@@ -92,6 +93,7 @@ static int soc_init_memory_map(struct mvebu_soc_info *soc)
+ 		error("No MBUS support yet");
+ 		return -EINVAL;
+ 	}
++#endif
+ 
+ 	return 0;
+ }
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index 17af6e4..cba1c85 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -134,9 +134,11 @@ int mvebu_board_init(void)
+ 	mvebu_devel_board_init(brd_fam);
+ #endif
+ 
++#ifndef CONFIG_PALLADIUM
+ 	/* mpp_set */
+ 	mpp_enable_bus(UART_1_MPP_BUS, 0);
+ 	mpp_set_and_update(brd->mpp_regs);
++#endif
+ 
+ 
+ 	return 0;
+-- 
+1.9.1
+

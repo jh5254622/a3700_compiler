@@ -1,0 +1,162 @@
+From e8d1ce0464b703ce9967ed5a58ad21765976445e Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Tue, 19 Jan 2016 00:38:57 +0800
+Subject: [PATCH 0727/1240] fix: spl: mvebu: relocate fdt related code from SPL
+ to FDT driver
+
+	- since in next patches, we will stop using common SPL file
+	  for mvebu SoCs, the following routines could be shared:
+	  setup_fdt & mvebu_setup_fdt
+	- clean duplication of mvebu_setup_fdt from U-Boot code as well.
+	- Fix JIRA: SYSTEMSW-2107
+
+Change-Id: I0af548b680eb178f832cee9f007e2f083cf67db6
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26837
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/fdt.c       | 22 ++++++++++++++++++++++
+ arch/arm/cpu/mvebu-common/spl.c       | 25 -------------------------
+ arch/arm/include/asm/arch-mvebu/fdt.h |  7 +++++++
+ board/mvebu/common/fdt_eeprom.h       |  1 -
+ board/mvebu/common/init.c             | 13 +------------
+ 5 files changed, 30 insertions(+), 38 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/fdt.c b/arch/arm/cpu/mvebu-common/fdt.c
+index 050587c..c80dfcf 100644
+--- a/arch/arm/cpu/mvebu-common/fdt.c
++++ b/arch/arm/cpu/mvebu-common/fdt.c
+@@ -21,6 +21,28 @@
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
++int setup_fdt(void)
++{
++#ifdef CONFIG_OF_CONTROL
++#ifdef CONFIG_OF_EMBED
++	/* Get a pointer to the FDT */
++	gd->fdt_blob = __dtb_dt_begin;
++#else
++	#error "Support only embedded FDT mode in SPL"
++#endif
++#endif
++	return 0;
++}
++
++#ifdef CONFIG_MULTI_DT_FILE
++int mvebu_setup_fdt(void)
++{
++	gd->fdt_blob = mvebu_fdt_config_init();
++	return 0;
++}
++#endif
++
++
+ void *fdt_get_regs_offs(const void *blob, int node, const char *prop_name)
+ {
+ 	uintptr_t reg;
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index edcccb9..520624a 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -22,36 +22,11 @@
+ #include <i2c.h>
+ #include <asm/arch-mvebu/fdt.h>
+ #include <asm/arch-mvebu/spl.h>
+-#ifdef CONFIG_MULTI_DT_FILE
+-#include "../../../../board/mvebu/common/fdt_eeprom.h"
+-#endif
+ 
+ #ifdef CONFIG_MVEBU_SPL_SAR_DUMP
+ extern void mvebu_sar_dump_reg(void);
+ #endif
+ 
+-static int setup_fdt(void)
+-{
+-#ifdef CONFIG_OF_CONTROL
+-#ifdef CONFIG_OF_EMBED
+-	/* Get a pointer to the FDT */
+-	gd->fdt_blob = __dtb_dt_begin;
+-#else
+-	#error "Support only embedded FDT mode in SPL"
+-#endif
+-#endif
+-	return 0;
+-}
+-
+-#ifdef CONFIG_MULTI_DT_FILE
+-static int mvebu_setup_fdt(void)
+-{
+-	gd->fdt_blob = mvebu_fdt_config_init();
+-	return 0;
+-}
+-#endif
+-
+-
+ void board_init_f(ulong silent)
+ {
+ 	gd = &gdata;
+diff --git a/arch/arm/include/asm/arch-mvebu/fdt.h b/arch/arm/include/asm/arch-mvebu/fdt.h
+index 92754c4..c6c3784 100644
+--- a/arch/arm/include/asm/arch-mvebu/fdt.h
++++ b/arch/arm/include/asm/arch-mvebu/fdt.h
+@@ -26,6 +26,13 @@ struct fdt_range {
+ 	u32 size;
+ };
+ 
++int setup_fdt(void);
++
++#ifdef CONFIG_MULTI_DT_FILE
++int mvebu_setup_fdt(void);
++u8 *mvebu_fdt_config_init(void);
++#endif
++
+ void *fdt_get_regs_offs(const void *blob, int node, const char *prop_name);
+ void *fdt_get_regs_base(const void *blob, int node, uintptr_t reg);
+ void *fdt_get_reg_offs_by_compat(enum fdt_compat_id compat_id);
+diff --git a/board/mvebu/common/fdt_eeprom.h b/board/mvebu/common/fdt_eeprom.h
+index 94a6302..73b261d 100644
+--- a/board/mvebu/common/fdt_eeprom.h
++++ b/board/mvebu/common/fdt_eeprom.h
+@@ -115,6 +115,5 @@ struct  fdt_config_types_info {
+ 	bool upload_fdt_from_flash(u8 fdt_config_id);
+ 	bool upload_fdt_from_eeprom(void);
+ 	void write_fdt_struct_to_eeprom(void);
+-	u8 *mvebu_fdt_config_init(void);
+ 
+ #endif
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index a3beff4..8b02491 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -28,25 +28,14 @@
+ #include <asm/arch-mvebu/mpp.h>
+ #include <asm/arch-mvebu/system_info.h>
+ #include <asm/arch-mvebu/mbus.h>
++#include <asm/arch-mvebu/fdt.h>
+ #include "board.h"
+ #ifdef CONFIG_DEVEL_BOARD
+ #include "devel-board.h"
+ #endif
+-#ifdef CONFIG_MULTI_DT_FILE
+-#include "fdt_eeprom.h"
+-#endif
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+-#ifdef CONFIG_MULTI_DT_FILE
+-static int mvebu_setup_fdt(void)
+-{
+-	/* Get a pointer to the FDT */
+-	gd->fdt_blob = mvebu_fdt_config_init();
+-	return 0;
+-}
+-#endif
+-
+ #ifdef CONFIG_BOARD_LATE_INIT
+ int board_late_init(void)
+ {
+-- 
+1.9.1
+

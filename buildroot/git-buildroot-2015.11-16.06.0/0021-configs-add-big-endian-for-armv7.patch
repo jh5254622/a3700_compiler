@@ -1,0 +1,93 @@
+From 931e515143fa06e7fa38c66c02d75d00bd8c6b22 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Wed, 25 Nov 2015 18:20:15 +0200
+Subject: [PATCH 21/66] configs: add big-endian for armv7
+
+	This is the big-endian for armv7 because buildroot dosen't support big-endian for armv8.
+
+Change-Id: I7f74eb1094498ec64ddcba08aa68815f369b678b
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25288
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Tested-by: Shadi Ammouri <shadi@marvell.com>
+---
+ configs/mvebu_armv7_be_defconfig | 67 ++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 67 insertions(+)
+ create mode 100644 configs/mvebu_armv7_be_defconfig
+
+diff --git a/configs/mvebu_armv7_be_defconfig b/configs/mvebu_armv7_be_defconfig
+new file mode 100644
+index 0000000..e884f0d
+--- /dev/null
++++ b/configs/mvebu_armv7_be_defconfig
+@@ -0,0 +1,67 @@
++BR2_armeb=y
++BR2_cortex_a9=y
++BR2_ARM_EABIHF=y
++BR2_ARM_FPU_VFPV3=y
++BR2_TOOLCHAIN_EXTERNAL=y
++BR2_MVEBU_RELEASE_NAME="2016_T1.0.eng_drop_v1"
++BR2_TARGET_GENERIC_GETTY_PORT="ttyS0"
++BR2_ROOTFS_OVERLAY="user_files/"
++BR2_PACKAGE_BUSYBOX_SHOW_OTHERS=y
++BR2_PACKAGE_BZIP2=y
++BR2_PACKAGE_GZIP=y
++BR2_PACKAGE_BONNIE=y
++BR2_PACKAGE_DHRYSTONE=y
++BR2_PACKAGE_FIO=y
++BR2_PACKAGE_LMBENCH=y
++BR2_PACKAGE_MEMSTAT=y
++BR2_PACKAGE_STRACE=y
++BR2_PACKAGE_STRESS=y
++BR2_PACKAGE_WHETSTONE=y
++BR2_PACKAGE_GREP=y
++BR2_PACKAGE_TAR=y
++BR2_PACKAGE_BTRFS_PROGS=y
++BR2_PACKAGE_CRAMFS=y
++BR2_PACKAGE_E2FSPROGS_DEBUGFS=y
++BR2_PACKAGE_XFSPROGS=y
++BR2_PACKAGE_DEVMEM2=y
++BR2_PACKAGE_HDPARM=y
++BR2_PACKAGE_I2C_TOOLS=y
++BR2_PACKAGE_IOSTAT=y
++BR2_PACKAGE_KVMTOOL=y
++BR2_PACKAGE_LM_SENSORS=y
++BR2_PACKAGE_LSHW=y
++BR2_PACKAGE_MDADM=y
++BR2_PACKAGE_MEMTESTER=y
++BR2_PACKAGE_PARTED=y
++BR2_PACKAGE_SDPARM=y
++BR2_PACKAGE_SMARTMONTOOLS=y
++BR2_PACKAGE_SYSSTAT=y
++BR2_PACKAGE_BC=y
++BR2_PACKAGE_ARPTABLES=y
++BR2_PACKAGE_BRIDGE_UTILS=y
++BR2_PACKAGE_DHCPCD=y
++BR2_PACKAGE_ETHTOOL=y
++BR2_PACKAGE_IFTOP=y
++BR2_PACKAGE_IPERF=y
++BR2_PACKAGE_IPERF3=y
++BR2_PACKAGE_IPSEC_TOOLS=y
++BR2_PACKAGE_IPTABLES=y
++BR2_PACKAGE_LIGHTTPD=y
++BR2_PACKAGE_NCFTP=y
++BR2_PACKAGE_NETCAT=y
++BR2_PACKAGE_RSYNC=y
++BR2_PACKAGE_SAMBA=y
++BR2_PACKAGE_TCPDUMP=y
++BR2_PACKAGE_VSFTPD=y
++BR2_PACKAGE_WGET=y
++BR2_PACKAGE_WIRESHARK=y
++BR2_PACKAGE_BASH=y
++BR2_PACKAGE_FILE=y
++BR2_PACKAGE_TIME=y
++BR2_PACKAGE_WHICH=y
++BR2_PACKAGE_FTOP=y
++BR2_PACKAGE_HTOP=y
++BR2_PACKAGE_LESS=y
++BR2_PACKAGE_VIM=y
++BR2_TARGET_ROOTFS_TAR_GZIP=y
++BR2_PACKAGE_HOST_MKE2IMG=y
+-- 
+1.9.1
+

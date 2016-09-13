@@ -1,0 +1,66 @@
+From 4e9727d03963a56859f6c271a37da2b847212e68 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 22 May 2016 15:24:58 +0300
+Subject: [PATCH 187/239] fix: xdb: update BootRom break point when flash is
+ empty
+
+Change-Id: I659b040ced20d5f5d0d9401f35c440acdfba05af
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29856
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ scripts/debugger/xdb_debug.xdb                    |  4 ++++
+ scripts/debugger/xdb_scripts/binary_extension.xdb | 19 +++++++++++++------
+ 2 files changed, 17 insertions(+), 6 deletions(-)
+
+diff --git a/scripts/debugger/xdb_debug.xdb b/scripts/debugger/xdb_debug.xdb
+index f3a267c..b643072 100644
+--- a/scripts/debugger/xdb_debug.xdb
++++ b/scripts/debugger/xdb_debug.xdb
+@@ -41,7 +41,11 @@ To debug the Binary extension, ATF, and Bootloader need to run the buttons separ
+   if the atf not run, the button will reset the SoC\\n\
+   stop at the beginning of the Bootloader\\n\
+   load the Bootloader elf image and stop\\n\
++\\n\
++Please note - if you run Armda-8040-RZ board, need to press on Armada-8040-RZ button\\n\
+ \""
+ 
++define macro /OVERWRITE /button armada_8040_rz "set val @armada_8040_rz = 1;"
++
+ ! Stop the CPU before run any button
+ STOP
+diff --git a/scripts/debugger/xdb_scripts/binary_extension.xdb b/scripts/debugger/xdb_scripts/binary_extension.xdb
+index 389e23f..60a64b0 100644
+--- a/scripts/debugger/xdb_scripts/binary_extension.xdb
++++ b/scripts/debugger/xdb_scripts/binary_extension.xdb
+@@ -16,13 +16,20 @@ TCI TRESET
+ RESTART
+ 
+ IF @flash_empty != 1 THEN
+-! break at start of bin_ext_run
+-SET BREAKPOINT AT (0xFFE1C048) HARD
++	! break at start of bin_ext_run
++	SET BREAKPOINT AT (0xFFE1C048) HARD
+ ELSE
+-! break at UART error of Bootrom
+-SET BREAKPOINT AT (0xffff2270) HARD
+-RUN
+-SET BREAKPOINT AT (0xffff3244) HARD
++	! break at UART error of Bootrom
++	IF @armada_8040_rz != 1 THEN
++		! not Armada-8040-RZ(include AP-806-Z)
++		SET BREAKPOINT AT (0xFFFF0D14) HARD
++		RUN
++		SET BREAKPOINT AT (0xffff23d4) HARD
++	ELSE
++		SET BREAKPOINT AT (0xffff2270) HARD
++		RUN
++		SET BREAKPOINT AT (0xffff3244) HARD
++	END
+ END
+ 
+ ! Run till the breakpoint
+-- 
+1.9.1
+

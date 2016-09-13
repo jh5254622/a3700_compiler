@@ -1,0 +1,395 @@
+From 1ef44a7cd5be384aa94197497f2d71432c6e48b4 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 1 Jun 2015 18:16:36 +0300
+Subject: [PATCH 0191/1240] i2c: fdt: added support for FDT in I2C driver
+
+	- Added support for FDT in I2C driver
+	- Read base address of I2C driver from Device tree blob
+	- Update Device tree of Armada38x, and Armada8k
+	- Fix I2C driver:
+		- Initialize global array, because we use it before relocation
+		- Added clock property for i2c-bus struct, to save the clock
+		  from device tree
+	- Update device tree bindings
+
+Change-Id: I5d979dd00140a2792956050563bface487469314
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/19669
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/dts/armada-385-db.dts                  | 14 ++++
+ arch/arm/dts/armada-8k.dts                      |  6 ++
+ arch/arm/include/asm/arch-armada38x/regs-base.h |  1 -
+ arch/arm/include/asm/arch-armada8k/regs-base.h  |  1 -
+ doc/device-tree-bindings/README.mvebu           |  2 +
+ doc/device-tree-bindings/i2c/mvebu-i2c.txt      | 20 ++++++
+ drivers/i2c/mvebu_i2c.c                         | 90 +++++++++++++++++--------
+ include/fdtdec.h                                |  1 +
+ lib/fdtdec.c                                    |  1 +
+ 9 files changed, 107 insertions(+), 29 deletions(-)
+ create mode 100644 doc/device-tree-bindings/i2c/mvebu-i2c.txt
+
+diff --git a/arch/arm/dts/armada-385-db.dts b/arch/arm/dts/armada-385-db.dts
+index 204bda2..7e7ecd6 100644
+--- a/arch/arm/dts/armada-385-db.dts
++++ b/arch/arm/dts/armada-385-db.dts
+@@ -44,6 +44,20 @@
+ 				reg = <0x18600 0x4>;
+ 			};
+ 
++			i2c0: i2c@11000 {
++				compatible = "marvell,mvebu-i2c";
++				reg = <0x11000 0x4>;
++				clock = <&tclk>;
++				status = "okay";
++			};
++
++			i2c1: i2c@11100 {
++				compatible = "marvell,mvebu-i2c";
++				reg = <0x11100 0x4>;
++				clock = <&tclk>;
++				status = "disable";
++			};
++
+ 			spi0: spi@10600 {
+ 				compatible = "marvell,orion-spi";
+ 				reg = <0x10600 0x50>;
+diff --git a/arch/arm/dts/armada-8k.dts b/arch/arm/dts/armada-8k.dts
+index bb681c6..9145b33 100644
+--- a/arch/arm/dts/armada-8k.dts
++++ b/arch/arm/dts/armada-8k.dts
+@@ -39,6 +39,12 @@
+ 				#clock-cells = <0>;
+ 				clock-frequency = <125000>;
+ 			};
++			i2c0: i2c@511000 {
++				compatible = "marvell,mvebu-i2c";
++				reg = <0x511000 0x4>;
++				clock = <&tclk>;
++				status = "okay";
++			};
+ 
+ 			spi0: spi@510600 {
+ 				compatible = "marvell,orion-spi";
+diff --git a/arch/arm/include/asm/arch-armada38x/regs-base.h b/arch/arm/include/asm/arch-armada38x/regs-base.h
+index 14a389b..3a818e5 100644
+--- a/arch/arm/include/asm/arch-armada38x/regs-base.h
++++ b/arch/arm/include/asm/arch-armada38x/regs-base.h
+@@ -30,7 +30,6 @@
+ #define MVEBU_SPI_REGS_BASE(x)	(MVEBU_REGS_BASE + 0x10600 + (x * 0x80))
+ #define MVEBU_PCIE_BASE(x)	((x == 0) ? (MVEBU_REGS_BASE + 0x80000) : \
+ 				(MVEBU_REGS_BASE + 0x40000 + (0x4000 * (x - 1))))
+-#define MVEBU_I2C_BASE(x)	(MVEBU_REGS_BASE + 0x11000 + (0x100 * x))
+ #define MVEBU_NAND_REGS_BASE	(MVEBU_REGS_BASE + 0xD0000)
+ #define MVEBU_MISC_REGS_BASE	(MVEBU_REGS_BASE + 0x18200)
+ #define MVEBU_DEVICE_ID_REG	(MVEBU_MISC_REGS_BASE + 0x38)
+diff --git a/arch/arm/include/asm/arch-armada8k/regs-base.h b/arch/arm/include/asm/arch-armada8k/regs-base.h
+index d18d921..d6ae608 100644
+--- a/arch/arm/include/asm/arch-armada8k/regs-base.h
++++ b/arch/arm/include/asm/arch-armada8k/regs-base.h
+@@ -30,7 +30,6 @@
+ #define MVEBU_ADEC_IOB_BASE 	(MVEBU_REGS_BASE + 0x2810000)
+ 
+ #define MVEBU_SPI_REGS_BASE(x)	(MVEBU_REGS_BASE + 0x510600)
+-#define MVEBU_I2C_BASE(x)	(MVEBU_REGS_BASE + 0x511000 + (0x100 * x))
+ #define MVEBU_UART_BASE(x)	(MVEBU_REGS_BASE + 0x512000 + (0x100 * x))
+ #define MVEBU_MISC_REGS_BASE	(MVEBU_REGS_BASE + 0x18200)
+ #define MVEBU_DEVICE_ID_REG	(MVEBU_MISC_REGS_BASE + 0x38)
+diff --git a/doc/device-tree-bindings/README.mvebu b/doc/device-tree-bindings/README.mvebu
+index b6c48b1..fe8f4bc 100644
+--- a/doc/device-tree-bindings/README.mvebu
++++ b/doc/device-tree-bindings/README.mvebu
+@@ -44,3 +44,5 @@ Group Ltd.
+ 				Specify the SPI interface, check doc/device-tree-bindings/spi/mvebu-spi.txt
+ 			2.1.2 /soc/internal-regs/tclock/ node:
+ 				Specify the clock interface, check doc/device-tree-bindings/clock/mvebu-clock.txt
++			2.1.3 /soc/internal-regs/i2c/ node;
++				Specify the I2C interface, check doc/device-tree-bindings/i2c/mvebu-i2c.txt
+diff --git a/doc/device-tree-bindings/i2c/mvebu-i2c.txt b/doc/device-tree-bindings/i2c/mvebu-i2c.txt
+new file mode 100644
+index 0000000..c1e5dd9
+--- /dev/null
++++ b/doc/device-tree-bindings/i2c/mvebu-i2c.txt
+@@ -0,0 +1,20 @@
++Marvell I2C bindings
++====================
++
++The I2C node requires the following properties:
++	- compatible = "marvell,mvebu-i2c";
++	- reg = <0x511000 0x4>;
++		base address of I2C-0
++	- clock = <&tclk>;
++		This property points to the used clock for the I2C interface.
++		in this example the node point to the t-clock.
++	- status = "okay";
++		Set if the I2C interface is enabled/disabled.
++
++Example for I2C-0 node:
++	i2c0: i2c@11000 {
++		compatible = "marvell,mvebu-i2c";
++		reg = <0x11000 0x4>;
++		clock = <&tclk>;
++		status = "okay";
++	};
+diff --git a/drivers/i2c/mvebu_i2c.c b/drivers/i2c/mvebu_i2c.c
+index 611740e..56cc2e9 100644
+--- a/drivers/i2c/mvebu_i2c.c
++++ b/drivers/i2c/mvebu_i2c.c
+@@ -21,9 +21,11 @@
+ #include <i2c.h>
+ #include <asm/errno.h>
+ #include <asm/io.h>
++#include <fdtdec.h>
+ #include <asm/arch-mvebu/clock.h>
+-#include <asm/arch-mvebu/mvebu.h>
++#include <asm/arch-mvebu/fdt.h>
+ 
++#define CONFIG_MAX_I2C_NUM			2
+ #define I2C_TIMEOUT_VALUE			0x500
+ #define I2C_MAX_RETRY_CNT			1000
+ #define I2C_CMD_WRITE				0x0
+@@ -65,11 +67,21 @@ struct  mvebu_i2c_regs {
+ 	u32 soft_reset;
+ };
+ 
+-static struct  mvebu_i2c_regs *i2c_reg;
++struct mvebu_i2c_bus {
++	struct  mvebu_i2c_regs *i2c_reg;
++	u32 clock;
++	bool status;
++};
++
++/* initialize i2c_bus to -1, because we use this struct before relocation */
++static struct mvebu_i2c_bus i2c_bus[CONFIG_MAX_I2C_NUM] = { { .i2c_reg = NULL, .clock = -1, .status = false},
++							{ .i2c_reg = NULL, .clock = -1, .status = false} };
++
++#define i2c_reg(x) (&i2c_bus[gd->cur_i2c_bus].i2c_reg->x)
+ 
+ static int mvebu_i2c_lost_arbitration(u32 *status)
+ {
+-	*status = readl(&i2c_reg->status);
++	*status = readl(i2c_reg(status));
+ 	if ((I2C_STATUS_LOST_ARB_DATA_ADDR_TRANSFER == *status) || (I2C_STATUS_LOST_ARB_GENERAL_CALL == *status))
+ 		return -EAGAIN;
+ 	return 0;
+@@ -81,9 +93,9 @@ static void mvebu_i2c_interrupt_clear(void)
+ 
+ 	/* Wait for 1 ms to prevent I2C register write after write issues */
+ 	udelay(1000);
+-	reg = readl(&i2c_reg->control);
++	reg = readl(i2c_reg(control));
+ 	reg &= ~(I2C_CONTROL_IFLG);
+-	writel(reg, &i2c_reg->control);
++	writel(reg, i2c_reg(control));
+ 	/* Wait for 1 ms for the clear to take effect */
+ 	udelay(1000);
+ 
+@@ -95,7 +107,7 @@ static int mvebu_i2c_interrupt_get(void)
+ 	u32 reg;
+ 
+ 	/* get the interrupt flag bit */
+-	reg = readl(&i2c_reg->control);
++	reg = readl(i2c_reg(control));
+ 	reg &= I2C_CONTROL_IFLG;
+ 	return reg && I2C_CONTROL_IFLG;
+ }
+@@ -119,7 +131,7 @@ static int mvebu_i2c_start_bit_set(void)
+ 		is_int_flag = 1;
+ 
+ 	/* set start bit */
+-	writel(readl(&i2c_reg->control) | I2C_CONTROL_START, &i2c_reg->control);
++	writel(readl(i2c_reg(control)) | I2C_CONTROL_START, i2c_reg(control));
+ 
+ 	/* in case that the int flag was set before i.e. repeated start bit */
+ 	if (is_int_flag) {
+@@ -133,7 +145,7 @@ static int mvebu_i2c_start_bit_set(void)
+ 	}
+ 
+ 	/* check that start bit went down */
+-	if ((readl(&i2c_reg->control) & I2C_CONTROL_START) != 0) {
++	if ((readl(i2c_reg(control)) & I2C_CONTROL_START) != 0) {
+ 		error("Start bit didn't went down\n");
+ 		return -EPERM;
+ 	}
+@@ -157,12 +169,12 @@ static int mvebu_i2c_stop_bit_set(void)
+ 	u32 status;
+ 
+ 	/* Generate stop bit */
+-	writel(readl(&i2c_reg->control) | I2C_CONTROL_STOP, &i2c_reg->control);
++	writel(readl(i2c_reg(control)) | I2C_CONTROL_STOP, i2c_reg(control));
+ 	mvebu_i2c_interrupt_clear();
+ 
+ 	timeout = 0;
+ 	/* Read control register, check the control stop bit */
+-	while ((readl(&i2c_reg->control) & I2C_CONTROL_STOP) && (timeout++ < I2C_TIMEOUT_VALUE))
++	while ((readl(i2c_reg(control)) & I2C_CONTROL_STOP) && (timeout++ < I2C_TIMEOUT_VALUE))
+ 		;
+ 	if (timeout >= I2C_TIMEOUT_VALUE) {
+ 		error("Stop bit didn't went down\n");
+@@ -170,7 +182,7 @@ static int mvebu_i2c_stop_bit_set(void)
+ 	}
+ 
+ 	/* check that stop bit went down */
+-	if ((readl(&i2c_reg->control) & I2C_CONTROL_STOP) != 0) {
++	if ((readl(i2c_reg(control)) & I2C_CONTROL_STOP) != 0) {
+ 		error("Stop bit didn't went down\n");
+ 		return -EPERM;
+ 	}
+@@ -194,7 +206,7 @@ static int mvebu_i2c_address_set(u8 chain, int command)
+ 
+ 	reg = (chain << I2C_DATA_ADDR_7BIT_OFFS) & I2C_DATA_ADDR_7BIT_MASK;
+ 	reg |= command;
+-	writel(reg, &i2c_reg->data);
++	writel(reg, i2c_reg(data));
+ 	udelay(1000);
+ 
+ 	mvebu_i2c_interrupt_clear();
+@@ -232,9 +244,9 @@ static int mvebu_i2c_data_receive(u8 *p_block, u32 block_size)
+ 	}
+ 	while (block_size_read) {
+ 		if (block_size_read == 1) {
+-			reg = readl(&i2c_reg->control);
++			reg = readl(i2c_reg(control));
+ 			reg &= ~(I2C_CONTROL_ACK);
+-			writel(reg, &i2c_reg->control);
++			writel(reg, i2c_reg(control));
+ 		}
+ 		mvebu_i2c_interrupt_clear();
+ 
+@@ -257,7 +269,7 @@ static int mvebu_i2c_data_receive(u8 *p_block, u32 block_size)
+ 		}
+ 
+ 		/* read the data */
+-		*p_block = (u8) readl(&i2c_reg->data);
++		*p_block = (u8) readl(i2c_reg(data));
+ 		debug("%s: place %d read %x\n", __func__, block_size - block_size_read, *p_block);
+ 		p_block++;
+ 		block_size_read--;
+@@ -277,7 +289,7 @@ static int mvebu_i2c_data_transmit(u8 *p_block, u32 block_size)
+ 
+ 	while (block_size_write) {
+ 		/* write the data */
+-		writel((u32) *p_block, &i2c_reg->data);
++		writel((u32) *p_block, i2c_reg(data));
+ 		debug("%s: index = %d, data = %x\n", __func__, block_size - block_size_write, *p_block);
+ 		p_block++;
+ 		block_size_write--;
+@@ -325,11 +337,11 @@ static unsigned int mvebu_i2c_bus_speed_set(struct i2c_adapter *adap, unsigned i
+ 	unsigned int n, m, freq, margin, min_margin = 0xffffffff;
+ 	unsigned int actual_freq = 0, actual_n = 0, actual_m = 0;
+ 
+-	debug("%s: Tclock = 0x%x, freq = 0x%x\n", __func__, soc_tclk_get(), requested_speed);
++	debug("%s: clock = 0x%x, freq = 0x%x\n", __func__, i2c_bus[gd->cur_i2c_bus].clock, requested_speed);
+ 	/* Calucalte N and M for the TWSI clock baud rate */
+ 	for (n = 0; n < 8; n++) {
+ 		for (m = 0; m < 16; m++) {
+-			freq = soc_tclk_get() / (10 * (m + 1) * (2 << n));
++			freq = i2c_bus[gd->cur_i2c_bus].clock / (10 * (m + 1) * (2 << n));
+ 			margin = abs(requested_speed - freq);
+ 
+ 			if ((freq <= requested_speed) && (margin < min_margin)) {
+@@ -342,30 +354,54 @@ static unsigned int mvebu_i2c_bus_speed_set(struct i2c_adapter *adap, unsigned i
+ 	}
+ 	debug("%s: actual_n = 0x%x, actual_m = 0x%x, actual_freq = 0x%x\n", __func__, actual_n, actual_m, actual_freq);
+ 	/* Set the baud rate */
+-	writel((actual_m << 3) | actual_n, &i2c_reg->baudrate);
++	writel((actual_m << 3) | actual_n, i2c_reg(baudrate));
+ 
+ 	return 0;
+ }
+ 
+ static void mvebu_i2c_init(struct i2c_adapter *adap, int speed, int slaveaddr)
+ {
+-	i2c_reg = (struct  mvebu_i2c_regs *)MVEBU_I2C_BASE(gd->cur_i2c_bus);
++	int node_list[CONFIG_MAX_I2C_NUM], node;
++	u32 i;
++
++	if (i2c_bus[gd->cur_i2c_bus].status)
++		return;
++
++	/* update the node_list with the active I2C nodes */
++	fdtdec_find_aliases_for_id(gd->fdt_blob, "i2c", COMPAT_MVEBU_I2C, node_list, CONFIG_MAX_I2C_NUM);
++
++	for (i = 0; i < CONFIG_MAX_I2C_NUM ; i++) {
++		node = node_list[i];
++
++		if (node <= 0)
++			continue;
++
++		if (gd->cur_i2c_bus == i) {
++			i2c_bus[gd->cur_i2c_bus].i2c_reg =
++				(struct  mvebu_i2c_regs *)fdt_get_regs_offs(gd->fdt_blob, node, "reg");
++			i2c_bus[gd->cur_i2c_bus].clock = soc_clock_get(gd->fdt_blob, node);
++			i2c_bus[gd->cur_i2c_bus].status = true;
++		}
++	}
++	if (!i2c_bus[gd->cur_i2c_bus].status)
++		error("i2c %d device not found in device tree blob\n", gd->cur_i2c_bus);
++
+ 	/* Reset the I2C logic */
+-	writel(0, &i2c_reg->soft_reset);
++	writel(0, i2c_reg(soft_reset));
+ 
+ 	udelay(2000);
+ 
+ 	mvebu_i2c_bus_speed_set(adap, speed);
+ 
+ 	/* Enable the I2C and slave */
+-	writel(I2C_CONTROL_TWSIEN | I2C_CONTROL_ACK, &i2c_reg->control);
++	writel(I2C_CONTROL_TWSIEN | I2C_CONTROL_ACK, i2c_reg(control));
+ 
+ 	/* set the I2C slave address */
+-	writel(0, &i2c_reg->xtnd_slave_addr);
+-	writel(slaveaddr, &i2c_reg->slave_address);
++	writel(0, i2c_reg(xtnd_slave_addr));
++	writel(slaveaddr, i2c_reg(slave_address));
+ 
+ 	/* unmask I2C interrupt */
+-	writel(readl(&i2c_reg->control) | I2C_CONTROL_INTEN, &i2c_reg->control);
++	writel(readl(i2c_reg(control)) | I2C_CONTROL_INTEN, i2c_reg(control));
+ 
+ 	udelay(1000);
+ }
+@@ -445,7 +481,7 @@ static int mvebu_i2c_read(struct i2c_adapter *adap, uchar chip, uint addr,
+ 	if (counter == I2C_MAX_RETRY_CNT)
+ 		error("I2C transactions failed, got EAGAIN %d times\n", I2C_MAX_RETRY_CNT);
+ 
+-	writel(readl(&i2c_reg->control) | I2C_CONTROL_ACK, &i2c_reg->control);
++	writel(readl(i2c_reg(control)) | I2C_CONTROL_ACK, i2c_reg(control));
+ 
+ 	udelay(1000);
+ 
+@@ -507,4 +543,4 @@ U_BOOT_I2C_ADAP_COMPLETE(mvebu0, mvebu_i2c_init, mvebu_i2c_probe,
+ U_BOOT_I2C_ADAP_COMPLETE(mvebu1, mvebu_i2c_init, mvebu_i2c_probe,
+ 			 mvebu_i2c_read, mvebu_i2c_write,
+ 			 mvebu_i2c_bus_speed_set,
+-			 CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE, 0)
++			 CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE, 1)
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 0288c9b..f70fa2f 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -124,6 +124,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_SPI,
+ 	COMPAT_MVEBU_UART,
+ 	COMPAT_MVEBU_TCLOCK,
++	COMPAT_MVEBU_I2C,
+ 
+ 	COMPAT_COUNT,
+ };
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 960bdfe..f8d01b0 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -86,6 +86,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_SPI, "marvell,orion-spi"),
+ 	COMPAT(MVEBU_UART, "marvell,armadalp-uart"),
+ 	COMPAT(MVEBU_TCLOCK, "marvell,tclk"),
++	COMPAT(MVEBU_I2C, "marvell,mvebu-i2c"),
+ };
+ 
+ const char *fdtdec_get_compatible(enum fdt_compat_id id)
+-- 
+1.9.1
+

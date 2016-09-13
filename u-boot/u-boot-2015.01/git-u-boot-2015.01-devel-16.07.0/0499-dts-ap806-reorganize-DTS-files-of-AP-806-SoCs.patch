@@ -1,0 +1,569 @@
+From 08878f4d52ed644909a732fde9719db0ff82f129 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 15 Nov 2015 20:35:18 +0200
+Subject: [PATCH 0499/1240] dts: ap806: reorganize DTS files of AP-806 SoCs
+
+- ap-806.dtsi => all SoC specific configuration
+- apn-806-db.dtsi => all devel boards configurations
+- rest of the device trees are board specific
+
+Change-Id: I9c4ead14dd492df375933efb2b5421da758d8caf
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24867
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/dts/Makefile           |   1 -
+ arch/arm/dts/apn-806-db-dop.dts |  12 ++-
+ arch/arm/dts/apn-806-db-flc.dts |  52 ------------
+ arch/arm/dts/apn-806-db.dts     |   9 ++
+ arch/arm/dts/apn-806-db.dtsi    |  45 +++++++---
+ arch/arm/dts/apn-806-pd.dts     |   4 +-
+ arch/arm/dts/apn-806-z1.dtsi    | 151 +++++++++++++++++++++++++++++++++
+ arch/arm/dts/apn-806.dtsi       | 180 ----------------------------------------
+ 8 files changed, 205 insertions(+), 249 deletions(-)
+ delete mode 100644 arch/arm/dts/apn-806-db-flc.dts
+ create mode 100644 arch/arm/dts/apn-806-z1.dtsi
+ delete mode 100644 arch/arm/dts/apn-806.dtsi
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index 41e37a1..bae8791 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -56,7 +56,6 @@ dtb-$(CONFIG_MVEBU) += armada-lp-db.dtb
+ dtb-$(CONFIG_MVEBU) += armada-lp-palladium.dtb
+ dtb-$(CONFIG_MVEBU) += apn-806-db.dtb \
+ 		       apn-806-pd.dtb \
+-		       apn-806-db-flc.dtb \
+ 		       apn-806-db-dop.dtb
+ 
+ targets += $(dtb-y)
+diff --git a/arch/arm/dts/apn-806-db-dop.dts b/arch/arm/dts/apn-806-db-dop.dts
+index 0ce9ff7..8fbd38c 100644
+--- a/arch/arm/dts/apn-806-db-dop.dts
++++ b/arch/arm/dts/apn-806-db-dop.dts
+@@ -21,8 +21,16 @@
+ /* This Device tree used for AP-806 with DRAM over PCIe */
+ #include "apn-806-db.dtsi"
+ 
+-/{
+-	soc {
++/ {
++	model = "DB-88FA806-DDR4-MODULAR-DOP";
++	compatible = "marvell,apn-806-db", "marvell,apn-806";
++
++	memory {
++		device_type = "memory";
++		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
++	};
++
++	ap-806 {
+ 		pcie-controller {
+ 			pcie@1,0 {
+ 				reg = <0x50000000 0x2000>;
+diff --git a/arch/arm/dts/apn-806-db-flc.dts b/arch/arm/dts/apn-806-db-flc.dts
+deleted file mode 100644
+index 3d299dd..0000000
+--- a/arch/arm/dts/apn-806-db-flc.dts
++++ /dev/null
+@@ -1,52 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-/dts-v1/;
+-
+-#include "apn-806-db.dtsi"
+-
+-/ {
+-	model = "Marvell APN-806 Development Board FLC mode";
+-	compatible = "marvell,apn-806-db-flc", "marvell,apn-806-db", "marvell,apn-806";
+-
+-	soc {
+-		internal-regs {
+-
+-			ccu {
+-				windows = <0x0 0x0  0x0 0xeff00000 0x3 /* DRAM window */
+-				0x0 0xf2000000 0x0 0xe000000 0x00 /* IO window */>;
+-			};
+-
+-			rfu {
+-				windows = <
+-					0x0 0xfff00000 0x0 0x0 0x0 /*BootROM */
+-					0x0 0xf8000000 0x0 0x1100000 0x2 /* SPI */
+-					0x0 0xfe000000 0x0 0x1f00000 0x05 /* PCIe window 31Mb for PCIe port*/
+-					0x0 0xffe00000 0x0 0x100000 0x03 /* PCI-REG window 64Kb for PCIe-reg*/>;
+-			};
+-
+-			flc {
+-				compatible = "marvell,mvebu-flc";
+-				reg = <0x20700 0x100>;
+-				flc_ext_dev_map = <0x1 0x0 0x0 0x40000000>;
+-			};
+-
+-		};
+-	};
+-};
+-
+diff --git a/arch/arm/dts/apn-806-db.dts b/arch/arm/dts/apn-806-db.dts
+index 7dc73fb..0ecc59d 100644
+--- a/arch/arm/dts/apn-806-db.dts
++++ b/arch/arm/dts/apn-806-db.dts
+@@ -20,3 +20,12 @@
+ 
+ #include "apn-806-db.dtsi"
+ 
++/ {
++	model = "DB-88FA806-DDR4-MODULAR";
++	compatible = "marvell,apn-806-db", "marvell,apn-806";
++
++	memory {
++		device_type = "memory";
++		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
++	};
++};
+diff --git a/arch/arm/dts/apn-806-db.dtsi b/arch/arm/dts/apn-806-db.dtsi
+index b57c3b8..17d8ebf 100644
+--- a/arch/arm/dts/apn-806-db.dtsi
++++ b/arch/arm/dts/apn-806-db.dtsi
+@@ -16,20 +16,9 @@
+  * ***************************************************************************
+  */
+ 
+-#include "apn-806.dtsi"
++#include "apn-806-z1.dtsi"
+ 
+ / {
+-	model = "DB-88FA806-DDR4-MODULAR";
+-	compatible = "marvell,apn-806-db", "marvell,apn-806";
+-
+-	#address-cells = <2>;
+-	#size-cells = <2>;
+-
+-	memory {
+-		device_type = "memory";
+-		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
+-	};
+-
+ 	/* This should go only into devel boards */
+ 	sar {
+ 		compatible = "marvell,sample-at-reset";
+@@ -99,6 +88,38 @@
+ 			status = "okay";
+ 		};
+ 	};
++	/* This should go only into devel boards */
++	mpp-buses {
++		mpp-bus0 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "spi0";
++			bank-name = "apn-806";
++			pin-count = <5>;
++			pins = <4 1  5 1  6 1  7 1  8 1>;
++		};
++		mpp-bus1 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "i2c";
++			bank-name = "apn-806";
++			pin-count = <2>;
++			pins = <0 1  1 1>;
++		};
++		mpp-bus2 {
++			/* the RX pin is directly connected to uart1 */
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "uart1";
++			bank-name = "apn-806";
++			pin-count = <1>;
++			pins = <13 1>;
++		};
++		mpp-bus3 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "uart0";
++			bank-name = "apn-806";
++			pin-count = <2>;
++			pins = <2 1  3 1>;
++		};
++	};
+ };
+ 
+ &pinctl {
+diff --git a/arch/arm/dts/apn-806-pd.dts b/arch/arm/dts/apn-806-pd.dts
+index 59f9589..85b2108 100644
+--- a/arch/arm/dts/apn-806-pd.dts
++++ b/arch/arm/dts/apn-806-pd.dts
+@@ -18,13 +18,13 @@
+ 
+ /dts-v1/;
+ 
+-#include "apn-806.dtsi"
++#include "apn-806-z1.dtsi"
+ 
+ / {
+ 	model = "Marvell APN-806 Palladuim";
+ 	compatible = "marvell,apn-806-pd", "marvell,apn-806";
+ 
+-	soc {
++	ap-806 {
+ 
+ 		internal-regs {
+ 
+diff --git a/arch/arm/dts/apn-806-z1.dtsi b/arch/arm/dts/apn-806-z1.dtsi
+new file mode 100644
+index 0000000..8d4288c
+--- /dev/null
++++ b/arch/arm/dts/apn-806-z1.dtsi
+@@ -0,0 +1,151 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <dt-bindings/comphy/comphy_data.h>
++/ {
++
++	#address-cells = <2>;
++	#size-cells = <2>;
++
++	cpus {
++		#address-cells = <1>;
++		#size-cells = <0>;
++		cpu@0 {
++			device_type = "cpu";
++			compatible = "arm,cortex-a57";
++			reg = <0>;
++		};
++	};
++
++	ap-806 {
++		compatible = "marvell,mvebu-apn-806";
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		internal-regs {
++			compatible = "marvell,internal-regs";
++			#address-cells = <1>;
++			#size-cells = <1>;
++			ranges = <0x0000 0xf0000000 0x1000000>;
++
++			tclk: tclk {
++				compatible = "marvell,tclk";
++				#clock-cells = <0>;
++				clock-frequency = <200000000>;
++			};
++
++			i2c0: i2c@511000 {
++				compatible = "marvell,mvebu-i2c";
++				reg = <0x511000 0x4>;
++				clock = <&tclk>;
++				support-256-offset;
++				status = "okay";
++			};
++
++			spi0: spi@510600 {
++				compatible = "marvell,orion-spi";
++				reg = <0x510600 0x50>;
++				spi-max-frequency = <10000000>;
++				clock = <&tclk>;
++				cpol-cs-bitmap = <1>; /* bit i is set if the CPOL of
++							 CS-i is enabled or not */
++				status = "okay";
++			};
++
++			pinctl: pinctl@6F008C {
++				compatible = "marvell,mvebu-pinctl";
++				bank-name ="apn-806";
++				reg = <0x6F008c 0x10>;
++				pin-count = <16>;
++				max-func = <1>;
++				reverse-reg;
++			};
++
++			ddr-mac {
++				compatible = "marvell,mvebu-ddr-mac";
++				reg = <0x20000 0x20>;
++				status = "okay";
++			};
++
++			ddr-phy {
++				compatible = "marvell,mvebu-ddr-phy";
++				reg = <0x20000 0x10>;
++				status = "okay";
++			};
++
++			ccu {
++				compatible = "marvell,mvebu-ccu";
++				reg = <0x4000 0x50>;
++				max-win = <8>;
++				windows = <0x0 0xf2000000 0x0 0xe000000 0x00 /* IO window */>;
++			};
++
++			rfu {
++				compatible = "marvell,mvebu-rfu";
++				reg = <0x6f0000 0x50>;
++				windows = <0x0 0xfe000000 0x0 0x1f00000 0x05 /* PCIe window 31Mb for PCIe port*/
++					0x0 0xffe00000 0x0 0x100000 0x03 /* PCI-REG window 64Kb for PCIe-reg*/>;
++			};
++
++			comphy {
++				compatible = "marvell,mvebu-comphy", "marvell,comphy-ap806";
++				mux-bitcount = <1>;
++				max-lanes = <4>;
++				reg-comphy = <0x6F0000 0x8>;
++				reg-hpipe3 = <0x70000 0x8>;
++				phy0 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy1 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy2 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy3 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++			};
++
++			thermal: thermal@6f8084 {
++				compatible = "marvell,thermal-sensor-v2";
++				gain = <425>;
++				offset = <153400>;
++				divisor = <1000>;
++				reg = <0x6f8084 0x12>;
++				status = "okay";
++			};
++		};
++
++		pcie-controller {
++			#address-cells = <1>;
++			#size-cells = <1>;
++			compatible = "marvell,mvebu-pcie";
++
++			pcie@1,0 {
++				reg = <0xffe00000 0x100000>;
++				mem = <0xfe000000 0x1f00000>;
++				status = "okay";
++			};
++		};
++	};
++};
+diff --git a/arch/arm/dts/apn-806.dtsi b/arch/arm/dts/apn-806.dtsi
+deleted file mode 100644
+index 0633f99..0000000
+--- a/arch/arm/dts/apn-806.dtsi
++++ /dev/null
+@@ -1,180 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#include <dt-bindings/comphy/comphy_data.h>
+-/ {
+-
+-	cpus {
+-		#address-cells = <1>;
+-		#size-cells = <0>;
+-		cpu@0 {
+-			device_type = "cpu";
+-			compatible = "arm,cortex-a57";
+-			reg = <0>;
+-		};
+-	};
+-
+-	soc {
+-		compatible = "marvell,mvebu-apn-806";
+-		#address-cells = <1>;
+-		#size-cells = <0>;
+-
+-		internal-regs {
+-			compatible = "marvell,internal-regs";
+-			#address-cells = <1>;
+-			#size-cells = <1>;
+-			ranges = <0x0000 0xf0000000 0x1000000>;
+-
+-			tclk: tclk {
+-				compatible = "marvell,tclk";
+-				#clock-cells = <0>;
+-				clock-frequency = <200000000>;
+-			};
+-
+-			i2c0: i2c@511000 {
+-				compatible = "marvell,mvebu-i2c";
+-				reg = <0x511000 0x4>;
+-				clock = <&tclk>;
+-				support-256-offset;
+-				status = "okay";
+-			};
+-
+-			spi0: spi@510600 {
+-				compatible = "marvell,orion-spi";
+-				reg = <0x510600 0x50>;
+-				spi-max-frequency = <10000000>;
+-				clock = <&tclk>;
+-				cpol-cs-bitmap = <1>; /* bit i is set if the CPOL of
+-							 CS-i is enabled or not */
+-				status = "okay";
+-			};
+-
+-			pinctl: pinctl@6F008C {
+-				compatible = "marvell,mvebu-pinctl";
+-				bank-name ="apn-806";
+-				reg = <0x6F008c 0x10>;
+-				pin-count = <16>;
+-				max-func = <1>;
+-				reverse-reg;
+-			};
+-
+-			ddr-mac {
+-				compatible = "marvell,mvebu-ddr-mac";
+-				reg = <0x20000 0x20>;
+-				status = "okay";
+-			};
+-
+-			ddr-phy {
+-				compatible = "marvell,mvebu-ddr-phy";
+-				reg = <0x20000 0x10>;
+-				status = "okay";
+-			};
+-
+-			ccu {
+-				compatible = "marvell,mvebu-ccu";
+-				reg = <0x4000 0x50>;
+-				max-win = <8>;
+-				windows = <0x0 0xf2000000 0x0 0xe000000 0x00 /* IO window */>;
+-			};
+-
+-			rfu {
+-				compatible = "marvell,mvebu-rfu";
+-				reg = <0x6f0000 0x50>;
+-				windows = <0x0 0xfe000000 0x0 0x1f00000 0x05 /* PCIe window 31Mb for PCIe port*/
+-					0x0 0xffe00000 0x0 0x100000 0x03 /* PCI-REG window 64Kb for PCIe-reg*/>;
+-			};
+-
+-			comphy {
+-				compatible = "marvell,mvebu-comphy", "marvell,comphy-ap806";
+-				mux-bitcount = <1>;
+-				max-lanes = <4>;
+-				reg-comphy = <0x6F0000 0x8>;
+-				reg-hpipe3 = <0x70000 0x8>;
+-				phy0 {
+-					phy-type = <PHY_TYPE_PEX0>;
+-					phy-speed = <PHY_SPEED_5G>;
+-				};
+-				phy1 {
+-					phy-type = <PHY_TYPE_PEX0>;
+-					phy-speed = <PHY_SPEED_5G>;
+-				};
+-				phy2 {
+-					phy-type = <PHY_TYPE_PEX0>;
+-					phy-speed = <PHY_SPEED_5G>;
+-				};
+-				phy3 {
+-					phy-type = <PHY_TYPE_PEX0>;
+-					phy-speed = <PHY_SPEED_5G>;
+-				};
+-			};
+-
+-			thermal: thermal@6f8084 {
+-				compatible = "marvell,thermal-sensor-v2";
+-				gain = <425>;
+-				offset = <153400>;
+-				divisor = <1000>;
+-				reg = <0x6f8084 0x12>;
+-				status = "okay";
+-			};
+-		};
+-
+-		pcie-controller {
+-			#address-cells = <1>;
+-			#size-cells = <1>;
+-			compatible = "marvell,mvebu-pcie";
+-
+-			pcie@1,0 {
+-				reg = <0xffe00000 0x100000>;
+-				mem = <0xfe000000 0x1f00000>;
+-				status = "okay";
+-			};
+-		};
+-	};
+-	/* This should go only into devel boards */
+-	mpp-buses {
+-		mpp-bus0 {
+-			compatible = "marvell,mvebu-mpp-bus";
+-			bus-name = "spi0";
+-			bank-name = "apn-806";
+-			pin-count = <5>;
+-			pins = <4 1  5 1  6 1  7 1  8 1>;
+-		};
+-		mpp-bus1 {
+-			compatible = "marvell,mvebu-mpp-bus";
+-			bus-name = "i2c";
+-			bank-name = "apn-806";
+-			pin-count = <2>;
+-			pins = <0 1  1 1>;
+-		};
+-		mpp-bus2 {
+-			/* the RX pin is directly connected to uart1 */
+-			compatible = "marvell,mvebu-mpp-bus";
+-			bus-name = "uart1";
+-			bank-name = "apn-806";
+-			pin-count = <1>;
+-			pins = <13 1>;
+-		};
+-		mpp-bus3 {
+-			compatible = "marvell,mvebu-mpp-bus";
+-			bus-name = "uart0";
+-			bank-name = "apn-806";
+-			pin-count = <2>;
+-			pins = <2 1  3 1>;
+-		};
+-	};
+-};
+-- 
+1.9.1
+

@@ -1,0 +1,43 @@
+From c32e41ba8d083fecd5cdf9c9890d375129e0046b Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Tue, 15 Mar 2016 12:49:57 +0200
+Subject: [PATCH 065/239] fix: ble: fix boot from uart
+
+this patch removes the console initialization during boot from uart
+(i.e. when bootrom sends silent flag)
+
+Change-Id: I3cfa75dd5a69f4f147506842a4928dcfe3dda949
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28257
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ ble/ble_main.c | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/ble/ble_main.c b/ble/ble_main.c
+index eb0d49e..13bad50 100644
+--- a/ble/ble_main.c
++++ b/ble/ble_main.c
+@@ -37,9 +37,17 @@
+ #include <platform_def.h>
+ #include <plat_marvell.h>
+ 
++#define BR_FLAG_SILENT		0x1
++
+ int  __attribute__ ((section(".entry"))) ble_main(int bootrom_flags)
+ {
+-	console_init(PLAT_MARVELL_BOOT_UART_BASE, PLAT_MARVELL_BOOT_UART_CLK_IN_HZ, MARVELL_CONSOLE_BAUDRATE);
++	/*
++	 * In some situations, like boot from UART, bootrom will
++	 * request to avoid printing to console. in that case don't
++	 * initialize the console and prints will be ignored
++	 */
++	if ((bootrom_flags & BR_FLAG_SILENT) == 0)
++		console_init(PLAT_MARVELL_BOOT_UART_BASE, PLAT_MARVELL_BOOT_UART_CLK_IN_HZ, MARVELL_CONSOLE_BAUDRATE);
+ 
+ 	NOTICE("Starting binary extension\n");
+ 
+-- 
+1.9.1
+

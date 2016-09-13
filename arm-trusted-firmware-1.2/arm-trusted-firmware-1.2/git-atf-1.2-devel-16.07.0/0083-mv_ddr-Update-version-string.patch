@@ -1,0 +1,93 @@
+From 37403f9ab828b69947801858aeee9a012763215e Mon Sep 17 00:00:00 2001
+From: Victor Axelrod <victora@marvell.com>
+Date: Tue, 5 Apr 2016 14:20:36 +0300
+Subject: [PATCH 083/239] mv_ddr: Update version string
+
+Change-Id: Ib6e331599dcb81805bffb36093d016683f6085d2
+Signed-off-by: Victor Axelrod <victora@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28785
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/ddr3_init.c        | 9 +++------
+ drivers/marvell/mv_ddr/ddr3_init.h        | 2 +-
+ drivers/marvell/mv_ddr/ddr3_training.c    | 4 ++--
+ drivers/marvell/mv_ddr/ddr3_training_ip.h | 6 +-----
+ 4 files changed, 7 insertions(+), 14 deletions(-)
+
+diff --git a/drivers/marvell/mv_ddr/ddr3_init.c b/drivers/marvell/mv_ddr/ddr3_init.c
+index 68fad2e..b8b812f 100644
+--- a/drivers/marvell/mv_ddr/ddr3_init.c
++++ b/drivers/marvell/mv_ddr/ddr3_init.c
+@@ -136,11 +136,8 @@ int ddr3_init(void)
+ {
+ 	int status;
+ 
+-	/* Print version from internal library */
+-	ddr3_print_version();
+-
+-	/* Add sub-version string */
+-	DEBUG_INIT_C("", SUB_VERSION, 1);
++	/* Print mv_ddr version */
++	mv_ddr_ver_print();
+ 
+ 	/* SoC/Board special initializations */
+ 	mv_ddr_pre_training_soc_config(ddr_type);
+@@ -189,7 +186,7 @@ int ddr3_init(void)
+ 		ddr3_new_tip_ecc_scrub();
+ #endif
+ 
+-	printf("%s Training Sequence - Ended Successfully\n", ddr_type);
++	printf("mv_ddr: completed successfully\n");
+ 
+ 	return MV_OK;
+ }
+diff --git a/drivers/marvell/mv_ddr/ddr3_init.h b/drivers/marvell/mv_ddr/ddr3_init.h
+index 0d27af8..b80fc9b 100644
+--- a/drivers/marvell/mv_ddr/ddr3_init.h
++++ b/drivers/marvell/mv_ddr/ddr3_init.h
+@@ -266,7 +266,7 @@ int ddr3_post_run_alg(void);
+ int ddr3_if_ecc_enabled(void);
+ void ddr3_new_tip_ecc_scrub(void);
+ 
+-void ddr3_print_version(void);
++void mv_ddr_ver_print(void);
+ struct hws_topology_map *ddr3_get_topology_map(void);
+ 
+ int ddr3_if_ecc_enabled(void);
+diff --git a/drivers/marvell/mv_ddr/ddr3_training.c b/drivers/marvell/mv_ddr/ddr3_training.c
+index b960e06..cdf8a2b 100644
+--- a/drivers/marvell/mv_ddr/ddr3_training.c
++++ b/drivers/marvell/mv_ddr/ddr3_training.c
+@@ -175,9 +175,9 @@ u32 mask_tune_func = (SET_MEDIUM_FREQ_MASK_BIT |
+ 		      CENTRALIZATION_RX_MASK_BIT |
+ 		      CENTRALIZATION_TX_MASK_BIT);
+ 
+-void ddr3_print_version(void)
++void mv_ddr_ver_print(void)
+ {
+-	printf(DDR3_TIP_VERSION_STRING);
++	printf(MV_DDR_VERSION);
+ #if defined(CONFIG_DDR4)
+ 	printf(ddr4_sublib_version_get());
+ #endif /* CONFIG_DDR4 */
+diff --git a/drivers/marvell/mv_ddr/ddr3_training_ip.h b/drivers/marvell/mv_ddr/ddr3_training_ip.h
+index 5caef52..f9e4625 100644
+--- a/drivers/marvell/mv_ddr/ddr3_training_ip.h
++++ b/drivers/marvell/mv_ddr/ddr3_training_ip.h
+@@ -102,11 +102,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #include "ddr_topology_def.h"
+ #include "ddr_training_ip_db.h"
+ 
+-#if defined(CONFIG_DDR4)
+-#define DDR3_TIP_VERSION_STRING "DDR4 Training Sequence - Ver mv_ddr TIP-0.23."
+-#else /* CONFIG_DDR4 */
+-#define DDR3_TIP_VERSION_STRING "DDR3 Training Sequence - Ver mv_ddr TIP-1.55."
+-#endif /* CONFIG_DDR4 */
++#define MV_DDR_VERSION "mv_ddr version: 16.04.0\n"
+ 
+ #define MAX_CS_NUM		4
+ #define MAX_TOTAL_BUS_NUM	(MAX_INTERFACE_NUM * MAX_BUS_NUM)
+-- 
+1.9.1
+

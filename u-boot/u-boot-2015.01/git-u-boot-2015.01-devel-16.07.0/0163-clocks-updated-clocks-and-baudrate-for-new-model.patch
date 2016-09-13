@@ -1,0 +1,39 @@
+From 657e3576a08ad320dbda0cac90e9c3786b0aac16 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 23 Mar 2015 09:54:35 +0200
+Subject: [PATCH 0163/1240] clocks: updated clocks and baudrate for new model
+
+Change-Id: I6393c35f5557e38a36cc684b4c250d62354535d8
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17750
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/armada8k.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index bae268c..aef6094 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -46,7 +46,7 @@
+ #define CONFIG_REMAKE_ELF
+ 
+ /* Clock Definitions */
+-#define COUNTER_FREQUENCY	(8000)
++#define COUNTER_FREQUENCY	(48000)
+ #define CONFIG_MSS_FREQUENCY	(384000)
+ 
+ /* SPL */
+@@ -85,7 +85,7 @@
+ #define CONFIG_BAUDRATE                 24000
+ 
+ #undef CONFIG_BOOTARGS
+-#define CONFIG_BOOTARGS			"console=ttyS0,5652 earlycon=uart8250,mmio32,0xf0512000 mem=128M"
++#define CONFIG_BOOTARGS			"console=ttyS0,24000 earlycon=uart8250,mmio32,0xf0512000 mem=128M"
+ 
+ #undef  CONFIG_EXTRA_ENV_SETTINGS
+ #define CONFIG_EXTRA_ENV_SETTINGS	"kernel_addr=0x107ffc0\0"	\
+-- 
+1.9.1
+

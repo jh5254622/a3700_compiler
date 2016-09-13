@@ -1,0 +1,75 @@
+From be537fb44334b05cd189a94e7757f5090528da5c Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Thu, 30 Jul 2015 11:44:23 +0300
+Subject: [PATCH 0295/1240] fix: ccu: rfu: update windows init order
+
+Enable ccu and rfu windows only after setting the rest of the windows parameters.
+
+Signed-off-by: Neta Zur <neta@marvell.com>
+Change-Id: Icad7380b483d0bbcd521a729ff249d32e8211cf2
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22338
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/misc/mvebu_ccu.c |  9 +++++----
+ drivers/misc/mvebu_rfu.c | 14 +++++++-------
+ 2 files changed, 12 insertions(+), 11 deletions(-)
+
+diff --git a/drivers/misc/mvebu_ccu.c b/drivers/misc/mvebu_ccu.c
+index 0d598cd..e726393 100644
+--- a/drivers/misc/mvebu_ccu.c
++++ b/drivers/misc/mvebu_ccu.c
+@@ -137,10 +137,6 @@ static void ccu_enable_win(struct ccu_win *win, u32 win_id)
+ 	u32 alr, ahr;
+ 	u64 start_addr, end_addr;
+ 
+-	ccu_win_reg = WIN_ENABLE_BIT;
+-	ccu_win_reg |= (win->target_id & CCU_TARGET_ID_MASK) << CCU_TARGET_ID_OFFSET;
+-	writel(ccu_win_reg, CCU_WIN_CR_OFFSET(win_id));
+-
+ 	start_addr = ((u64)win->base_addr_high << 32) + win->base_addr_low;
+ 	end_addr = (start_addr + (((u64)win->win_size_high << 32) + win->win_size_low) - 1);
+ 	alr = (u32)((start_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
+@@ -148,6 +144,11 @@ static void ccu_enable_win(struct ccu_win *win, u32 win_id)
+ 
+ 	writel(alr, CCU_WIN_ALR_OFFSET(win_id));
+ 	writel(ahr, CCU_WIN_AHR_OFFSET(win_id));
++
++	ccu_win_reg = WIN_ENABLE_BIT;
++	ccu_win_reg |= (win->target_id & CCU_TARGET_ID_MASK) << CCU_TARGET_ID_OFFSET;
++	writel(ccu_win_reg, CCU_WIN_CR_OFFSET(win_id));
++
+ }
+ 
+ void dump_ccu(void)
+diff --git a/drivers/misc/mvebu_rfu.c b/drivers/misc/mvebu_rfu.c
+index e79f3e0..4ca1d19 100644
+--- a/drivers/misc/mvebu_rfu.c
++++ b/drivers/misc/mvebu_rfu.c
+@@ -117,16 +117,16 @@ static void rfu_enable_win(struct rfu_win *win, u32 trgt_id)
+ 
+ 	start_addr = ((u64)win->base_addr_high << 32) + win->base_addr_low;
+ 	end_addr = (start_addr + (((u64)win->win_size_high << 32) + win->win_size_low) - 1);
+-	alr = (u32)((start_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
+-	alr |= WIN_ENABLE_BIT;
+-	writel(alr, rfu_alr_offset_get(trgt_id));
+ 
+ 	/* there's no ahr for bootrom and pcie-regs windows */
+-	if (trgt_id == BOOTROM_TID || trgt_id == PCIE_REGS_TID)
+-		return;
++	if (trgt_id != BOOTROM_TID && trgt_id != PCIE_REGS_TID) {
++		ahr = (u32)((end_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
++		writel(ahr, rfu_ahr_offset_get(trgt_id));
++	}
+ 
+-	ahr = (u32)((end_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
+-	writel(ahr, rfu_ahr_offset_get(trgt_id));
++	alr = (u32)((start_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
++	alr |= WIN_ENABLE_BIT;
++	writel(alr, rfu_alr_offset_get(trgt_id));
+ }
+ 
+ void dump_rfu(void)
+-- 
+1.9.1
+

@@ -1,0 +1,94 @@
+From d309bc4340caae3730ab13c0024ddeb7efd45826 Mon Sep 17 00:00:00 2001
+From: Ofir Fedida <ofedida@marvell.com>
+Date: Wed, 25 May 2016 16:45:17 +0300
+Subject: [PATCH 172/239] mv_ddr: apn806: Add missing functions and structures
+ for a80x0
+
+Add 80x0 and 80x0_cust flags support compilation in mv_ddr code
+
+Change-Id: If1a9ca25dc1c9c7718cd55bc146c4259c17598a7
+Signed-off-by: Ofir Fedida <ofedida@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29993
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c      |  8 ++++----
+ .../marvell/mv_ddr/apn806/mv_ddr_apn806_static.h   | 22 +++++++++++++++++++++-
+ 2 files changed, 25 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+index 144b7ca..c86bf8c 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+@@ -644,7 +644,7 @@ void mv_ddr_mc_config(void)
+ }
+ 
+ #ifdef CONFIG_MC_STATIC
+-#if defined(a70x0) || defined(a70x0_cust)
++#if defined(a70x0) || defined(a70x0_cust) || defined(a80x0) || defined(a80x0_cust)
+ static void ddr_static_config(void)
+ {
+ 	struct mk6_reg_data *reg_data = ddr_static_setup;
+@@ -670,7 +670,7 @@ static void mk6_mac_init(void)
+ 
+ int mv_ddr_mc_static_config(void)
+ {
+-#if defined(a70x0) || defined(a70x0_cust)
++#if defined(a70x0) || defined(a70x0_cust) || defined(a80x0) || defined(a80x0_cust)
+ 	ddr_static_config();
+ #else
+ 	mk6_mac_init();
+@@ -684,7 +684,7 @@ int mv_ddr_mc_static_config(void)
+ #endif /* CONFIG_MV_DDR_STATIC_MC */
+ 
+ #ifdef CONFIG_PHY_STATIC
+-#if defined(a70x0) || defined(a70x0_cust)
++#if defined(a70x0) || defined(a70x0_cust) || defined(a80x0) || defined(a80x0_cust)
+ static int mv_ddr_apn806_phy_static_config(u32 if_id, u32 subphys_num, enum hws_ddr_phy subphy_type)
+ {
+ #if 0
+@@ -737,7 +737,7 @@ static void mk6_phy_init(void)
+ 
+ void mv_ddr_phy_static_config(void)
+ {
+-#if defined(a70x0) || defined(a70x0_cust)
++#if defined(a70x0) || defined(a70x0_cust) || defined(a80x0) || defined(a80x0_cust)
+ 	/* TODO: Need to use variable for subphys number */
+ 	mv_ddr_apn806_phy_static_config(0, 4, DDR_PHY_DATA);
+ 	mv_ddr_apn806_phy_static_config(0, 3, DDR_PHY_CONTROL);
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_static.h b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_static.h
+index 3a42e5c..6a6ba51 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_static.h
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_static.h
+@@ -2572,7 +2572,27 @@ struct mk6_reg_data ddr_static_setup[] = {
+ 	{0xF0020020, 0x13000001},	/* MCinit */
+ 	{-1, -1},
+ };
++#endif
++#elif defined(a80x0)
++#if defined(CONFIG_DUNIT_STATIC)
++struct mk6_reg_data ddr_static_setup[] = {
++	{-1, -1},
++};
++#else /* ddr static configuration thru mk6 */
++struct mk6_reg_data ddr_static_setup[] = {
++	{-1, -1},
++};
++#endif
++#elif defined(a80x0_cust)
++#if defined(CONFIG_DUNIT_STATIC)
++struct mk6_reg_data ddr_static_setup[] = {
++	{-1, -1},
++};
++#else /* ddr static configuration thru mk6 */
++struct mk6_reg_data ddr_static_setup[] = {
++	{-1, -1},
++};
+ #endif /* CONFIG_DUNIT_STATIC */
+-#endif /* a70x0 or a70x0_cust */
++#endif /* a80x0_cust */
+ #endif /* defined(CONFIG_PHY_STATIC) || defined(CONFIG_MC_STATIC) */
+ #endif /* _MV_DDR_APN806_Z_STATIC_H */
+-- 
+1.9.1
+

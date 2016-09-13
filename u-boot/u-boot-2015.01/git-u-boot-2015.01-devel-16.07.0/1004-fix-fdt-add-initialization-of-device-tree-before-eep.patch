@@ -1,0 +1,47 @@
+From 3083b06ddd8260509cd2b78c3645a90f317f471c Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 6 Apr 2016 10:59:06 +0300
+Subject: [PATCH 1004/1240] fix: fdt: add initialization of device tree before
+ eeprom init
+
+- add initialization of device tree before eeprom init
+- add MPPs initialization for I2C access
+- after eeprom read, and choose device tree to work with, the u-boot will
+  re-initialize the MPPs with the correct configuration.
+
+Change-Id: Ie226f4557a3ff29f287180618f0fb6108304c1de
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28819
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ board/mvebu/common/init.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index 552fc8a..3e9d9ea 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -62,7 +62,19 @@ int board_early_init_f(void)
+ #ifdef CONFIG_SYS_MALLOC_F_LEN
+ 	gd->malloc_base = CONFIG_MALLOC_F_ADDR;
+ #endif
++
+ #ifdef CONFIG_BOARD_CONFIG_EEPROM
++	/* set default FDT to work with:
++	 ** - customer/regular mode: point to the defined FDT by CONFIG_DEFAULT_DEVICE_TREE.
++	 ** - Marvell multi FDT mode: set the first compiled relevant device
++	 **   tree for the SoC, required for i2c initialization to read EEPROM data */
++	setup_fdt();
++#ifdef CONFIG_MVEBU_PINCTL
++	/* Init the MPP in this stage - to initialize the MPPs of the I2C
++	 ** The SOC initialization code will re-call this function with the
++	 ** correct device tree to re-set the correct MPPs */
++	mvebu_pinctl_probe();
++#endif
+ 	cfg_eeprom_init();
+ #endif
+ 
+-- 
+1.9.1
+

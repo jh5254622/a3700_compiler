@@ -1,0 +1,116 @@
+From b975ceb8e4520d3b8e75bc4e08b5744a88c1eba5 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 3 Sep 2014 13:24:20 +0300
+Subject: [PATCH 0070/1240] cleanup: disabled debug prints and macros from SOC
+ init code
+
+Change-Id: I02ba8951013fb06e364444568a7bad6ce5165c6c
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/11457
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/adec_ccu.c  | 2 --
+ arch/arm/cpu/mvebu-common/adec_mbus.c | 3 ---
+ arch/arm/cpu/mvebu-common/mpp.c       | 2 --
+ arch/arm/cpu/mvebu-common/soc-init.c  | 5 -----
+ arch/arm/cpu/mvebu-common/unit-info.c | 2 --
+ 5 files changed, 14 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/adec_ccu.c b/arch/arm/cpu/mvebu-common/adec_ccu.c
+index 7ad44c1..3d2daad 100644
+--- a/arch/arm/cpu/mvebu-common/adec_ccu.c
++++ b/arch/arm/cpu/mvebu-common/adec_ccu.c
+@@ -157,7 +157,6 @@ int adec_init(struct adec_win *windows)
+ 	u32 win_id;
+ 	u32 win_reg, target_id;
+ 
+-	debug_enter();
+ 	debug("Initializing CCU Address decoding\n");
+ 
+ 	/* disable all RFU windows */
+@@ -215,7 +214,6 @@ int adec_init(struct adec_win *windows)
+ 	}
+ 
+ 	debug("Done CCU Address decoding Initializing\n");
+-	debug_exit();
+ 
+ 	return 0;
+ }
+diff --git a/arch/arm/cpu/mvebu-common/adec_mbus.c b/arch/arm/cpu/mvebu-common/adec_mbus.c
+index 52c7cd7..34a05d2 100644
+--- a/arch/arm/cpu/mvebu-common/adec_mbus.c
++++ b/arch/arm/cpu/mvebu-common/adec_mbus.c
+@@ -128,7 +128,6 @@ int adec_init(struct adec_win *windows)
+ {
+ 	u32 win_id, index, mbus_win;
+ 
+-	debug_enter();
+ 	debug("Initializing MBUS address decoding\n");
+ 	mbus_adec_base = (void *)MVEBU_ADEC_BASE;
+ 
+@@ -171,12 +170,10 @@ int adec_init(struct adec_win *windows)
+ 	}
+ 
+ 	debug("Done MBUS address decoding initializing\n");
+-	debug_exit();
+ 
+ 	return 0;
+ }
+ 
+-
+ int dram_init(void)
+ {
+ 	int cs;
+diff --git a/arch/arm/cpu/mvebu-common/mpp.c b/arch/arm/cpu/mvebu-common/mpp.c
+index db6a382..d6d1d62 100644
+--- a/arch/arm/cpu/mvebu-common/mpp.c
++++ b/arch/arm/cpu/mvebu-common/mpp.c
+@@ -17,8 +17,6 @@
+  * ***************************************************************************
+  */
+ 
+-#define DEBUG
+-
+ #include <config.h>
+ #include <common.h>
+ #include <asm/system.h>
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index 6cddeb4..c0d5c6a 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -88,8 +88,6 @@ int mvebu_soc_init()
+ 	int soc_id, soc_rev;
+ 	int ret;
+ 
+-	debug_enter();
+-
+ 	set_soc_family(soc_init());
+ 	soc_family = get_soc_family();
+ 	if (!soc_family)
+@@ -131,9 +129,6 @@ int mvebu_soc_init()
+ 	if (ret)
+ 		error("SOC late init failed");
+ 
+-	debug_exit();
+-
+-
+ 	return 0;
+ }
+ 
+diff --git a/arch/arm/cpu/mvebu-common/unit-info.c b/arch/arm/cpu/mvebu-common/unit-info.c
+index 0ead035..f93093c 100644
+--- a/arch/arm/cpu/mvebu-common/unit-info.c
++++ b/arch/arm/cpu/mvebu-common/unit-info.c
+@@ -17,8 +17,6 @@
+  * ***************************************************************************
+  */
+ 
+-#define DEBUG
+-
+ #include <config.h>
+ #include <common.h>
+ #include <asm/system.h>
+-- 
+1.9.1
+

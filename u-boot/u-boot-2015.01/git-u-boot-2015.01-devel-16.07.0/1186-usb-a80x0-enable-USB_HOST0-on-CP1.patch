@@ -1,0 +1,37 @@
+From 7f84be1dac0720f3e6855dcee86ce1175b689cbb Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Wed, 1 Jun 2016 13:49:33 +0300
+Subject: [PATCH 1186/1240] usb: a80x0: enable USB_HOST0 on CP1
+
+A80x0 devices has 2 UTMI units on CP0, and single UTMI on CP1:
+- Enabled 1st UTMI on CP1
+- Removed 2nd UTMI from CP1
+
+Change-Id: I3ec694f8bb35d50d3b3e754ec89334c7edefb6dc
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30259
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/armada-80x0-db.dtsi | 5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+
+diff --git a/arch/arm/dts/armada-80x0-db.dtsi b/arch/arm/dts/armada-80x0-db.dtsi
+index cd8484e..eb7a6f2 100644
+--- a/arch/arm/dts/armada-80x0-db.dtsi
++++ b/arch/arm/dts/armada-80x0-db.dtsi
+@@ -202,10 +202,7 @@
+ 				status = "disabled";
+ 			};
+ 			usb3@500000 {
+-				status = "disabled";
+-			};
+-			usb3@510000 {
+-				status = "disabled";
++				status = "okay";
+ 			};
+ 			sata@540000 {
+ 				status = "disabled";
+-- 
+1.9.1
+

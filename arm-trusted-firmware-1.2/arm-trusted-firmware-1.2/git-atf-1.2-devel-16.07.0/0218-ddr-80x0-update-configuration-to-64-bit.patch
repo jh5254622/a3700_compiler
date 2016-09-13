@@ -1,0 +1,37 @@
+From 5b358c27d3e324cc62272e6963dafb69a8eae54e Mon Sep 17 00:00:00 2001
+From: Victor Axelrod <victora@marvell.com>
+Date: Mon, 13 Jun 2016 21:00:48 +0300
+Subject: [PATCH 218/239] ddr: 80x0: update configuration to 64-bit
+
+Change-Id: I569f693e6262bec237a6d602e05c6304f82e74cf
+Signed-off-by: Victor Axelrod <victora@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30436
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+---
+ plat/marvell/a8k/a80x0/board/dram_port.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/plat/marvell/a8k/a80x0/board/dram_port.c b/plat/marvell/a8k/a80x0/board/dram_port.c
+index 8161659..33bc77d 100644
+--- a/plat/marvell/a8k/a80x0/board/dram_port.c
++++ b/plat/marvell/a8k/a80x0/board/dram_port.c
+@@ -47,12 +47,12 @@ struct dram_config dram_cfg = {
+ 		.phy_base = (void *)MVEBU_DRAM_PHY_BASE,
+ 		.ecc_enabled	= 0,
+ 		.cs_count	= 1,
+-		.freq_mhz	= 650,
++		.freq_mhz	= 800,
+ 
+ 		/* Bus configuration */
+ 		.bus[0] = {
+-			.bus_width = 32,
+-			.size_mb   = 0x800,
++			.bus_width = 64,
++			.size_mb   = 0x1000,
+ 		},
+ 	},
+ };
+-- 
+1.9.1
+

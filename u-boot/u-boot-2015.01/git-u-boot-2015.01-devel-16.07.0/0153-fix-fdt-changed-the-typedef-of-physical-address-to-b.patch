@@ -1,0 +1,59 @@
+From 3c9f96b24fa2e9a696d0497969c5827cf4b8b785 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 18 Mar 2015 17:55:40 +0200
+Subject: [PATCH 0153/1240] fix: fdt: changed the typedef of physical address
+ to be 32bit
+
+	- Changed the typedef of physical address to be 32 bit
+	- The format of device tree is always big endian and 32bit even
+	  on a litle endian machine with 64bit.
+
+Change-Id: I062f3e9b9759bd0b1a101ee3054a5aaf4b59b052
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17628
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/fdt.c | 2 +-
+ include/fdtdec.h                | 8 --------
+ 2 files changed, 1 insertion(+), 9 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/fdt.c b/arch/arm/cpu/mvebu-common/fdt.c
+index d4fc83a..f588d88 100644
+--- a/arch/arm/cpu/mvebu-common/fdt.c
++++ b/arch/arm/cpu/mvebu-common/fdt.c
+@@ -42,6 +42,6 @@ void *fdt_get_regs_base(void)
+ 		return gd->arch.reg_base;
+ 
+ 	node = fdt_node_offset_by_compatible(gd->fdt_blob, -1, "marvell,internal-regs");
+-	gd->arch.reg_base = (void *)fdtdec_get_addr(gd->fdt_blob, node, "reg");
++	gd->arch.reg_base = (void *)((uintptr_t)fdtdec_get_addr(gd->fdt_blob, node, "reg"));
+ 	return gd->arch.reg_base;
+ }
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index bfcdf85..943cb39 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -20,19 +20,11 @@
+  * A typedef for a physical address. Note that fdt data is always big
+  * endian even on a litle endian machine.
+  */
+-#ifdef CONFIG_PHYS_64BIT
+-typedef u64 fdt_addr_t;
+-typedef u64 fdt_size_t;
+-#define FDT_ADDR_T_NONE (-1ULL)
+-#define fdt_addr_to_cpu(reg) be64_to_cpu(reg)
+-#define fdt_size_to_cpu(reg) be64_to_cpu(reg)
+-#else
+ typedef u32 fdt_addr_t;
+ typedef u32 fdt_size_t;
+ #define FDT_ADDR_T_NONE (-1U)
+ #define fdt_addr_to_cpu(reg) be32_to_cpu(reg)
+ #define fdt_size_to_cpu(reg) be32_to_cpu(reg)
+-#endif
+ 
+ /* Information obtained about memory from the FDT */
+ struct fdt_memory {
+-- 
+1.9.1
+

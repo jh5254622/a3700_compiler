@@ -1,0 +1,367 @@
+From 0c5a884229e08eeb1a13a73a2f873e98ccad23d1 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Wed, 11 Nov 2015 10:05:37 +0800
+Subject: [PATCH 0490/1240] armada3700: set IO decode windows target to DRAM
+
+1.Set I/O unit address docode windows according to
+  MBUS DRAM mapping information for CPU address.
+2.Remove hardcoded I/O unit register offset definition
+  in regs-base.h
+3.Add DT support to get the I/O unit decode information.
+  Currently only eMMC and SATA are filled in DT since other
+  I/O unit could use default mapping or set it later
+   io-decode {
+	    compatible = "marvell,mvebu-io-decode";
+	    #address-cells = <1>;
+	    #size-cells = <1>;
+
+	    unit_io_decode_info =
+		/* reg_base, range, IO_ATTR(max_win, max_remap,
+		   remap_size, win_offset) */
+		<0xcb00 0x30 IO_ATTR(3, 0, 32, 0x10) /* eMMC */
+		0xc800 0x30 IO_ATTR(3, 0, 32, 0x10)> /* SATA */;
+    }
+
+Change-Id: I689346aa526e96599e38aab58f454de6462ef35e
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24791
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/armada-lp.dtsi                       |  23 ++--
+ arch/arm/include/asm/arch-armadalp/regs-base.h    |  11 +-
+ doc/device-tree-bindings/misc/mvebu-io-decode.txt |  32 +++++
+ drivers/misc/mvebu_io_addr_dec.c                  | 158 +++++++++++++++++-----
+ include/fdtdec.h                                  |   1 +
+ lib/fdtdec.c                                      |   1 +
+ 6 files changed, 176 insertions(+), 50 deletions(-)
+ create mode 100644 doc/device-tree-bindings/misc/mvebu-io-decode.txt
+
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index 0c059de..22125d4 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -1,4 +1,5 @@
+ #define ATTR(remapped, target, attributes) (((remapped) << 12) | ((target) << 8) | (attributes))
++#define IO_ATTR(max_win, max_remap, remap_size, win_offset) (((max_win) << 24) | ((max_remap) << 16) | ((remap_size) << 8) | (win_offset))
+ 
+ #include <dt-bindings/comphy/comphy_data.h>
+ / {
+@@ -49,6 +50,18 @@
+ 					0xF0000000 0x20000 ATTR(0x1, 0x7, 0x0)
+ 					0x80000000 0x10000000 ATTR(0x1, 0x3, 0x0)>;
+ 			};
++
++			io-decode {
++				compatible = "marvell,mvebu-io-decode";
++				#address-cells = <1>;
++				#size-cells = <1>;
++
++				unit_io_decode_info =
++					/* reg_base, range, IO_ATTR(max_win, max_remap, remap_size, win_offset) */
++					<0xcb00 0x30 IO_ATTR(3, 0, 32, 0x10) /* eMMC */
++					0xc800 0x30 IO_ATTR(3, 0, 32, 0x10)> /* SATA */;
++			};
++
+ 			neta0: neta@30000 {
+ 				compatible = "marvell,armadalp-neta";
+ 				reg = <0x30000 0x20>;
+@@ -94,16 +107,6 @@
+ 					status = "disabled";
+ 				};
+ 			};
+-			sata: sata@e0000 {
+-				compatible = "marvell,mvebu-sata";
+-				reg = <0xe0000 0x200>;
+-				status = "disabled";
+-			};
+-			mmc0: mmc@D8000 {
+-				compatible = "marvell,xenon-sdhci";
+-				reg = <0xD8000 0x300>;
+-				status = "disabled";
+-			};
+ 		};
+ 	};
+ };
+diff --git a/arch/arm/include/asm/arch-armadalp/regs-base.h b/arch/arm/include/asm/arch-armadalp/regs-base.h
+index 5a5ce4e..b76cc67 100644
+--- a/arch/arm/include/asm/arch-armadalp/regs-base.h
++++ b/arch/arm/include/asm/arch-armadalp/regs-base.h
+@@ -50,13 +50,8 @@
+ #define MVEBU_A3700_GPIO_NB_SEL (MVEBU_REGS_BASE + 0x13830)
+ #define MVEBU_A3700_GPIO_TW1_GPIO_EN_OFF (10)
+ 
+-/* decode window configuration regs for SATA */
+-#define MVEBU_ARLP_SATA_DEC_WIN_CTRL(num)	(MVEBU_REGS_BASE + 0xc800 + (num * 16))
+-#define MVEBU_ARLP_SATA_DEC_WIN_BASE(num)	(MVEBU_REGS_BASE + 0xc804 + (num * 16))
+-#define MVEBU_ARLP_SATA_DEC_WIN_CTRL_SIZE_OFF	(16)
+-#define MVEBU_ARLP_SATA_DEC_WIN_CTRL_ATTR_OFF	(8)
+-#define MVEBU_ARLP_SATA_DEC_WIN_CTRL_TARGET_OFF	(4)
+-#define MVEBU_ARLP_SATA_DEC_WIN_CTRL_EN_OFF		(0)
+-#define MVEBU_ARLP_SATA_DEC_WIN_BASE_OFF		(16)
++/* clock registers */
++#define MVEBU_NORTH_CLOCK_REGS_BASE	(MVEBU_REGS_BASE + 0x13000)
++#define MVEBU_SOUTH_CLOCK_REGS_BASE	(MVEBU_REGS_BASE + 0x18000)
+ 
+ #endif	/* _REGS_BASE_H_ */
+diff --git a/doc/device-tree-bindings/misc/mvebu-io-decode.txt b/doc/device-tree-bindings/misc/mvebu-io-decode.txt
+new file mode 100644
+index 0000000..4e8efe6
+--- /dev/null
++++ b/doc/device-tree-bindings/misc/mvebu-io-decode.txt
+@@ -0,0 +1,32 @@
++Marvell IO address decoding bindings
++=====================================
++
++The io decode node includes description about the address decoding configuration.
++
++The MBUS I/O decode node requires the following properties:
++	- compatible
++		should be "marvell,mvebu-io-decode"
++	- unit_io_decode_info: the IO unit information which should map their
++	decode window to DRAM.
++		- reg_base: base address of this I/O unit decode window
++		- range: range of this I/O unit decode window in unit of byte
++		- IO_ATTR: describle the I/O attributes
++			- max_win: the decode window number that this unit has
++			- max_remap: the decode window number including remapping that this unit has
++			- remap_size: remap window size in unit of bits, normally should be 32 or
++			64
++			- win_offset: the offset between continuous decode windows with the
++			same unit, typically it is 0x10
++
++Example:
++	io-decode {
++		compatible = "marvell,mvebu-io-decode";
++		#address-cells = <1>;
++		#size-cells = <1>;
++
++		unit_io_decode_info =
++			/* reg_base, range, IO_ATTR(max_win, max_remap, remap_size, win_offset) */
++			<0xcb00 0x30 IO_ATTR(3, 0, 32, 0x10) /* eMMC */
++			0xc800 0x30 IO_ATTR(3, 0, 32, 0x10)> /* SATA */;
++	};
++
+diff --git a/drivers/misc/mvebu_io_addr_dec.c b/drivers/misc/mvebu_io_addr_dec.c
+index 9e80f5e..527d856 100644
+--- a/drivers/misc/mvebu_io_addr_dec.c
++++ b/drivers/misc/mvebu_io_addr_dec.c
+@@ -16,65 +16,159 @@
+  * ***************************************************************************
+  */
+ 
++#define DEBUG
+ #include <common.h>
+ #include <asm/arch-mvebu/mvebu.h>
+ #include <asm/arch-mvebu/mbus.h>
+ #include <asm/io.h>
++#include <fdtdec.h>
++#include <asm/arch-mvebu/fdt.h>
+ 
+-void init_a3700_sata_addr_dec(struct mbus_win_map *win_map)
++DECLARE_GLOBAL_DATA_PTR;
++
++struct dec_win_config {
++	void __iomem *dec_win_base;
++	u32 max_win;
++	u32 max_remap;
++	u32 remap_size;
++	u32 win_offset;
++};
++
++struct io_dec_fdt_info {
++	u32 base;
++	u32 size;
++	u32 flags;
++};
++
++/* There are up to 14 IO unit which need address deocode in Armada-3700 */
++#define IO_UNIT_NUM_MAX		(14)
++struct io_dec_fdt_info __attribute__((section(".data")))io_dec_fdt_arr[IO_UNIT_NUM_MAX];
++
++#define MVEBU_DEC_WIN_CTRL_REG(base, win, off)	(base + (win * off))
++#define MVEBU_DEC_WIN_BASE_REG(base, win, off)	(base + (win * off) + 0x4)
++#define MVEBU_DEC_WIN_REMAP_REG(base, win, off)	(base + (win * off) + 0x8)
++
++#define MVEBU_DEC_WIN_CTRL_SIZE_OFF	(16)
++#define MVEBU_DEC_WIN_CTRL_ATTR_OFF	(8)
++#define MVEBU_DEC_WIN_CTRL_TARGET_OFF	(4)
++#define MVEBU_DEC_WIN_CTRL_EN_OFF	(0)
++#define MVEBU_DEC_WIN_BASE_OFF		(16)
++
++/* set io decode window */
++int set_io_addr_dec(struct mbus_win_map *win_map, struct dec_win_config *dec_win)
+ {
+ 	struct mbus_win *win;
+-	int win_id;
+-	u32 control_value = 0;
+-	u32 base_value = 0;
+-
+-	/* fabric decode window configuration for SATA,
+-	     this configuration is not part of SATA unit (not in SATA's regs range),
+-	     and default value of fabric decode windows for other units works well,
+-	     SATA is the only unit needs reconfig.
+-	     So there is no driver for fabric decode window configuration */
++	int id;
++	u32 ctrl = 0;
++	u32 base = 0;
+ 
+ 	/* disable all windows first */
+-	writel(0, MVEBU_ARLP_SATA_DEC_WIN_CTRL(0));
+-	writel(0, MVEBU_ARLP_SATA_DEC_WIN_CTRL(1));
+-	writel(0, MVEBU_ARLP_SATA_DEC_WIN_CTRL(2));
+-
+-	/* configure SATA decode windows to DRAM, according to CPU-DRAM
+-	  * decode window configurations */
+-	for (win_id = 0, win = &win_map->mbus_windows[win_id];
+-	      win_id < win_map->mbus_win_num; win_id++, win++) {
++	for (id = 0; id < dec_win->max_win; id++)
++		writel(0, MVEBU_DEC_WIN_CTRL_REG(dec_win->dec_win_base, id, dec_win->win_offset));
++
++	/* configure eMMC decode windows for DRAM, according to CPU-DRAM
++	 * decode window configurations
++	 */
++	for (id = 0, win = &win_map->mbus_windows[id]; id < win_map->mbus_win_num; id++, win++) {
+ 		/* set size */
+-		control_value |= win->win_size << MVEBU_ARLP_SATA_DEC_WIN_CTRL_SIZE_OFF;
++		ctrl = win->win_size << MVEBU_DEC_WIN_CTRL_SIZE_OFF;
+ 		/* set attr */
+-		control_value |= win->attribute << MVEBU_ARLP_SATA_DEC_WIN_CTRL_ATTR_OFF;
++		ctrl |= win->attribute << MVEBU_DEC_WIN_CTRL_ATTR_OFF;
+ 		/* set target */
+-		control_value |= win->target << MVEBU_ARLP_SATA_DEC_WIN_CTRL_TARGET_OFF;
+-		/* set enable */
+-		control_value |= win->enabled << MVEBU_ARLP_SATA_DEC_WIN_CTRL_EN_OFF;
++		ctrl |= win->target << MVEBU_DEC_WIN_CTRL_TARGET_OFF;
+ 		/* set base */
+-		base_value |= win->base_addr << MVEBU_ARLP_SATA_DEC_WIN_BASE_OFF;
++		base = win->base_addr << MVEBU_DEC_WIN_BASE_OFF;
+ 
+-		writel(base_value, MVEBU_ARLP_SATA_DEC_WIN_BASE(win_id));
+-		writel(control_value, MVEBU_ARLP_SATA_DEC_WIN_CTRL(win_id));
++		/* set base address*/
++		writel(base, MVEBU_DEC_WIN_BASE_REG(dec_win->dec_win_base, id, dec_win->win_offset));
++		/* set remap window */
++		if (id < dec_win->max_remap)
++			writel(base, MVEBU_DEC_WIN_REMAP_REG(dec_win->dec_win_base, id, dec_win->win_offset));
++		/* set control register */
++		writel(ctrl, MVEBU_DEC_WIN_CTRL_REG(dec_win->dec_win_base, id, dec_win->win_offset));
++		/* enable the address decode window at last to make it effective */
++		ctrl |= win->enabled << MVEBU_DEC_WIN_CTRL_EN_OFF;
++		writel(ctrl, MVEBU_DEC_WIN_CTRL_REG(dec_win->dec_win_base, id, dec_win->win_offset));
++
++		debug("set_io_addr_dec %d ctrl(0x%x) base(0x%x) remap(%x)\n",
++		      id, readl(MVEBU_DEC_WIN_CTRL_REG(dec_win->dec_win_base, id, dec_win->win_offset)),
++		      readl(MVEBU_DEC_WIN_BASE_REG(dec_win->dec_win_base, id, dec_win->win_offset)),
++		      readl(MVEBU_DEC_WIN_REMAP_REG(dec_win->dec_win_base, id, dec_win->win_offset)));
+ 	}
++	return 0;
+ }
+ 
+ int init_a3700_io_addr_dec(void)
+ {
+-	int	rval = 0;
++	int ret = 0;
++	u32 node;
++	u32 count;
++	int index;
+ 	struct mbus_win_map win_map;
++	struct dec_win_config dec_win;
++	const void *blob = gd->fdt_blob;
++	struct io_dec_fdt_info *fdt_info = io_dec_fdt_arr;
+ 
++	debug("Initializing MBUS IO address decode windows\n");
+ 	debug_enter();
+ 
+-	/* Add units configuration code here */
+ 	/* fetch CPU-DRAM window mapping information by reading
+-	  * from CPU-DRAM decode windows (only the enabled ones) */
++	 * CPU-DRAM decode windows (only the enabled ones)
++	 */
+ 	mbus_win_map_build(&win_map);
++	for (index = 0; index < win_map.mbus_win_num; index++)
++		debug("MBUS DRAM mapping %d base(0x%llx) size(0x%llx) target(%d) attr(%d)\n",
++		      index, (u64)win_map.mbus_windows[index].base_addr, (u64)win_map.mbus_windows[index].win_size,
++		      win_map.mbus_windows[index].target, win_map.mbus_windows[index].attribute);
++
++	/* Get I/O address decoding node from the FDT blob */
++	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_MBUS_IO_DEC));
++	if (node < 0) {
++		error("No I/O address decoding node found in FDT blob\n");
++		return -1;
++	}
+ 
+-	/* sata unit addr dec configuration */
+-	init_a3700_sata_addr_dec(&win_map);
++	/* Get the array of the windows and fill the map data */
++	count = fdtdec_get_int_array_count(blob, node, "unit_io_decode_info", (u32 *)fdt_info, IO_UNIT_NUM_MAX * 3);
++	if (count <= 0) {
++		debug("no windows configurations found\n");
++		return 0;
++	}
++
++	/* each window has 3 variables in FDT (base, size, flags)
++	 * base: base address of IO decode window
++	 * size: size of IO decode window register in unit of byte
++	 * flags: information about this IO decode window which is combined by IO_ATTR
++	 *     IO_ATTR(max_win, max_remap, remap_size, win_offset) (((max_win) << 24) | ((max_remap) << 16) |
++	 *            ((remap_size) << 8) | (win_offset))
++	 *            max_win: how many decode window that this unit has
++	 *            max_remap: the decode window number including remapping that this unit has
++	 *            remap_size: remap window size in unit of bits, normally should be 32 or 64
++	 *            win_offset: the offset between continuous decode windows with the same unit, typically 0x10
++	 *
++	 * Example in FDT: <0xcb00 0x30 IO_ATTR(3, 0, 32, 0x10)>
++	 */
++	count = count / 3;
++	for (index = 0; index < count; index++, fdt_info++) {
++		dec_win.dec_win_base = (void *)((u64)fdt_info->base);
++		dec_win.max_win = (fdt_info->flags >> 24) & 0xFF;
++		dec_win.max_remap = (fdt_info->flags >> 16) & 0xFF;
++		dec_win.remap_size = (fdt_info->flags >> 8) & 0xFF;
++		dec_win.win_offset = fdt_info->flags & 0xFF;
++
++		/* set I/O address decode window */
++		ret = set_io_addr_dec(&win_map, &dec_win);
++		if (ret) {
++			error("failed to set io address decode\n");
++			break;
++		}
++		debug("set io decode window successfully, base(0x%x) size(0x%x)",
++		      fdt_info->base, fdt_info->size);
++		debug(" max_win(%d) max_remap(%d) remap_size(%d) win_offset(%d)\n",
++		      dec_win.max_win, dec_win.max_remap, dec_win.remap_size, dec_win.win_offset);
++	}
+ 
+ 	debug_exit();
+-	return rval;
++	return ret;
+ }
+ 
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 59e08ae..52e630b 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -135,6 +135,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_PINCTL,
+ 	COMPAT_MVEBU_MPP_BUS,
+ 	COMPAT_MVEBU_MBUS,
++	COMPAT_MVEBU_MBUS_IO_DEC,
+ 	COMPAT_MVEBU_CCU,
+ 	COMPAT_MVEBU_RFU,
+ 	COMPAT_MVEBU_IOB,
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 34541d6..26b3fa4 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -97,6 +97,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_PINCTL, "marvell,mvebu-pinctl"),
+ 	COMPAT(MVEBU_MPP_BUS, "marvell,mvebu-mpp-bus"),
+ 	COMPAT(MVEBU_MBUS, "marvell,mvebu-mbus"),
++	COMPAT(MVEBU_MBUS_IO_DEC, "marvell,mvebu-io-decode"),
+ 	COMPAT(MVEBU_CCU, "marvell,mvebu-ccu"),
+ 	COMPAT(MVEBU_RFU, "marvell,mvebu-rfu"),
+ 	COMPAT(MVEBU_IOB, "marvell,mvebu-iob"),
+-- 
+1.9.1
+

@@ -1,0 +1,56 @@
+From bc4f935b05c2c0ce93d087a6373e80a1c7169af8 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Mon, 25 Apr 2016 10:18:58 +0300
+Subject: [PATCH 134/239] ccu: Init Aurora2 GSPMU to enable CPU control over
+ SPMU registers
+
+this enable the access to SPMU registers
+
+Change-Id: I6bc4c2f7a5ada217f33c67c3268599468bd4311d
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29271
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ plat/marvell/a8k/a70x0/apn806_setup.c | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/plat/marvell/a8k/a70x0/apn806_setup.c b/plat/marvell/a8k/a70x0/apn806_setup.c
+index d8dcc34..6423b76 100644
+--- a/plat/marvell/a8k/a70x0/apn806_setup.c
++++ b/plat/marvell/a8k/a70x0/apn806_setup.c
+@@ -41,6 +41,9 @@
+ #define SMMU_sACR		(MVEBU_SMMU_BASE + 0x10)
+ #define SMMU_sACR_PG_64K	(1 << 16)
+ 
++#define CCU_GSPMU_CR		(MVEBU_CCU_BASE + 0x3F0)
++#define GSPMU_CPU_CONTROL	(0x1 << 0)
++
+ void setup_smmu(void)
+ {
+ 	uint32_t reg;
+@@ -51,8 +54,21 @@ void setup_smmu(void)
+ 	mmio_write_32(SMMU_sACR, reg);
+ }
+ 
++void init_aurora2(void)
++{
++	uint32_t reg;
++
++	/* Enable GSPMU control by CPU */
++	reg = mmio_read_32(CCU_GSPMU_CR);
++	reg |= GSPMU_CPU_CONTROL;
++	mmio_write_32(CCU_GSPMU_CR, reg);
++}
++
+ void apn806_init(void)
+ {
++	/* Setup Aurora2. */
++	init_aurora2();
++
+ 	/* configure RFU windows */
+ 	init_rfu();
+ 
+-- 
+1.9.1
+

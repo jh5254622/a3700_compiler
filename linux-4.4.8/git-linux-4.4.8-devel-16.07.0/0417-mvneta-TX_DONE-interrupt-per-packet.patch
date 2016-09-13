@@ -1,0 +1,40 @@
+From d9cf6cb5ac0b41bb1b24ed13ffeedc17cca49206 Mon Sep 17 00:00:00 2001
+From: Dmitri Epshtein <dima@marvell.com>
+Date: Sun, 22 May 2016 09:41:32 +0300
+Subject: [PATCH 417/538] mvneta: TX_DONE interrupt per packet
+
+- when MVNETA_TXDONE_COAL_PKTS is 1
+  -> interrupt per two transmitted packet
+
+- when MVNETA_TXDONE_COAL_PKTS is 0
+  -> interrupt per each transmitted packet
+
+NAS performance strongly depends on the fact that all transmitted packets
+must be released.
+
+Change-Id: I9a37c933615d7f84fbd5316e81eb5304fd7ff2fd
+Signed-off-by: Dmitri Epshtein <dima@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29840
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Lior Amsalem <alior@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/net/ethernet/marvell/mvneta.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/marvell/mvneta.c b/drivers/net/ethernet/marvell/mvneta.c
+index c48ec20..9c2a2c8 100644
+--- a/drivers/net/ethernet/marvell/mvneta.c
++++ b/drivers/net/ethernet/marvell/mvneta.c
+@@ -234,7 +234,7 @@
+ /* Various constants */
+ 
+ /* Coalescing */
+-#define MVNETA_TXDONE_COAL_PKTS		1
++#define MVNETA_TXDONE_COAL_PKTS		0      /* interrupt per packet */
+ #define MVNETA_RX_COAL_PKTS		32
+ #define MVNETA_RX_COAL_USEC		100
+ 
+-- 
+1.9.1
+

@@ -1,0 +1,72 @@
+From 460e32e2243cba81510f68bc06b5fb35d88e19d9 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Sun, 10 Jan 2016 11:51:08 +0200
+Subject: [PATCH 0659/1240] fix: usb3: a3700: disable simultaneous usage of
+ both Host & device interrupts
+
+Armada3700: USB Device & Host share the same IP, with auto-detection mechanism,
+under the (correct) assumption that only one can operate by default,
+the Host & Device share the same interrupt (with OR gate).
+
+Due to issues with the auto-detection block, the shared interrupt is raised periodically,
+and causes unpredictable driver behavior in Linux.
+this patch disable the usage of both interrupts ORed simultaneously,
+by setting single interrupt, according to ID_MODE
+
+* ID_MODE is another setting, auto-detected or manually configured,
+  which select Host/Device mode.
+  (Currently ID_MODE is set to manual mode - SOFT_ID,
+   due to USB adapters miss configured to indicate Device as mode)
+
+Change-Id: I31d9e0c1c29d5e06f86d766b65187506c75ff8ee
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26664
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Reviewed-by: Hua Jing <jinghua@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/phy/comphy_a3700.c | 9 +++++++--
+ drivers/phy/comphy_a3700.h | 6 ++++++
+ 2 files changed, 13 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/phy/comphy_a3700.c b/drivers/phy/comphy_a3700.c
+index 969be41..0420cf8 100644
+--- a/drivers/phy/comphy_a3700.c
++++ b/drivers/phy/comphy_a3700.c
+@@ -365,8 +365,13 @@ static int comphy_usb3_power_up(enum phy_speed speed)
+ 	if (ret == 0)
+ 		error("Failed to lock USB3 PLL\n");
+ 
+-	/* Switch from device to host mode */
+-	reg_set((void __iomem *)USB32_CTRL_BASE, 0x1, 0x3);
++	/* set   BIT0: set ID_MODE of Host/Device = "Soft ID" (BIT1)
++	 * clear BIT1: set SOFT_ID = Host
++	 * set   BIT4: set INT_MODE = ID. Interrupt Mode: enable interrupt by ID
++	 *             instead of using both interrupts of HOST and Device ORed simultaneously
++	 *             INT_MODE=ID in order to avoid unexpected behaviour or both interrupts together */
++	reg_set((void __iomem *)USB32_CTRL_BASE, usb32_ctrl_id_mode | usb32_ctrl_int_mode,
++			usb32_ctrl_id_mode | usb32_ctrl_soft_id | usb32_ctrl_int_mode);
+ 
+ 	debug_exit();
+ 
+diff --git a/drivers/phy/comphy_a3700.h b/drivers/phy/comphy_a3700.h
+index e8e53cc..b05cc17 100644
+--- a/drivers/phy/comphy_a3700.h
++++ b/drivers/phy/comphy_a3700.h
+@@ -83,6 +83,12 @@
+ #define PHY_BASE(unit)			((unit == PCIE) ? PCIEPHY_BASE : USB3PHY_BASE)
+ #define PHY_SHFT(unit)			((unit == PCIE) ? PCIEPHY_SHFT : USB3PHY_SHFT)
+ 
++/* bit definition for USB32_CTRL_BASE (USB32 Control Mode) */
++#define usb32_ctrl_id_mode		BIT0
++#define usb32_ctrl_soft_id		BIT1
++#define usb32_ctrl_int_mode		BIT4
++
++
+ #define PHY_PWR_PLL_CTRL_ADDR		0x01	/* for phy_read16 and phy_write16 */
+ #define PWR_PLL_CTRL_ADDR(unit)		(PHY_PWR_PLL_CTRL_ADDR * PHY_SHFT(unit) + PHY_BASE(unit))
+ #define rf_phy_mode_shift		5
+-- 
+1.9.1
+

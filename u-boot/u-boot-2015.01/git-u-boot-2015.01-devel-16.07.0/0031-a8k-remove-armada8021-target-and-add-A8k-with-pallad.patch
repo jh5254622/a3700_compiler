@@ -1,0 +1,60 @@
+From 826ae5d47792445577e60225726047dc7da06f85 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 10 Jun 2014 17:51:03 +0300
+Subject: [PATCH 0031/1240] a8k: remove armada8021 target, and add A8k with
+ palladium config
+
+Change-Id: Ifc85322a5b9c842d5a8468602bcfdb9425065a29
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/8454
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ build.pl | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/build.pl b/build.pl
+index 5c41838..8184661 100755
+--- a/build.pl
++++ b/build.pl
+@@ -2,7 +2,7 @@
+ 
+ use Cwd qw();
+ 
+-our @supported_boards = ("armada8k", "armada8021-pxp", "armada38x");
++our @supported_boards = ("armada8k", "armada8k-pxp", "armada38x");
+ our @supported_flash = ("spi", "nand", "nor");
+ 
+ sub bin2hex
+@@ -62,7 +62,7 @@ sub usage
+ 	print "\n";
+ 	print "Options:\n";
+ 	print "\t-f\tBoot device. Accepts spi, nor, nand\n";
+-	print "\t-b\tBoard type. Accepts: armada8k, armada8021-pxp, armada38x\n";
++	print "\t-b\tBoard type. Accepts: armada8k, armada8k-pxp, armada38x\n";
+ 	print "\t-c\tClean build. calls \"make mrproper\"\n";
+ 	print "\t-o\tOutput directory. Build products will be copied to here\n";
+ 	print "\t-h\tPrints this help message\n";
+@@ -178,9 +178,9 @@ if (system("make -j6 -s")) {
+ 	exit 1;
+ }
+ 
+-print "\n**** [Creating Image]\t*****\n\n";
+-unless ($board eq "armada8021-pxp") 
++unless ($board eq "armada8k-pxp")
+ {
++	print "\n**** [Creating flash Image]\t*****\n\n";
+ 	if (system("./tools/marvell/doimage -T uart -D 0 -E 0 -G ./tools/marvell/bin_hdr.uart u-boot.bin u-boot-$flash_name-uart.bin")) {
+ 		print "\nError: doimage failed creating UART image \n\n";
+ 		exit 1;
+@@ -191,6 +191,7 @@ unless ($board eq "armada8021-pxp")
+ 	}	
+ } else {
+ 
++	print "\n**** [Creating HEX Image]\t*****\n\n";
+ 	# Create palladium compatible hex file #
+ 	if(bin2hex()) {
+ 		print "\nError: failed creating palladium image\n\n";
+-- 
+1.9.1
+

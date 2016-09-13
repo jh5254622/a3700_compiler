@@ -1,0 +1,44 @@
+From 6f49bb33e5ca3542b6b6f6fa87be8842699ef299 Mon Sep 17 00:00:00 2001
+From: Wilson Ding <dingwei@marvell.com>
+Date: Thu, 26 May 2016 19:00:16 +0800
+Subject: [PATCH 1170/1240] doc: add mmc destination to the bubt command
+
+Change-Id: I0ba77cad2f7acf8cff1f77a0a88b452f9451d26c
+Signed-off-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30019
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ doc/mvebu/commands/bubt.txt | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/doc/mvebu/commands/bubt.txt b/doc/mvebu/commands/bubt.txt
+index c7b9d20..fab9966 100644
+--- a/doc/mvebu/commands/bubt.txt
++++ b/doc/mvebu/commands/bubt.txt
+@@ -5,7 +5,7 @@ Bubt command is used to burn a new ATF image to flash device.
+ The bubt command gets the following parameters: ATF file name, destination device and source device.
+ bubt [file-name] [destination [source]]
+ 	- file-name		Image file name to burn.			default = flash-image.bin
+-	- destination		Flash to burn to [spi, nor, nand].		defualt = active flash
++	- destination		Flash to burn to [spi, nor, nand, mmc].		defualt = active flash
+ 	- source		Source to load image from [tftp, usb].		default = tftp
+ 
+ Examples:
+@@ -33,8 +33,13 @@ This section describe bubt implementation step-by-step:
+ 			# erase bank 1
+ 	- SPI:		# sf probe 0
+ 			# sf erase 0 100000
++	- MMC:		# mmc dev 0 <boot_partition>
++
++Notes:
++- For the options of MMC boot partition, please refer to 'eMMC boot device' in doc/mvebu/build.txt.
+ 
+ 3. Write the ATF image:
+ 	- NAND:		# nand write <load_address> 0 <ATF Size>
+ 	- NOR:		# cp.b <load_address> fd000000 <ATF Size>
+ 	- SPI:		# sf write <load_address> 0 <ATF Size>
++	- MMC:		# mmc write <load_address> 0 <ATF Size>/<block_size>
+-- 
+1.9.1
+

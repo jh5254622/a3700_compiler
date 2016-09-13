@@ -1,0 +1,30 @@
+From 7fa3eb9ae8ec284779ea75f135d89882b98de41f Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 24 Aug 2014 16:22:09 +0300
+Subject: [PATCH 0057/1240] config: disabled general debug macro
+
+Change-Id: I9ab508fc308f137bbbcd15290f710214b91bc06c
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/11267
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/mvebu-common.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index df70db0..ca7641d 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -30,7 +30,7 @@
+ #define CONFIG_ADEC
+ 
+ /* Usefull Debug */
+-#define DEBUG
++/* #define DEBUG */
+ #define CONFIG_BOOTSTAGE
+ #define CONFIG_BOOTSTAGE_REPORT
+ #define CONFIG_MVEBU_DEBUG_FUNC_IN_OUT
+-- 
+1.9.1
+

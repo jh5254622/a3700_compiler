@@ -1,0 +1,62 @@
+From 5a42c92fb3c34290e86eeba0d61c4cdd6e05a4a4 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Mon, 26 Oct 2015 09:25:25 +0200
+Subject: [PATCH 0454/1240] llc: Add config option to enable LLC support
+
+	- Enable / Disable LLC through menuconfig
+
+Change-Id: If182d7354d6db4fd1a9544d298e8ff0dba880871
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24320
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/Kconfig  | 8 ++++++++
+ arch/arm/cpu/armv8/armada8k/Makefile | 2 +-
+ arch/arm/cpu/armv8/armada8k/psci.S   | 2 +-
+ 3 files changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/Kconfig b/arch/arm/cpu/armv8/armada8k/Kconfig
+index 3314b92..dc0732e 100644
+--- a/arch/arm/cpu/armv8/armada8k/Kconfig
++++ b/arch/arm/cpu/armv8/armada8k/Kconfig
+@@ -27,5 +27,13 @@ config ARMV8_PSCI
+ config PALLADIUM
+ 	bool "Support palladium emulation"
+ 	default n
++
++config MVEBU_LLC_ENABLE
++	depends on TARGET_ARMADA_8K && !MVEBU_SPL_DDR_OVER_PCI_SUPPORT && !SPL_BUILD
++	bool "Enable LLC support"
++	default y
++	help
++	  Enable LLC in PSCI code
++
+ endif
+ 
+diff --git a/arch/arm/cpu/armv8/armada8k/Makefile b/arch/arm/cpu/armv8/armada8k/Makefile
+index 9e9701f..42cbff5 100644
+--- a/arch/arm/cpu/armv8/armada8k/Makefile
++++ b/arch/arm/cpu/armv8/armada8k/Makefile
+@@ -19,4 +19,4 @@
+ obj-y += soc.o
+ obj-y += clock.o
+ obj-$(CONFIG_ARMV8_PSCI)	+= psci.o
+-obj-$(CONFIG_ARMV8_PSCI)	+= cache_llc.o
++obj-$(CONFIG_MVEBU_LLC_ENABLE)	+= cache_llc.o
+diff --git a/arch/arm/cpu/armv8/armada8k/psci.S b/arch/arm/cpu/armv8/armada8k/psci.S
+index 5b4d9ad..9a2d516 100644
+--- a/arch/arm/cpu/armv8/armada8k/psci.S
++++ b/arch/arm/cpu/armv8/armada8k/psci.S
+@@ -58,7 +58,7 @@ psci_arch_init:
+ 	add     x29, x30, 0 /* keep return address */
+ 	bl	enable_affinity
+ 	bl	psci_build_stack
+-#ifndef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
++#ifdef CONFIG_MVEBU_LLC_ENABLE
+ 	bl	llc_enable
+ #endif
+ 	ret	x29
+-- 
+1.9.1
+

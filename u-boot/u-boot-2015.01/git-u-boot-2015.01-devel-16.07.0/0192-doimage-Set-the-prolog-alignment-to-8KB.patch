@@ -1,0 +1,52 @@
+From 91712c463246688a1114aa46ac4d1357ec9f3ad3 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 2 Jun 2015 18:09:38 +0300
+Subject: [PATCH 0192/1240] doimage: Set the prolog alignment to 8KB
+
+	This alignment matches the largest NAND page size supported by
+	Bootrom. And is intended to simplify the read operations performed
+	by the IOROM.
+
+Change-Id: I515def3220d788a5e74860bff762904e457a9315
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/19714
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ tools/doimage.c | 13 ++++++++++---
+ 1 file changed, 10 insertions(+), 3 deletions(-)
+
+diff --git a/tools/doimage.c b/tools/doimage.c
+index 4d1193f..f86591c 100644
+--- a/tools/doimage.c
++++ b/tools/doimage.c
+@@ -36,6 +36,15 @@
+ 
+ #define MAIN_HDR_MAGIC		0xB105B002
+ 
++/* PROLOG alignment considerations:
++**  128B: To allow supporting XMODEM protocol.
++**  8KB: To align the boot image to the largest NAND page size, and simplify
++**  the read operations from NAND.
++**  We choose the largest page size, in order to use a single image for all
++**  NAND page sizes.
++*/
++#define PROLOG_ALIGNMENT	(8 << 10)
++
+ /* UART argument bitfield */
+ #define UART_MODE_UNMODIFIED	0x0
+ #define UART_MODE_DISABLE	0x1
+@@ -565,9 +574,7 @@ int write_prolog(int ext_cnt, char *ext_filename, uint8_t *image_buf, int image_
+ 	if (ext_cnt)
+ 		prolog_size +=  get_file_size(ext_filename);
+ 
+-	/* Always align prolog to 128 byte to enable
+-	 * Transferring the prolog in 128 byte XMODEM packets */
+-	prolog_size = ((prolog_size + 127) & (~127));
++	prolog_size = ((prolog_size + PROLOG_ALIGNMENT) & (~(PROLOG_ALIGNMENT-1)));
+ 
+ 	header.magic       = MAIN_HDR_MAGIC;
+ 	header.prolog_size = prolog_size;
+-- 
+1.9.1
+

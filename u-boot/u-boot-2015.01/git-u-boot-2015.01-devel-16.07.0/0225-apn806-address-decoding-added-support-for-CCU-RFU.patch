@@ -1,0 +1,56 @@
+From 8276965dca925229af3efdcf540f89fa016d8df4 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Fri, 26 Jun 2015 10:52:28 +0300
+Subject: [PATCH 0225/1240] apn806: address decoding: added support for CCU,
+ RFU
+
+Change-Id: Id657dcc950c0200d8c5f402c48917f3ca3f1d67f
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20511
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/dts/apn-806.dtsi        | 14 ++++++++++++++
+ configs/mvebu_armada8k_defconfig |  2 ++
+ 2 files changed, 16 insertions(+)
+
+diff --git a/arch/arm/dts/apn-806.dtsi b/arch/arm/dts/apn-806.dtsi
+index 7eb38f0..6504203 100644
+--- a/arch/arm/dts/apn-806.dtsi
++++ b/arch/arm/dts/apn-806.dtsi
+@@ -68,6 +68,20 @@
+ 				max-func = <1>;
+ 				reverse-reg;
+ 			};
++
++			ccu {
++				compatible = "marvell,mvebu-ccu";
++				reg = <0x4000 0x50>;
++				max-win = <8>;
++				windows = <0xf2000000 0xe000000 0x00 /* IO window */>;
++			};
++
++			rfu {
++				compatible = "marvell,mvebu-rfu";
++				reg = <0x6f0000 0x50>;
++				windows = <0xfe000000 0x1f00000 0x05 /* PCIe window 31Mb for PCIe port*/
++					0xffe00000 0x100000 0x03 /* PCI-REG window 64Kb for PCIe-reg*/>;
++			};
+ 		};
+ 	};
+ 	/* This should go only into devel boards */
+diff --git a/configs/mvebu_armada8k_defconfig b/configs/mvebu_armada8k_defconfig
+index 439ae6f..2c6ab0d 100644
+--- a/configs/mvebu_armada8k_defconfig
++++ b/configs/mvebu_armada8k_defconfig
+@@ -20,5 +20,7 @@ CONFIG_CMD_MVEBU_MPP=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="apn-806-db"
++CONFIG_MVEBU_CCU=y
++CONFIG_MVEBU_RFU=y
+ +S:CONFIG_SYS_NS16550=y
+ CONFIG_MVEBU_PINCTL=y
+-- 
+1.9.1
+

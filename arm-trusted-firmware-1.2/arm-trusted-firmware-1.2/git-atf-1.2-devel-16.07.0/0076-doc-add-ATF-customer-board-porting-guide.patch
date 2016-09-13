@@ -1,0 +1,64 @@
+From 915c7611c4e6972f3fedba52b891f249fbadca23 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Wed, 16 Mar 2016 17:59:52 +0200
+Subject: [PATCH 076/239] doc: add ATF customer board porting guide
+
+Change-Id: Ie757eb5877eb93e8d0ae2d498ff37e217eb93d56
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28304
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ docs/marvell/porting.txt | 40 ++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 40 insertions(+)
+ create mode 100644 docs/marvell/porting.txt
+
+diff --git a/docs/marvell/porting.txt b/docs/marvell/porting.txt
+new file mode 100644
+index 0000000..b38b41d
+--- /dev/null
++++ b/docs/marvell/porting.txt
+@@ -0,0 +1,40 @@
++ATF Porting:
++------------
++
++This document describes how to port ATF to a customer board, assuming that the SoC being used is already supported
++in ATF.
++
++
++Source code structure
++---------------------
++
++- The cusomer platform specific code will reside under plat/marvell/<soc family>/<soc>_cust.
++  e.g. plat/marvell/a8k/a7040_cust
++- The platform name for build purposes is called <soc>_cust (e.g. a7040_cust).
++- The build system will reuse all files from within the soc directory, and take only the porting
++  files from the customer platform directory.
++
++
++Porting:
++--------
++All files that require porting are located under the plat/marvell/<soc family>/<soc>_cust directory.
++
++Common to all SoC's
++  o DDR Porting (dram_porting.c):
++	- This file defines the dram topology on the customer's board.
++	- <TODO> Need to add detailed description of the porting fields.
++
++A7K/A8K specific
++  o SoC Physical Address Map (soc_phys_map_config.c):
++	- This file describes the SoC physical memory mapping to be used for the CCU, RFU and IOB
++	  address decode units (Refer to the functional spec for more details).
++	- In most cases, using the default address decode windows should work OK.
++	- In cases where a special physical address map is needed (e.g. Special size for PCIe MEM windows,
++	  large memory mapped SPI flash...), then porting of the SoC memory map is required.
++	  Note: For a detailed information on how CCU, RFU & IOB work, please refer to the SoC functional spec,
++	  and under doc/marvell/misc/mvebu-[ccu/iob/rfu].txt files.
++
++Build Instructions:
++------------------
++Refer to the build instructions under docs/marvell/build.txt
++
+-- 
+1.9.1
+

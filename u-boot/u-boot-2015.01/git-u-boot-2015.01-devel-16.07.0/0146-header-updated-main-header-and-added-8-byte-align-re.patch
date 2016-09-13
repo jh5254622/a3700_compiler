@@ -1,0 +1,116 @@
+From cdb20a9566f5eb906ff56a2e93eca8ec435c8c63 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 12 Mar 2015 09:41:02 +0200
+Subject: [PATCH 0146/1240] header: updated main header and added 8 byte align
+ restriction
+
+- All binary extensions must be 8 byte aligned
+- load and source address must also be 8 byte aligned
+
+This is required to allow efficient copy of the boot image
+using 8 byte aligned accesses
+
+Change-Id: I44da2601c77273b47acf4e85643fd7ed12225b56
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17482
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ tools/doimage.c | 32 +++++++++++++++++++++++---------
+ 1 file changed, 23 insertions(+), 9 deletions(-)
+
+diff --git a/tools/doimage.c b/tools/doimage.c
+index 197e759..a4525ee 100644
+--- a/tools/doimage.c
++++ b/tools/doimage.c
+@@ -50,12 +50,12 @@ typedef struct _main_header {
+ 	uint16_t	uart_args;		/* 24-25 */
+ 	uint8_t		has_extension;		/*  26   */
+ 	uint8_t		flags;			/*  27   */
+-	uint32_t	rsrvd0;			/* 28-31 */
+-	uint32_t	io_arg_0;		/* 32-47 */
+-	uint32_t	io_arg_1;		/* 32-47 */
+-	uint32_t	io_arg_2;		/* 32-47 */
+-	uint32_t	io_arg_3;		/* 32-47 */
+-	uint32_t	prolog_checksum;	/* 48-51 */
++	uint32_t	io_arg_0;		/* 28-31 */
++	uint32_t	io_arg_1;		/* 32-35 */
++	uint32_t	io_arg_2;		/* 36-39 */
++	uint32_t	io_arg_3;		/* 40-43 */
++	uint32_t	prolog_checksum;	/* 44-47 */
++	uint32_t	rsrvd0;			/* 48-51 */
+ 	uint32_t	rsrvd1;			/* 52-53 */
+ 	uint32_t	rsrvd2;			/* 56-59 */
+ 	uint32_t	rsrvd3;			/* 60-63 */
+@@ -203,12 +203,12 @@ int print_header(uint8_t *buf, int base)
+ 	print_field(main_hdr, header_t, uart_args, FMT_HEX, base);
+ 	print_field(main_hdr, header_t, has_extension, FMT_DEC, base);
+ 	print_field(main_hdr, header_t, flags, FMT_HEX, base);
+-	print_field(main_hdr, header_t, rsrvd0, FMT_HEX, base);
+ 	print_field(main_hdr, header_t, io_arg_0, FMT_HEX, base);
+ 	print_field(main_hdr, header_t, io_arg_1, FMT_HEX, base);
+ 	print_field(main_hdr, header_t, io_arg_2, FMT_HEX, base);
+ 	print_field(main_hdr, header_t, io_arg_3, FMT_HEX, base);
+ 	print_field(main_hdr, header_t, prolog_checksum, FMT_HEX, base);
++	print_field(main_hdr, header_t, rsrvd0, FMT_HEX, base);
+ 	print_field(main_hdr, header_t, rsrvd1, FMT_HEX, base);
+ 	print_field(main_hdr, header_t, rsrvd2, FMT_HEX, base);
+ 	print_field(main_hdr, header_t, rsrvd3, FMT_HEX, base);
+@@ -333,6 +333,7 @@ int format_bin_ext(char *filename, FILE *out_fd)
+ 	ext_header_t header;
+ 	FILE *in_fd;
+ 	int size, written;
++	int aligned_size, pad_bytes;
+ 	char c;
+ 
+ 	in_fd = fopen(filename, "rb");
+@@ -347,9 +348,13 @@ int format_bin_ext(char *filename, FILE *out_fd)
+ 		return 1;
+ 	}
+ 
++	/* Align extension size to 8 bytes */
++	aligned_size = (size + 7) & (~7);
++	pad_bytes    = aligned_size - size;
++
+ 	header.type = EXT_TYPE_BINARY;
+ 	header.offset = 0;
+-	header.size = size;
++	header.size = aligned_size;
+ 	header.reserved = 0;
+ 
+ 	/* Write header */
+@@ -365,6 +370,9 @@ int format_bin_ext(char *filename, FILE *out_fd)
+ 		fputc(c, out_fd);
+ 	}
+ 
++	while (pad_bytes--)
++		fputc(0, out_fd);
++
+ 	fclose(in_fd);
+ 
+ 	return 0;
+@@ -563,7 +571,6 @@ int main(int argc, char *argv[])
+ 			break;
+ 		case 'a':
+ 			opts.source_addr = strtoul(optarg, NULL, 0);
+-			printf("src = 0x%x arg = %s\n", opts.source_addr, optarg);
+ 			break;
+ 		case 'b':
+ 			strncpy(opts.bin_ext_file, optarg, MAX_FILENAME);
+@@ -582,6 +589,13 @@ int main(int argc, char *argv[])
+ 		}
+ 	}
+ 
++	/* Check validity of inputes */
++	if (opts.source_addr % 8)
++		usage_err("Source address must be 8 bytes aligned");
++
++	if (opts.load_addr % 8)
++		usage_err("Load address must be 8 bytes aligned");
++
+ 	/* The remaining arguments are the input
+ 	 * and potentially output file */
+ 
+-- 
+1.9.1
+

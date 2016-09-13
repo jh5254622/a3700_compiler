@@ -1,0 +1,768 @@
+From c4f21d7f0f7f974bc0f51d1eb9108e3beb6b9f72 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 6 Feb 2014 10:31:41 +0200
+Subject: [PATCH 0005/1240] unit: add unit info infrastructure
+
+Change-Id: I171a8ea10836d92644f471132437a95b242c5373
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/Makefile           |   2 +-
+ arch/arm/cpu/armv8/armada8k/memory-map.c       |  31 -----
+ arch/arm/cpu/armv8/armada8k/soc-init.c         |  19 ++-
+ arch/arm/cpu/armv8/armada8k/tables.c           |  84 ++++++++++++
+ arch/arm/cpu/mvebu-common/Makefile             |   2 +
+ arch/arm/cpu/mvebu-common/adec.c               |   5 +-
+ arch/arm/cpu/mvebu-common/soc-init.c           | 101 ++++++++++++++
+ arch/arm/cpu/mvebu-common/unit-info.c          | 174 +++++++++++++++++++++++++
+ arch/arm/include/asm/arch-armada8k/armada8k.h  |   1 +
+ arch/arm/include/asm/arch-armada8k/regs-base.h |  28 ++++
+ arch/arm/include/asm/arch-mvebu/adec.h         |   2 +-
+ arch/arm/include/asm/arch-mvebu/mvebu.h        |   3 -
+ arch/arm/include/asm/arch-mvebu/soc.h          |  51 ++++++++
+ arch/arm/include/asm/arch-mvebu/tables.h       |  25 ++++
+ arch/arm/include/asm/arch-mvebu/unit-info.h    |  72 ++++++++++
+ 15 files changed, 557 insertions(+), 43 deletions(-)
+ delete mode 100644 arch/arm/cpu/armv8/armada8k/memory-map.c
+ create mode 100644 arch/arm/cpu/armv8/armada8k/tables.c
+ create mode 100644 arch/arm/cpu/mvebu-common/soc-init.c
+ create mode 100644 arch/arm/cpu/mvebu-common/unit-info.c
+ create mode 100644 arch/arm/include/asm/arch-armada8k/regs-base.h
+ create mode 100644 arch/arm/include/asm/arch-mvebu/soc.h
+ create mode 100644 arch/arm/include/asm/arch-mvebu/tables.h
+ create mode 100644 arch/arm/include/asm/arch-mvebu/unit-info.h
+
+diff --git a/arch/arm/cpu/armv8/armada8k/Makefile b/arch/arm/cpu/armv8/armada8k/Makefile
+index ae3593d..fe4e59c 100644
+--- a/arch/arm/cpu/armv8/armada8k/Makefile
++++ b/arch/arm/cpu/armv8/armada8k/Makefile
+@@ -18,4 +18,4 @@
+ #
+ 
+ obj-y += soc-init.o
+-obj-y += memory-map.o
++obj-y += tables.o
+diff --git a/arch/arm/cpu/armv8/armada8k/memory-map.c b/arch/arm/cpu/armv8/armada8k/memory-map.c
+deleted file mode 100644
+index 6d2b2eb..0000000
+--- a/arch/arm/cpu/armv8/armada8k/memory-map.c
++++ /dev/null
+@@ -1,31 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
+- * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
+- *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
+- * ***************************************************************************
+- */
+-
+-#include <common.h>
+-#include <asm/io.h>
+-#include <asm/arch-mvebu/adec.h>
+-
+-struct adec_win memory_map[] = {
+-	{0x0,     0x40000000, DRAM_0_TID, 0},
+-	{0x40000000, 0x20000000, IO_0_TID, 0},
+-	/* Invalid entry closes the array */
+-	{0x0, 0x0, INVALID_TID, 0}
+-};
+-
+-
+diff --git a/arch/arm/cpu/armv8/armada8k/soc-init.c b/arch/arm/cpu/armv8/armada8k/soc-init.c
+index cd52e50..a185db1 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc-init.c
++++ b/arch/arm/cpu/armv8/armada8k/soc-init.c
+@@ -21,16 +21,25 @@
+ 
+ #include <common.h>
+ #include <asm/io.h>
+-#include <asm/arch-mvebu/adec.h>
++#include <asm/arch-mvebu/soc.h>
++#include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-armada8k/armada8k.h>
+ 
+-extern struct adec_win memory_map[];
++int soc_get_rev(void)
++{
++	/* This should read the soc rev from some register*/
++	return 0;
++}
+ 
+-int a8k_init(void)
++int soc_get_id(void)
+ {
+-	debug("Initialixing A8K\n");
++	/* This should read the soc id from some register*/
++	return 8022;
++}
+ 
+-	adec_ap_init(memory_map, (void *)MVEBU_ADEC_AP_BASE);
++int a8k_init(void)
++{
++	common_soc_init(&a8k_family_info);
+ 
+ 	return 0;
+ }
+diff --git a/arch/arm/cpu/armv8/armada8k/tables.c b/arch/arm/cpu/armv8/armada8k/tables.c
+new file mode 100644
+index 0000000..b22da38
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armada8k/tables.c
+@@ -0,0 +1,84 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch-mvebu/adec.h>
++#include <asm/arch-mvebu/unit-info.h>
++#include <asm/arch-mvebu/soc.h>
++
++struct adec_win memory_map[] = {
++	{0x0,     0x40000000, DRAM_0_TID, 0},
++	{0x40000000, 0x20000000, IO_0_TID, 0},
++	/* Delimiter */
++	{0x0, 0x0, INVALID_TID, 0}
++};
++
++/* List the maximum amount of units for all devices and boards */
++u16 base_unit_mask_table[MAX_UNIT_ID + 1] = {
++	[PEX_UNIT_ID]		=  cnt_to_mask(3),
++	[SATA_UNIT_ID]		=  cnt_to_mask(4),
++	[ETH_GIG_UNIT_ID]	=  cnt_to_mask(4),
++	[UART_UNIT_ID]		=  cnt_to_mask(2),
++	[USB_UNIT_ID]		=  cnt_to_mask(1),
++	[USB3_UNIT_ID]		=  cnt_to_mask(2),
++	[SPI_UNIT_ID]		=  cnt_to_mask(2),
++	[XOR_UNIT_ID]		=  cnt_to_mask(1),
++	[CESA_UNIT_ID]		=  cnt_to_mask(1),
++	[SDIO_UNIT_ID]		=  cnt_to_mask(1),
++	[NAND_UNIT_ID]		=  cnt_to_mask(1)
++};
++
++/* Per device unit info. List which units are disabled for this device */
++u16 armada8021_unit_disable[MAX_UNIT_ID + 1] = {
++	[PEX_UNIT_ID]		=  id_to_mask(0) | id_to_mask(2),
++	[SATA_UNIT_ID]		=  id_to_mask(2) | id_to_mask(3)
++};
++
++u16 armada8022_unit_disable[MAX_UNIT_ID + 1] = {
++	[ETH_GIG_UNIT_ID]	= id_to_mask(3),
++	[USB3_UNIT_ID]		= id_to_mask(1)
++};
++
++struct mvebu_soc_info a8k_soc_info[] = {
++	/* Armda 8021 */
++	{
++		.name = "MV-8021",
++		.id = 8021,
++		.unit_disable = armada8021_unit_disable,
++		.memory_map = memory_map
++	},
++	/* Armda 8022 */
++	{
++		.name = "MV-8022",
++		.id = 8022,
++		.unit_disable = armada8022_unit_disable,
++		.memory_map = memory_map
++	},
++	/* Delimiter */
++	{.id = 0}
++};
++
++struct mvebu_soc_family a8k_family_info = {
++	.name = "MV-80xx",
++	.id   = 8000,
++	.base_unit_info = base_unit_mask_table,
++	.soc_table = a8k_soc_info,
++	.adec_type = 0,
++};
+diff --git a/arch/arm/cpu/mvebu-common/Makefile b/arch/arm/cpu/mvebu-common/Makefile
+index d30717b..52d82a5 100644
+--- a/arch/arm/cpu/mvebu-common/Makefile
++++ b/arch/arm/cpu/mvebu-common/Makefile
+@@ -18,3 +18,5 @@
+ #
+ 
+ obj-$(CONFIG_ADEC) += adec.o
++obj-y += unit-info.o
++obj-y += soc-init.o
+diff --git a/arch/arm/cpu/mvebu-common/adec.c b/arch/arm/cpu/mvebu-common/adec.c
+index 81c4d86..2265c9e 100644
+--- a/arch/arm/cpu/mvebu-common/adec.c
++++ b/arch/arm/cpu/mvebu-common/adec.c
+@@ -23,6 +23,7 @@
+ #include <common.h>
+ #include <asm/system.h>
+ #include <asm/io.h>
++#include <asm/arch/regs-base.h>
+ #include <asm/arch-mvebu/adec.h>
+ 
+ void __iomem *ap_adec_base;
+@@ -80,12 +81,12 @@ void adec_dump(void)
+ 	return;
+ }
+ 
+-int adec_ap_init(struct adec_win *windows, void __iomem *ap_base)
++int adec_ap_init(struct adec_win *windows)
+ {
+ 	int win_id;
+ 
+ 	debug("Initialzing AP ADEC unit\n");
+-	ap_adec_base = ap_base;
++	ap_adec_base = (void *)MVEBU_ADEC_AP_BASE;
+ 
+ 	for (win_id = 0; win_id < MAX_AP_WINDOWS; win_id++) {
+ 		if (windows->target_id == INVALID_TID)
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+new file mode 100644
+index 0000000..f80c0c6
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -0,0 +1,101 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#define DEBUG
++
++#include <config.h>
++#include <common.h>
++#include <errno.h>
++#include <asm/system.h>
++#include <asm/bitops.h>
++#include <asm/arch-mvebu/unit-info.h>
++#include <asm/arch-mvebu/adec.h>
++#include <asm/arch-mvebu/soc.h>
++#include <asm/arch-mvebu/tables.h>
++
++struct mvebu_soc_family *soc_family;
++
++static struct mvebu_soc_info *get_soc_info(int soc_id)
++{
++	struct mvebu_soc_info *soc = soc_family->soc_table;
++
++	/* Avoid searching on each access */
++	if (soc_family->curr_soc)
++		return soc_family->curr_soc;
++
++	while (soc->id != 0) {
++		if (soc->id == soc_id) {
++			soc_family->curr_soc = soc;
++			break;
++		}
++		soc++;
++	}
++
++	if (soc_family->curr_soc == NULL)
++		printf("Error: %s: Can't find soc info %d\n", __func__, soc_id);
++
++	return soc_family->curr_soc;
++}
++
++u16 *soc_get_unit_mask_table(void)
++{
++	return soc_family->base_unit_info;
++}
++
++static int update_soc_units(int soc_id)
++{
++	struct mvebu_soc_info *soc = get_soc_info(soc_id);
++	u16 *unit_mask = soc_get_unit_mask_table();
++
++	if (soc->unit_disable)
++		update_unit_info(unit_mask, soc->unit_disable, UNIT_INFO_DISABLE);
++
++	return 0;
++}
++
++static int soc_init_memory_map(int soc_id)
++{
++	struct mvebu_soc_info *soc_info = get_soc_info(soc_id);
++	struct adec_win *memory_map = soc_info->memory_map;
++
++	if (soc_family->adec_type == 0) {
++		adec_ap_init(memory_map);
++	} else if (soc_family->adec_type == 1) {
++		printf(" Error: No MBUS support yet\n");
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
++int common_soc_init(struct mvebu_soc_family *soc_family_info)
++{
++	int soc_id = soc_get_id();
++	int ret;
++
++	soc_family = soc_family_info;
++
++	update_soc_units(soc_id);
++
++	ret = soc_init_memory_map(soc_id);
++	if (ret)
++		return ret;
++
++	return 0;
++}
+diff --git a/arch/arm/cpu/mvebu-common/unit-info.c b/arch/arm/cpu/mvebu-common/unit-info.c
+new file mode 100644
+index 0000000..4b803de
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/unit-info.c
+@@ -0,0 +1,174 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#define DEBUG
++
++#include <config.h>
++#include <common.h>
++#include <asm/system.h>
++#include <asm/bitops.h>
++#include <asm/arch-mvebu/unit-info.h>
++#include <asm/arch-mvebu/tables.h>
++#include <asm/arch-mvebu/soc.h>
++
++const char *mvebu_unit_names[MAX_UNIT_ID + 1] = {
++	[DRAM_UNIT_ID] =	"DRAM",
++	[PEX_UNIT_ID] =		"PCIe",
++	[PEX_IF_UNIT_ID] =	"PCIe I/F",
++	[PCI_UNIT_ID] =		"PCI",
++	[PCI_IF_UNIT_ID] =	"PCI I/F",
++	[ETH_GIG_UNIT_ID] =	"ETH",
++	[USB_UNIT_ID] =		"USB2",
++	[USB3_UNIT_ID] =	"USB3",
++	[IDMA_UNIT_ID] =	"IDMA",
++	[IDMA_CHAN_UNIT_ID] =	"IDMA Channel",
++	[XOR_UNIT_ID] =		"XOR",
++	[XOR_CHAN_UNIT_ID] =	"XOR Channel",
++	[SATA_UNIT_ID] =	"SATA",
++	[TDM_32CH_UNIT_ID] =	"TDM32",
++	[TDM_PORTS_UNIT_ID] =	"TDM",
++	[UART_UNIT_ID] =	"UART",
++	[CESA_UNIT_ID] =	"CESA",
++	[SPI_UNIT_ID] =		"SPI",
++	[SDIO_UNIT_ID] =	"SDIO",
++	[BM_UNIT_ID] =		"BM",
++	[PNC_UNIT_ID] =		"PNC",
++	[NAND_UNIT_ID] =	"NAND",
++	[SERDES_LANES_UNIT_ID] =	"SERDES Lane",
++	[MAX_UNIT_ID] =		"NA"
++};
++
++const char *unit_info_get_name(enum mvebu_unit_id id)
++{
++	if ((id < 0) || (id > MAX_UNIT_ID)) {
++		printf("Error: %s: Illegal unit id %d\n", __func__, id);
++		return NULL;
++	}
++
++	return mvebu_unit_names[id];
++}
++
++static u16 *unit_info_get_mask(enum mvebu_unit_id id)
++{
++	u16 *unit_mask;
++
++	if ((id < 0) || (id > MAX_UNIT_ID)) {
++		printf("Error: %s: Illegal unit id %d\n", __func__, id);
++		return NULL;
++	}
++
++	unit_mask = soc_get_unit_mask_table();
++	unit_mask += id;
++
++	return unit_mask;
++}
++
++void unit_info_disable_units(enum mvebu_unit_id id, u16 mask)
++{
++	u16 *unit_mask;
++
++	unit_mask = unit_info_get_mask(id);
++	if (!unit_mask)
++		return;
++
++	disable_unit(unit_mask, mask);
++}
++
++void unit_info_disable_unit_instance(enum mvebu_unit_id id, int index)
++{
++	unit_info_disable_units(id, (1 << index));
++}
++
++bool unit_info_is_active(enum mvebu_unit_id id, int index)
++{
++	u16 *unit_mask;
++	bool active;
++
++	unit_mask = unit_info_get_mask(id);
++	if (!unit_mask)
++		return -1;
++
++	/* TODO - is this BE safe, should i use test_bit ??*/
++	active = (bool)(((*unit_mask) >> index) & 0x1);
++	return active;
++}
++
++int unit_info_get_count(enum mvebu_unit_id id)
++{
++	u16 *unit_mask;
++
++	unit_mask = unit_info_get_mask(id);
++	if (!unit_mask)
++		return -1;
++
++	return hweight32(*unit_mask);
++}
++
++static void unit_mask_to_list(u16 mask, char *list)
++{
++	int i;
++	char str[8];
++
++	sprintf(list, " ");
++
++	for (i = 0; i < 16; i++) {
++		if ((mask >> i) & 0x1) {
++			sprintf(str, "%d ", i);
++			strcat(list, str);
++		}
++	}
++}
++
++void dump_unit_info(void)
++{
++	u16 *unit_mask;
++	char active_list[64];
++	int unit_id;
++
++	unit_mask = soc_get_unit_mask_table();
++
++	printf("name      active\n");
++	printf("-----------------------\n");
++
++	for (unit_id = 0; unit_id < MAX_UNIT_ID; unit_id++) {
++		if (*unit_mask) {
++			unit_mask_to_list(*unit_mask, active_list);
++			printf("%.10s %s\n", unit_info_get_name(unit_id), active_list);
++		}
++		unit_mask++;
++	}
++}
++
++void update_unit_info(u16 *unit_mask, u16 *new_mask,
++		      enum unit_update_mode update_mode)
++{
++	int unit_id;
++
++	for (unit_id = 0; unit_id < MAX_UNIT_ID; unit_id++) {
++		if (update_mode == UNIT_INFO_OVERRIDE)
++			override_unit(unit_mask, (*new_mask));
++		else if (update_mode == UNIT_INFO_DISABLE)
++			disable_unit(unit_mask, (*new_mask));
++		else if (update_mode == UNIT_INFO_ENABLE)
++			enable_unit(unit_mask, (*new_mask));
++
++		unit_mask++;
++		new_mask++;
++	}
++}
+diff --git a/arch/arm/include/asm/arch-armada8k/armada8k.h b/arch/arm/include/asm/arch-armada8k/armada8k.h
+index 7919e0d..d21083c 100644
+--- a/arch/arm/include/asm/arch-armada8k/armada8k.h
++++ b/arch/arm/include/asm/arch-armada8k/armada8k.h
+@@ -23,5 +23,6 @@
+ #include <asm/arch-mvebu/mvebu.h>
+ 
+ int a8k_init(void);
++extern struct mvebu_soc_family a8k_family_info;
+ 
+ #endif	/* _ARMADA8K_H_ */
+diff --git a/arch/arm/include/asm/arch-armada8k/regs-base.h b/arch/arm/include/asm/arch-armada8k/regs-base.h
+new file mode 100644
+index 0000000..9b57e73
+--- /dev/null
++++ b/arch/arm/include/asm/arch-armada8k/regs-base.h
+@@ -0,0 +1,28 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#ifndef _REGS_BASE_H_
++#define _REGS_BASE_H_
++
++#define MVEBU_REGS_BASE	(0x90000000)
++
++/* List of register base for all units */
++#define MVEBU_ADEC_AP_BASE (MVEBU_REGS_BASE + 0x0)
++
++#endif	/* _ARMADA8K_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/adec.h b/arch/arm/include/asm/arch-mvebu/adec.h
+index 6dfcfa9..160f919 100644
+--- a/arch/arm/include/asm/arch-mvebu/adec.h
++++ b/arch/arm/include/asm/arch-mvebu/adec.h
+@@ -54,6 +54,6 @@ struct adec_win {
+ 
+ 
+ void adec_dump(void);
+-int adec_ap_init(struct adec_win *windows, void __iomem *ap_base);
++int adec_ap_init(struct adec_win *windows);
+ 
+ #endif /* _ADEC_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/mvebu.h b/arch/arm/include/asm/arch-mvebu/mvebu.h
+index 6f8def6..a52a876 100644
+--- a/arch/arm/include/asm/arch-mvebu/mvebu.h
++++ b/arch/arm/include/asm/arch-mvebu/mvebu.h
+@@ -20,8 +20,5 @@
+ #ifndef _MVEBU_H_
+ #define _MVEBU_H_
+ 
+-#define MVEBU_CFG_BASE	(0x90000000)
+-
+-#define MVEBU_ADEC_AP_BASE (MVEBU_CFG_BASE + 0x0)
+ 
+ #endif	/* MVEBU_H */
+diff --git a/arch/arm/include/asm/arch-mvebu/soc.h b/arch/arm/include/asm/arch-mvebu/soc.h
+new file mode 100644
+index 0000000..aaf94df
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/soc.h
+@@ -0,0 +1,51 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#ifndef _SOC_H_
++#define _SOC_H_
++
++#include <asm/arch-mvebu/unit-info.h>
++#include <asm/arch-mvebu/adec.h>
++
++#define MAX_SOC_NAME	   (32)
++
++struct mvebu_soc_family {
++	char name[MAX_SOC_NAME];
++	int	 id;
++	u16	*base_unit_info;
++	struct mvebu_soc_info *soc_table;
++	struct mvebu_soc_info *curr_soc;
++	int adec_type;
++};
++
++struct mvebu_soc_info {
++	char name[MAX_SOC_NAME];
++	int	 id;
++	u16	*unit_disable;
++	struct adec_win *memory_map;
++};
++
++int common_soc_init(struct mvebu_soc_family *soc_family_info);
++
++/* API required from all SOCs */
++int soc_get_rev(void);
++int soc_get_id(void);
++u16 *soc_get_unit_mask_table(void);
++
++#endif /* _SOC_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/tables.h b/arch/arm/include/asm/arch-mvebu/tables.h
+new file mode 100644
+index 0000000..f4be7ba
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/tables.h
+@@ -0,0 +1,25 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#ifndef _TABLES_H_
++#define _TABLES_H_
++
++
++
++#endif /* _TABLES_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/unit-info.h b/arch/arm/include/asm/arch-mvebu/unit-info.h
+new file mode 100644
+index 0000000..ecefa81
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/unit-info.h
+@@ -0,0 +1,72 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#ifndef _UNIT_INFO_H_
++#define _UNIT_INFO_H_
++
++enum mvebu_unit_id {
++	DRAM_UNIT_ID,
++	PEX_UNIT_ID,
++	PEX_IF_UNIT_ID,
++	PCI_UNIT_ID,
++	PCI_IF_UNIT_ID,
++	ETH_GIG_UNIT_ID,
++	USB_UNIT_ID,
++	USB3_UNIT_ID,
++	IDMA_UNIT_ID,
++	IDMA_CHAN_UNIT_ID,
++	XOR_UNIT_ID,
++	XOR_CHAN_UNIT_ID,
++	SATA_UNIT_ID,
++	TDM_32CH_UNIT_ID,
++	TDM_PORTS_UNIT_ID,
++	UART_UNIT_ID,
++	CESA_UNIT_ID,
++	SPI_UNIT_ID,
++	SDIO_UNIT_ID,
++	BM_UNIT_ID,
++	PNC_UNIT_ID,
++	NAND_UNIT_ID,
++	SERDES_LANES_UNIT_ID,
++	MAX_UNIT_ID
++};
++
++enum unit_update_mode {
++	UNIT_INFO_DISABLE,
++	UNIT_INFO_ENABLE,
++	UNIT_INFO_OVERRIDE
++};
++
++#define MAX_UNIT_COUNT		16
++
++#define disable_unit(dst, mask)		((*dst) &= (~mask))
++#define enable_unit(dst, mask)		((*dst) |= mask)
++#define override_unit(dst, mask)	((*dst) = mask)
++
++#define cnt_to_mask(count)	((1 << count) - 1)
++#define id_to_mask(id)		(1 << id)
++
++void dump_unit_info(void);
++void update_unit_info(u16 *unit_mask, u16 *new_mask, enum unit_update_mode);
++int  unit_info_get_count(enum mvebu_unit_id id);
++bool unit_info_is_active(enum mvebu_unit_id id, int index);
++void unit_info_disable_units(enum mvebu_unit_id id, u16 mask);
++void unit_info_disable_unit_instance(enum mvebu_unit_id id, int index);
++
++#endif /* _UNIT_INFO_H_ */
+-- 
+1.9.1
+

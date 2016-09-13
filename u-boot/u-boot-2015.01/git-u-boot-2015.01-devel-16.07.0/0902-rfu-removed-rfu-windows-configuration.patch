@@ -1,0 +1,320 @@
+From 2b42838cefec0a2d23e88372545aad11d8d4f51c Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Mon, 22 Feb 2016 17:05:21 +0200
+Subject: [PATCH 0902/1240] rfu: removed rfu windows configuration
+
+- This configuration was moved to ATF.
+- Only rfu windows print (used by map command)
+
+Change-Id: Id120c5e8ef830aae71658410e957e69d7ffe9f8f
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27741
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/mvebu_rfu.c | 162 ++++++--------------------------
+ arch/arm/cpu/armv8/armada8k/spl.c       |   4 -
+ arch/arm/cpu/mvebu-common/soc-init.c    |   6 --
+ arch/arm/dts/apn-806-z1.dtsi            |   3 -
+ arch/arm/include/asm/arch-mvebu/rfu.h   |   1 -
+ 5 files changed, 27 insertions(+), 149 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/mvebu_rfu.c b/arch/arm/cpu/armv8/armada8k/mvebu_rfu.c
+index ba6522d..5a81e91 100644
+--- a/arch/arm/cpu/armv8/armada8k/mvebu_rfu.c
++++ b/arch/arm/cpu/armv8/armada8k/mvebu_rfu.c
+@@ -20,10 +20,7 @@
+ /* #define DEBUG_REG */
+ 
+ #include <common.h>
+-#include <asm/system.h>
+ #include <asm/io.h>
+-#include <fdtdec.h>
+-#include <asm/arch-mvebu/mvebu.h>
+ #include <asm/arch-mvebu/fdt.h>
+ #include <asm/arch-mvebu/rfu.h>
+ 
+@@ -31,102 +28,39 @@
+ #define WIN_ENABLE_BIT			(0x1)
+ /* Physical address of the base of the window = {Addr[19:0],20`h0} */
+ #define ADDRESS_SHIFT			(20 - 4)
+-#define ADDRESS_MASK			(0xFFFFFFF0)
+-#define RFU_WIN_ALIGNMENT_1M		(0x100000)
+-#define RFU_WIN_ALIGNMENT_64K		(0x10000)
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+-void __attribute__((section(".data"))) __iomem *rfu_base;
+-
+-struct rfu_win {
+-	u32 base_addr_high;
+-	u32 base_addr_low;
+-	u32 win_size_high;
+-	u32 win_size_low;
+-	u32 target_id;
+-};
+-
+ enum rfu_target_ids {
+-	BOOTROM_TID	= 0x0,
+-	STM_TID		= 0x1,
+-	SPI_TID		= 0x2,
+-	PCIE_REGS_TID	= 0x3,
+-	IHBPHY_TID	= 0x4,
+-	PCIE_PORT_TID	= 0x5,
++	BOOTROM_TID     = 0x0,
++	STM_TID         = 0x1,
++	SPI_TID         = 0x2,
++	PCIE_REGS_TID   = 0x3,
++	IHBPHY_TID      = 0x4,
++	PCIE_PORT_TID   = 0x5,
+ 	RFU_MAX_TID
+ };
+ 
+-static void rfu_win_check(struct rfu_win *win, u32 win_num)
+-{
+-	u64 base_addr, win_size;
+-	u32 alignment_value = RFU_WIN_ALIGNMENT_1M;
+-	/* for RFU The base is always 1M aligned */
+-	/* check if address is aligned to 1M */
+-	base_addr = ((u64)win->base_addr_high << 32) + win->base_addr_low;
+-	if (IS_NOT_ALIGN(base_addr, RFU_WIN_ALIGNMENT_1M)) {
+-		base_addr = ALIGN_UP(base_addr, RFU_WIN_ALIGNMENT_1M);
+-		error("Window %d: base address unaligned to 0x%x\n", win_num, RFU_WIN_ALIGNMENT_1M);
+-		printf("Align up the base address to 0x%llx\n", base_addr);
+-		win->base_addr_high = (u32)(base_addr >> 32);
+-		win->base_addr_low = (u32)(base_addr);
+-	}
+-
+-	/* targets that have AHR must have size aligned to 1M.
+-	   targets with no AHR (pcie-reg, bootrom) have a fixed size of 64k */
+-	if (win->target_id == BOOTROM_TID || win->target_id == PCIE_REGS_TID)
+-		alignment_value = RFU_WIN_ALIGNMENT_64K;
+-	/* size parameter validity check */
+-	win_size = ((u64)win->win_size_high << 32) + win->win_size_low;
+-	if (IS_NOT_ALIGN(win_size, alignment_value)) {
+-		win_size = ALIGN_UP(win_size, alignment_value);
+-		error("Window %d: window size unaligned to 0x%x\n", win_num, alignment_value);
+-		printf("Aligning size to 0x%llx\n", win_size);
+-		win->win_size_high = (u32)(win_size >> 32);
+-		win->win_size_low = (u32)(win_size);
+-	}
+-}
+-
+-static void *rfu_alr_offset_get(u32 trgt_id)
++u32 rfu_alr_offset_get(u32 trgt_id)
+ {
+ 	u32 rfu_alr_offset[RFU_MAX_TID] = {0x0, 0x10, 0x20, 0x208, 0x210, 0x218};
+ 
+ 	if (trgt_id < 0 || trgt_id > RFU_MAX_TID) {
+ 		error("target ID is wrong");
+-		return rfu_base;
++		return 0;
+ 	}
+-	return rfu_base + rfu_alr_offset[trgt_id];
++	return rfu_alr_offset[trgt_id];
+ }
+ 
+-static void *rfu_ahr_offset_get(u32 trgt_id)
++u32 rfu_ahr_offset_get(u32 trgt_id)
+ {
+ 	u32 rfu_ahr_offset[RFU_MAX_TID] = {0x0, 0x18, 0x28, 0x0, 0x214, 0x21c};
+ 
+ 	if (trgt_id < 0 || trgt_id > RFU_MAX_TID) {
+ 		error("target ID is wrong");
+-		return rfu_base;
+-	}
+-	return rfu_base + rfu_ahr_offset[trgt_id];
+-}
+-
+-static void rfu_enable_win(struct rfu_win *win, u32 trgt_id)
+-{
+-	u32 alr, ahr;
+-	u64 start_addr, end_addr;
+-
+-	start_addr = ((u64)win->base_addr_high << 32) + win->base_addr_low;
+-	end_addr = (start_addr + (((u64)win->win_size_high << 32) + win->win_size_low) - 1);
+-
+-	/* there's no ahr for bootrom and pcie-regs windows */
+-	if (trgt_id != BOOTROM_TID && trgt_id != PCIE_REGS_TID) {
+-		ahr = (u32)((end_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
+-		writel(ahr, rfu_ahr_offset_get(trgt_id));
++		return 0;
+ 	}
+-
+-	alr = (u32)((start_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
+-	if (trgt_id != PCIE_REGS_TID)
+-		alr |= WIN_ENABLE_BIT;
+-	writel(alr, rfu_alr_offset_get(trgt_id));
++	return rfu_ahr_offset[trgt_id];
+ }
+ 
+ void dump_rfu(void)
+@@ -134,20 +68,33 @@ void dump_rfu(void)
+ 	u32 trgt_id;
+ 	u32 alr, ahr;
+ 	u64 start, end;
++	const void *blob = gd->fdt_blob;
++	void __iomem *rfu_base;
+ 	char *rfu_target_name[RFU_MAX_TID] = {"BootRoom ", "STM      ", "SPI      ",
+ 					"PCIe-reg ", "IHB-Port ", "PCIe-Port"};
++	int node;
++
++	/* Get address decoding node from the FDT blob */
++	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_RFU));
++	if (node < 0) {
++		error("No RFU address decoding node found in FDT blob\n");
++		return;
++	}
++
++	/* Get the base address of the address decoding MBUS */
++	rfu_base = (void *)fdt_get_regs_offs(blob, node, "reg");
+ 
+ 	/* Dump all RFU windows */
+ 	printf("bank  target     start              end\n");
+ 	printf("----------------------------------------------------\n");
+ 	for (trgt_id = 0; trgt_id < RFU_MAX_TID; trgt_id++) {
+-		alr = readl(rfu_alr_offset_get(trgt_id));
++		alr = readl(rfu_base + rfu_alr_offset_get(trgt_id));
+ 		if (alr & WIN_ENABLE_BIT) {
+ 			alr &= ~WIN_ENABLE_BIT;
+ 			if (trgt_id == BOOTROM_TID || trgt_id == PCIE_REGS_TID)
+ 				ahr = alr;
+ 			else
+-				ahr = readl(rfu_ahr_offset_get(trgt_id));
++				ahr = readl(rfu_base + rfu_ahr_offset_get(trgt_id));
+ 			start = ((u64)alr << ADDRESS_SHIFT);
+ 			end = (((u64)ahr + 0x10) << ADDRESS_SHIFT);
+ 			printf("rfu   %s  0x%016llx 0x%016llx\n", rfu_target_name[trgt_id], start, end);
+@@ -157,58 +104,3 @@ void dump_rfu(void)
+ 
+ 	return;
+ }
+-
+-int init_rfu(bool sw_init)
+-{
+-	struct rfu_win memory_map[RFU_MAX_TID], *win;
+-	const void *blob = gd->fdt_blob;
+-	u32 win_id, win_reg, trgt_id;
+-	u32 win_count;
+-	int node;
+-
+-	debug_enter();
+-	debug("Initializing RFU Address decoding\n");
+-
+-	/* Get address decoding node from the FDT blob */
+-	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_RFU));
+-	if (node < 0) {
+-		debug("No RFU address decoding node found in FDT blob\n");
+-		return 0;
+-	}
+-
+-	/* Get the base address of the address decoding MBUS */
+-	rfu_base = (void *)fdt_get_regs_offs(blob, node, "reg");
+-
+-	if (sw_init) {
+-		/* init only the rfu_base without update the rfu windows.
+-			The rfu_base required for the dump_rfu function */
+-		debug("Done SW RFU Address decoding Initializing\n");
+-		return 0;
+-	}
+-
+-	/* Get the array of the windows and fill the map data */
+-	win_count = fdtdec_get_int_array_count(blob, node, "windows", (u32 *)memory_map, RFU_MAX_TID * 5);
+-	if (win_count <= 0) {
+-		debug("no windows configurations found\n");
+-		return 0;
+-	}
+-	win_count = win_count/5; /* every window had 5 variables in FDT:
+-				    base high, base low, size high, size low, target id) */
+-
+-	/* disable all RFU windows */
+-	for (trgt_id = 0; trgt_id < RFU_MAX_TID; trgt_id++) {
+-		win_reg = readl(rfu_alr_offset_get(trgt_id));
+-		win_reg &= ~WIN_ENABLE_BIT;
+-		writel(win_reg, rfu_alr_offset_get(trgt_id));
+-	}
+-
+-	for (win_id = 0, win = memory_map; win_id < win_count; win_id++, win++) {
+-		rfu_win_check(win, win_id);
+-		rfu_enable_win(win, win->target_id);
+-	}
+-
+-	debug("Done RFU Address decoding Initializing\n");
+-	debug_exit();
+-
+-	return 0;
+-}
+diff --git a/arch/arm/cpu/armv8/armada8k/spl.c b/arch/arm/cpu/armv8/armada8k/spl.c
+index a96f214..8ef4d21 100644
+--- a/arch/arm/cpu/armv8/armada8k/spl.c
++++ b/arch/arm/cpu/armv8/armada8k/spl.c
+@@ -22,7 +22,6 @@
+ #include <asm/arch-mvebu/ddr.h>
+ #include <asm/arch-mvebu/dram_over_pci.h>
+ #include <asm/arch-mvebu/ccu.h>
+-#include <asm/arch-mvebu/rfu.h>
+ #include <asm/arch-mvebu/flc.h>
+ #include <asm/arch-mvebu/fdt.h>
+ #include <asm/arch-armada8k/misc-regs.h>
+@@ -98,9 +97,6 @@ void board_init_f(ulong silent)
+ #ifdef CONFIG_MVEBU_CCU
+ 	init_ccu(false);
+ #endif
+-#ifdef CONFIG_MVEBU_RFU
+-	init_rfu(false);
+-#endif
+ 	init_flc();
+ #endif
+ 
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index 1725fc6..3c34054 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -33,9 +33,6 @@
+ #ifdef CONFIG_MVEBU_CCU
+ #include <asm/arch-mvebu/ccu.h>
+ #endif
+-#ifdef CONFIG_MVEBU_RFU
+-#include <asm/arch-mvebu/rfu.h>
+-#endif
+ #ifdef CONFIG_MVEBU_IOB
+ #include <asm/arch-mvebu/iob.h>
+ #endif
+@@ -117,9 +114,6 @@ int mvebu_soc_init()
+ #ifdef CONFIG_MVEBU_CCU
+ 	init_ccu(sw_init);
+ #endif
+-#ifdef CONFIG_MVEBU_RFU
+-	init_rfu(sw_init);
+-#endif
+ #ifdef CONFIG_MVEBU_IOB
+ 	init_iob();
+ #endif
+diff --git a/arch/arm/dts/apn-806-z1.dtsi b/arch/arm/dts/apn-806-z1.dtsi
+index 0332b4d..670574c 100644
+--- a/arch/arm/dts/apn-806-z1.dtsi
++++ b/arch/arm/dts/apn-806-z1.dtsi
+@@ -101,9 +101,6 @@
+ 			rfu {
+ 				compatible = "marvell,mvebu-rfu";
+ 				reg = <0x6f0000 0x50>;
+-				windows = <0x0 0xfe000000 0x0 0x1f00000 0x05 /* PCIe window 31Mb for PCIe port*/
+-					0x0 0xffe00000 0x0 0x100000 0x03 /* PCI-REG window 64Kb for PCIe-reg*/
+-					0x0 0xf6000000 0x0 0x100000 0x04 /* IHB window  1Mb for PHY-reg*/>;
+ 			};
+ 
+ 			comphy {
+diff --git a/arch/arm/include/asm/arch-mvebu/rfu.h b/arch/arm/include/asm/arch-mvebu/rfu.h
+index 4a9f239..2419903 100644
+--- a/arch/arm/include/asm/arch-mvebu/rfu.h
++++ b/arch/arm/include/asm/arch-mvebu/rfu.h
+@@ -20,7 +20,6 @@
+ #define _RFU_H_
+ 
+ void dump_rfu(void);
+-int init_rfu(bool sw_init);
+ 
+ #endif /* _RFU_H_ */
+ 
+-- 
+1.9.1
+

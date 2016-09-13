@@ -1,0 +1,132 @@
+From 9107f195db191cb657cdd61b48229d81c3acfd0b Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Thu, 4 Feb 2016 18:03:56 +0200
+Subject: [PATCH 0977/1240] fix: fdt: arm8k: change Device Tree size from 7KB
+ to 12KB
+
+- This change is necessary because 7040-FDTs are bigger then 7KB.
+- This change is possible beacuse the FDT compressed before writing it to EEPROM.
+
+Change-Id: I3a39ff30c73667ea32e020d2b261d7d570bf811d
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27250
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/Makefile           | 6 +++++-
+ board/mvebu/common/Kconfig      | 4 ++--
+ board/mvebu/common/cfg_eeprom.h | 4 ++--
+ include/configs/armada3700.h    | 2 ++
+ include/configs/armada38x.h     | 2 ++
+ include/configs/armada8k.h      | 1 +
+ include/configs/mvebu-common.h  | 1 -
+ 7 files changed, 14 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index 310517c..6109000 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -87,9 +87,13 @@ endif #CONFIG_TARGET_ARMADA_8K
+ 
+ targets += $(dtb-y)
+ 
+-# alignment fdt file to 8k. this is helpful to support multi fdt.
++# alignment fdt file to 7K in Armada3700 and to 12k in Armada8k. this is helpful to support multi fdt.
+ # This alignment allows selecting DT files easily by skipping over a predefined DT size.
++ifdef CONFIG_TARGET_ARMADA_8K
++DTC_FLAGS += -R 4 -S 0x3000
++else
+ DTC_FLAGS += -R 4 -S 0x1C00
++endif #CONFIG_TARGET_ARMADA_8K
+ 
+ PHONY += dtbs
+ dtbs: $(addprefix $(obj)/, $(dtb-y))
+diff --git a/board/mvebu/common/Kconfig b/board/mvebu/common/Kconfig
+index 2846b75..d3854c2 100644
+--- a/board/mvebu/common/Kconfig
++++ b/board/mvebu/common/Kconfig
+@@ -17,8 +17,8 @@ config MULTI_DT_FILE
+ 	select BOARD_CONFIG_EEPROM
+ 	help
+ 	  If this option is enabled, U-Boot will support different DT files.
+-	  Each FDT has a fixed size of 7KB, so to choose between them in u-boot,
+-	  it will be executerd by a jump of 7KB.
++	  Each FDT has a fixed size, so to choose between them in u-boot,
++	  it will be executerd by a jump of this fix size.
+ 	  The u-boot separates between the DTB by the flavor/board id
+ 
+ config BOARD_CONFIG_EEPROM
+diff --git a/board/mvebu/common/cfg_eeprom.h b/board/mvebu/common/cfg_eeprom.h
+index c534ef5..343a5d9 100644
+--- a/board/mvebu/common/cfg_eeprom.h
++++ b/board/mvebu/common/cfg_eeprom.h
+@@ -110,12 +110,12 @@ struct hw_info_data_struct {
+ 				0x00000000,				     /* checksum */			  \
+ 				0xfecadefa,				     /* EEPROM pattern */		  \
+ 				EEPROM_STRUCT_SIZE,			     /* length = 0x114 bytes */		  \
+-				{{[0 ... 255] = 0x00} },		     /* manufacturing_information */	  \
++				{{[0 ... (MVEBU_HW_INFO_LEN - 1)] = 0x00} },   /* manufacturing_information */	  \
+ 				{0x00,					     /* fdt config disable */		  \
+ 				 0x03,					     /* active fdt selection = default */ \
+ 				 0x00,					     /* validation counter = 0 */	  \
+ 				{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },/* reserve_board_cgf */		  \
+-				{[0 ... 7167] = 1}			     /* fdt file */			  \
++				{[0 ... (MVEBU_FDT_SIZE - 1)] = 1}	     /* fdt file */			  \
+ }
+ 
+ #define MV_MAX_FDT_CONFIGURATION	MV_MARVELL_BOARD_NUM * 8
+diff --git a/include/configs/armada3700.h b/include/configs/armada3700.h
+index 4e168d3..78a4e89 100644
+--- a/include/configs/armada3700.h
++++ b/include/configs/armada3700.h
+@@ -45,6 +45,8 @@
+ #define MV_INCLUDE_PEX
+ */
+ 
++#define MVEBU_FDT_SIZE 0x1C00
++
+ /* Plaform */
+ #define CONFIG_MARVELL
+ 
+diff --git a/include/configs/armada38x.h b/include/configs/armada38x.h
+index d6a7308..7b472ef 100644
+--- a/include/configs/armada38x.h
++++ b/include/configs/armada38x.h
+@@ -51,6 +51,8 @@
+ #define MV_DDR_64BIT
+ #define MV_BOOTROM
+ 
++#define MVEBU_FDT_SIZE 0x1C00
++
+ /* Plaform */
+ #define CONFIG_MARVELL
+ 
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index bd6f88d..e137921 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -40,6 +40,7 @@
+ #define MV_INCLUDE_PEX
+ */
+ #define CONFIG_GZIP_COMPRESSED
++#define MVEBU_FDT_SIZE 0x3000
+ 
+ #undef CONFIG_GICV3
+ #define CONFIG_GICV2
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 9061d8c..f5e25c1 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -248,7 +248,6 @@
+ 
+ /* Flat Device Tree Definitions */
+ #define CONFIG_OF_LIBFDT
+-#define MVEBU_FDT_SIZE 0x1C00
+ 
+ /* SMP Spin Table Definitions */
+ #define CPU_RELEASE_ADDR               (CONFIG_SYS_SDRAM_BASE + 0x2000000)
+-- 
+1.9.1
+

@@ -1,0 +1,31 @@
+From 7e853c8e9bb08150fc3484c6b6598ea37f73e630 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 9 Nov 2015 18:25:52 +0200
+Subject: [PATCH 0475/1240] fix: phy: compile relevant file of the comphy per
+ SoC
+
+Change-Id: Ieba945f13142d68a15699f2d36bda7faec338e49
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24691
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ drivers/phy/Makefile | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/phy/Makefile b/drivers/phy/Makefile
+index e2ca19e..c171cca 100644
+--- a/drivers/phy/Makefile
++++ b/drivers/phy/Makefile
+@@ -1,5 +1,5 @@
+ obj-y += comphy_core.o
+-obj-y += comphy_a38x.o
+-obj-y += comphy_ap806_z1.o
+-obj-y += comphy_a3700.o
++obj-$(CONFIG_TARGET_ARMADA_38X) += comphy_a38x.o
++obj-$(CONFIG_TARGET_ARMADA_8K) += comphy_ap806_z1.o
++obj-$(CONFIG_TARGET_ARMADA_LP) += comphy_a3700.o
+ obj-y += comphy_pcie_config.o
+-- 
+1.9.1
+

@@ -1,0 +1,181 @@
+From ba7e00f9f17354490625e1e0d973692ff6b1abbe Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Wed, 30 Mar 2016 17:20:48 +0300
+Subject: [PATCH 077/239] ddr: 70x0: dunit and phy static configuration
+
+Change-Id: I463391bbf0dcad7bd9b81680e1291f3472f86b44
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28680
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ drivers/marvell/dram/Makefile        |   8 +++
+ drivers/marvell/dram/ddr_mckinley6.c | 111 +++++++++++++++++++++++++++++++----
+ 2 files changed, 106 insertions(+), 13 deletions(-)
+
+diff --git a/drivers/marvell/dram/Makefile b/drivers/marvell/dram/Makefile
+index fd399b7..9eda78b 100644
+--- a/drivers/marvell/dram/Makefile
++++ b/drivers/marvell/dram/Makefile
+@@ -46,6 +46,14 @@ CFLAGS   = -Wall -Werror -Os -ffreestanding -mlittle-endian -g -gdwarf-2
+ CFLAGS   += -march=armv8-a -fpie $(INCLUDE) -D$(PLATFORM)
+ LDFLAGS  = -Xlinker --discard-all -Wl,--build-id=none -static -nostartfiles
+ 
++ifeq (${PLATFORM},a70x0)
++# Use Dunit as DDR Controller
++CFLAGS += -DCONFIG_DUNIT
++else ifeq (${PLATFORM},a70x0_cust)
++# Use Dunit as DDR Controller
++CFLAGS += -DCONFIG_DUNIT
++endif
++
+ CSRC = $(foreach DIR, $(SRCDIRS), $(wildcard $(DIR)/*.c))
+ ASRC = $(foreach DIR, $(SRCDIRS), $(wildcard $(DIR)/*.S))
+ 
+diff --git a/drivers/marvell/dram/ddr_mckinley6.c b/drivers/marvell/dram/ddr_mckinley6.c
+index 343e0d0..1fd62f3 100644
+--- a/drivers/marvell/dram/ddr_mckinley6.c
++++ b/drivers/marvell/dram/ddr_mckinley6.c
+@@ -8,7 +8,7 @@
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+@@ -2029,22 +2029,92 @@ struct mk6_reg_data mk6_phy_setup[] = {
+ 	{-1, -1},
+ };
+ #elif defined(a70x0_cust) || defined(a70x0)
+-/* The below definitions are needed in order to enable temporary compilation
+-** of a7040_cust & a70x0 platforms, till the relevat ddr code for these platforms
+-** is added
+-*/
+-struct mk6_reg_data mk6_mac_setup[] = {
+-	{-1, -1},
+-};
+-
+-struct mk6_reg_data mk6_phy_setup[] = {
++struct mk6_reg_data dunit_setup[] = {
++	{0xF0000030, 0x00000003}, /* set private ID*/
++	{0xF000070C, 0x000000FF}, /* enable SMC for STX access */
++	{0xf00116d8, 0x000003cc},
++	{0xf06f0100, 0x044c0006},
++	{0xf00119d4, 0x00000002},
++	{0xf06f8d38, 0xacac0000},
++	{0xf06f4360, 0xffff0044},
++	{0xf00114c8, 0x01cb0008},
++	{0xf00117c8, 0x12c80008},
++	{0xf0011dc8, 0x01cb0008},
++	{0xf0011ec8, 0x12c80008},
++	{0xf00116a0, 0xe83f0001},
++	{0xf00114cc, 0x0001200d},
++	{0xf0011524, 0x00008800},
++	{0xf0011400, 0x6b10cc30},
++	{0xf0011400, 0x7b10cc30},
++	{0xf0011538, 0x00000d0d},
++	{0xf001153c, 0x00001515},
++	{0xf00116a0, 0xcc00000a},
++	{0xf00116a0, 0xc0006852},
++	{0xf00116a0, 0xc0402080},
++	{0xf00116a0, 0xc0808419},
++	{0xf00116a0, 0xc0c06010},
++	{0xf00116a0, 0xc002010d},
++	{0xf00116a0, 0xc042010e},
++	{0xf00116a0, 0xc08200d2},
++	{0xf00116a0, 0xc0c20103},
++	{0xf00116a0, 0xc003000a},
++	{0xf00116a0, 0xc043000a},
++	{0xf00116a0, 0xc083000a},
++	{0xf00116a0, 0xc0c3000a},
++	{0xf00116a0, 0xc0040044},
++	{0xf00116a0, 0xc044004e},
++	{0xf00116a0, 0xc0840010},
++	{0xf00116a0, 0xc0c4000b},
++	{0xf00116a0, 0xc006004b},
++	{0xf00116a0, 0xc046004c},
++	{0xf00116a0, 0xc0860015},
++	{0xf00116a0, 0xc0c60046},
++	{0xf00116a0, 0xc005000e},
++	{0xf00116a0, 0xc0450018},
++	{0xf00116a0, 0xc085001a},
++	{0xf00116a0, 0xc0c50015},
++	{0xf00116a0, 0xe8021503},
++	{0xf00116a0, 0xe8130050},
++	{0xf00116a0, 0xe8140012},
++	{0xf00116a0, 0xec021503},
++	{0xf00116a0, 0xec130050},
++	{0xf00116a0, 0xec140012},
++	{0xf00116a0, 0xf81b0020},
++	{0xf00116a0, 0xe8280428},
++	{0xf00116a0, 0xec24070e},
++	{0xf00116a0, 0xe824078f},
++	{0xf00116a0, 0xe8260100},
++	{0xf0011400, 0x7b104c30},
++	{0xf0011404, 0x36301848},
++	{0xf0011408, 0x5411cbb9},
++	{0xf001140c, 0x784a1f97},
++	{0xf0011410, 0x17114444},
++	{0xf0011414, 0x000007c8},
++	{0xf0011424, 0x0060f3f7},
++	{0xf001142c, 0x14c5138 },
++	{0xf0011498, 0x0000000f},
++	{0xf001149c, 0x00000303},
++	{0xf00114e0, 0x00000400},
++	{0xf00114e4, 0x000003ff},
++	{0xf00114e8, 0x007f01ff},
++	{0xf00114ec, 0x00000054},
++	{0xf00115e0, 0x00000023},
++	{0xf00115e4, 0x00203c18},
++	{0xf00115ec, 0xd9ff0029},
++	{0xf0011900, 0x00000314},
++	{0xf0011904, 0x00000001},
++	{0xf0011908, 0x00000200},
++	{0xf001190c, 0x00000800},
++	{0xf0011910, 0x00000000},
++	{0xf0011914, 0x000004a0},
++	{0xf0011918, 0x0000080a},
++	{0xf0020020, 0x13000001},
++	{0xf0011480, 0x00000001},
+ 	{-1, -1},
+ };
+-
+-
+ #endif
+ 
+-
++#ifndef CONFIG_DUNIT
+ static int32_t log_2_n_round_down(uint32_t n)
+ {
+ 	int32_t log2n = -1;
+@@ -2129,10 +2199,25 @@ static void mk6_phy_init(struct dram_config *cfg)
+ 	mck6_writel(cfg, reg, base_addr + MCK6_USER_COMMAND_0_REG);
+ }
+ 
++#else /* CONFIG_DUNIT */
++static void dunit_init(struct dram_config *cfg)
++{
++	struct mk6_reg_data *phy_regs = dunit_setup;
++
++	for (; phy_regs->offset != -1 ; phy_regs++)
++		mck6_writel(cfg, phy_regs->value, phy_regs->offset);
++}
++#endif
++
+ int dram_init(struct dram_config *cfg)
+ {
++#ifdef CONFIG_DUNIT
++	dunit_init(cfg);
++#else
+ 	mk6_mac_init(cfg);
+ 	mk6_phy_init(cfg);
++#endif
++
+ 	cfg->printf("Static DRAM initialization is DONE..\n");
+ 
+ 	return 0;
+-- 
+1.9.1
+

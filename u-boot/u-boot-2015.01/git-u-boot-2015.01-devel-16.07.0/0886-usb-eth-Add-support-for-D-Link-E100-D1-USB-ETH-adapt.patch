@@ -1,0 +1,35 @@
+From 613ab1f8fc9b42d1646a16c4a856818206a19277 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Thu, 18 Feb 2016 10:17:49 +0200
+Subject: [PATCH 0886/1240] usb: eth: Add support for D-Link E100-D1 USB-ETH
+ adapter
+
+- Add D-Link E100 HW version D1 to the list of IDs
+  supported by asix driver. The adapter is based on
+  ASIX AX88772 chip
+
+Change-Id: I28d275e4591de1602ff78152590a8b32a4784a69
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27623
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ drivers/usb/eth/asix.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/usb/eth/asix.c b/drivers/usb/eth/asix.c
+index 082bfb7..a89b502 100644
+--- a/drivers/usb/eth/asix.c
++++ b/drivers/usb/eth/asix.c
+@@ -578,6 +578,8 @@ static const struct asix_dongle asix_dongles[] = {
+ 	{ 0x1557, 0x7720, FLAG_TYPE_AX88772 },	/* 0Q0 cable ethernet */
+ 	/* DLink DUB-E100 H/W Ver B1 Alternate */
+ 	{ 0x2001, 0x3c05, FLAG_TYPE_AX88772 },
++	/* DLink DUB-E100 H/W Ver D1 */
++	{ 0x2001, 0x1a02, FLAG_TYPE_AX88772 },
+ 	/* ASIX 887E2B */
+ 	{ 0x0b95, 0x7e2b, FLAG_TYPE_AX88772B | FLAG_EEPROM_MAC },
+ 	/* ASIX 88772B */
+-- 
+1.9.1
+

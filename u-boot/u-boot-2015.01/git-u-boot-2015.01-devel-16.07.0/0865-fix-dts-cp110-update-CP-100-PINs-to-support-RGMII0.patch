@@ -1,0 +1,46 @@
+From 7c704cf35346554583cbab26ee6a7ebae83625c0 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 17 Feb 2016 17:26:31 +0200
+Subject: [PATCH 0865/1240] fix: dts: cp110: update CP-100 PINs, to support
+ RGMII0
+
+- This is temporary change for Router configuration to support RGMII0
+- This patch will be revert when support SGMII port in U-Boot
+
+Change-Id: I2c12c7651dcb83189ce402628e0ab40165c3a8cc
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27600
+Reviewed-by: Neta Zur Hershkovits <neta@marvell.com>
+Reviewed-by: Yuval Caduri <cyuval@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/armada-7040-rz-db_router.dts | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/dts/armada-7040-rz-db_router.dts b/arch/arm/dts/armada-7040-rz-db_router.dts
+index 6771124..a420f6d 100644
+--- a/arch/arm/dts/armada-7040-rz-db_router.dts
++++ b/arch/arm/dts/armada-7040-rz-db_router.dts
+@@ -78,7 +78,7 @@
+ 
+ 			pinctl@440000 {
+ 					/* MPP Bus:
+-					   TDM	 [0-12]
++					   RGMII0[0-11]
+ 					   SPI   [13-16]
+ 					   SATA1 [28]
+ 					   UART0 [29-30]
+@@ -91,8 +91,8 @@
+ 					   SD	 [56-62]
+ 					*/
+ 					/*   0   1   2   3   4   5   6   7   8   9 */
+-				pin-func = < 4   4   4   4   4   4   4   4   4   4
+-					     4   4   0   3   3   3   3   0   0   0
++				pin-func = < 3   3   3   3   3   3   3   3   3   3
++					     3   3   0   3   3   3   3   0   0   0
+ 					     0   0   0   0   0   0   0   0   9   0xA
+ 					     0xA 0   7   0   7   0   6   2   2   0
+ 					     7   7   8   8   1   1   1   1   1   1
+-- 
+1.9.1
+

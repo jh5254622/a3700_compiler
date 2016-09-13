@@ -1,0 +1,667 @@
+From 475735d7b286f3297ec23d7bfd8bfb2bbb5d4c7a Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 30 Mar 2014 12:35:30 +0300
+Subject: [PATCH 0022/1240] init: Improved init flow for boards
+
+	- Moved development board init to seperate files
+	- Moved reset_cpu to SOC code
+
+Change-Id: Ib084f861a18b8f5f32267073a6a6151f6876405f
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Makefile              |  1 -
+ arch/arm/cpu/mvebu-common/cpuinfo.c             | 68 -----------------
+ arch/arm/cpu/mvebu-common/misc.c                | 72 ++++++++++++++++++
+ arch/arm/include/asm/arch-armada38x/regs-base.h |  7 +-
+ arch/arm/include/asm/arch-mvebu/soc.h           |  1 +
+ board/mvebu/common/Makefile                     |  4 +
+ board/mvebu/common/board-common.c               | 88 +---------------------
+ board/mvebu/common/board.h                      | 16 ++--
+ board/mvebu/common/config.c                     |  2 +-
+ board/mvebu/common/devel-board.c                | 99 +++++++++++++++++++++++++
+ board/mvebu/common/devel-board.h                | 34 +++++++++
+ board/mvebu/common/init.c                       | 55 ++++++++++++--
+ board/mvebu/common/sar.c                        |  2 +-
+ include/configs/armada38x.h                     |  2 +-
+ include/configs/mvebu-common.h                  |  7 ++
+ 15 files changed, 286 insertions(+), 172 deletions(-)
+ delete mode 100644 arch/arm/cpu/mvebu-common/cpuinfo.c
+ create mode 100644 board/mvebu/common/devel-board.c
+ create mode 100644 board/mvebu/common/devel-board.h
+
+diff --git a/arch/arm/cpu/mvebu-common/Makefile b/arch/arm/cpu/mvebu-common/Makefile
+index bd13609..20314ec 100644
+--- a/arch/arm/cpu/mvebu-common/Makefile
++++ b/arch/arm/cpu/mvebu-common/Makefile
+@@ -23,4 +23,3 @@ obj-y += misc.o
+ obj-$(CONFIG_AURORA_TIMER) += timer_aurora.o
+ obj-$(CONFIG_MVEBU_CA9) += platform.o
+ obj-$(CONFIG_ADEC) += adec.o
+-obj-$(CONFIG_DISPLAY_CPUINFO) += cpuinfo.o
+diff --git a/arch/arm/cpu/mvebu-common/cpuinfo.c b/arch/arm/cpu/mvebu-common/cpuinfo.c
+deleted file mode 100644
+index 2492a06..0000000
+--- a/arch/arm/cpu/mvebu-common/cpuinfo.c
++++ /dev/null
+@@ -1,68 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
+- * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
+- *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
+- * ***************************************************************************
+- */
+-
+-#include <common.h>
+-#include <asm/arch-mvebu/clock.h>
+-
+-/* Enable each SOC to print its own info */
+-void __print_soc_info(void)
+-{
+-	return;
+-}
+-
+-void print_soc_info(void)
+-	__attribute__((weak, alias("__print_soc_info")));
+-
+-int print_cpuinfo(void)
+-{
+-#if 0
+-	char *device, *rev;
+-	char name[50];
+-	mvBoardIdSet();
+-	mvBoardNameGet(name);
+-	printf("Board: %s\n",  name);
+-	if (!mvCtrlIsValidSatR())
+-		printf("       Custom configuration\n");
+-	device = soc_get_device_name();
+-	device = soc_get_rev_name();
+-	printf("SoC:   %s-%s\n", device, rev);
+-	if (soc_get_cpu_cnt())
+-		printf("       running %d CPUs\n", mvCtrlGetCpuNum()+1);
+-
+-	mvCpuNameGet(name);
+-	printf("CPU:   %s LE",  name);
+-	if (mvCtrlGetCpuNum())
+-		printf("       CPU %d\n",  whoAmI());
+-#endif
+-	printf("       CPU    @ %d [MHz]\n", soc_cpu_clk_get() / 1000000);
+-	printf("       L2     @ %d [MHz]\n", soc_l2_clk_get() / 1000000);
+-	printf("       TClock @ %d [MHz]\n", soc_tclk_get() / 1000000);
+-	printf("       DDR    @ %d [MHz]\n", soc_ddr_clk_get() / 1000000);
+-#if 0
+-	printf("       DDR %dBit Width, %s Memory Access\n", mvCtrlDDRBusWidth(), mvCtrlDDRThruXbar()?"XBAR":"FastPath");
+-#if defined(CONFIG_ECC_SUPPORT)
+-	printf("       DDR ECC %s\n", mvCtrlDDRECC()?"Enabled":"Disabled");
+-#endif
+-#endif
+-
+-	print_soc_info();
+-
+-	return 0;
+-}
+-
+diff --git a/arch/arm/cpu/mvebu-common/misc.c b/arch/arm/cpu/mvebu-common/misc.c
+index e9035a6..4a0c63e 100644
+--- a/arch/arm/cpu/mvebu-common/misc.c
++++ b/arch/arm/cpu/mvebu-common/misc.c
+@@ -20,6 +20,7 @@
+ #include <common.h>
+ #include <asm/io.h>
+ #include <asm/arch/regs-base.h>
++#include <asm/arch-mvebu/clock.h>
+ 
+ #define DEVICE_ID_OFFSET	16
+ #define DEVICE_REV_OFFSET	8
+@@ -59,6 +60,77 @@ void print_mv_banner(void)
+ 	return;
+ }
+ 
++/* Enable each SOC to print its own info */
++void __print_soc_specific_info(void)
++{
++	return;
++}
++void print_soc_specific_info(void) __attribute__((weak, alias("__print_soc_specific_info")));
++
++
++void mvebu_print_soc_info(void)
++{
++#if 0
++	char *device, *rev;
++	char name[50];
++	if (!mvCtrlIsValidSatR())
++		printf("       Custom configuration\n");
++	device = soc_get_device_name();
++	device = soc_get_rev_name();
++	printf("SoC:   %s-%s\n", device, rev);
++	if (soc_get_cpu_cnt())
++		printf("       running %d CPUs\n", mvCtrlGetCpuNum()+1);
++
++	mvCpuNameGet(name);
++	printf("CPU:   %s LE",  name);
++	if (mvCtrlGetCpuNum())
++		printf("       CPU %d\n",  whoAmI());
++#endif
++	printf("       CPU    @ %d [MHz]\n", soc_cpu_clk_get() / 1000000);
++	printf("       L2     @ %d [MHz]\n", soc_l2_clk_get() / 1000000);
++	printf("       TClock @ %d [MHz]\n", soc_tclk_get() / 1000000);
++	printf("       DDR    @ %d [MHz]\n", soc_ddr_clk_get() / 1000000);
++#if 0
++	printf("       DDR %dBit Width, %s Memory Access\n", mvCtrlDDRBusWidth(), mvCtrlDDRThruXbar()?"XBAR":"FastPath");
++#if defined(CONFIG_ECC_SUPPORT)
++	printf("       DDR ECC %s\n", mvCtrlDDRECC()?"Enabled":"Disabled");
++#endif
++#endif
++
++	__print_soc_specific_info();
++
++}
++
++/*
++ * We don't use the generic U-BOOT "print_cpuinfo" hook since we want to print
++ * the board name first. board name is only available later in init stage
++ * and that's when we call "mvebu_print_soc_info"
++ */
++#ifdef CONFIG_DISPLAY_CPUINFO
++int print_cpuinfo(void)
++{
++	return 0;
++}
++#endif
++
++void __reset_cpu(ulong addr)
++{
++	u32 reg;
++	/* Enable global system reset */
++	reg = readl(MVEBU_RESET_MASK_REG);
++	reg |= 1;
++	writel(reg, MVEBU_RESET_MASK_REG);
++
++	/* Trigger reset */
++	reg = readl(MVEBU_SOFT_RESET_REG);
++	reg |= 1;
++	writel(reg, MVEBU_SOFT_RESET_REG);
++}
++
++void reset_cpu(ulong addr) __attribute__((weak, alias("__reset_cpu")));
++
++
++
+ void enable_caches(void)
+ {
+ 	/* Nothing to be done */
+diff --git a/arch/arm/include/asm/arch-armada38x/regs-base.h b/arch/arm/include/asm/arch-armada38x/regs-base.h
+index 4593907..e18bb95 100644
+--- a/arch/arm/include/asm/arch-armada38x/regs-base.h
++++ b/arch/arm/include/asm/arch-armada38x/regs-base.h
+@@ -28,7 +28,10 @@
+ #define MVEBU_UART_BASE(x)	(MVEBU_REGS_BASE + 0x12000 + (0x100 * x))
+ #define MVEBU_GLOBAL_TIMER_BASE	(MVEBU_REGS_BASE + 0x20300)
+ 
+-#define MVEBU_DEVICE_ID_REG	(MVEBU_REGS_BASE + 0x18238)
+-#define MVEBU_DEVICE_REV_REG	(MVEBU_REGS_BASE + 0x1823C)
++#define MVEBU_MISC_REGS_BASE	(MVEBU_REGS_BASE + 0x18200)
++#define MVEBU_DEVICE_ID_REG	(MVEBU_MISC_REGS_BASE + 0x38)
++#define MVEBU_DEVICE_REV_REG	(MVEBU_MISC_REGS_BASE + 0x3C)
++#define MVEBU_RESET_MASK_REG	(MVEBU_MISC_REGS_BASE + 0x60)
++#define MVEBU_SOFT_RESET_REG	(MVEBU_MISC_REGS_BASE + 0x64)
+ 
+ #endif	/* _REGS_BASE_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/soc.h b/arch/arm/include/asm/arch-mvebu/soc.h
+index 6024311..332d166 100644
+--- a/arch/arm/include/asm/arch-mvebu/soc.h
++++ b/arch/arm/include/asm/arch-mvebu/soc.h
+@@ -57,6 +57,7 @@ struct mvebu_soc_family *soc_init(void);
+ 
+ /* Common SOC API */
+ int mvebu_soc_init(void);
++void mvebu_print_soc_info(void);
+ 
+ u16 *soc_get_unit_mask_table(void);
+ 
+diff --git a/board/mvebu/common/Makefile b/board/mvebu/common/Makefile
+index 705a21b..59a0589 100644
+--- a/board/mvebu/common/Makefile
++++ b/board/mvebu/common/Makefile
+@@ -20,5 +20,9 @@
+ obj-y	+= board-common.o
+ obj-y	+= entry.o
+ obj-y	+= init.o
++
++ifdef CONFIG_MVEBU_DEVEL_BOARD
+ obj-y	+= sar.o
+ obj-y	+= config.o
++obj-y	+= devel-board.o
++endif
+diff --git a/board/mvebu/common/board-common.c b/board/mvebu/common/board-common.c
+index fd5845d..28ad917 100644
+--- a/board/mvebu/common/board-common.c
++++ b/board/mvebu/common/board-common.c
+@@ -33,95 +33,13 @@ DECLARE_GLOBAL_DATA_PTR;
+ 
+ struct mvebu_board_family *brd;
+ 
+-int board_get_id(void)
++/* Generic board id function. Each board family can make his own */
++int __board_get_id(void)
+ {
+ 	/* Stub to implement generic board id read */
+ 	return 1;
+ }
+-/* this function is weak so non standard boards can iplement their own */
+-/*void board_get_id(void) __attribute__((weak, alias("__board_get_id")));*/
++int board_get_id(void) __attribute__((weak, alias("__board_get_id")));
+ 
+-int common_board_init(struct mvebu_board_family *board_family)
+-{
+-	int board_id = board_get_id();
+-	struct mvebu_board_info *curr_board;
+-	u16 *unit_mask = soc_get_unit_mask_table();
+-	int sar_id, cfg_id, idx;
+-
+-	brd = board_family;
+-
+-	if ((board_id < 0) || (board_id > brd->board_cnt)) {
+-		printf("ERROR: %s: unidentified board id %d. Using default %d\n",
+-		       __func__, board_id, brd->default_id);
+-		board_id = brd->default_id;
+-	}
+-
+-	brd->curr_board = brd->boards_info[board_id];
+-	curr_board = brd->curr_board;
+-
+-	printf("Board: %s\n", curr_board->name);
+-
+-	/* Update active units list for board */
+-	if (curr_board->unit_mask)
+-		update_unit_info(unit_mask, curr_board->unit_mask,
+-				 curr_board->unit_update_mode);
+ 
+-	/* Update SAR and CFG for board */
+-	if (curr_board->configurable) {
+-		struct mvebu_board_config *brd_cfg = curr_board->config_data;
+-
+-		/* Deactivate all SAR entries */
+-		for (sar_id = 0; sar_id < MAX_SAR; sar_id++)
+-			brd->sar->sar_lookup[sar_id].active = 0;
+-
+-		/* Activate board entries */
+-		for (idx = 0; idx < brd_cfg->sar_cnt; idx++)
+-			brd->sar->sar_lookup[brd_cfg->active_sar[idx]].active = 1;
+-
+-		/* Deactivate all CFG entries */
+-		for (cfg_id = 0; cfg_id < MAX_CFG; cfg_id++)
+-			brd->sar->sar_lookup[cfg_id].active = 0;
+-
+-		/* Activate board entries */
+-		for (idx = 0; idx < brd_cfg->cfg_cnt; idx++)
+-			brd->sar->sar_lookup[brd_cfg->active_cfg[idx]].active = 1;
+-	}
+-
+-	return 0;
+-}
+ 
+-struct sar_data *board_get_sar(void)
+-{
+-	if (brd->curr_board->configurable &&
+-	    brd->curr_board->config_data->sar_cnt)
+-		return brd->sar;
+-	else
+-		return NULL;
+-}
+-
+-struct sar_var *board_get_sar_table(void)
+-{
+-	if (brd->curr_board->configurable &&
+-	    brd->curr_board->config_data->sar_cnt)
+-		return brd->sar->sar_lookup;
+-	else
+-		return NULL;
+-}
+-
+-struct cfg_data *board_get_cfg(void)
+-{
+-	if (brd->curr_board->configurable &&
+-	    brd->curr_board->config_data->cfg_cnt)
+-		return brd->cfg;
+-	else
+-		return NULL;
+-}
+-
+-struct cfg_var *board_get_cfg_table(void)
+-{
+-	if (brd->curr_board->configurable &&
+-	    brd->curr_board->config_data->cfg_cnt)
+-		return brd->cfg->cfg_lookup;
+-	else
+-		return NULL;
+-}
+diff --git a/board/mvebu/common/board.h b/board/mvebu/common/board.h
+index 6841fd8..497b9b7 100644
+--- a/board/mvebu/common/board.h
++++ b/board/mvebu/common/board.h
+@@ -87,11 +87,17 @@ struct mvebu_board_family {
+ 	struct cfg_data *cfg;
+ };
+ 
++/* APIs required from all board families */
++struct mvebu_board_family *board_init_family(void);
+ 
+-int common_board_init(struct mvebu_board_family *board_family);
+-struct sar_data *board_get_sar(void);
+-struct sar_var  *board_get_sar_table(void);
+-struct cfg_data *board_get_cfg(void);
+-struct cfg_var  *board_get_cfg_table(void);
++/* Common board API */
++int board_get_id(void);
++
++
++DECLARE_GLOBAL_DATA_PTR;
++#define get_board_family()	(struct mvebu_board_family *)(gd->arch.board_family)
++#define set_board_family(x)	(gd->arch.board_family = x)
++#define get_board_info()	(struct mvebu_board_info *)(gd->arch.board_family->curr_board)
++#define set_board_info(x)	(gd->arch.board_family->curr_board = x)
+ 
+ #endif /* _BOARD_H_ */
+diff --git a/board/mvebu/common/config.c b/board/mvebu/common/config.c
+index 99a5225..85fc64e 100644
+--- a/board/mvebu/common/config.c
++++ b/board/mvebu/common/config.c
+@@ -24,7 +24,7 @@
+ #include <asm/io.h>
+ #include <asm/bitops.h>
+ #include <linux/compiler.h>
+-#include "board.h"
++#include "devel-board.h"
+ #include "config.h"
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+diff --git a/board/mvebu/common/devel-board.c b/board/mvebu/common/devel-board.c
+new file mode 100644
+index 0000000..4ec6ddc
+--- /dev/null
++++ b/board/mvebu/common/devel-board.c
+@@ -0,0 +1,99 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG */
++
++#include <common.h>
++#include <errno.h>
++#include <asm/arch-mvebu/soc.h>
++#include "devel-board.h"
++
++int mvebu_devel_board_init(struct mvebu_board_family *brd_fam)
++{
++	struct mvebu_board_info *brd = brd_fam->curr_board;
++	int sar_id, cfg_id, idx;
++
++	/* Update SAR and CFG for board */
++	if (brd->configurable) {
++		struct mvebu_board_config *brd_cfg = brd->config_data;
++
++		/* Deactivate all SAR entries */
++		for (sar_id = 0; sar_id < MAX_SAR; sar_id++)
++			brd_fam->sar->sar_lookup[sar_id].active = 0;
++
++		/* Activate board entries */
++		for (idx = 0; idx < brd_cfg->sar_cnt; idx++)
++			brd_fam->sar->sar_lookup[brd_cfg->active_sar[idx]].active = 1;
++
++		/* Deactivate all CFG entries */
++		for (cfg_id = 0; cfg_id < MAX_CFG; cfg_id++)
++			brd_fam->sar->sar_lookup[cfg_id].active = 0;
++
++		/* Activate board entries */
++		for (idx = 0; idx < brd_cfg->cfg_cnt; idx++)
++			brd_fam->sar->sar_lookup[brd_cfg->active_cfg[idx]].active = 1;
++	}
++
++	return 0;
++}
++
++struct sar_data *board_get_sar(void)
++{
++	struct mvebu_board_family *brd_fam = get_board_family();
++
++	if (brd_fam->curr_board->configurable &&
++	    brd_fam->curr_board->config_data->sar_cnt)
++		return brd_fam->sar;
++	else
++		return NULL;
++}
++
++struct sar_var *board_get_sar_table(void)
++{
++	struct mvebu_board_family *brd_fam = get_board_family();
++
++	if (brd_fam->curr_board->configurable &&
++	    brd_fam->curr_board->config_data->sar_cnt)
++		return brd_fam->sar->sar_lookup;
++	else
++		return NULL;
++}
++
++struct cfg_data *board_get_cfg(void)
++{
++	struct mvebu_board_family *brd_fam = get_board_family();
++
++	if (brd_fam->curr_board->configurable &&
++	    brd_fam->curr_board->config_data->cfg_cnt)
++		return brd_fam->cfg;
++	else
++		return NULL;
++}
++
++struct cfg_var *board_get_cfg_table(void)
++{
++	struct mvebu_board_family *brd_fam = get_board_family();
++
++	if (brd_fam->curr_board->configurable &&
++	    brd_fam->curr_board->config_data->cfg_cnt)
++		return brd_fam->cfg->cfg_lookup;
++	else
++		return NULL;
++}
++
+diff --git a/board/mvebu/common/devel-board.h b/board/mvebu/common/devel-board.h
+new file mode 100644
+index 0000000..af3fb3e
+--- /dev/null
++++ b/board/mvebu/common/devel-board.h
+@@ -0,0 +1,34 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#ifndef _DEVEL_BOARD_H_
++#define _DEVEL_BOARD_H_
++
++#include <common.h>
++#include "board.h"
++
++int mvebu_devel_board_init(struct mvebu_board_family *brd_fam);
++
++struct sar_data *board_get_sar(void);
++struct sar_var  *board_get_sar_table(void);
++struct cfg_data *board_get_cfg(void);
++struct cfg_var  *board_get_cfg_table(void);
++
++
++#endif /* _DEVEL_BOARD_H_ */
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index bed92f9..7de0a27 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -27,10 +27,13 @@
+ #include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/soc.h>
+ #include "board.h"
++#ifdef CONFIG_MVEBU_DEVEL_BOARD
++#include "devel-board.h"
++#endif
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+-struct mvebu_board_family *board_family;
++struct mvebu_brd_fam *brd_fam;
+ 
+ #ifdef CONFIG_BOARD_LATE_INIT
+ int board_late_init(void)
+@@ -85,11 +88,53 @@ int mvebu_io_init(void)
+ 	return 0;
+ }
+ 
++int mvebu_print_info(char *board_name)
++{
++	printf("Board: %s\n", board_name);
++	mvebu_print_soc_info();
++
++	return 0;
++}
++
+ int mvebu_board_init(void)
+ {
++	int board_id;
++	struct mvebu_board_family *brd_fam;
++	struct mvebu_board_info *brd;
++	u16 *unit_mask = soc_get_unit_mask_table();
++
+ 	debug("Initializing board\n");
+ 
+-	/*board_family = board_init_family();*/
++	brd_fam = board_init_family();
++	if (!brd_fam) {
++		error("Failed to get board family structure");
++		return 0;
++	}
++
++	set_board_family(board_init_family());
++
++	/* Identify the specific board */
++	board_id = board_get_id();
++	if ((board_id < 0) || (board_id > brd_fam->board_cnt)) {
++		error("Unidentified board id %d. Using default %d",
++		      board_id, brd_fam->default_id);
++		board_id = brd_fam->default_id;
++	}
++
++	brd_fam->curr_board = brd_fam->boards_info[board_id];
++	brd = brd_fam->curr_board;
++
++	mvebu_print_info(brd->name);
++
++	/* Update active units list for board */
++	if (brd->unit_mask)
++		update_unit_info(unit_mask, brd->unit_mask, brd->unit_update_mode);
++
++#ifdef CONFIG_MVEBU_DEVEL_BOARD
++	mvebu_devel_board_init(brd_fam);
++#endif
++
++	/* mpp_set */
+ 
+ 	return 0;
+ }
+@@ -113,10 +158,4 @@ int dram_init(void)
+ 	return 0;
+ }
+ 
+-/*
+- * Board specific reset that is system reset.
+- */
+-void reset_cpu(ulong addr)
+-{
+-}
+ 
+diff --git a/board/mvebu/common/sar.c b/board/mvebu/common/sar.c
+index d76f00a..0239555 100644
+--- a/board/mvebu/common/sar.c
++++ b/board/mvebu/common/sar.c
+@@ -24,7 +24,7 @@
+ #include <asm/io.h>
+ #include <asm/bitops.h>
+ #include <linux/compiler.h>
+-#include "board.h"
++#include "devel-board.h"
+ #include "sar.h"
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+diff --git a/include/configs/armada38x.h b/include/configs/armada38x.h
+index 5f516e5..1baeb7a 100644
+--- a/include/configs/armada38x.h
++++ b/include/configs/armada38x.h
+@@ -40,7 +40,7 @@
+ #define CONFIG_IDENT_STRING	" Marvell version: 2014_T2.0"
+ 
+ /* Configurable boards */
+-#define CONFIG_MVEBU_DEV_BOARD      /* Turn this off for Customer boards */
++#define CONFIG_MVEBU_DEVEL_BOARD      /* Turn this off for Customer boards */
+ 
+ /* Platform */
+ #define CONFIG_MVEBU_CA9
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 02dc3f4..cf50e54 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -112,6 +112,13 @@
+ #define CONFIG_CMD_ELF
+ #define CONFIG_CMD_STAGE_BOOT
+ 
++/* MVEBU Generic commands */
++#define CONFIG_CMD_MVEBU_MAP
++#ifdef CONFIG_MVEBU_DEVEL_BOARD
++#define CONFIG_CMD_MVEBU_SAR
++#define CONFIG_CMD_MVEBU_CONFIG
++#endif
++
+ 
+ /* No flash setup */
+ #if !defined(MV_INCLUDE_NOR) && !defined(MV_INCLUDE_NAND) && !defined(MV_INCLUDE_SPI)
+-- 
+1.9.1
+

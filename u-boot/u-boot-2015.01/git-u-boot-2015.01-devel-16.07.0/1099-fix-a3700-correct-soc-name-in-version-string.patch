@@ -1,0 +1,30 @@
+From 8d0adc91d155d550fe3d744481b660a8dfd9019a Mon Sep 17 00:00:00 2001
+From: zachary <zhangzg@marvell.com>
+Date: Fri, 22 Apr 2016 00:42:55 +0800
+Subject: [PATCH 1099/1240] fix: a3700: correct soc name in version string
+
+Change-Id: Icde21b77eb2992ddbdea4bd29699b79272e01c78
+Signed-off-by: zachary <zhangzg@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29255
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ include/configs/armada3700.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/configs/armada3700.h b/include/configs/armada3700.h
+index e30d968..75b13f5 100644
+--- a/include/configs/armada3700.h
++++ b/include/configs/armada3700.h
+@@ -20,7 +20,7 @@
+ #define __ARMADA_LP_H
+ 
+ /* Version */
+-#define CONFIG_BOOTP_VCI_STRING		" U-boot.armv8.armadalp"
++#define CONFIG_BOOTP_VCI_STRING		" U-boot.armv8.armada3700"
+ 
+ /* Platform */
+ /* Support GICv3 */
+-- 
+1.9.1
+

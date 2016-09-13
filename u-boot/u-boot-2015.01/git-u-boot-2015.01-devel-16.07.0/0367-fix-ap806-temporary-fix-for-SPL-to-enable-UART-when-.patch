@@ -1,0 +1,31 @@
+From acd1149f202936d03507c6bddb8f23b3e9dc71c9 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 27 Aug 2015 01:49:38 +0300
+Subject: [PATCH 0367/1240] fix: ap806: temporary fix for SPL to enable UART
+ when loading from debbuger
+
+Change-Id: If6b9ba802ca20fe2009cb9e9fb7671934458a035
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23240
+Reviewed-by: Neta Zur Hershkovits <neta@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/spl.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index ae9e1d4..212170a 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -60,7 +60,7 @@ void board_init_f(ulong silent)
+ 	gd = &gdata;
+ 	gd->baudrate = CONFIG_BAUDRATE;
+ 
+-#ifndef CONFIG_TARGET_ARMADA_38X
++#if 0
+ 	if (silent)
+ 		gd->flags |= GD_FLG_SILENT;
+ #endif
+-- 
+1.9.1
+

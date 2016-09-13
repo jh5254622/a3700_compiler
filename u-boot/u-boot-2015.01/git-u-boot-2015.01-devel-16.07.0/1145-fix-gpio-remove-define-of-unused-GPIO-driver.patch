@@ -1,0 +1,35 @@
+From f80ed3c2a576d4d64b619109965818cd245bb2a7 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 18 May 2016 13:49:35 +0300
+Subject: [PATCH 1145/1240] fix: gpio: remove define of unused GPIO driver
+
+- KW_GPIO driver is unused, this patch remove the compilation of it
+
+Change-Id: I827905415517ae361df091bab1a2ab8ca3c3f619
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29794
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ include/configs/mvebu-common.h | 5 -----
+ 1 file changed, 5 deletions(-)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 6b74021..731e8fb 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -293,11 +293,6 @@
+ #define CONFIG_BAUDRATE		115200
+ #endif
+ 
+-/* GPIO */
+-#ifdef MV_INCLUDE_GPIO
+-	#define CONFIG_KIRKWOOD_GPIO
+-#endif /* MV_INCLUDE_GPIO */
+-
+ /* I2C */
+ #ifdef CONFIG_MVEBU_I2C
+ 	#define CONFIG_SYS_I2C
+-- 
+1.9.1
+

@@ -1,0 +1,50 @@
+From 9fad3ae02b43b59badc4eb153b03678550a5a275 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 2 Feb 2016 10:02:52 +0200
+Subject: [PATCH 0760/1240] fix: dts: add spi1 for CP-110
+
+- Add missing node for SPI1 for CP-110
+
+Change-Id: I94eb143041722d4554e5b1ac3475c7603706bc9c
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27119
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/cp110.dtsi | 15 ++++++++++++---
+ 1 file changed, 12 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index c16a110..e853877 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -25,13 +25,22 @@ map-iob {
+ 		0x0 0xf6000000 0x0 0x1000000 0x4 /* PEX0_X4 window */
+ 		0x0 0xf9000000 0x0 0x1000000 0x5 /* NAND window */>;
+ };
+-
+-spi@700600 {
++spi0@700600 {
+ 	compatible = "marvell,orion-spi";
+ 	reg = <0x700600 0x50>;
+ 	spi-max-frequency = <10000000>;
+ 	clock = <&tclk>;
+-	cpol-cs-bitmap = <1>; /* bit i is set if the CPOL of
++	cpol-cs-bitmap = <0>; /* bit i is set if the CPOL of
++				CS-i is enabled or not */
++	status = "disable";
++};
++
++spi1@700680 {
++	compatible = "marvell,orion-spi";
++	reg = <0x700680 0x50>;
++	spi-max-frequency = <10000000>;
++	clock = <&tclk>;
++	cpol-cs-bitmap = <0>; /* bit i is set if the CPOL of
+ 				CS-i is enabled or not */
+ 	status = "disable";
+ };
+-- 
+1.9.1
+

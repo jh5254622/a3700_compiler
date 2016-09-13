@@ -1,0 +1,46 @@
+From d7fb7de2cbd214cf96967c105fb1ce9ea1b637eb Mon Sep 17 00:00:00 2001
+From: Ken Ma <make@marvell.com>
+Date: Tue, 3 May 2016 16:49:34 +0800
+Subject: [PATCH 1139/1240] a3700: disable uart recovery hack in spl
+
+- The uart recovery hack has been moved to ATF in term of SPL removal.
+  Hence, the boot mode switch feature is supposed to be disabled in SPL.
+  Otherwise both SPL and ATF will set the set_info for boot_src, which
+  will be overridden by the wrong value.
+
+Change-Id: I73e486b6646ec055efcd238f686555232b479e73
+Signed-off-by: Ken Ma <make@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29405
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/cpu/armv8/armada3700/Kconfig | 2 +-
+ configs/mvebu_armada3700_defconfig    | 1 +
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/armv8/armada3700/Kconfig b/arch/arm/cpu/armv8/armada3700/Kconfig
+index 469146f..95b49c0 100644
+--- a/arch/arm/cpu/armv8/armada3700/Kconfig
++++ b/arch/arm/cpu/armv8/armada3700/Kconfig
+@@ -28,7 +28,7 @@ config ARMV8_PSCI
+ config MVEBU_BOOTMODE_SWITCH_SUPPORT
+ 	bool "Mvebu bootmode switch support"
+ 	depends on DEVEL_BOARD
+-	default y
++	default n
+ 	help
+ 	  Choose this option to switch the boot source
+ 	  to uart at the early stage of SPL while the boot source
+diff --git a/configs/mvebu_armada3700_defconfig b/configs/mvebu_armada3700_defconfig
+index a8e1b0b..abd769b 100644
+--- a/configs/mvebu_armada3700_defconfig
++++ b/configs/mvebu_armada3700_defconfig
+@@ -48,4 +48,5 @@ CONFIG_MVEBU_COMPHY_SUPPORT=y
+ +S:# CONFIG_MVEBU_SPL_DDR_SUPPORT is not set
+ CONFIG_SHA256=y
+ CONFIG_SHA1=y
++CONFIG_MVEBU_BOOTMODE_SWITCH_SUPPORT=y
+ +S:CONFIG_MVEBU_MBUS_SKIP_DRAM_WIN=y
+-- 
+1.9.1
+

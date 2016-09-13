@@ -1,0 +1,411 @@
+From df7901b97bec9b2287ef1fea0f6df676af865cc7 Mon Sep 17 00:00:00 2001
+From: Ofer Heifetz <oferh@marvell.com>
+Date: Mon, 30 May 2016 11:03:31 +0300
+Subject: [PATCH 63/66] package/libreswan: add new package
+
+Change-Id: Ic59657e23e1d963f246a5e6cb53280f6339fa29d
+Signed-off-by: Ofer Heifetz <oferh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30137
+Tested-by: Star_Automation <star@marvell.com>
+---
+ package/Config.in                                  |  1 +
+ ...or-proc-net-pf_key-oops-on-4.4-kernels-in.patch | 39 +++++++++
+ ...02-KLIPS-fix-sk-pointer-usage-for-key_pid.patch | 31 +++++++
+ package/libreswan/Config.in                        | 14 +++
+ package/libreswan/libreswan.hash                   |  2 +
+ package/libreswan/libreswan.mk                     | 52 ++++++++++++
+ package/libreswan/module/README                    | 24 ++++++
+ package/libreswan/module/config-all.hmodules       | 99 ++++++++++++++++++++++
+ package/libreswan/module/defconfig                 | 58 +++++++++++++
+ 9 files changed, 320 insertions(+)
+ create mode 100644 package/libreswan/0001-KLIPS-Fix-for-proc-net-pf_key-oops-on-4.4-kernels-in.patch
+ create mode 100644 package/libreswan/0002-KLIPS-fix-sk-pointer-usage-for-key_pid.patch
+ create mode 100644 package/libreswan/Config.in
+ create mode 100644 package/libreswan/libreswan.hash
+ create mode 100644 package/libreswan/libreswan.mk
+ create mode 100644 package/libreswan/module/README
+ create mode 100644 package/libreswan/module/config-all.hmodules
+ create mode 100644 package/libreswan/module/defconfig
+
+diff --git a/package/Config.in b/package/Config.in
+index 13c7473..6b6fedd 100644
+--- a/package/Config.in
++++ b/package/Config.in
+@@ -1292,6 +1292,7 @@ endif
+ 	source "package/knock/Config.in"
+ 	source "package/leafnode2/Config.in"
+ 	source "package/lftp/Config.in"
++	source "package/libreswan/Config.in"
+ 	source "package/lighttpd/Config.in"
+ 	source "package/linknx/Config.in"
+ 	source "package/links/Config.in"
+diff --git a/package/libreswan/0001-KLIPS-Fix-for-proc-net-pf_key-oops-on-4.4-kernels-in.patch b/package/libreswan/0001-KLIPS-Fix-for-proc-net-pf_key-oops-on-4.4-kernels-in.patch
+new file mode 100644
+index 0000000..bcdf8f8
+--- /dev/null
++++ b/package/libreswan/0001-KLIPS-Fix-for-proc-net-pf_key-oops-on-4.4-kernels-in.patch
+@@ -0,0 +1,39 @@
++From 21bf480121f4c14739e0c3c1e5a223ca063189ff Mon Sep 17 00:00:00 2001
++From: Erik Andersson <erik@ingate.com>
++Date: Thu, 7 Apr 2016 15:21:01 -0500
++Subject: [PATCH] KLIPS: Fix for /proc/net/pf_key oops on < 4.4 kernels
++ introduced in 3.17
++
++Signed-off-by: Paul Wouters <pwouters@redhat.com>
++---
++ linux/include/libreswan/pfkey.h | 7 ++++++-
++ 1 file changed, 6 insertions(+), 1 deletion(-)
++
++diff --git a/linux/include/libreswan/pfkey.h b/linux/include/libreswan/pfkey.h
++index d965e5d..3f70e15 100644
++--- a/linux/include/libreswan/pfkey.h
+++++ b/linux/include/libreswan/pfkey.h
++@@ -18,6 +18,7 @@
++ #define __NET_IPSEC_PF_KEY_H
++ 
++ #include "pfkeyv2.h"
+++#include <linux/version.h>
++ #ifdef __KERNEL__
++ extern struct proto_ops pfkey_proto_ops;
++ typedef struct sock pfkey_sock;
++@@ -139,7 +140,11 @@ struct key_opt {
++ 	struct sock     *sk;
++ };
++ 
++-#define key_pid(sk) ((struct key_opt*)&(sk))->key_pid
+++#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+++# define key_pid(sk) ((struct key_opt*)&(sk))->key_pid
+++#else
+++# define key_pid(sk) ((struct key_opt*)&((sk)->sk_protinfo))->key_pid
+++#endif
++ 
++ /* XXX-mcr this is not an alignment, this is because the count is in 64-bit
++  * words.
++-- 
++2.8.2
++
+diff --git a/package/libreswan/0002-KLIPS-fix-sk-pointer-usage-for-key_pid.patch b/package/libreswan/0002-KLIPS-fix-sk-pointer-usage-for-key_pid.patch
+new file mode 100644
+index 0000000..f181bd3
+--- /dev/null
++++ b/package/libreswan/0002-KLIPS-fix-sk-pointer-usage-for-key_pid.patch
+@@ -0,0 +1,31 @@
++From d272dfdd4efb2072946228ea57818e76173e3d7c Mon Sep 17 00:00:00 2001
++From: Ofer Heifetz <oferh@marvell.com>
++Date: Sun, 29 May 2016 15:51:42 +0300
++Subject: [PATCH] KLIPS: fix sk pointer usage for key_pid
++
++up till LKv4.1, key_pid was saved into sk_proinfo, this field
++was removed and KLIPS was changed to save the key_pid into
++the sk pointer which crashed the kernel. This patch fixes this
++issue by saving the key_pid into sk->sk_user_data.
++
++Signed-off-by: Ofer Heifetz <oferh@marvell.com>
++---
++ linux/include/libreswan/pfkey.h | 2 +-
++ 1 file changed, 1 insertion(+), 1 deletion(-)
++
++diff --git a/linux/include/libreswan/pfkey.h b/linux/include/libreswan/pfkey.h
++index 3f70e15..29719f2 100644
++--- a/linux/include/libreswan/pfkey.h
+++++ b/linux/include/libreswan/pfkey.h
++@@ -141,7 +141,7 @@ struct key_opt {
++ };
++ 
++ #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
++-# define key_pid(sk) ((struct key_opt*)&(sk))->key_pid
+++# define key_pid(sk) ((struct key_opt*)&((sk)->sk_user_data))->key_pid
++ #else
++ # define key_pid(sk) ((struct key_opt*)&((sk)->sk_protinfo))->key_pid
++ #endif
++-- 
++2.8.2
++
+diff --git a/package/libreswan/Config.in b/package/libreswan/Config.in
+new file mode 100644
+index 0000000..efaafcc
+--- /dev/null
++++ b/package/libreswan/Config.in
+@@ -0,0 +1,14 @@
++config BR2_PACKAGE_LIBRESWAN
++	bool "libreswan"
++	depends on BR2_USE_MMU # iproute2
++	depends on BR2_TOOLCHAIN_HEADERS_AT_LEAST_3_0 # iproute2
++	select BR2_PACKAGE_GMP
++	select BR2_PACKAGE_IPROUTE2
++	help
++	  Libreswan is an implementation of IPsec for Linux
++
++	  https://libreswan.org/
++
++comment "libreswan needs a toolchain w/ headers >= 3.0"
++	depends on BR2_USE_MMU
++	depends on !BR2_TOOLCHAIN_HEADERS_AT_LEAST_3_0
+diff --git a/package/libreswan/libreswan.hash b/package/libreswan/libreswan.hash
+new file mode 100644
+index 0000000..8797401
+--- /dev/null
++++ b/package/libreswan/libreswan.hash
+@@ -0,0 +1,2 @@
++# Locally calculated after checking pgp signature
++sha256  28c286f57f6d8d00e1502ea283aac0f9f863edb2d759e50dc89df0e28c0d0d03  libreswan-3.17.tar.gz
+diff --git a/package/libreswan/libreswan.mk b/package/libreswan/libreswan.mk
+new file mode 100644
+index 0000000..2c2780e
+--- /dev/null
++++ b/package/libreswan/libreswan.mk
+@@ -0,0 +1,52 @@
++################################################################################
++#
++# libreswan
++#
++################################################################################
++
++LIBRESWAN_VERSION = 3.17
++LIBRESWAN_SITE = http://download.libreswan.org
++LIBRESWAN_LICENSE = GPLv2+, BSD-3c
++LIBRESWAN_LICENSE_FILES = COPYING LICENSE
++
++LIBRESWAN_DEPENDENCIES = host-bison host-flex gmp iproute2 libnss
++LIBRESWAN_MAKE_OPTS = ARCH=$(BR2_ARCH) CC="$(TARGET_CC)" \
++	USERCOMPILE="$(TARGET_CFLAGS) $(if $(BR2_STATIC_LIBS),,-fPIE)" \
++	USERLINK="$(TARGET_LDFLAGS) $(if $(BR2_STATIC_LIBS),,-fPIE)" \
++	INC_USRLOCAL=/usr
++
++# these option`s goal is KLIPS IPsec + OCF HW/SW crypto, for netkey use strongswan
++LIBRESWAN_MAKE_OPTS += USE_DNSSEC=false \
++			USE_KLIPS=true \
++			HAVE_OPENSSL=true \
++			USE_NETKEY=false \
++			USE_LDAP=false \
++			USE_EXTRACRYPTO=false \
++			USE_XAUTHPAM=false \
++			USE_LIBCAP_NG=false \
++			USE_NM=false \
++			USE_MAST=false
++
++ifeq ($(BR2_PACKAGE_LIBCURL),y)
++LIBRESWAN_DEPENDENCIES += libcurl
++LIBRESWAN_MAKE_OPTS += USE_LIBCURL=true
++else
++LIBRESWAN_MAKE_OPTS += USE_LIBCURL=false
++endif
++
++ifeq ($(BR2_PACKAGE_OPENSSL),y)
++LIBRESWAN_DEPENDENCIES += openssl
++LIBRESWAN_MAKE_OPTS += HAVE_OPENSSL=true
++endif
++
++define LIBRESWAN_BUILD_CMDS
++	$(TARGET_MAKE_ENV) $(MAKE1) -C $(@D) \
++		$(LIBRESWAN_MAKE_OPTS) base
++endef
++
++define LIBRESWAN_INSTALL_TARGET_CMDS
++	$(TARGET_MAKE_ENV) $(MAKE1) -C $(@D) \
++		$(LIBRESWAN_MAKE_OPTS) DESTDIR=$(TARGET_DIR) INITSYSTEM=sysvinit install-base
++endef
++
++$(eval $(generic-package))
+diff --git a/package/libreswan/module/README b/package/libreswan/module/README
+new file mode 100644
+index 0000000..0e2e719
+--- /dev/null
++++ b/package/libreswan/module/README
+@@ -0,0 +1,24 @@
++To build Libreswan kernel module (KLIPS) ipsec.ko, you need the following:
++1) kernel source directory: KERNEL_GIT
++2) OCF source directory: OCF_DIR
++3) buildroot directory: BR_DIR
++4) ipsec.ko default include and config files (reside in the buildroot/package/libreswan/module directory))
++
++Following are the configurations you need to set before building:
++
++KERNEL_GIT=
++OCF_DIR=
++BR_DIR=
++
++You must first build the linux kernel and the OCF kernel module before building the ipsec.ko.
++
++Following is the build command that builds the ipsec.ko
++make KBUILD_EXTRA_SYMBOLS=$OCF_DIR/Module.symvers \
++     MODULE_DEF_INCLUDE=$BR_DIR/package/libreswan/module/config-all.hmodules \
++     MODULE_DEFCONFIG=$BR_DIR/package/libreswan/module/defconfig \
++     KERNELSRC=$KERNEL_GIT \
++     module
++
++If the build passes w/o an error, the ipsec.ko module can be copied into your rootfs:
++sudo cp -v $LIBSWAN_DIR/modobj/ipsec.ko $TARGET_ROOTFS/lib/modules/
++
+diff --git a/package/libreswan/module/config-all.hmodules b/package/libreswan/module/config-all.hmodules
+new file mode 100644
+index 0000000..7c74caa
+--- /dev/null
++++ b/package/libreswan/module/config-all.hmodules
+@@ -0,0 +1,99 @@
++#ifndef _CONFIG_ALL_H_
++/*
++ * Copyright (C) 2002              Michael Richardson <mcr@freeswan.org>
++ * Copyright (C) 2011              Paul Wouters <paul@xelerance.com>
++ *
++ * This kernel module is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.  See <http://www.fsf.org/copyleft/lgpl.txt>.
++ *
++ * This kernel module is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
++ * License for more details.
++ *
++ * This is the OCF version. It builds support for 3 crypto subsystems, and KLIPS
++ * will use the first one found in the following order: OCF, CryptoAPI, inline
++ * Cryptoapi might support more ciphers then the other subsystems.
++ * Requires ocf kernel module - see http://ocf-linux.sf.net/
++ */
++#define	_CONFIG_ALL_H_	/* seen it, no need to see it again */
++
++#define CONFIG_KLIPS 1
++#define CONFIG_KLIPS_MODULE 1
++
++#ifndef CONFIG_KLIPS_AH
++#define CONFIG_KLIPS_AH 1
++#endif
++
++#ifndef CONFIG_KLIPS_DEBUG
++#define CONFIG_KLIPS_DEBUG 1
++#endif
++
++#ifndef CONFIG_KLIPS_ESP
++#define CONFIG_KLIPS_ESP 1
++#endif
++
++#ifndef CONFIG_KLIPS_IPCOMP
++#define CONFIG_KLIPS_IPCOMP 1
++#endif
++
++#ifndef CONFIG_KLIPS_IPIP
++#define CONFIG_KLIPS_IPIP 1
++#endif
++
++#ifndef CONFIG_KLIPS_AUTH_HMAC_MD5
++#define CONFIG_KLIPS_AUTH_HMAC_MD5 1
++#endif
++
++#ifndef CONFIG_KLIPS_AUTH_HMAC_SHA1
++#define CONFIG_KLIPS_AUTH_HMAC_SHA1 1
++#endif
++
++#ifndef CONFIG_KLIPS_DYNDEV
++#define CONFIG_KLIPS_DYNDEV 1
++#endif
++
++#ifndef CONFIG_KLIPS_ENC_3DES
++#define CONFIG_KLIPS_ENC_3DES 1
++#endif
++
++/* no longer required for 2.6.22 and up */
++#if 0
++# ifndef CONFIG_KLIPS_NAT_TRAVERSAL
++#  define CONFIG_KLIPS_NAT_TRAVERSAL 1
++#  define CONFIG_KLIPS_COMPAT_NAT_NFMARK 1
++# endif
++#endif
++#undef CONFIG_KLIPS_NAT_TRAVERSAL
++#undef CONFIG_KLIPS_COMPAT_NAT_NFMARK
++
++#ifndef CONFIG_KLIPS_ENC_AES
++#define CONFIG_KLIPS_ENC_AES 1
++#endif
++
++#if 0 
++#ifndef CONFIG_KLIPS_ENC_CRYPTOAPI
++#define CONFIG_KLIPS_ENC_CRYPTOAPI 1
++#endif
++#endif
++
++#ifndef CONFIG_KLIPS_OCF
++# define CONFIG_KLIPS_OCF 1
++#endif
++
++#if 0
++#define CONFIG_KLIPS_ALG_CRYPTOAPI #error
++#endif
++#define CONFIG_KLIPS_ALG_AES #error
++
++#ifndef CONFIG_KLIPS_ALG_AES_MAC
++#define CONFIG_KLIPS_ALG_AES_MAC 1
++#endif
++
++#ifndef CONFIG_KLIPS_ALG
++#define CONFIG_KLIPS_ALG 1
++#endif
++
++#endif /* _CONFIG_ALL_H */
+diff --git a/package/libreswan/module/defconfig b/package/libreswan/module/defconfig
+new file mode 100644
+index 0000000..126c417
+--- /dev/null
++++ b/package/libreswan/module/defconfig
+@@ -0,0 +1,58 @@
++#
++# Libreswan IPSec implementation, KLIPS+OCF kernel config defaults
++#
++
++#
++# First, lets override stuff already set or not in the kernel config.
++#
++# We can't even think about leaving this off...
++CONFIG_INET=y
++
++#
++# This must be on for subnet protection.
++CONFIG_IP_FORWARD=y
++
++# Shut off IPSEC masquerading if it has been enabled, since it will
++# break the compile.  IPPROTO_ESP and IPPROTO_AH were included in
++# net/ipv4/ip_masq.c when they should have gone into include/linux/in.h.
++CONFIG_IP_MASQUERADE_IPSEC=n
++
++#
++# Next, lets set the recommended FreeS/WAN configuration.
++#
++
++# To config as static (preferred), 'y'.  To config as module, 'm'.
++CONFIG_KLIPS=m
++
++# To do tunnel mode IPSec, this must be enabled.
++CONFIG_KLIPS_IPIP=y
++
++# To enable authentication, say 'y'.   (Highly recommended)
++CONFIG_KLIPS_AH=y
++
++# Authentication algorithm(s):
++CONFIG_KLIPS_AUTH_HMAC_MD5=y
++CONFIG_KLIPS_AUTH_HMAC_SHA1=y
++
++# To enable encryption, say 'y'.   (Highly recommended)
++CONFIG_KLIPS_ESP=y
++
++# modular algo extensions (and new ALGOs)
++CONFIG_KLIPS_ALG=y
++
++# Encryption algorithm(s):
++CONFIG_KLIPS_ENC_3DES=y
++CONFIG_KLIPS_ENC_AES=y
++
++# Use CryptoAPI for ALG? - by default, no.
++CONFIG_KLIPS_ENC_CRYPTOAPI=n
++
++# IP Compression: new, probably still has minor bugs.
++CONFIG_KLIPS_IPCOMP=y
++
++# To enable userspace-switchable KLIPS debugging, say 'y'.
++CONFIG_KLIPS_DEBUG=y
++
++# OCF HW offloading, requires kernel patch
++CONFIG_KLIPS_OCF=y
++
+-- 
+1.9.1
+

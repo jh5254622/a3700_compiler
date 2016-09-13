@@ -1,0 +1,112 @@
+From e61b0e88527795e5d49f76a9edcfd164b2bbf8e6 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 6 Jan 2016 10:04:12 +0200
+Subject: [PATCH 0643/1240] dts: config: added config and device tree for 7040
+ emulation model
+
+Currently all interfaces are disabled to reduce boot time
+For testing purposes individual interfaces should be enabled
+by adding status=okay in the proper device tree node
+
+Change-Id: I5034905dbbea2b405834468e60e376164aaae968
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26570
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/Makefile                 |  3 ++-
+ arch/arm/dts/armada-70x0-pd.dts       | 48 +++++++++++++++++++++++++++++++++++
+ configs/mvebu_armada70x0_pd_defconfig |  5 ++--
+ 3 files changed, 53 insertions(+), 3 deletions(-)
+ create mode 100644 arch/arm/dts/armada-70x0-pd.dts
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index 26aa0b0..fe59ea4 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -60,7 +60,8 @@ dtb-$(CONFIG_TARGET_ARMADA_8K) += apn-806-db.dtb \
+ 		       apn-806-pd-a0.dtb \
+ 		       apn-806-db-dop.dtb \
+ 		       armada-80x0-db.dtb \
+-		       armada-8040-rz1-db.dtb
++		       armada-8040-rz1-db.dtb \
++		       armada-70x0-pd.dtb
+ 
+ targets += $(dtb-y)
+ 
+diff --git a/arch/arm/dts/armada-70x0-pd.dts b/arch/arm/dts/armada-70x0-pd.dts
+new file mode 100644
+index 0000000..50f69c4
+--- /dev/null
++++ b/arch/arm/dts/armada-70x0-pd.dts
+@@ -0,0 +1,48 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/dts-v1/;
++
++#include "armada-70x0.dtsi" /* include SoC device tree */
++
++/ {
++	model = "ARMADA-70x0 Emulation";
++	compatible = "marvell,armada-70x0-pd", "marvell,armada-70x0";
++	fdt_config_id = <6>;
++	board_id = <0x10>;
++
++	memory {
++		device_type = "memory";
++		reg = <0x00000000 0x10000000 0 0>; /* 512 MB */
++	};
++
++	cp110-master {
++		internal-regs {
++			pinctl@440000 {
++					/*   0 1 2 3 4 5 6 7 8 9 */
++				pin-func = < 0 0 0 0 0 0 0 0 0 0
++					     0 0 0 0 0 0 0 0 0 0
++					     0 0 0 0 0 0 0 0 0 0
++					     0 0 0 0 0 0 0 0 0 0
++					     0 0 0 0 0 0 0 0 0 0
++					     0 0 0 0 0 0 6 6 6 6
++					     0 0 0 0>;
++			};
++		};
++	};
++};
+diff --git a/configs/mvebu_armada70x0_pd_defconfig b/configs/mvebu_armada70x0_pd_defconfig
+index aa19410..098d4a1 100644
+--- a/configs/mvebu_armada70x0_pd_defconfig
++++ b/configs/mvebu_armada70x0_pd_defconfig
+@@ -28,11 +28,12 @@ CONFIG_CMD_MVEBU_MPP=y
+ CONFIG_CMD_MVEBU_BUBT=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+-+S:CONFIG_DEFAULT_DEVICE_TREE="armada-8040-rz1-db"
+++S:CONFIG_DEFAULT_DEVICE_TREE="armada-70x0-pd"
++CONFIG_MVEBU_DW_PCIE=y
+ CONFIG_MVEBU_ICU=y
+ +S:CONFIG_SYS_NS16550=y
+ CONFIG_MVEBU_I2C=y
+ CONFIG_MVEBU_SPI=y
+ CONFIG_MVEBU_PINCTL=y
+ +S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+-# CONFIG_MVEBU_SPL_DDR_SUPPORT is not set
+++S:# CONFIG_MVEBU_SPL_DDR_SUPPORT is not set
+-- 
+1.9.1
+

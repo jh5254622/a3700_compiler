@@ -1,0 +1,29 @@
+From 753f379bb5b31c87f39bd4dde25ba30fa5500906 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 5 Apr 2016 16:26:04 +0300
+Subject: [PATCH 51/66] defconfig: Enable compilation of libaio library
+
+Change-Id: Ifdc4f2178dd46c05bcecb988dab630a11620e3a1
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28799
+Reviewed-by: Ofer Heifetz <oferh@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ configs/mvebu_armv8_le_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/configs/mvebu_armv8_le_defconfig b/configs/mvebu_armv8_le_defconfig
+index c4e9b47..dfcb79e 100644
+--- a/configs/mvebu_armv8_le_defconfig
++++ b/configs/mvebu_armv8_le_defconfig
+@@ -58,6 +58,7 @@ BR2_PACKAGE_SDPARM=y
+ BR2_PACKAGE_SMARTMONTOOLS=y
+ BR2_PACKAGE_SYSSTAT=y
+ BR2_PACKAGE_OPENSSL_BIN=y
++BR2_PACKAGE_LIBAIO=y
+ BR2_PACKAGE_BC=y
+ BR2_PACKAGE_ARPTABLES=y
+ BR2_PACKAGE_BRIDGE_UTILS=y
+-- 
+1.9.1
+

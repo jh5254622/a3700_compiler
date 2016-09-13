@@ -1,0 +1,243 @@
+From 9753cfd88084c8164241dcdb4bd77b1800d574b3 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 13 Apr 2016 17:03:14 +0300
+Subject: [PATCH 1039/1240] amb: adec: add dump function for AXI-MBUS address
+ decoding windows
+
+Change-Id: I37dc498fc41e3c3fb0316004f2395594d8a94642
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29011
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/Makefile         |  1 +
+ arch/arm/cpu/armv8/armada8k/mvebu_amb_adec.c | 72 ++++++++++++++++++++++++++++
+ arch/arm/dts/cp110.dtsi                      |  4 ++
+ arch/arm/include/asm/arch-mvebu/amb_adec.h   | 25 ++++++++++
+ common/mvebu/cmd_misc.c                      |  6 +++
+ configs/mvebu_armada70x0_defconfig           |  1 +
+ drivers/misc/Kconfig                         | 10 ++++
+ include/fdtdec.h                             |  1 +
+ lib/fdtdec.c                                 |  1 +
+ 9 files changed, 121 insertions(+)
+ create mode 100644 arch/arm/cpu/armv8/armada8k/mvebu_amb_adec.c
+ create mode 100644 arch/arm/include/asm/arch-mvebu/amb_adec.h
+
+diff --git a/arch/arm/cpu/armv8/armada8k/Makefile b/arch/arm/cpu/armv8/armada8k/Makefile
+index 16e80d0..7517350 100644
+--- a/arch/arm/cpu/armv8/armada8k/Makefile
++++ b/arch/arm/cpu/armv8/armada8k/Makefile
+@@ -24,4 +24,5 @@ obj-$(CONFIG_MVEBU_LLC_ENABLE)	+= cache_llc.o
+ obj-$(CONFIG_MVEBU_CCU) += mvebu_ccu.o
+ obj-$(CONFIG_MVEBU_RFU) += mvebu_rfu.o
+ obj-$(CONFIG_MVEBU_IOB) += mvebu_iob.o
++obj-$(CONFIG_MVEBU_AMB_ADEC) += mvebu_amb_adec.o
+ obj-$(CONFIG_MVEBU_FLC) += mvebu_flc.o
+diff --git a/arch/arm/cpu/armv8/armada8k/mvebu_amb_adec.c b/arch/arm/cpu/armv8/armada8k/mvebu_amb_adec.c
+new file mode 100644
+index 0000000..6943065
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armada8k/mvebu_amb_adec.c
+@@ -0,0 +1,72 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG */
++/* #define DEBUG_REG */
++
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch-mvebu/fdt.h>
++#include <asm/arch-mvebu/amb_adec.h>
++
++/* common defines */
++#define WIN_ENABLE_BIT			(0x1)
++/* Physical address of the base of the window = {AddrLow[19:0],20`h0} */
++#define ADDRESS_SHIFT			(20 - 4)
++
++/* AMB registers */
++#define AMB_MAX_WIN_ID			(7)
++
++#define AMB_WIN_CR_OFFSET(base, win)	(base + 0x0 + (0x8 * win))
++#define AMB_ATTR_OFFSET			(8)
++#define AMB_ATTR_MASK			(0xFF)
++
++#define AMB_WIN_BASE_OFFSET(base, win)	(base + 0x4 + (0x8 * win))
++#define AMB_BASE_OFFSET			(16)
++
++DECLARE_GLOBAL_DATA_PTR;
++
++void dump_amb_adec(void)
++{
++	const void *blob = gd->fdt_blob;
++	void __iomem *amb_base;
++	u32 ctrl, base, win_id, attr, node;
++
++	/* Get address decoding node from the FDT blob */
++	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_AMB_ADEC));
++	if (node < 0) {
++		error("No AMB address decoding node found in FDT blob\n");
++		return;
++	}
++	/* Get the base address of the address decoding MBUS */
++	amb_base = (void *)fdt_get_regs_offs(blob, node, "reg");
++
++	/* Dump all AMB windows */
++	printf("bank  attribute     base\n");
++	printf("------------------------------\n");
++	for (win_id = 0; win_id < AMB_MAX_WIN_ID; win_id++) {
++		ctrl = readl(AMB_WIN_CR_OFFSET(amb_base, win_id));
++		if (ctrl & WIN_ENABLE_BIT) {
++			base = readl(AMB_WIN_BASE_OFFSET(amb_base, win_id));
++			attr = (ctrl >> AMB_ATTR_OFFSET) & AMB_ATTR_MASK;
++			printf("amb   0x%04x        0x%08x\n", attr, base);
++		}
++	}
++
++	return;
++}
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index ed4b503..f6b4f7f 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -21,6 +21,10 @@ map-iob {
+ 	reg = <0x190000 0x50>;
+ 	max-win = <16>;
+ };
++map-amb-adec {
++	compatible = "marvell,mvebu-amb-adec";
++	reg = <0x70ff00 0x50>;
++};
+ 
+ refclk {
+ 	compatible = "marvell,refclk";
+diff --git a/arch/arm/include/asm/arch-mvebu/amb_adec.h b/arch/arm/include/asm/arch-mvebu/amb_adec.h
+new file mode 100644
+index 0000000..ec830f8
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/amb_adec.h
+@@ -0,0 +1,25 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _AMB_ADEC_H_
++#define _AMB_ADEC_H_
++
++void dump_amb_adec(void);
++
++#endif /* _AMB_ADEC_H_ */
++
+diff --git a/common/mvebu/cmd_misc.c b/common/mvebu/cmd_misc.c
+index 9bf8d9e..8e89706 100644
+--- a/common/mvebu/cmd_misc.c
++++ b/common/mvebu/cmd_misc.c
+@@ -34,6 +34,9 @@
+ #ifdef CONFIG_MVEBU_IOB
+ #include <asm/arch-mvebu/iob.h>
+ #endif
++#ifdef CONFIG_MVEBU_AMB_ADEC
++#include <asm/arch-mvebu/amb_adec.h>
++#endif
+ #ifdef CONFIG_MVEBU_MBUS
+ #include <asm/arch-mvebu/mbus.h>
+ #endif
+@@ -53,6 +56,9 @@ int do_map_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+ #ifdef CONFIG_MVEBU_IOB
+ 	dump_iob();
+ #endif
++#ifdef CONFIG_MVEBU_AMB_ADEC
++	dump_amb_adec();
++#endif
+ #ifdef CONFIG_MVEBU_MBUS
+ 	dump_mbus();
+ #endif
+diff --git a/configs/mvebu_armada70x0_defconfig b/configs/mvebu_armada70x0_defconfig
+index 0e4d47c..62fced8 100644
+--- a/configs/mvebu_armada70x0_defconfig
++++ b/configs/mvebu_armada70x0_defconfig
+@@ -32,6 +32,7 @@ CONFIG_SCSI_AHCI_PLAT=y
+ CONFIG_CP110_SATA_ADDR_WA=y
+ CONFIG_MVEBU_ICU=y
+ CONFIG_MVEBU_CCU=y
++CONFIG_MVEBU_AMB_ADEC=y
+ CONFIG_MVEBU_IOB=y
+ CONFIG_MVEBU_RFU=y
+ CONFIG_MVEBU_MDIO=y
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index 6b41d22..c2fd042 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -91,6 +91,16 @@ config MVEBU_CCU
+ 	  This driver initialize the CCU windows
+ 	  only.
+ 
++config MVEBU_AMB_ADEC
++	bool "AXI MBUS address decoding driver"
++	default n
++	depends on TARGET_ARMADA_8K
++	help
++	  Choose this option to add support
++	  for AXI MBUS address decoding driver.
++	  This driver initialize the IOB windows
++	  only.
++
+ config MVEBU_IOB
+ 	bool "IOB address decoding driver"
+ 	default n
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 51c002b..2706a19 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -141,6 +141,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_CCU,
+ 	COMPAT_MVEBU_RFU,
+ 	COMPAT_MVEBU_IOB,
++	COMPAT_MVEBU_AMB_ADEC,
+ 	COMPAT_MVEBU_PCIE,
+ 	COMPAT_MVEBU_DW_PCIE,
+ 	COMPAT_MVEBU_COMPHY,
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 4eafcb0..722bca5 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -103,6 +103,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_CCU, "marvell,mvebu-ccu"),
+ 	COMPAT(MVEBU_RFU, "marvell,mvebu-rfu"),
+ 	COMPAT(MVEBU_IOB, "marvell,mvebu-iob"),
++	COMPAT(MVEBU_AMB_ADEC, "marvell,mvebu-amb-adec"),
+ 	COMPAT(MVEBU_PCIE, "marvell,mvebu-pcie"),
+ 	COMPAT(MVEBU_DW_PCIE, "marvell,mvebu-dw-pcie"),
+ 	COMPAT(MVEBU_COMPHY, "marvell,mvebu-comphy"),
+-- 
+1.9.1
+

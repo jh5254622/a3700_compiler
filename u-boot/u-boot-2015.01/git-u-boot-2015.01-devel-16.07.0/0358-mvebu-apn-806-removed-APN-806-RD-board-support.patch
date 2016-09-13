@@ -1,0 +1,121 @@
+From a2a26ece4603bd55fa2b7d71dea3ccace5ac825e Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 24 Aug 2015 11:28:37 +0300
+Subject: [PATCH 0358/1240] mvebu: apn-806: removed APN-806 RD board support
+
+Change-Id: Idf005f7ef23eba6b96c362ed6cacd66cc52e093a
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23066
+Tested-by: Star_Automation <star@marvell.com>
+---
+ board/mvebu/armada8k/Kconfig          | 10 ----------
+ board/mvebu/armada8k/Makefile         |  1 -
+ board/mvebu/armada8k/armada8021-pxp.c |  4 ----
+ board/mvebu/armada8k/rd-8210-info.c   | 26 --------------------------
+ include/fdtdec.h                      |  1 -
+ lib/fdtdec.c                          |  1 -
+ 6 files changed, 43 deletions(-)
+ delete mode 100644 board/mvebu/armada8k/rd-8210-info.c
+
+diff --git a/board/mvebu/armada8k/Kconfig b/board/mvebu/armada8k/Kconfig
+index dd5e790..61d55044 100644
+--- a/board/mvebu/armada8k/Kconfig
++++ b/board/mvebu/armada8k/Kconfig
+@@ -11,14 +11,4 @@ config APN_806_DB
+ 	  DB board. Say N unless you really
+ 	  work on this board
+ 
+-config APN_806_RD
+-	bool "Support Marvell Armada-8K RD board"
+-	depends on DEVEL_BOARD
+-	default y
+-	help
+-	  Choose this option to add
+-	  support for Marvell Armada-8K
+-	  RD board. Say N unless you really
+-	  work on this board
+-
+ endmenu
+diff --git a/board/mvebu/armada8k/Makefile b/board/mvebu/armada8k/Makefile
+index 1c34c15..c28d48a 100644
+--- a/board/mvebu/armada8k/Makefile
++++ b/board/mvebu/armada8k/Makefile
+@@ -18,4 +18,3 @@
+ 
+ obj-y	+= armada8021-pxp.o
+ obj-$(CONFIG_APN_806_DB)	+= db-8210-info.o
+-obj-$(CONFIG_APN_806_RD)	+= rd-8210-info.o
+diff --git a/board/mvebu/armada8k/armada8021-pxp.c b/board/mvebu/armada8k/armada8021-pxp.c
+index 263b802..fd7ad29 100644
+--- a/board/mvebu/armada8k/armada8021-pxp.c
++++ b/board/mvebu/armada8k/armada8021-pxp.c
+@@ -34,10 +34,6 @@ struct mvebu_board_info *mvebu_board_info_get(enum fdt_compat_id compat_id)
+ 	case COMPAT_MVEBU_APN_806_DB:
+ 		return &a8021_db_info;
+ #endif
+-#ifdef CONFIG_APN_806_RD
+-	case COMPAT_MVEBU_APN_806_RD:
+-		return &a8021_rd_info;
+-#endif
+ 	case COMPAT_MVEBU_APN_806_CUSTOMER:
+ 	default:
+ 		error("Missing board information for compatible string = %d\n", compat_id);
+diff --git a/board/mvebu/armada8k/rd-8210-info.c b/board/mvebu/armada8k/rd-8210-info.c
+deleted file mode 100644
+index 2193e60..0000000
+--- a/board/mvebu/armada8k/rd-8210-info.c
++++ /dev/null
+@@ -1,26 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#include <common.h>
+-#include <linux/compiler.h>
+-#include "board-info.h"
+-
+-struct mvebu_board_info a8021_rd_info = {
+-	.id = ARMADA_8021_RD_ID,
+-};
+-
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index ef96760..9c30c24 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -147,7 +147,6 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_ARMADA_38X_RD,
+ 	COMPAT_MVEBU_ARMADA_38X_CUSTOMER,
+ 	COMPAT_MVEBU_APN_806_DB,
+-	COMPAT_MVEBU_APN_806_RD,
+ 	COMPAT_MVEBU_APN_806_CUSTOMER,
+ 	COMPAT_MVEBU_ARMADA_LP_DB0,
+ 	COMPAT_MVEBU_ARMADA_LP_DB1,
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 9e0b1d0..64c066b 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -109,7 +109,6 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_ARMADA_38X_RD, "marvell,armada-38x-rd"),
+ 	COMPAT(MVEBU_ARMADA_38X_CUSTOMER, "marvell,armada-38x-customer"),
+ 	COMPAT(MVEBU_APN_806_DB, "marvell,apn-806-db"),
+-	COMPAT(MVEBU_APN_806_RB, "marvell,apn-806-rb"),
+ 	COMPAT(MVEBU_APN_806_CUSTOMER, "marvell,apn-806-customer"),
+ 	COMPAT(MVEBU_ARMADA_LP_DB0, "marvell,armada-lp-db0"),
+ 	COMPAT(MVEBU_ARMADA_LP_DB1, "marvell,armada-lp-db1"),
+-- 
+1.9.1
+

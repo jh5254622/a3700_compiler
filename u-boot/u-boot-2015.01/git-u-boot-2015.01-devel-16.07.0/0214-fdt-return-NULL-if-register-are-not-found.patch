@@ -1,0 +1,30 @@
+From 0ece9cc3e039bfdbe207c6fc920b0fd6f9b5eba4 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 24 Jun 2015 09:34:33 +0300
+Subject: [PATCH 0214/1240] fdt: return NULL if register are not found
+
+Change-Id: I9c681df88453f83014ed7f768c493ad67950ede1
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20449
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/fdt.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/arm/cpu/mvebu-common/fdt.c b/arch/arm/cpu/mvebu-common/fdt.c
+index f588d88..175942e 100644
+--- a/arch/arm/cpu/mvebu-common/fdt.c
++++ b/arch/arm/cpu/mvebu-common/fdt.c
+@@ -30,6 +30,8 @@ void *fdt_get_regs_offs(const void *blob, int node, const char *prop_name)
+ 
+ 	base = fdt_get_regs_base();
+ 	reg = fdtdec_get_addr(blob, node, prop_name);
++	if (reg == FDT_ADDR_T_NONE)
++		return NULL;
+ 
+ 	return base + reg;
+ }
+-- 
+1.9.1
+

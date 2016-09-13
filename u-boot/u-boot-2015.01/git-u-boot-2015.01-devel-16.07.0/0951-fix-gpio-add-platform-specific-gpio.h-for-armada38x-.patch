@@ -1,0 +1,76 @@
+From 031a5e55c4beb447c41b3ec276262fa8373bd8b6 Mon Sep 17 00:00:00 2001
+From: Ken Ma <make@marvell.com>
+Date: Thu, 18 Feb 2016 21:47:05 +0800
+Subject: [PATCH 0951/1240] fix: gpio: add platform-specific gpio.h for
+ armada38x and armada8k
+
+- The platform-specific gpio.h in each arch/arm/include/asm/arch-xxx/
+  folder should be in included "arch/arm/include/asm/gpio.h" so that
+  general <asm/gpio.h> which is "arch/arm/include/asm/gpio.h" can
+  provide platform-specific gpio macro definitions and APIs.
+- Now armada3700 has the platform-specific gpio.h while armada38x and
+  armada8k do not have, so platform-specific gpio.h for armada38x and
+  armada8k are added in this patch.
+- This patch is needed to revert patch 5e9f0ee
+
+Change-Id: Id795ba517db8a83dad319d5f40f04315eacaa344
+Signed-off-by: Ken Ma <make@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27254
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/include/asm/arch-armada38x/gpio.h | 17 +++++++++++++++++
+ arch/arm/include/asm/arch-armada8k/gpio.h  | 17 +++++++++++++++++
+ 2 files changed, 34 insertions(+)
+ create mode 100644 arch/arm/include/asm/arch-armada38x/gpio.h
+ create mode 100644 arch/arm/include/asm/arch-armada8k/gpio.h
+
+diff --git a/arch/arm/include/asm/arch-armada38x/gpio.h b/arch/arm/include/asm/arch-armada38x/gpio.h
+new file mode 100644
+index 0000000..5c78566
+--- /dev/null
++++ b/arch/arm/include/asm/arch-armada38x/gpio.h
+@@ -0,0 +1,17 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
+diff --git a/arch/arm/include/asm/arch-armada8k/gpio.h b/arch/arm/include/asm/arch-armada8k/gpio.h
+new file mode 100644
+index 0000000..5c78566
+--- /dev/null
++++ b/arch/arm/include/asm/arch-armada8k/gpio.h
+@@ -0,0 +1,17 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
+-- 
+1.9.1
+

@@ -1,0 +1,48 @@
+From b19bf1069c01289c2e72f55c8cded7985bc88ae9 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 13 Mar 2016 10:57:38 +0200
+Subject: [PATCH 051/239] make: added support for linking library from
+ bootloader projects
+
+This is required for linking the DRAM library from ble bootloader
+
+Change-Id: Id037f34d3cbbb82f01c793a7d6127ad2652941a9
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28184
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ make_helpers/build_macros.mk | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/make_helpers/build_macros.mk b/make_helpers/build_macros.mk
+index 00fb92c..5a51e1f 100644
+--- a/make_helpers/build_macros.mk
++++ b/make_helpers/build_macros.mk
+@@ -306,6 +306,7 @@ define MAKE_BL
+         $(eval DUMP       := $(call IMG_DUMP,$(1)))
+         $(eval BIN        := $(call IMG_BIN,$(1)))
+         $(eval BL_LINKERFILE := $(BL$(call uppercase,$(1))_LINKERFILE))
++        $(eval BL_LIBS    := $(BL$(call uppercase,$(1))_LIBS))
+ 
+         $(eval $(call MAKE_OBJS,$(BUILD_DIR),$(SOURCES),$(1)))
+         $(eval $(call MAKE_LD,$(LINKERFILE),$(BL_LINKERFILE)))
+@@ -313,13 +314,13 @@ define MAKE_BL
+ $(BUILD_DIR):
+ 	$$(Q)mkdir -p "$$@"
+ 
+-$(ELF): $(OBJS) $(LINKERFILE)
++$(ELF): $(OBJS) $(LINKERFILE) $(BL_LIBS)
+ 	@echo "  LD      $$@"
+ 	@echo 'const char build_message[] = "Built : "__TIME__", "__DATE__; \
+ 	       const char version_string[] = "${VERSION_STRING}";' | \
+ 		$$(CC) $$(CFLAGS) -xc - -o $(BUILD_DIR)/build_message.o
+ 	$$(Q)$$(LD) -o $$@ $$(LDFLAGS) -Map=$(MAPFILE) --script $(LINKERFILE) \
+-					$(BUILD_DIR)/build_message.o $(OBJS)
++					$(BUILD_DIR)/build_message.o $(OBJS) $(BL_LIBS)
+ 
+ $(DUMP): $(ELF)
+ 	@echo "  OD      $$@"
+-- 
+1.9.1
+

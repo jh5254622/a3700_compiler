@@ -1,0 +1,442 @@
+From d74892a57436adc4c2617d61e04af5367914d4db Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 10 Feb 2014 13:28:12 +0200
+Subject: [PATCH 0007/1240] unit-info: Added support for modifying unit info in
+ board level
+
+Change-Id: I6764969f434e780407f6c43ee92f9b3a0c38313d
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/tables.c        |  6 +--
+ arch/arm/cpu/mvebu-common/unit-info.c       | 47 +++++++++--------
+ arch/arm/include/asm/arch-mvebu/unit-info.h |  1 +
+ board/mvebu/armada8021-pxp/Makefile         |  1 +
+ board/mvebu/armada8021-pxp/armada8021-pxp.c |  5 ++
+ board/mvebu/armada8021-pxp/board-info.c     | 60 +++++++++++++++++++++
+ board/mvebu/armada8021-pxp/board-info.h     | 27 ++++++++++
+ board/mvebu/common/Makefile                 |  8 +++
+ board/mvebu/common/board-common.c           | 70 +++++++++++++++++++++++++
+ board/mvebu/common/board.h                  | 81 +++++++++++++++++++++++++++++
+ 10 files changed, 280 insertions(+), 26 deletions(-)
+ create mode 100644 board/mvebu/armada8021-pxp/board-info.c
+ create mode 100644 board/mvebu/armada8021-pxp/board-info.h
+ create mode 100644 board/mvebu/common/Makefile
+ create mode 100644 board/mvebu/common/board-common.c
+ create mode 100644 board/mvebu/common/board.h
+
+diff --git a/arch/arm/cpu/armv8/armada8k/tables.c b/arch/arm/cpu/armv8/armada8k/tables.c
+index b22da38..5e80a1f 100644
+--- a/arch/arm/cpu/armv8/armada8k/tables.c
++++ b/arch/arm/cpu/armv8/armada8k/tables.c
+@@ -31,7 +31,7 @@ struct adec_win memory_map[] = {
+ };
+ 
+ /* List the maximum amount of units for all devices and boards */
+-u16 base_unit_mask_table[MAX_UNIT_ID + 1] = {
++u16 base_unit_mask_table[MAX_UNIT_ID] = {
+ 	[PEX_UNIT_ID]		=  cnt_to_mask(3),
+ 	[SATA_UNIT_ID]		=  cnt_to_mask(4),
+ 	[ETH_GIG_UNIT_ID]	=  cnt_to_mask(4),
+@@ -46,12 +46,12 @@ u16 base_unit_mask_table[MAX_UNIT_ID + 1] = {
+ };
+ 
+ /* Per device unit info. List which units are disabled for this device */
+-u16 armada8021_unit_disable[MAX_UNIT_ID + 1] = {
++u16 armada8021_unit_disable[MAX_UNIT_ID] = {
+ 	[PEX_UNIT_ID]		=  id_to_mask(0) | id_to_mask(2),
+ 	[SATA_UNIT_ID]		=  id_to_mask(2) | id_to_mask(3)
+ };
+ 
+-u16 armada8022_unit_disable[MAX_UNIT_ID + 1] = {
++u16 armada8022_unit_disable[MAX_UNIT_ID] = {
+ 	[ETH_GIG_UNIT_ID]	= id_to_mask(3),
+ 	[USB3_UNIT_ID]		= id_to_mask(1)
+ };
+diff --git a/arch/arm/cpu/mvebu-common/unit-info.c b/arch/arm/cpu/mvebu-common/unit-info.c
+index c4f668e..1f9eb6d 100644
+--- a/arch/arm/cpu/mvebu-common/unit-info.c
++++ b/arch/arm/cpu/mvebu-common/unit-info.c
+@@ -28,29 +28,28 @@
+ #include <asm/arch-mvebu/soc.h>
+ 
+ const char *mvebu_unit_names[MAX_UNIT_ID + 1] = {
+-	[DRAM_UNIT_ID] =	"DRAM",
+-	[PEX_UNIT_ID] =		"PCIe",
+-	[PEX_IF_UNIT_ID] =	"PCIe I/F",
+-	[PCI_UNIT_ID] =		"PCI",
+-	[PCI_IF_UNIT_ID] =	"PCI I/F",
+-	[ETH_GIG_UNIT_ID] =	"ETH",
+-	[USB_UNIT_ID] =		"USB2",
+-	[USB3_UNIT_ID] =	"USB3",
+-	[IDMA_UNIT_ID] =	"IDMA",
+-	[IDMA_CHAN_UNIT_ID] =	"IDMA Channel",
+-	[XOR_UNIT_ID] =		"XOR",
+-	[XOR_CHAN_UNIT_ID] =	"XOR Channel",
+-	[SATA_UNIT_ID] =	"SATA",
+-	[TDM_32CH_UNIT_ID] =	"TDM32",
+-	[TDM_PORTS_UNIT_ID] =	"TDM",
+-	[UART_UNIT_ID] =	"UART",
+-	[CESA_UNIT_ID] =	"CESA",
+-	[SPI_UNIT_ID] =		"SPI",
+-	[SDIO_UNIT_ID] =	"SDIO",
+-	[BM_UNIT_ID] =		"BM",
+-	[PNC_UNIT_ID] =		"PNC",
+-	[NAND_UNIT_ID] =	"NAND",
+-	[SERDES_LANES_UNIT_ID] =	"SERDES Lane",
++	[DRAM_UNIT_ID] =	"dram",
++	[CPU_UNIT_ID] =		"cpu",
++	[PEX_UNIT_ID] =		"pex",
++	[PCI_UNIT_ID] =		"pci",
++	[ETH_GIG_UNIT_ID] =	"eth",
++	[USB_UNIT_ID] =		"usb2",
++	[USB3_UNIT_ID] =	"usb3",
++	[IDMA_UNIT_ID] =	"idma",
++	[IDMA_CHAN_UNIT_ID] =	"idma channel",
++	[XOR_UNIT_ID] =		"xor",
++	[XOR_CHAN_UNIT_ID] =	"xor channel",
++	[SATA_UNIT_ID] =	"sata",
++	[TDM_32CH_UNIT_ID] =	"tdm32",
++	[TDM_PORTS_UNIT_ID] =	"tdm",
++	[UART_UNIT_ID] =	"uart",
++	[CESA_UNIT_ID] =	"cesa",
++	[SPI_UNIT_ID] =		"spi",
++	[SDIO_UNIT_ID] =	"sdio",
++	[BM_UNIT_ID] =		"bm",
++	[PNC_UNIT_ID] =		"pnc",
++	[NAND_UNIT_ID] =	"nand",
++	[SERDES_LANES_UNIT_ID] =	"serdes-lane",
+ 	[MAX_UNIT_ID] =		"NA"
+ };
+ 
+@@ -160,6 +159,8 @@ void update_unit_info(u16 *unit_mask, u16 *new_mask,
+ {
+ 	int unit_id;
+ 
++	debug("Updating unit info\n");
++
+ 	for (unit_id = 0; unit_id < MAX_UNIT_ID; unit_id++) {
+ 		if (update_mode == UNIT_INFO_OVERRIDE)
+ 			override_unit(unit_mask, (*new_mask));
+diff --git a/arch/arm/include/asm/arch-mvebu/unit-info.h b/arch/arm/include/asm/arch-mvebu/unit-info.h
+index ecefa81..851663f 100644
+--- a/arch/arm/include/asm/arch-mvebu/unit-info.h
++++ b/arch/arm/include/asm/arch-mvebu/unit-info.h
+@@ -22,6 +22,7 @@
+ 
+ enum mvebu_unit_id {
+ 	DRAM_UNIT_ID,
++	CPU_UNIT_ID,
+ 	PEX_UNIT_ID,
+ 	PEX_IF_UNIT_ID,
+ 	PCI_UNIT_ID,
+diff --git a/board/mvebu/armada8021-pxp/Makefile b/board/mvebu/armada8021-pxp/Makefile
+index 797b774..45b41f7 100644
+--- a/board/mvebu/armada8021-pxp/Makefile
++++ b/board/mvebu/armada8021-pxp/Makefile
+@@ -6,3 +6,4 @@
+ #
+ 
+ obj-y	:= armada8021-pxp.o
++obj-y	+= board-info.o
+diff --git a/board/mvebu/armada8021-pxp/armada8021-pxp.c b/board/mvebu/armada8021-pxp/armada8021-pxp.c
+index 51625f5..1e97c1d 100644
+--- a/board/mvebu/armada8021-pxp/armada8021-pxp.c
++++ b/board/mvebu/armada8021-pxp/armada8021-pxp.c
+@@ -26,6 +26,7 @@
+ #include <asm/io.h>
+ #include <asm/arch-armada8k/armada8k.h>
+ #include <linux/compiler.h>
++#include "board-info.h"
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+@@ -35,6 +36,10 @@ int board_init(void)
+ 
+ 	a8k_init();
+ 
++	common_board_init(&a8k_board_family);
++
++	/* a8k specific board init goes here */
++
+ 	return 0;
+ }
+ 
+diff --git a/board/mvebu/armada8021-pxp/board-info.c b/board/mvebu/armada8021-pxp/board-info.c
+new file mode 100644
+index 0000000..c39c738
+--- /dev/null
++++ b/board/mvebu/armada8021-pxp/board-info.c
+@@ -0,0 +1,60 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <linux/compiler.h>
++#include <asm/arch-mvebu/unit-info.h>
++#include "board-info.h"
++
++enum a8k_board_types {
++	ARMADA_8021_DB_ID,
++	ARMADA_8021_RD_ID,
++	ARMADA_8022_DB_ID,
++	ARMADA_8022_RD_ID,
++	MAX_BOARD_ID
++};
++
++u16 a8021_rd_unit_disable[MAX_UNIT_ID] = {
++	[NAND_UNIT_ID] = id_to_mask(0),
++	[SDIO_UNIT_ID] = id_to_mask(0)
++};
++
++struct mvebu_board_info a8021_db_info = {
++	.name = "DB-MV8021",
++	.id = ARMADA_8021_DB_ID,
++};
++
++struct mvebu_board_info a8021_rd_info = {
++	.name = "RD-MV8021",
++	.id = ARMADA_8021_RD_ID,
++	.unit_mask = a8021_rd_unit_disable,
++	.unit_update_mode = UNIT_INFO_DISABLE,
++};
++
++struct mvebu_board_info *a8k_board_lookup[MAX_BOARD_ID] = {
++	[ARMADA_8021_DB_ID] = &a8021_db_info,
++	[ARMADA_8021_RD_ID] = &a8021_rd_info
++};
++
++struct mvebu_board_family a8k_board_family = {
++	.default_id = ARMADA_8021_DB_ID,
++	.board_cnt = MAX_BOARD_ID,
++	.boards_info = a8k_board_lookup,
++};
++
+diff --git a/board/mvebu/armada8021-pxp/board-info.h b/board/mvebu/armada8021-pxp/board-info.h
+new file mode 100644
+index 0000000..1658358
+--- /dev/null
++++ b/board/mvebu/armada8021-pxp/board-info.h
+@@ -0,0 +1,27 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#ifndef _BOARD_INFO_H_
++#define _BOARD_INFO_H_
++
++#include "../common/board.h"
++
++extern struct mvebu_board_family a8k_board_family;
++
++#endif /* _BOARD_INFO_H_ */
+diff --git a/board/mvebu/common/Makefile b/board/mvebu/common/Makefile
+new file mode 100644
+index 0000000..65b2ebd
+--- /dev/null
++++ b/board/mvebu/common/Makefile
+@@ -0,0 +1,8 @@
++#
++# (C) Copyright 2000-2004
++# Wolfgang Denk, DENX Software Engineering, wd@denx.de.
++#
++# SPDX-License-Identifier:	GPL-2.0+
++#
++
++obj-y	:= board-common.o
+diff --git a/board/mvebu/common/board-common.c b/board/mvebu/common/board-common.c
+new file mode 100644
+index 0000000..5ee55f9
+--- /dev/null
++++ b/board/mvebu/common/board-common.c
+@@ -0,0 +1,70 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG*/
++
++#include <common.h>
++#include <malloc.h>
++#include <errno.h>
++#include <netdev.h>
++#include <asm/io.h>
++#include <linux/compiler.h>
++#include <asm/arch-mvebu/unit-info.h>
++#include <asm/arch-mvebu/soc.h>
++#include "board.h"
++
++DECLARE_GLOBAL_DATA_PTR;
++
++struct mvebu_board_family *brd;
++
++int board_get_id(void)
++{
++	/* Stub to implement generic board id read */
++	return 1;
++}
++/* this function is weak so non standard boards can iplement their own */
++/*void board_get_id(void) __attribute__((weak, alias("__board_get_id")));*/
++
++int common_board_init(struct mvebu_board_family *board_family)
++{
++	int board_id = board_get_id();
++	struct mvebu_board_info *curr_board;
++	u16 *unit_mask = soc_get_unit_mask_table();
++
++	brd = board_family;
++
++	if ((board_id < 0) || (board_id > brd->board_cnt)) {
++		printf("ERROR: %s: unidentified board id %d. Using default %d\n",
++		       __func__, board_id, brd->default_id);
++		board_id = brd->default_id;
++	}
++
++	brd->curr_board = brd->boards_info[board_id];
++	curr_board = brd->curr_board;
++
++	printf("Board: %s\n", curr_board->name);
++
++	if (curr_board->unit_mask)
++		update_unit_info(unit_mask, curr_board->unit_mask,
++				 curr_board->unit_update_mode);
++
++	return 0;
++}
++
++
+diff --git a/board/mvebu/common/board.h b/board/mvebu/common/board.h
+new file mode 100644
+index 0000000..3e3b461
+--- /dev/null
++++ b/board/mvebu/common/board.h
+@@ -0,0 +1,81 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#ifndef _BOARD_H_
++#define _BOARD_H_
++
++#include <common.h>
++#include <asm/arch-mvebu/mvebu.h>
++#include <asm/arch-mvebu/unit-info.h>
++#include <linux/compiler.h>
++
++#define MAX_BOARD_NAME	16
++
++/*
++ * mvebu_board_config  - Describes board configuration features
++ *
++ */
++struct mvebu_board_config {
++	int x;
++};
++
++
++/*
++ * mvebu_board_info - Describes board specific features
++ *
++ * name -	short name of the board
++ * id -		a unique board id value
++ * unit_mask -	pointer to table that modifies the
++ *		active units for this board (optional)
++ * unit_update_mode -	specifies the unit update method (optional). Is either
++ *			UNIT_INFO_DISABLE - disable existing units
++ *			UNIT_INFO_ENABLE - enable more units
++ *			UNIT_INFO_OVERRIDE - override active unit info
++ * config -	pointer to board configuration options (optional).
++ *		this should be used only for configurable boards like
++ *		Development Boards (DB)
++ */
++struct mvebu_board_info {
++	char name[MAX_BOARD_NAME];
++	u32  id;
++	u16  *unit_mask;
++	enum unit_update_mode unit_update_mode;
++	struct mvebu_board_config *config;
++};
++
++/*
++ * mvebu_board_familt - Describes common board data
++ *
++ * default_id - defualt board id in case board_id can't be read.
++ * board_cnt - number of different boards
++ * curr_board - pointer to current board's info
++ * boards_info - pointer to table containing
++ *
++ */
++struct mvebu_board_family {
++	int  default_id;
++	int  board_cnt;
++	struct mvebu_board_info *curr_board;
++	struct mvebu_board_info **boards_info;
++};
++
++
++int common_board_init(struct mvebu_board_family *board_family);
++
++#endif /* _BOARD_H_ */
+-- 
+1.9.1
+

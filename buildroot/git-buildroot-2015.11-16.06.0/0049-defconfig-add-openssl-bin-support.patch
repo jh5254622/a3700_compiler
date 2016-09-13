@@ -1,0 +1,29 @@
+From 329f33d11d569b436b77f386b92bd23d97416b1e Mon Sep 17 00:00:00 2001
+From: Ofer Heifetz <oferh@marvell.com>
+Date: Thu, 31 Mar 2016 21:16:56 +0300
+Subject: [PATCH 49/66] defconfig: add openssl bin support
+
+Change-Id: Ia9432580625d5841e2c9dfd0ade1007fdcafd9b1
+Signed-off-by: Ofer Heifetz <oferh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28720
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Lior Amsalem <alior@marvell.com>
+---
+ configs/mvebu_armv8_le_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/configs/mvebu_armv8_le_defconfig b/configs/mvebu_armv8_le_defconfig
+index 74084ef..afd4f80 100644
+--- a/configs/mvebu_armv8_le_defconfig
++++ b/configs/mvebu_armv8_le_defconfig
+@@ -57,6 +57,7 @@ BR2_PACKAGE_PARTED=y
+ BR2_PACKAGE_SDPARM=y
+ BR2_PACKAGE_SMARTMONTOOLS=y
+ BR2_PACKAGE_SYSSTAT=y
++BR2_PACKAGE_OPENSSL_BIN=y
+ BR2_PACKAGE_BC=y
+ BR2_PACKAGE_ARPTABLES=y
+ BR2_PACKAGE_BRIDGE_UTILS=y
+-- 
+1.9.1
+

@@ -1,0 +1,37 @@
+From e0a62eef8cfdc4d795235148ad5644bf4b30c8aa Mon Sep 17 00:00:00 2001
+From: Thomas Petazzoni <thomas.petazzoni@free-electrons.com>
+Date: Tue, 19 Apr 2016 23:38:41 +0200
+Subject: [PATCH 59/66] fio: add optional dependency on libaio
+
+fio can automatically detect and use libaio when available, so this
+commit makes this optional dependency explicit.
+
+Suggested by Charles <ckhardin@exablox.com> in bug #8851.
+
+Change-Id: I69a8fd4985eda4499c174cf91a04a97e42588360
+Signed-off-by: Thomas Petazzoni <thomas.petazzoni@free-electrons.com>
+Signed-off-by: Ofer Heifetz <oferh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29711
+Tested-by: Star_Automation <star@marvell.com>
+---
+ package/fio/fio.mk | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/package/fio/fio.mk b/package/fio/fio.mk
+index 67a9570..1f1bfbe 100644
+--- a/package/fio/fio.mk
++++ b/package/fio/fio.mk
+@@ -9,6 +9,10 @@ FIO_SITE = https://fossies.org/linux/misc
+ FIO_LICENSE = GPLv2 + special obligations
+ FIO_LICENSE_FILES = LICENSE
+ 
++ifeq ($(BR2_PACKAGE_LIBAIO),y)
++FIO_DEPENDENCIES += libaio
++endif
++
+ define FIO_CONFIGURE_CMDS
+ 	(cd $(@D); ./configure --cc="$(TARGET_CC)" --extra-cflags="$(TARGET_CFLAGS)")
+ endef
+-- 
+1.9.1
+

@@ -1,0 +1,44 @@
+From 0f81ea17474ee29dbe2803ed6496e0f1c97f872a Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Mon, 15 Feb 2016 11:39:28 +0200
+Subject: [PATCH 0851/1240] ddr: mck6: ap806: Relax DDR timing parameters
+
+- Relax the timing between:
+  READ to WRITE, READ to READ, and set the address timing to be 2T.
+
+Change-Id: If80c164185ff672995cedbec02c1cc33e9124b11
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27506
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/ddr/ddr_mckinley6_8k.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/ddr/ddr_mckinley6_8k.c b/drivers/ddr/ddr_mckinley6_8k.c
+index 448a21b..d148531 100644
+--- a/drivers/ddr/ddr_mckinley6_8k.c
++++ b/drivers/ddr/ddr_mckinley6_8k.c
+@@ -907,7 +907,7 @@ struct mvebu_mckinley_config mckinley_phy_config[] = {
+ 	{ 0x204, { 0x00000000, 0x00000000} },
+ 	{ 0x220, { 0x11010642, 0x11010642} },
+ 	{ 0x2c0, { 0x0000e000, 0x0000e000} },
+-	{ 0x2c4, { 0x00000020, 0x00000020} },
++	{ 0x2c4, { 0x00100020, 0x00100020} },
+ 	{ 0x300, { 0x00000709, 0x00000709} },
+ 	{ 0x304, { 0x00000000, 0x00000000} },
+ 	{ 0x310, { 0x00110000, 0x00110000} },
+@@ -928,8 +928,8 @@ struct mvebu_mckinley_config mckinley_phy_config[] = {
+ 	{ 0x3b0, { 0x0a0b060a, 0x0a0b060a} },
+ 	{ 0x3b4, { 0x04000600, 0x04000600} },
+ 	{ 0x3b8, { 0x00000500, 0x00000500} },
+-	{ 0x3bc, { 0x00050000, 0x00050000} },
+-	{ 0x3c0, { 0x00000000, 0x00000000} },
++	{ 0x3bc, { 0x00070000, 0x00070000} },
++	{ 0x3c0, { 0x00000007, 0x00000007} },
+ 	{ 0x3c4, { 0x00000000, 0x00000000} },
+ 	{ 0x3c8, { 0x00000000, 0x00000000} },
+ 	{ 0x3cc, { 0x00000000, 0x00000000} },
+-- 
+1.9.1
+

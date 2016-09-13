@@ -1,0 +1,40 @@
+From ea7acdf59cefc66dfe9db550ae3d0e1bc748e5e1 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Thu, 25 Feb 2016 00:52:23 +0800
+Subject: [PATCH 1218/1240] fix: neta: a3700: fix neta node in dts for Alpha
+
+- phy_id for neta0 (SGMII-0) is not 1, but 0.
+- remove neta1 node since it is not enabled.
+
+Change-Id: Id72adc3318f1efb13850f72e994a409e3fe286e2
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27854
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Victor Gu <xigu@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/dts/armada-3700-customer0.dts | 7 +------
+ 1 file changed, 1 insertion(+), 6 deletions(-)
+
+diff --git a/arch/arm/dts/armada-3700-customer0.dts b/arch/arm/dts/armada-3700-customer0.dts
+index cd4994d..ba92915 100644
+--- a/arch/arm/dts/armada-3700-customer0.dts
++++ b/arch/arm/dts/armada-3700-customer0.dts
+@@ -21,13 +21,8 @@
+ 			};
+ 			neta0: neta@30000 {
+ 				status = "okay";
+-				phy_addr = <0x1>;
+-				phy_mode = "sgmii";
+-			};
+-			neta1: neta@40000 {
+-				status = "disabled";
+ 				phy_addr = <0x0>;
+-				phy_mode = "rgmii";
++				phy_mode = "sgmii";
+ 			};
+ 			i2c: i2c@11000 {
+ 				status = "okay";
+-- 
+1.9.1
+

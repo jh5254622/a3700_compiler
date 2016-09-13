@@ -1,0 +1,203 @@
+From 574fc3179c6bf2ce000b3f90134c8ad70460641e Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Wed, 18 Nov 2015 14:45:33 +0200
+Subject: [PATCH 0513/1240] dts: ap806-a0: Add DT files for AP806-A0 silicon
+
+	- Define new dtsi file for AP806-A0 silicon revision.
+	- Remove unneeded entries from Z1 revision, and update units base
+	  addresses.
+
+Change-Id: Iac113ad2f412b15d7d1c905bc5b4a158912b7d94
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24983
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/Makefile          |   1 +
+ arch/arm/dts/apn-806-a0-pd.dts |  47 ++++++++++++++++++
+ arch/arm/dts/apn-806-a0.dtsi   | 107 +++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 155 insertions(+)
+ create mode 100644 arch/arm/dts/apn-806-a0-pd.dts
+ create mode 100644 arch/arm/dts/apn-806-a0.dtsi
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index ffd32cb..748de30 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -56,6 +56,7 @@ dtb-$(CONFIG_MVEBU) += armada-lp-db.dtb
+ dtb-$(CONFIG_MVEBU) += armada-lp-palladium.dtb
+ dtb-$(CONFIG_MVEBU) += apn-806-db.dtb \
+ 		       apn-806-pd.dtb \
++		       apn-806-a0-pd.dtb \
+ 		       apn-806-db-dop.dtb \
+ 		       armada-80x0-db.dtb \
+ 		       armada-70x0-db.dtb
+diff --git a/arch/arm/dts/apn-806-a0-pd.dts b/arch/arm/dts/apn-806-a0-pd.dts
+new file mode 100644
+index 0000000..a5645d2
+--- /dev/null
++++ b/arch/arm/dts/apn-806-a0-pd.dts
+@@ -0,0 +1,47 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/dts-v1/;
++
++#include "apn-806-a0.dtsi"
++
++/ {
++	model = "Marvell APN-806A0 Palladuim";
++	compatible = "marvell,apn-806-pd", "marvell,apn-806";
++
++	ap-806 {
++
++		internal-regs {
++
++			tclk: tclk {
++				clock-frequency = <125000>;
++			};
++
++			spi0: spi@510600 {
++				spi-max-frequency = <51200>;
++			};
++		};
++	};
++};
++
++&pinctl {
++		  /* 0 1 2 3 4 5 6 7 8 9 */
++	pin-func = < 3 3 3 3 3 3 0 0 0 0
++		     0 3 0 0 0 0 0 0 0 0
++		     3 >;
++};
+diff --git a/arch/arm/dts/apn-806-a0.dtsi b/arch/arm/dts/apn-806-a0.dtsi
+new file mode 100644
+index 0000000..35cac54
+--- /dev/null
++++ b/arch/arm/dts/apn-806-a0.dtsi
+@@ -0,0 +1,107 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/ {
++
++	#address-cells = <2>;
++	#size-cells = <2>;
++
++	cpus {
++		#address-cells = <1>;
++		#size-cells = <0>;
++		cpu@0 {
++			device_type = "cpu";
++			compatible = "arm,cortex-a57";
++			reg = <0>;
++		};
++	};
++
++	ap-806 {
++		compatible = "marvell,mvebu-apn-806";
++		#address-cells = <1>;
++		#size-cells = <0>;
++
++		internal-regs {
++			compatible = "marvell,internal-regs";
++			#address-cells = <1>;
++			#size-cells = <1>;
++			ranges = <0x0000 0xf0000000 0x1000000>;
++
++			tclk: tclk {
++				compatible = "marvell,tclk";
++				#clock-cells = <0>;
++				clock-frequency = <200000000>;
++			};
++
++			i2c0: i2c@511000 {
++				compatible = "marvell,mvebu-i2c";
++				reg = <0x511000 0x4>;
++				clock = <&tclk>;
++				support-256-offset;
++				status = "okay";
++			};
++
++			spi0: spi@510600 {
++				compatible = "marvell,orion-spi";
++				reg = <0x510600 0x50>;
++				spi-max-frequency = <10000000>;
++				clock = <&tclk>;
++				cpol-cs-bitmap = <1>; /* bit i is set if the CPOL of
++							 CS-i is enabled or not */
++				status = "okay";
++			};
++
++			pinctl: pinctl@6F008C {
++				compatible = "marvell,mvebu-pinctl";
++				bank-name ="apn-806";
++				reg = <0x6F4000 0x10>;
++				pin-count = <20>;
++				max-func = <1>;
++				reverse-reg;
++			};
++
++			ddr-mac {
++				compatible = "marvell,mvebu-ddr-mac";
++				reg = <0x20000 0x20>;
++				status = "okay";
++			};
++
++			ddr-phy {
++				compatible = "marvell,mvebu-ddr-phy";
++				reg = <0x20000 0x10>;
++				status = "okay";
++			};
++
++			ccu {
++				compatible = "marvell,mvebu-ccu";
++				reg = <0x4000 0x50>;
++				max-win = <8>;
++				windows = <0x0 0xf2000000 0x0 0xe000000 0x00 /* IO window */>;
++			};
++
++			thermal: thermal@6f8084 {
++				compatible = "marvell,thermal-sensor-v2";
++				gain = <425>;
++				offset = <153400>;
++				divisor = <1000>;
++				reg = <0x6f8084 0x12>;
++				status = "okay";
++			};
++		};
++	};
++};
+-- 
+1.9.1
+

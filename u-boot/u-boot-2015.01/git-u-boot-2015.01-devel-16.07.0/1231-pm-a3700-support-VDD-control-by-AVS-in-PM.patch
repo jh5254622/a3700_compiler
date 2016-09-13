@@ -1,0 +1,139 @@
+From 11c783e372907e18533ac910dd3544ccd7b09ec3 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Thu, 23 Jun 2016 17:54:27 +0800
+Subject: [PATCH 1231/1240] pm: a3700: support VDD control by AVS in PM
+
+- add routine to enable the AVS in PM
+- Add PM DT property to decide the VDD control method
+- Enable and configure AVS once it is selected to be
+  used by VDD control.
+
+Change-Id: If3c299dfb8566c743cfdfdac75fb0b8a8d5b32fb
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30682
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/cpu/armv8/armada3700/pm.c          | 46 +++++++++++++++++++++++++++++
+ arch/arm/dts/armada-3700-ddr3-db.dts        |  1 +
+ doc/device-tree-bindings/power/mvebu-pm.txt |  4 +++
+ 3 files changed, 51 insertions(+)
+
+diff --git a/arch/arm/cpu/armv8/armada3700/pm.c b/arch/arm/cpu/armv8/armada3700/pm.c
+index 9cfa48d..04f81f5 100644
+--- a/arch/arm/cpu/armv8/armada3700/pm.c
++++ b/arch/arm/cpu/armv8/armada3700/pm.c
+@@ -22,12 +22,16 @@
+ #include <asm/arch-mvebu/fdt.h>
+ #include <asm/arch-mvebu/mvebu.h>
+ #include <asm/arch/clock.h>
++#include <asm/arch/avs.h>
+ #include <asm/io.h>
+ #include <asm/errno.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+ /* North bridge PM configuration registers */
++#define PM_POWER_DOWN_REG	(0x8)
++#define  PM_AVS_VDD2_MODE	(BIT13)
++#define  PM_AVS_DISABLE_MODE	(BIT14)
+ #define PM_NB_L0_L1_CONFIG_REG	(0x18)
+ #define PM_NB_L2_L3_CONFIG_REG	(0x1C)
+ #define  PM_NB_TBG_DIV_LX_OFF	(13)
+@@ -107,6 +111,29 @@ enum vdd_select vdd_sel_arr[DVFS_LOAD_MAX_NUM] = {
+ };
+ 
+ /******************************************************************************
++* Name: pm_en_avs
++*
++* Description: Enable AVS in DVFS
++*
++* Input:	None
++* Output:	None
++* Return:	Non-zero if the requested settings are not supported
++******************************************************************************/
++static int pm_en_avs(void)
++{
++	u32 reg_val;
++
++	reg_val = readl(g_pm_config.reg_base + PM_POWER_DOWN_REG);
++	/* Clear the AVS disable mode bit */
++	reg_val &= ~(PM_AVS_DISABLE_MODE);
++	/* Set AVS VDD2 mode bit */
++	reg_val |= PM_AVS_VDD2_MODE;
++	writel(reg_val, g_pm_config.reg_base + PM_POWER_DOWN_REG);
++
++	return 0;
++}
++
++/******************************************************************************
+ * Name: set_dvfs_param
+ *
+ * Description: Set DVFS parameters for dedicated LOAD level
+@@ -231,6 +258,7 @@ int init_pm(void)
+ 	u32 count;
+ 	u32 clk_sel;
+ 	u32 clk_prscl;
++	const char *vdd_control;
+ 
+ 	debug_enter();
+ 
+@@ -264,6 +292,24 @@ int init_pm(void)
+ 		return -EINVAL;
+ 	}
+ 
++	/* Set VDD control method, currently only support AVS */
++	fdt_get_string(gd->fdt_blob, node, "vdd_control", &vdd_control);
++	if (!strcmp(vdd_control, "avs")) {
++		/* Enale AVS in PM */
++		pm_en_avs();
++		if (ret) {
++			error("Failed to enable AVS in PM\n");
++			return -EINVAL;
++		}
++
++		/* Set AVS VDD load values */
++		ret = set_avs_vdd_loads();
++		if (ret) {
++			error("Failed to set AVS VDD load values\n");
++			return -EINVAL;
++		}
++	}
++
+ 	debug_exit();
+ 	return ret;
+ }
+diff --git a/arch/arm/dts/armada-3700-ddr3-db.dts b/arch/arm/dts/armada-3700-ddr3-db.dts
+index bdc4399..6daf70d 100644
+--- a/arch/arm/dts/armada-3700-ddr3-db.dts
++++ b/arch/arm/dts/armada-3700-ddr3-db.dts
+@@ -41,6 +41,7 @@
+ 				status = "okay";
+ 			};
+ 			pm@14000 {
++				vdd_control = "avs";
+ 				status = "okay";
+ 			};
+ 			neta0: neta@30000 {
+diff --git a/doc/device-tree-bindings/power/mvebu-pm.txt b/doc/device-tree-bindings/power/mvebu-pm.txt
+index c2bfde6..1c54c21 100644
+--- a/doc/device-tree-bindings/power/mvebu-pm.txt
++++ b/doc/device-tree-bindings/power/mvebu-pm.txt
+@@ -3,9 +3,13 @@ The PMU support inside of Marvell EBU Armada-3700 SoC
+ Required Properties:
+ -compatible: "marvell,armada-3700-pm"
+ -reg: PM internal register offset and size
++Optional Properties:
++-vdd_control: how to control the VDD in PM, currently support "avs"
++  which indicates using AVS to control the VDD.
+ 
+ Example:
+ 	pm@14000 {
+ 		compatible = "marvell,armada-3700-pm";
+ 		reg = <0x14000 0x100>;
++		vdd_control = "avs";
+ 	};
+-- 
+1.9.1
+

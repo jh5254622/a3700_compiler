@@ -1,0 +1,29 @@
+From a17925fdf981ebbe70b3fa25b13f1a7b69ea9f3f Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 7 Feb 2016 10:33:02 +0200
+Subject: [PATCH 0822/1240] config: enable CP-110 ahci WA for armada-7040
+
+Change-Id: Ib9330627b1b7e73d5aa84a0db498e5e8a0277542
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27262
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ configs/mvebu_armada70x0_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/configs/mvebu_armada70x0_defconfig b/configs/mvebu_armada70x0_defconfig
+index abac2ab..9b09239 100644
+--- a/configs/mvebu_armada70x0_defconfig
++++ b/configs/mvebu_armada70x0_defconfig
+@@ -33,6 +33,7 @@ CONFIG_CMD_MVEBU_TSEN=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-7040-rz-db_router"
+ CONFIG_MVEBU_DW_PCIE=y
+ CONFIG_SCSI_AHCI_PLAT=y
++CONFIG_CP110_SATA_ADDR_WA=y
+ CONFIG_MVEBU_ICU=y
+ CONFIG_MVEBU_MDIO=y
+ CONFIG_ENC28J60=y
+-- 
+1.9.1
+

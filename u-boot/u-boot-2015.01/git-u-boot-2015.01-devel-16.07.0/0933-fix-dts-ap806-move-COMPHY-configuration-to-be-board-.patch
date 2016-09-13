@@ -1,0 +1,77 @@
+From 4502d62e79bd45c7b87c55f1f3105aa718bbc77d Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 13 Mar 2016 10:10:32 +0200
+Subject: [PATCH 0933/1240] fix: dts: ap806: move COMPHY configuration to be
+ board spesific
+
+Change-Id: I4d35bb068f1baa2c9555c3a8e5e0e4fd1204aae6
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28181
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/apn-806-db.dtsi | 19 +++++++++++++++++++
+ arch/arm/dts/apn-806-z1.dtsi | 17 +----------------
+ 2 files changed, 20 insertions(+), 16 deletions(-)
+
+diff --git a/arch/arm/dts/apn-806-db.dtsi b/arch/arm/dts/apn-806-db.dtsi
+index c747eb5..76e4e5e 100644
+--- a/arch/arm/dts/apn-806-db.dtsi
++++ b/arch/arm/dts/apn-806-db.dtsi
+@@ -30,6 +30,25 @@
+ 					size = <0x00000002 0x00000000>;
+ 				};
+ 			};
++			comphy {
++				status = "okay";
++				phy0 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy1 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy2 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++				phy3 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++			};
+ 		};
+ 	};
+ 	/* This should go only into devel boards */
+diff --git a/arch/arm/dts/apn-806-z1.dtsi b/arch/arm/dts/apn-806-z1.dtsi
+index 78ab397..bf473be 100644
+--- a/arch/arm/dts/apn-806-z1.dtsi
++++ b/arch/arm/dts/apn-806-z1.dtsi
+@@ -108,22 +108,7 @@
+ 				max-lanes = <4>;
+ 				reg-comphy = <0x6F0000 0x8>;
+ 				reg-hpipe3 = <0x70000 0x8>;
+-				phy0 {
+-					phy-type = <PHY_TYPE_PEX0>;
+-					phy-speed = <PHY_SPEED_5G>;
+-				};
+-				phy1 {
+-					phy-type = <PHY_TYPE_PEX0>;
+-					phy-speed = <PHY_SPEED_5G>;
+-				};
+-				phy2 {
+-					phy-type = <PHY_TYPE_PEX0>;
+-					phy-speed = <PHY_SPEED_5G>;
+-				};
+-				phy3 {
+-					phy-type = <PHY_TYPE_PEX0>;
+-					phy-speed = <PHY_SPEED_5G>;
+-				};
++				status = "disabled";
+ 			};
+ 
+ 			thermal: thermal@6f8084 {
+-- 
+1.9.1
+

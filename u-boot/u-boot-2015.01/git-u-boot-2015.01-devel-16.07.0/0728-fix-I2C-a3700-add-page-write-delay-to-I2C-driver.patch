@@ -1,0 +1,75 @@
+From ec48ca984a4e4a6589fc94c86e8453bddca31e91 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Mon, 25 Jan 2016 21:33:19 +0800
+Subject: [PATCH 0728/1240] fix: I2C: a3700: add page write delay to I2C driver
+
+	For some eeprom, after each page write, need to delay some time before
+	next read/write. For example, the EEPROM A3700 DB is using, ST M24C64
+	has 32 byte page write mode and takes up to 10 msec.
+
+	There is no such delay in i2c driver of A3700, since in mainline code
+	common/cmd_i2c.c, routine mod_i2c_mem, there is a delay for
+	CONFIG_SYS_EEPROM_PAGE_WRITE_DELAY_MS, and in armadalp.h, this macro
+	is defined as 10ms.
+
+	But now many new features read/write eeprom, such as Multi-fdt, unique
+	mac address. And it is not very convinient to add delay after all the
+	eeprom write operation. So move this delay into I2C driver write routine.
+
+Change-Id: I16b10efd9b311c3740625b67448b05a5fc18e6a1
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26983
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ drivers/i2c/mv_i2c.c       | 17 +++++++++++++++++
+ include/configs/armadalp.h |  4 +---
+ 2 files changed, 18 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/i2c/mv_i2c.c b/drivers/i2c/mv_i2c.c
+index e805973..6ea6754 100644
+--- a/drivers/i2c/mv_i2c.c
++++ b/drivers/i2c/mv_i2c.c
+@@ -527,6 +527,23 @@ int i2c_write(uchar chip, uint addr, int alen, uchar *buffer, int len)
+ 		if (i2c_transfer(&msg))
+ 			return -1;
+ 	}
++/*
++ * For some eeprom, after each page write, need to delay some time before
++ * next read/write. For example, the EEPROM A3700 DB is using, ST M24C64
++ * has 32 byte page write mode and takes up to 10 msec.
++ *
++ * in mainline code common/cmd_i2c.c, routine mod_i2c_mem, there is a delay
++ * for CONFIG_SYS_EEPROM_PAGE_WRITE_DELAY_MS, and in armadalp.h, this macro
++ * is defined as 10ms. So it was OK without delay in I2C driver.
++ *
++ * But many new features read/write eeprom, such as Multi-fdt, unique
++ * mac address. And it is not very convinient to add delay after all
++ * the eeprom write operations in all these modules/features.
++ * So add this delay into I2C driver write routine.
++*/
++#ifdef CONFIG_MVEBU_EEPROM_PAGE_WRITE_DELAY_MS
++	udelay(CONFIG_MVEBU_EEPROM_PAGE_WRITE_DELAY_MS * 1000);
++#endif
+ 
+ 	i2c_reset();
+ 
+diff --git a/include/configs/armadalp.h b/include/configs/armadalp.h
+index 264a55b..e14f65f 100644
+--- a/include/configs/armadalp.h
++++ b/include/configs/armadalp.h
+@@ -98,10 +98,8 @@ extern char __end_of_spl[];
+ #endif /* CONFIG_MVEBU_SPI */
+ 
+ /* The EEPROM ST M24C64 has 32 byte page write mode and takes up to 10 msec.
+-   In u-boot I2C mm command, after each page write, need to deley 10 msec to
+-   perform the next read.
+  */
+-#define CONFIG_SYS_EEPROM_PAGE_WRITE_DELAY_MS	10
++#define CONFIG_MVEBU_EEPROM_PAGE_WRITE_DELAY_MS	10
+ 
+ /*
+  * Include the generic MVEBU configuration file.
+-- 
+1.9.1
+

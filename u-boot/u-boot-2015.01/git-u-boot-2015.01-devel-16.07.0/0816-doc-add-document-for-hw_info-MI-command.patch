@@ -1,0 +1,100 @@
+From 3ae36218ac31e70e92924d496dc614ee21cf4cc8 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Fri, 5 Feb 2016 19:39:12 +0800
+Subject: [PATCH 0816/1240] doc: add document for hw_info MI command
+
+This patch add hw_info.txt document to describle the
+the commands for hardware information configuration
+modules.
+And user_guide is updated to mention Marvell property
+hw_info is included.
+
+Change-Id: Ic870abc7a7587ec32872515acf80c9c6d4d28b67
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27255
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ doc/mvebu/commands/hw_info.txt | 57 ++++++++++++++++++++++++++++++++++++++++++
+ doc/mvebu/user_guide.txt       |  1 +
+ 2 files changed, 58 insertions(+)
+ create mode 100644 doc/mvebu/commands/hw_info.txt
+
+diff --git a/doc/mvebu/commands/hw_info.txt b/doc/mvebu/commands/hw_info.txt
+new file mode 100644
+index 0000000..dbf9e2f
+--- /dev/null
++++ b/doc/mvebu/commands/hw_info.txt
+@@ -0,0 +1,57 @@
++hw_info command
++--------------------------------
++hw_info commands are used:
++- store HW manufacturing information to EEPROM during the board manufacture in order to
++keep these parameter regardless the boot-loader upgrading.
++- load HW manufacturing information from EEPROM to the relevant u-boot env variable in
++order to take effect.
++
++Notes:
++------
++- hw_info commands are only relevant for Marvell boards with the EEPROM device
++used to save HW manufacturing information.
++
++Lists the hw_info commands:
++---------------------------
++- "hw_info dump <name>" - Dump all or specific HW parameters from EEPROM.
++- "hw_info load <name>  - Load all or specific HW parameters from EEPROM to env variables.
++                          The hw_info load will be performed automatically with
++                          resetenv operation, however it requires user to saveenv manually
++                          later.
++- "hw_info store <name> - Store all or specific HW parameters from env variables to EEPROM.
++                          Before the store operation, the expected env varibles
++                          should be already saved to env by using the command setenv or editenv.
++
++Supported HW information parameters:
++------------------------------------
++- board_id      board ID
++- pcb_slm       PCB SLM number
++- pcb_rev       PCB revision number
++- eco_rev       ECO revision number
++- pcb_sn        PCB SN
++- ethaddr       first MAC address
++- eth1addr      second MAC address
++- eth2addr      third MAC address
++- eth3addr      fourth MAC address
++
++Examples:
++---------
++1. initialize or change HW manufacturing information for the Armada-3700
++> setenv board_id 0020
++> setenv pcb_slm 1443
++> setenv pcb_rev 10
++> setenv eco_rev 12
++> setenv pcb_sn 0028
++> setenv ethaddr 00:50:43:00:00:01
++> setenv eth1addr 00:50:43:00:00:02
++> setenv eth2addr 00:50:43:00:00:03
++> setenv eth3addr 00:50:43:00:00:04
++> saveenv
++> hw_info store
++
++2. restore HW manufacturing information env variables after the resetenv command
++> hw_info load
++> saveenv (optional since hw_info load will ask user whether to saveenv)
++
++3. dump HW parameters from EEPROM
++> hw_info dump
+diff --git a/doc/mvebu/user_guide.txt b/doc/mvebu/user_guide.txt
+index 7d0d1c3..1abfa77 100644
+--- a/doc/mvebu/user_guide.txt
++++ b/doc/mvebu/user_guide.txt
+@@ -28,6 +28,7 @@ Table of contents:
+    ir - display and change memory values: doc/mvebu/commands/ir.txt
+    fdt_config - select & change board configuration: doc/mvebu/commands/fdt_config.txt
+    fdt - change and edit FDT file in memory: doc/mvebu/commands/fdt.txt
++   hw_info - load or store HW manufacturing information: doc/mvebu/commands/hw_info.txt
+    mmc - mmc usage: doc/mvebu/commands/mmc.txt
+    usb - usb usage: doc/mvebu/commands/usb.txt
+    sata - sata usage: doc/mvebu/commands/sata.txt
+-- 
+1.9.1
+

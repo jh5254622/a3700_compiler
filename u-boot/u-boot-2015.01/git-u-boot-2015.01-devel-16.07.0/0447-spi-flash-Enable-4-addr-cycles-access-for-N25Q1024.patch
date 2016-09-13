@@ -1,0 +1,33 @@
+From 133e91a38a0cc8870ff4547e768bf67aef2c5a81 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Thu, 22 Oct 2015 15:41:06 +0300
+Subject: [PATCH 0447/1240] spi: flash: Enable 4 addr cycles access for
+ N25Q1024
+
+	Set N25Q1024 flash flags to indicate support for 4 address cycles.
+
+Change-Id: Iba2378a72542aecda020742eb8f6cf4a6473f371
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24226
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/mtd/spi/sf_params.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/mtd/spi/sf_params.c b/drivers/mtd/spi/sf_params.c
+index 5a1fb45..c201690 100644
+--- a/drivers/mtd/spi/sf_params.c
++++ b/drivers/mtd/spi/sf_params.c
+@@ -87,7 +87,7 @@ const struct spi_flash_params spi_flash_params_table[] = {
+ 	{"N25Q256A",	   0x20bb19, 0x0,       64 * 1024,   512, RD_FULL,	   WR_QPP | SECT_4K},
+ 	{"N25Q512",	   0x20ba20, 0x0,       64 * 1024,  1024, RD_FULL, WR_QPP | E_FSR | SECT_4K},
+ 	{"N25Q512A",	   0x20bb20, 0x0,       64 * 1024,  1024, RD_FULL, WR_QPP | E_FSR | SECT_4K},
+-	{"N25Q1024",	   0x20ba21, 0x0,       64 * 1024,  2048, RD_FULL, WR_QPP | E_FSR },
++	{"N25Q1024",	   0x20ba21, 0x0,       64 * 1024,  2048, RD_FULL, WR_QPP | E_FSR | ADDR_CYC_4},
+ 	{"N25Q1024A",	   0x20bb21, 0x0,       64 * 1024,  2048, RD_FULL, WR_QPP | E_FSR | SECT_4K},
+ #endif
+ #ifdef CONFIG_SPI_FLASH_SST		/* SST */
+-- 
+1.9.1
+

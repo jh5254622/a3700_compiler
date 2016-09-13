@@ -1,0 +1,74 @@
+From 1fffdb2446ccea887c938b83d29901614578b0d2 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 15 Oct 2015 14:20:40 +0300
+Subject: [PATCH 0437/1240] fix: pcie: fdt: update FDT with PCIe node to be
+ under SoC
+
+- Update FDT with PCIe node to be under SoC, to let the PCIe to use the base
+  address of the configuration window
+
+Change-Id: Ie85692e5bc2d263d840ac9c2f66bfc9de31f1c2b
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24027
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/dts/apn-806.dtsi | 18 +++++++++---------
+ drivers/pci/pci_mvebu.c   |  9 +--------
+ 2 files changed, 10 insertions(+), 17 deletions(-)
+
+diff --git a/arch/arm/dts/apn-806.dtsi b/arch/arm/dts/apn-806.dtsi
+index 7468647..15042cc 100644
+--- a/arch/arm/dts/apn-806.dtsi
++++ b/arch/arm/dts/apn-806.dtsi
+@@ -131,17 +131,17 @@
+ 				reg = <0x6f8084 0x12>;
+ 				status = "okay";
+ 			};
++		};
+ 
+-			pcie-controller {
+-				#address-cells = <1>;
+-				#size-cells = <1>;
+-				compatible = "marvell,mvebu-pcie";
++		pcie-controller {
++			#address-cells = <1>;
++			#size-cells = <1>;
++			compatible = "marvell,mvebu-pcie";
+ 
+-				pcie@1,0 {
+-					reg = <0x50000000 0x2000>;
+-					mem = <0x40000000 0x40000000>;
+-					status = "okay";
+-				};
++			pcie@1,0 {
++				reg = <0x50000000 0x2000>;
++				mem = <0x40000000 0x40000000>;
++				status = "okay";
+ 			};
+ 		};
+ 	};
+diff --git a/drivers/pci/pci_mvebu.c b/drivers/pci/pci_mvebu.c
+index c50a16a..8d5af9d 100644
+--- a/drivers/pci/pci_mvebu.c
++++ b/drivers/pci/pci_mvebu.c
+@@ -368,15 +368,8 @@ void pci_init_board(void)
+ 
+ 		if (!fdtdec_get_is_enabled(blob, port_node))
+ 			continue;
+-#ifdef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+-		/* fdt_get_regs_offs function added the base address to base of
+-		   the PCIe, when using DDR over PCI need to use fdtdec_get_addr
+-		    to get the base address without adding the base of the SoC */
+-		reg_base = (void *)((uintptr_t)fdtdec_get_addr(blob, port_node, "reg"));
+-#else
+-		reg_base = fdt_get_regs_offs(blob, port_node, "reg");
+-#endif
+ 
++		reg_base = fdt_get_regs_offs(blob, port_node, "reg");
+ 		if (reg_base == 0) {
+ 			error("Missing registers in PCIe node\n");
+ 			continue;
+-- 
+1.9.1
+

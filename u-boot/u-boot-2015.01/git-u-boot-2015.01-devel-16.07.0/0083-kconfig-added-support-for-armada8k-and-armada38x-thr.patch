@@ -1,0 +1,213 @@
+From 9e406b46a9fdd690e6c0ae7ddc91c8042842b07d Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 29 Sep 2014 16:01:34 +0300
+Subject: [PATCH 0083/1240] kconfig: added support for armada8k and armada38x
+ through Kconfig
+
+Change-Id: Ib1cc9218e492b933036c0ca83d0e23c89d037f6c
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/Kconfig                  |  7 +++++++
+ board/mvebu/armada38x/Kconfig     | 23 +++++++++++++++++++++
+ board/mvebu/armada8k/Kconfig      | 27 +++++++++++++++++++++++++
+ board/mvebu/common/Kconfig        | 42 +++++++++++++++++++++++++++++++++++++++
+ configs/mvebu_armada38x_defconfig |  6 ++++++
+ configs/mvebu_armada8k_defconfig  |  3 +++
+ include/configs/armada38x.h       |  6 ------
+ include/configs/armada8k.h        |  2 --
+ 8 files changed, 108 insertions(+), 8 deletions(-)
+ create mode 100644 board/mvebu/armada38x/Kconfig
+ create mode 100644 board/mvebu/armada8k/Kconfig
+ create mode 100644 board/mvebu/common/Kconfig
+ create mode 100644 configs/mvebu_armada38x_defconfig
+ create mode 100644 configs/mvebu_armada8k_defconfig
+
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index 5eb1d03..dfbeb3a 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -102,6 +102,12 @@ config TARGET_VCMA9
+ 	bool "Support VCMA9"
+ 	select CPU_ARM920T
+ 
++config TARGET_ARMADA_8K
++	bool "Support Armada 8K"
++
++config TARGET_ARMADA_38X
++	bool "Support Armada 38x"
++
+ config TARGET_SMDK2410
+ 	bool "Support smdk2410"
+ 	select CPU_ARM920T
+@@ -932,6 +938,7 @@ source "board/logicpd/imx27lite/Kconfig"
+ source "board/logicpd/imx31_litekit/Kconfig"
+ source "board/maxbcm/Kconfig"
+ source "board/mpl/vcma9/Kconfig"
++source "board/mvebu/common/Kconfig"
+ source "board/olimex/mx23_olinuxino/Kconfig"
+ source "board/palmld/Kconfig"
+ source "board/palmtc/Kconfig"
+diff --git a/board/mvebu/armada38x/Kconfig b/board/mvebu/armada38x/Kconfig
+new file mode 100644
+index 0000000..07c8a61
+--- /dev/null
++++ b/board/mvebu/armada38x/Kconfig
+@@ -0,0 +1,23 @@
++if TARGET_ARMADA_38X
++
++config SYS_CPU
++	string
++	default "armv7"
++
++config SYS_BOARD
++	string
++	default "armada38x"
++
++config SYS_VENDOR
++	string
++	default "mvebu"
++
++config SYS_SOC
++	string
++	default "armada38x"
++
++config SYS_CONFIG_NAME
++	string
++	default "armada38x"
++
++endif
+diff --git a/board/mvebu/armada8k/Kconfig b/board/mvebu/armada8k/Kconfig
+new file mode 100644
+index 0000000..9792366
+--- /dev/null
++++ b/board/mvebu/armada8k/Kconfig
+@@ -0,0 +1,27 @@
++if TARGET_ARMADA_8K
++
++config SYS_CPU
++	string
++	default "armv8"
++
++config SYS_BOARD
++	string
++	default "armada8k"
++
++config SYS_VENDOR
++	string
++	default "mvebu"
++
++config SYS_SOC
++	string
++	default "armada8k"
++
++config SYS_CONFIG_NAME
++	string
++	default "armada8k"
++
++config PALLADIUM
++	bool "Support palladium emulation"
++	default y
++endif
++
+diff --git a/board/mvebu/common/Kconfig b/board/mvebu/common/Kconfig
+new file mode 100644
+index 0000000..541efc4
+--- /dev/null
++++ b/board/mvebu/common/Kconfig
+@@ -0,0 +1,42 @@
++
++source "board/mvebu/armada8k/Kconfig"
++source "board/mvebu/armada38x/Kconfig"
++
++menu "IO support"
++
++config MVEBU_NAND
++	bool "NAND flash support"
++	default n
++
++config MVEBU_SPI
++	bool "SPI flash support"
++	default n
++
++config MVEBU_PCI
++	bool "PCIE support"
++	default n
++
++config MVEBU_UART
++	bool "UART support"
++	default n
++
++endmenu
++
++
++choice
++	prompt "Flash for environment and image"
++	default MVEBU_SPI_BOOT
++
++config MVEBU_NAND_BOOT
++	bool "NAND flash boot"
++	depends on MVEBU_NAND
++
++config MVEBU_SPI_BOOT
++	bool "SPI flash boot"
++	depends on MVEBU_SPI
++
++config MVEBU_NOR_BOOT
++	bool "NOR flash boot"
++	depends on MVEBU_NOR
++
++endchoice
+diff --git a/configs/mvebu_armada38x_defconfig b/configs/mvebu_armada38x_defconfig
+new file mode 100644
+index 0000000..dcaee63
+--- /dev/null
++++ b/configs/mvebu_armada38x_defconfig
+@@ -0,0 +1,6 @@
++CONFIG_ARM=y
++CONFIG_TARGET_ARMADA_38X=y
++CONFIG_MVEBU_NAND=y
++CONFIG_MVEBU_SPI=y
++CONFIG_MVEBU_PCI=y
++CONFIG_MVEBU_UART=y
+diff --git a/configs/mvebu_armada8k_defconfig b/configs/mvebu_armada8k_defconfig
+new file mode 100644
+index 0000000..850b213
+--- /dev/null
++++ b/configs/mvebu_armada8k_defconfig
+@@ -0,0 +1,3 @@
++CONFIG_SYS_EXTRA_OPTIONS="ARM64"
++CONFIG_ARM=y
++CONFIG_TARGET_ARMADA_8K=y
+diff --git a/include/configs/armada38x.h b/include/configs/armada38x.h
+index 869580f..875a09d 100644
+--- a/include/configs/armada38x.h
++++ b/include/configs/armada38x.h
+@@ -46,12 +46,6 @@
+ #define CONFIG_MVEBU_CA9
+ #define CONFIG_AURORA_TIMER
+ 
+-/* Enable IO drivers */
+-#define CONFIG_MVEBU_UART
+-#define CONFIG_MVEBU_SPI
+-#define CONFIG_MVEBU_PCI
+-#define CONFIG_MVEBU_NAND
+-
+ /*
+ #define MV_INCLUDE_SDIO
+ #define MV_INCLUDE_INTEG_SATA
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index a039e28..0706828 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -24,8 +24,6 @@
+ #define CONFIG_IDENT_STRING             " Armada8k"
+ #define CONFIG_BOOTP_VCI_STRING         "U-boot.armv8.armada8k"
+ 
+-/* Enable IO drivers */
+-#define CONFIG_MVEBU_UART
+ /*
+ #define MV_INCLUDE_SDIO
+ #define MV_INCLUDE_INTEG_SATA
+-- 
+1.9.1
+

@@ -1,0 +1,98 @@
+From 3c4b3d1c721b707dbe9b3797d3db98e1dbbb7532 Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Wed, 20 Jan 2016 12:58:44 +0200
+Subject: [PATCH 014/239] atf: added documentation for aft build
+
+Change-Id: I3db75e05557b262ec7c62dc0189fdbb7d1a988dc
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26905
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ docs/marvell/build.txt | 73 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 73 insertions(+)
+ create mode 100644 docs/marvell/build.txt
+
+diff --git a/docs/marvell/build.txt b/docs/marvell/build.txt
+new file mode 100644
+index 0000000..c8f8451
+--- /dev/null
++++ b/docs/marvell/build.txt
+@@ -0,0 +1,73 @@
++Build instructions:
++-------------------
++
++This document describes how to compile the Arm Trusted Firmware (ATF) project for Marvell's platforms.
++ATF documentation is available at 'docs' directory.
++
++Build Instruction:
++------------------
++
++1. Download the ATF release <ARMATFV> from https://github.com/ARM-software/arm-trusted-firmware/archive/v1.2.tar.gz
++2. Extract ATF tree with Marvell source:
++	2.1. Extract ATF source code:
++		# tar -xjf atf-<ARMATFV>.tar.bz2
++		# mv atf-<ARMATFV> atf-<ARMATFV>-<MVATF>
++	2.2. add Marvell code:
++	- Option 1: Extracting the release zip file over the ATF tree:
++		 Extract the atf-<ARMATFV>-<MVATF>.zip release file.
++		# unzip atf-<ARMATFV>-<MVATF>.zip
++		For example: unzip atf-1.2-2016_T1.0.eng_drop_v1.zip.
++		This overrides part of the ATF source files and adds the relevant Marvell files.
++		 When asked whether to replace a certain file, choose 'A' for all files that have such a conflict.
++	- Option 2: Patch update:
++		 Extract the git-<ARMATFV>-<MVATF>.zip to the destination folder atf-<ARMATFV>-<MVATF>.
++		 Run the following git command in the atf-<ARMATFV>-<MVATF> folder:
++		  git apply git-<version>-<release>/*.patch
++3. Change directory 'cd' to the ATF directory.
++4. Set the cross compiler:
++	# export CROSS_COMPILE=/path/to/toolchain/aarch64-marvell-linux-gnu-
++5. Set U-Boot image location (relativly to ATF root or absolute path)
++	# export BL33=path/to/u-boot.bin
++	For example: if U-Boot project (and its images) is located at ~/project/u-boot, BL33
++				 should be ~/project/u-boot/u-boot.bin
++	Note: u-boot.bin should be used and not u-boot-spl.bin
++6. Set SPL image location (relativly to ATF root or absolute path)
++	# export SPL_IMAGE=path/to/u-boot-spl.bin
++	For example: if U-Boot project (and its images) is located at ~/project/u-boot, SPL_IMAGE
++				 should be ~/project/u-boot/spl/u-boot-spl.bin
++7. Clean build residuals: (for non fresh builds)
++	# make distclean
++8. Build ATF:
++	There are several build options:
++	- DEBUG: default is without debug informaion (=0). in order to enable it use DEBUG=1
++	- LOG_LEVEL: defines the level of logging which will be purged to the default output port.
++				LOG_LEVEL_NONE		0
++				LOG_LEVEL_NOTICE	10
++				LOG_LEVEL_ERROR		20
++				LOG_LEVEL_WARNING	30
++				LOG_LEVEL_INFO		40
++				LOG_LEVEL_VERBOSE	50
++	- USE_COHERENT_MEM: This flag determines whether to include the coherent memory region in the
++						BL memory map or not. It should be set to 0.
++
++	For eample: in order to build and image in release mode with log level up to warnings run:
++	# make DEBUG=0 USE_COHERENT_MEM=0 LOG_LEVEL=30 PLAT=mvebu all fip
++
++Build output:
++-------------
++
++	(for more information about build options, please refer to section 'Summary of build options' in  ATF user-guide:
++	 https://github.com/ARM-software/arm-trusted-firmware/blob/master/docs/user-guide.md)
++
++
++	Marvell's ATF compilation generates 6 files:
++	bl1.bin			- BL1 image
++	bl2.bin			- BL2 image
++	bl31.bin		- BL31 image
++	fip.bin			- FIP image (contains BL2, BL31 & BL33 (U-Boot) images)
++	boot-image.bin	- ATF image (contains BL1 and FIP images)
++	flash-image.bin	- Image which contains boot-image.bin and SPL image.
++
++	flash-image.bin should be burnt/placed on the boot flash/device.
++
++
+-- 
+1.9.1
+

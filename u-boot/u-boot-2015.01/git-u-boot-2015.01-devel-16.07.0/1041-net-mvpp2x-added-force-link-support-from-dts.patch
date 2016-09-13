@@ -1,0 +1,70 @@
+From a30d25f2e59b1b290e1844e8508aa2c9c40ef80e Mon Sep 17 00:00:00 2001
+From: Stefan Chulski <stefanc@marvell.com>
+Date: Tue, 12 Apr 2016 15:17:04 +0300
+Subject: [PATCH 1041/1240] net: mvpp2x: added force-link support from dts
+
+- force-link from dts
+- force-link parameter added to mv_pp2x_dev_param struct
+
+Change-Id: If74d559d3937fe04bc2fe25bf8a0deae9f61103d
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28970
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/net/mv_pp2x.c | 5 +++++
+ drivers/net/mv_pp2x.h | 1 +
+ 2 files changed, 6 insertions(+)
+
+diff --git a/drivers/net/mv_pp2x.c b/drivers/net/mv_pp2x.c
+index 3cd1afa..88ff86f 100644
+--- a/drivers/net/mv_pp2x.c
++++ b/drivers/net/mv_pp2x.c
+@@ -5073,6 +5073,7 @@ int mv_pp2x_dts_port_param_set(int port_node, struct mv_pp2x_dev_param *param)
+ 	int emac_off, phy_off, gop_port, mdio_phy, speed;
+ 	int phy_mode = 0;
+ 	u32 *emac_handle, *phy_handle;
++	bool force_link;
+ 
+ 	emac_handle = (u32 *)fdt_getprop(gd->fdt_blob,
+ 				port_node, "emac-data", NULL);
+@@ -5114,6 +5115,8 @@ int mv_pp2x_dts_port_param_set(int port_node, struct mv_pp2x_dev_param *param)
+ 		param->phy_speed = speed;
+ 	}
+ 
++	force_link = fdtdec_get_bool(gd->fdt_blob, emac_off, "force-link");
++
+ 	phy_handle = (u32 *)fdt_getprop(gd->fdt_blob,
+ 					emac_off, "phy", NULL);
+ 
+@@ -5135,6 +5138,7 @@ int mv_pp2x_dts_port_param_set(int port_node, struct mv_pp2x_dev_param *param)
+ 		param->phy_addr = mdio_phy;
+ 
+ 	}
++	param->force_link = force_link;
+ 	param->phy_handle = phy_handle;
+ 	param->phy_type = phy_mode;
+ 	param->gop_port = gop_port;
+@@ -5167,6 +5171,7 @@ static int mv_pp2x_initialize_dev(bd_t *bis, struct mv_pp2x *pp2,
+ 	pp2_port->mac_data.gop_index = param->gop_port;
+ 	pp2_port->mac_data.phy_mode = param->phy_type;
+ 	pp2_port->mac_data.speed = param->phy_speed;
++	pp2_port->mac_data.force_link = param->force_link;
+ 
+ 	/*
+ 	 * Allocate buffer area for tx/rx descs and rx_buffers. This is only
+diff --git a/drivers/net/mv_pp2x.h b/drivers/net/mv_pp2x.h
+index eb7aa16..d582456 100644
+--- a/drivers/net/mv_pp2x.h
++++ b/drivers/net/mv_pp2x.h
+@@ -2878,6 +2878,7 @@ struct mv_pp2x_dev_param {
+ 	phy_interface_t phy_type;
+ 	u32 *phy_handle;
+ 	int phy_speed;
++	bool force_link;
+ };
+ 
+ struct pp21_specific_tx_desc {
+-- 
+1.9.1
+

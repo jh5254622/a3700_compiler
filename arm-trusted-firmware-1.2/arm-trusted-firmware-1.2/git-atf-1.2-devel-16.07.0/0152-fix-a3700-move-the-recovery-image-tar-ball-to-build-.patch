@@ -1,0 +1,37 @@
+From e5d2df0ac684fff882537f03c4fed8fd85568779 Mon Sep 17 00:00:00 2001
+From: Wilson Ding <dingwei@marvell.com>
+Date: Tue, 17 May 2016 13:25:30 +0800
+Subject: [PATCH 152/239] fix: a3700: move the recovery image tar ball to build
+ folder
+
+- This patch is to move the uart_images.tgz to the release or
+  debug folder for Armada3700 build.
+- The tar ball only contains one-level sub-directory ./uart-
+  images, which is aligned to the old u-boot release manner.
+
+Change-Id: Iecec47598a7f1384a5b8d3e9f93604bc1ad62973
+Signed-off-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29776
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Victor Gu <xigu@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+---
+ Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index a8a2272..e722f1e 100644
+--- a/Makefile
++++ b/Makefile
+@@ -684,7 +684,7 @@ fip: ${BUILD_PLAT}/${FIP_NAME} ${DOIMAGETOOL}
+ 	@mkdir $(BUILD_PLAT)/$(BUILD_UART)
+ 	@mv -t $(BUILD_PLAT)/$(BUILD_UART) $(TIM_IMAGE) $(DOIMAGE_CFG)
+ 	@find . -name "*_h.*" |xargs cp -ut $(BUILD_PLAT)/$(BUILD_UART)
+-	@tar czf $(BUILD_UART).tgz $(BUILD_PLAT)/$(BUILD_UART)
++	@tar czf $(BUILD_PLAT)/$(BUILD_UART).tgz -C $(BUILD_PLAT) ./$(BUILD_UART)
+ 	@echo
+ 	@echo "Building flash image"
+ 	$(TIMBUILD) $(TIMBLDARGS)
+-- 
+1.9.1
+

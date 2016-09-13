@@ -1,0 +1,62 @@
+From 15d58e025b8a282e312a66fecc7e745259de9089 Mon Sep 17 00:00:00 2001
+From: zachary <zhangzg@marvell.com>
+Date: Wed, 23 Mar 2016 17:12:40 +0800
+Subject: [PATCH 177/239] fix: a3700: enable hash checksum in build uboot
+ script for ATF
+
+- enable hash checkusm in build uboot script for ATF
+
+change-Id: I343db2a41953fca5473ce9f72bf16540d0731733
+Signed-off-by: zachary <zhangzg@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28458
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ tools/wtp/untrusted/img-1.txt | 2 +-
+ tools/wtp/untrusted/img-2.txt | 2 +-
+ tools/wtp/untrusted/tim.txt   | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/tools/wtp/untrusted/img-1.txt b/tools/wtp/untrusted/img-1.txt
+index 9851972..258be1c 100644
+--- a/tools/wtp/untrusted/img-1.txt
++++ b/tools/wtp/untrusted/img-1.txt
+@@ -2,7 +2,7 @@ Image ID:                       0x57544d49		; WTMI
+ Next Image ID:                  0x4F424d49		; OBMI next
+ Flash Entry Address:            0x00004000		; WTMI flash addr
+ Load Address:                   0x1FFF0000		; WTMI RAM addr
+-Image Size To CRC in bytes:     0x00000000
++Image Size To CRC in bytes:     0xFFFFFFFF
+ Hash Algorithm ID:              32			; SHA-256
+ Partition Number:               0x00000000
+ Image Filename: WTMI_IMG
+diff --git a/tools/wtp/untrusted/img-2.txt b/tools/wtp/untrusted/img-2.txt
+index ad022fc..e27c210 100644
+--- a/tools/wtp/untrusted/img-2.txt
++++ b/tools/wtp/untrusted/img-2.txt
+@@ -2,7 +2,7 @@ Image ID:                       0x4F424d49		; OBMI
+ Next Image ID:                  0xFFFFFFFF		; NONE
+ Flash Entry Address:            0x00015000		; OBMI flash addr
+ Load Address:                   0x64100000		; OBMI RAM addr
+-Image Size To CRC in bytes:     0x00000000
++Image Size To CRC in bytes:     0xFFFFFFFF
+ Hash Algorithm ID:              32			; SHA-256
+ Partition Number:               0x00000000
+ Image Filename: BOOT_IMAGE
+diff --git a/tools/wtp/untrusted/tim.txt b/tools/wtp/untrusted/tim.txt
+index cd16593..b477ffa 100644
+--- a/tools/wtp/untrusted/tim.txt
++++ b/tools/wtp/untrusted/tim.txt
+@@ -2,7 +2,7 @@ Image ID:                       0x54494D48		; TIMH
+ Next Image ID:                  0x57544d49		; WTMI next
+ Flash Entry Address:            0x00000000		; TIM flash addr
+ Load Address:                   0x20006000		; TIM ISRAM addr
+-Image Size To CRC in bytes:     0x00000000
++Image Size To CRC in bytes:     0xFFFFFFFF
+ Hash Algorithm ID:              32			; SHA-256
+ Partition Number:               0x00000000
+ Image Filename: TIM_ATF.bin
+-- 
+1.9.1
+

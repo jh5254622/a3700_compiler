@@ -1,0 +1,72 @@
+From 59b62e0db10a6e33ef9a0cf8a9562c1d69b0c850 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Sun, 22 Nov 2015 17:20:10 +0200
+Subject: [PATCH 0519/1240] pcie: Reduce request size in PCIe devices
+
+	- Set PCIe capabilities to reduce the access size to 128B.
+	- This is useful to stabilize PCIe cards when working with AP806-Z1.
+
+Change-Id: I93cb143e04a1eccc62d6d167405a3c2d5619f889
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25150
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/pci/pci_mvebu.c        | 29 +++++++++++++++++++++++++++++
+ include/configs/mvebu-common.h |  3 +++
+ 2 files changed, 32 insertions(+)
+
+diff --git a/drivers/pci/pci_mvebu.c b/drivers/pci/pci_mvebu.c
+index 94d147f..86dfc8e 100644
+--- a/drivers/pci/pci_mvebu.c
++++ b/drivers/pci/pci_mvebu.c
+@@ -396,3 +396,32 @@ void pci_init_board(void)
+ 		first_busno = mvebu_pcie_init(host_id, reg_base, &win, first_busno);
+ 	}
+ }
++
++#ifdef CONFIG_MVEBU_PCI_BURST_RELAX
++#define PCIE_CAP_DCR			0x8
++#define DCR_MAX_READ_REQ_SIZE_MASK	(7 << 12)
++void board_pci_fixup_dev(struct pci_controller *hose, pci_dev_t dev,
++			 unsigned short vendor, unsigned short device,
++			 unsigned short class)
++{
++	int pcie_cap_pos, pci_dcr;
++	u32 temp32;
++
++	/* Get PCIe capability structure. */
++	pcie_cap_pos = pci_hose_find_capability(hose, dev, PCI_CAP_ID_EXP);
++	if (pcie_cap_pos == 0) {
++		error("Could not find PCIE CAP structure.\n");
++		return;
++	}
++
++	/* Get the PCIe Device Control Register */
++	pci_dcr = pcie_cap_pos + PCIE_CAP_DCR;
++	pci_hose_read_config_dword(hose, dev, pci_dcr, &temp32);
++	/* Set Max-Read-Request-Size field to 0x0 -> 128B */
++	temp32 &= ~DCR_MAX_READ_REQ_SIZE_MASK;
++	pci_hose_write_config_dword(hose, dev, pci_dcr, temp32);
++	pci_hose_read_config_dword(hose, dev, pci_dcr, &temp32);
++	printf("Set PCIe device capability (DCR/Read-Req-Size to 128B - 0x%x).\n", temp32);
++}
++#endif /* CONFIG_MVEBU_PCI_BURST_RELAX */
++
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index f842d60..5b454a1 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -311,6 +311,9 @@
+ #if defined(CONFIG_MVEBU_PCI) || defined(CONFIG_MVEBU_DW_PCIE)
+ 	#define CONFIG_PCI
+ 	#define CONFIG_PCI_PNP  /* Enable plug-and-play */
++	#ifdef CONFIG_MVEBU_PCI_BURST_RELAX
++	#define CONFIG_PCI_FIXUP_DEV
++	#endif
+ 	/*#define CONFIG_MVEBU_PCI_EP*/ /* Set PCI host as end point */
+ 
+ 	/* Enable PCIE NIC for devel boards */
+-- 
+1.9.1
+

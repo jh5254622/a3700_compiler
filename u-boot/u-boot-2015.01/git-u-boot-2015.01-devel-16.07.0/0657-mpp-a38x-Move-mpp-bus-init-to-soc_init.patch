@@ -1,0 +1,50 @@
+From bf28631472024a22d4899e32b2efc3872931b979 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Sun, 10 Jan 2016 10:33:47 +0200
+Subject: [PATCH 0657/1240] mpp: a38x: Move mpp-bus init to soc_init
+
+	mpp-bus init cannot be done at soc_early_init, because it requires
+	memory allocations, and the mpp-bus feature is not really needed
+	at this stage.
+
+Change-Id: I2b4dd3e3f593b2bcd7fdf3f59585a08ac8c4c577
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26657
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv7/armada38x/soc-init.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/cpu/armv7/armada38x/soc-init.c b/arch/arm/cpu/armv7/armada38x/soc-init.c
+index 9b3444b..541762d 100644
+--- a/arch/arm/cpu/armv7/armada38x/soc-init.c
++++ b/arch/arm/cpu/armv7/armada38x/soc-init.c
+@@ -33,7 +33,6 @@
+ 
+ int a38x_configure_mpp(void)
+ {
+-	mvebu_pinctl_probe();
+ #ifdef CONFIG_MVEBU_MPP_BUS
+ #ifdef CONFIG_MVEBU_NAND_BOOT
+ 	mpp_enable_bus("nand");
+@@ -48,7 +47,7 @@ int a38x_configure_mpp(void)
+ 
+ int soc_early_init_f(void)
+ {
+-	a38x_configure_mpp();
++	mvebu_pinctl_probe();
+ 
+ #ifdef CONFIG_CMD_NAND
+ 	nand_clock_init();
+@@ -66,6 +65,7 @@ void soc_init(void)
+ 	 * no device attached */
+ 	writel(0, MVEBU_IO_ERR_CTL_REG);
+ 
++	a38x_configure_mpp();
+ 	return;
+ }
+ 
+-- 
+1.9.1
+

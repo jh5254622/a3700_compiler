@@ -1,0 +1,32 @@
+From 1d6ec254e1040bd634db98977375bcd23aaf4e66 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 3 Feb 2016 11:04:50 +0200
+Subject: [PATCH 0785/1240] fix: pcie: comphy: fix PCIe COMPHY initialization
+
+- Set outputs TXCLK_2X on PIN_TXDCLK_2X
+
+Change-Id: Ic725c62846d07ab3824cc539309055b3c230dd0b
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27170
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ drivers/phy/comphy_cp110.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/phy/comphy_cp110.c b/drivers/phy/comphy_cp110.c
+index b17779a..801ff74 100644
+--- a/drivers/phy/comphy_cp110.c
++++ b/drivers/phy/comphy_cp110.c
+@@ -129,7 +129,7 @@ static int comphy_pcie_power_up(u32 lane, u32 pcie_by4, void __iomem *hpipe_base
+ 	data = 0x1 << HPIPE_MISC_CLK100M_125M_OFFSET;
+ 	/* Set PIN_TXDCLK_2X Clock Frequency Selection for outputs 500MHz clock */
+ 	mask |= HPIPE_MISC_TXDCLK_2X_MASK;
+-	data |= 0x1 << HPIPE_MISC_TXDCLK_2X_OFFSET;
++	data |= 0x0 << HPIPE_MISC_TXDCLK_2X_OFFSET;
+ 	/* Enable 500MHz Clock */
+ 	mask |= HPIPE_MISC_CLK500_EN_MASK;
+ 	data |= 0x1 << HPIPE_MISC_CLK500_EN_OFFSET;
+-- 
+1.9.1
+

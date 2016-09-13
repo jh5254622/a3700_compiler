@@ -1,0 +1,35 @@
+From 69b95a3ca94c182c52290c64c5253930d839c0cd Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 27 Aug 2015 01:30:45 +0300
+Subject: [PATCH 0365/1240] fix: uart: disable UART setbrg calculation when
+ booting in SPL
+
+Change-Id: Ib417d213b56d175b79d696090b8eb736f0fc0521
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23239
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Neta Zur Hershkovits <neta@marvell.com>
+---
+ drivers/serial/ns16550.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/serial/ns16550.c b/drivers/serial/ns16550.c
+index b9d6d9e..9ebdc97 100644
+--- a/drivers/serial/ns16550.c
++++ b/drivers/serial/ns16550.c
+@@ -129,10 +129,12 @@ int ns16550_calc_divisor(NS16550_t port, int clock, int baudrate)
+ 
+ static void NS16550_setbrg(NS16550_t com_port, int baud_divisor)
+ {
++#if !defined(CONFIG_SPL_BUILD) && defined(CONFIG_MVEBU)
+ 	serial_out(UART_LCR_BKSE | UART_LCRVAL, &com_port->lcr);
+ 	serial_out(baud_divisor & 0xff, &com_port->dll);
+ 	serial_out((baud_divisor >> 8) & 0xff, &com_port->dlm);
+ 	serial_out(UART_LCRVAL, &com_port->lcr);
++#endif
+ }
+ 
+ void NS16550_init(NS16550_t com_port, int baud_divisor)
+-- 
+1.9.1
+

@@ -1,0 +1,93 @@
+From 2c142a920a69e3ad81243c512d224d5c68ffff0f Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Tue, 3 May 2016 15:32:32 +0300
+Subject: [PATCH 1119/1240] fix: sar, cp110: add possibility to disable sar
+ node in DTS
+
+This patch fixes an issue with 2nd CP, to avoid duplicated call for cp110_sar_init.
+- sar init routine (for cp110 or ap806) was called if 'sar-reg' node exists in DT.
+- Each CP has it's own sar unit, and both include cp110.dtsi,
+  hence sar init was called twice (1 for each CP)
+
+Added 'status' property to 'sar-reg' node in cp110-slave/master & apn-806 files,
+and accordingly added a check for the 'status' before calling init routine.
+
+Change-Id: Ib250ade2b43ef4e5ec2622c5abf82b08b1b00313
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29450
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/apn-806-a0.dtsi      | 1 +
+ arch/arm/dts/cp110-master.dtsi    | 3 +++
+ arch/arm/dts/cp110.dtsi           | 1 +
+ drivers/misc/mvebu_sar/chip_sar.c | 6 ++++++
+ 4 files changed, 11 insertions(+)
+
+diff --git a/arch/arm/dts/apn-806-a0.dtsi b/arch/arm/dts/apn-806-a0.dtsi
+index 3d5c703..97b6c90 100644
+--- a/arch/arm/dts/apn-806-a0.dtsi
++++ b/arch/arm/dts/apn-806-a0.dtsi
+@@ -98,6 +98,7 @@
+ 			sar-reg {
+ 				compatible = "marvell,sample-at-reset-common", "marvell,sample-at-reset-ap806";
+ 				reg = <0x6F8200 0x8>;
++				status = "okay";
+ 			};
+ 
+ 			mmc0: mmc@6E0000 {
+diff --git a/arch/arm/dts/cp110-master.dtsi b/arch/arm/dts/cp110-master.dtsi
+index 628505b..7ba5101 100644
+--- a/arch/arm/dts/cp110-master.dtsi
++++ b/arch/arm/dts/cp110-master.dtsi
+@@ -39,6 +39,9 @@
+ 		internal-regs {
+ 			refclk: refclk {
+ 			};
++			sar-reg {
++				status = "okay";
++			};
+ 			gop {
+ 				emac0: mac0 {
+ 					mac-address = [00 00 00 00 00 01];
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index f6b4f7f..a9f4bae 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -142,6 +142,7 @@ mdio0@12A200 {
+ sar-reg {
+ 	compatible = "marvell,sample-at-reset-common", "marvell,sample-at-reset-cp110";
+ 	reg = <0x400200 0x8>;
++	status = "disabled";
+ };
+ 
+ rtc-reg {
+diff --git a/drivers/misc/mvebu_sar/chip_sar.c b/drivers/misc/mvebu_sar/chip_sar.c
+index 1355b4e..ac5a46d 100644
+--- a/drivers/misc/mvebu_sar/chip_sar.c
++++ b/drivers/misc/mvebu_sar/chip_sar.c
+@@ -111,15 +111,21 @@ int mvebu_sar_init(const void *blob)
+ 	}
+ 
+ 	for (i = 0; i < chip_count ; i++) {
++
+ 		node = sar_list[i];
+ 		if (node <= 0)
+ 			continue;
+ 
++		/* Skip if Node is disabled */
++		if (!fdtdec_get_is_enabled(blob, node))
++			continue;
++
+ 		chip_cfg_ptr = get_chip_config(fdtdec_next_lookup(blob, node, COMPAT_MVEBU_SAR_REG_COMMON));
+ 		if (chip_cfg_ptr == NULL) {
+ 			error("Bad compatible for sar-reg.\n");
+ 			continue;
+ 		}
++
+ 		ret = chip_cfg_ptr->sar_init_func(blob, node);
+ 		if (ret) {
+ 			error("sar_init failed (%d).\n", ret);
+-- 
+1.9.1
+

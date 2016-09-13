@@ -1,0 +1,37 @@
+From c78021557bc6fd7d4545e18bd7cf4a4bb80c48fb Mon Sep 17 00:00:00 2001
+From: Terry Zhou <bjzhou@marvell.com>
+Date: Wed, 13 Apr 2016 09:46:17 +0800
+Subject: [PATCH 1069/1240] spl: a3700: enlarge the SPL size to 128K
+
+Change-Id: I5549a7883553c397952964f23fffddfd29ca7ac3
+Signed-off-by: Terry Zhou <bjzhou@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28980
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ include/configs/armada3700.h | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/include/configs/armada3700.h b/include/configs/armada3700.h
+index 6645ece..e30d968 100644
+--- a/include/configs/armada3700.h
++++ b/include/configs/armada3700.h
+@@ -78,12 +78,13 @@
+    CM3 mapping for SRAM is     0x1FFF0000 - 0x20010000
+  */
+ #define CONFIG_SPL_TEXT_BASE		0x01000000
+-#define CONFIG_SPL_MAX_SIZE		0x00010000	/* 64K */
+ 
+ #if (CONFIG_SPL_TEXT_BASE != 0xF0000000)
+ #define SPL_IS_IN_DRAM
++#define CONFIG_SPL_MAX_SIZE		0x00020000	/* 128K */
+ #else
+ #undef SPL_IS_IN_DRAM
++#define CONFIG_SPL_MAX_SIZE		0x00010000	/* 64K */
+ #endif
+ 
+ 
+-- 
+1.9.1
+

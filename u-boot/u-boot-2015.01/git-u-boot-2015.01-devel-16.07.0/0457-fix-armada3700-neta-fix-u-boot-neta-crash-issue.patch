@@ -1,0 +1,62 @@
+From 675efd68bf9d14cded45408cce022f6de3f8ff25 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Fri, 23 Oct 2015 13:13:02 +0800
+Subject: [PATCH 0457/1240] fix: armada3700: neta: fix u-boot neta crash issue
+
+    When using linaro-4.9 compiler, armada3700 u-boot
+    will crash during neta module init, because of uncorrectly
+    use of pointer in routine mvneta_initialize.
+
+    This patch fix this issue by using &(const char *) instead of
+    (const char **) as input of fdt_get_string.
+
+Change-Id: I23b147a3e256be6601614cb9dbf0b3eadb01e33b
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24240
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ drivers/net/mvneta.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/net/mvneta.c b/drivers/net/mvneta.c
+index cba07a6..ca54e53 100644
+--- a/drivers/net/mvneta.c
++++ b/drivers/net/mvneta.c
+@@ -1745,7 +1745,7 @@ int mvneta_initialize(bd_t *bis)
+ 	int node_list[CONFIG_MAX_NETA_PORT_NUM], node;
+ 	int i, count, phy_addr, phy_mode;
+ 	unsigned long neta_reg_base;
+-	const char **phy_mode_name = 0;
++	const char *phy_mode_name;
+ 	int err, loop;
+ 
+ 	/* in dts file, go through all the 'neta' nodes.
+@@ -1780,7 +1780,7 @@ int mvneta_initialize(bd_t *bis)
+ 			return 0;
+ 		}
+ 		/* fetch 'phy mode' propertiy from 'neta' node */
+-		err = fdt_get_string(gd->fdt_blob, node, "phy_mode", phy_mode_name);
++		err = fdt_get_string(gd->fdt_blob, node, "phy_mode", &phy_mode_name);
+ 		if (err < 0) {
+ 			error("failed to get phy_mode_name, initialization skipped!\n");
+ 			return 0;
+@@ -1788,13 +1788,13 @@ int mvneta_initialize(bd_t *bis)
+ 
+ 		/* translate phy_mode from phy_mode_name */
+ 		for (loop = 0; loop < (sizeof(phy_mode_str) / sizeof(char *)); loop++)
+-			if (!strcmp(*phy_mode_name, phy_mode_str[loop])) {
++			if (!strcmp(phy_mode_name, phy_mode_str[loop])) {
+ 				phy_mode = loop;
+ 				break;
+ 			}
+ 
+ 		if (loop >= (sizeof(phy_mode_str) / sizeof(char *))) {
+-			error("could not find phy_mode by str: %s\n", *phy_mode_name);
++			error("could not find phy_mode by str: %s\n", phy_mode_name);
+ 			return 0;
+ 		}
+ 
+-- 
+1.9.1
+

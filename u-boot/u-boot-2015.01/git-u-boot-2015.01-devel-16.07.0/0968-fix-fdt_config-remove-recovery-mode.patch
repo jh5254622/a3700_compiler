@@ -1,0 +1,37 @@
+From 0a3689bb9ea11c4287720cdb44d67889f663f1f1 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Thu, 3 Mar 2016 17:36:33 +0200
+Subject: [PATCH 0968/1240] fix: fdt_config: remove recovery mode
+
+recovery mode mechanism leads to board failure, even when the data in EEPROM is valid.
+open a JIRA-2365 for this issue.
+
+Change-Id: Ic976dbb798e7e9c24ca5d19e1e9e015d51a776ad
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28033
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ board/mvebu/common/cfg_eeprom.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/board/mvebu/common/cfg_eeprom.c b/board/mvebu/common/cfg_eeprom.c
+index 68f8278..f6d9c39 100644
+--- a/board/mvebu/common/cfg_eeprom.c
++++ b/board/mvebu/common/cfg_eeprom.c
+@@ -418,7 +418,12 @@ int cfg_eeprom_init(void)
+ 				(uint32_t) eeprom_buffer.length - 4);
+ 
+ 	/* if checksum is valid and not in recovery boot mode */
++	/* the recovery mode works only on armada-3700 for now */
++#ifdef CONFIG_TARGET_ARMADA_3700
+ 	if (calculate_checksum == eeprom_buffer.checksum && !mvebu_is_in_recovery_mode()) {
++#else
++	if (calculate_checksum == eeprom_buffer.checksum) {
++#endif
+ 		/* update board_config_val struct with the read values from EEPROM */
+ 		board_config_val = eeprom_buffer;
+ 		/* if fdt_config is enabled, return - FDT already read in the struct from EEPROM */
+-- 
+1.9.1
+

@@ -1,0 +1,1041 @@
+
+Allocating common symbols
+Common symbol       size              file
+
+bl2_img_desc        0x80              ./build/a3700_z/debug/bl2/a3700_z_common.o
+
+Discarded input sections
+
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/build_message.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/build_message.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/build_message.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/io_fip.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/io_fip.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/io_fip.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/io_memmap.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/io_memmap.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/io_memmap.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/io_storage.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/io_storage.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/io_storage.o
+ .text.io_write
+                0x0000000000000000       0x94 ./build/a3700_z/debug/bl2/io_storage.o
+ .rodata.__func__.1478
+                0x0000000000000000        0x9 ./build/a3700_z/debug/bl2/io_storage.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+ .text.bl2_plat_get_scp_bl2_meminfo
+                0x0000000000000000       0x20 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+ .text.bl2_plat_set_bl32_ep_info
+                0x0000000000000000       0x30 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .text.marvell_io_is_toc_valid
+                0x0000000000000000       0x28 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/bl2_main.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/bl2_main.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/bl2_main.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/bl2_arch_setup.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/bl2_arch_setup.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/bl2_arch_setup.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/bl_common.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/bl_common.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/bl_common.o
+ .text.page_align
+                0x0000000000000000       0x1c ./build/a3700_z/debug/bl2/bl_common.o
+ .text.image_size
+                0x0000000000000000       0x60 ./build/a3700_z/debug/bl2/bl_common.o
+ .text.print_entry_point_info
+                0x0000000000000000        0x4 ./build/a3700_z/debug/bl2/bl_common.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/tf_printf.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/tf_printf.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/tf_printf.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/xlat_helpers.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/xlat_helpers.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/xlat_helpers.o
+ .text.create_table_desc
+                0x0000000000000000        0xc ./build/a3700_z/debug/bl2/xlat_helpers.o
+ .text.create_block_desc
+                0x0000000000000000       0x64 ./build/a3700_z/debug/bl2/xlat_helpers.o
+ .text.create_device_block
+                0x0000000000000000       0x20 ./build/a3700_z/debug/bl2/xlat_helpers.o
+ .text.create_romem_block
+                0x0000000000000000       0x18 ./build/a3700_z/debug/bl2/xlat_helpers.o
+ .text.create_rwmem_block
+                0x0000000000000000       0x18 ./build/a3700_z/debug/bl2/xlat_helpers.o
+ .rodata.__func__.1001
+                0x0000000000000000       0x12 ./build/a3700_z/debug/bl2/xlat_helpers.o
+ .rodata.str1.1
+                0x0000000000000000       0x1d ./build/a3700_z/debug/bl2/xlat_helpers.o
+ .debug_info    0x0000000000000000      0x3bd ./build/a3700_z/debug/bl2/xlat_helpers.o
+ .debug_abbrev  0x0000000000000000      0x138 ./build/a3700_z/debug/bl2/xlat_helpers.o
+ .debug_loc     0x0000000000000000      0x795 ./build/a3700_z/debug/bl2/xlat_helpers.o
+ .debug_aranges
+                0x0000000000000000       0x70 ./build/a3700_z/debug/bl2/xlat_helpers.o
+ .debug_ranges  0x0000000000000000       0xa0 ./build/a3700_z/debug/bl2/xlat_helpers.o
+ .debug_line    0x0000000000000000       0xd6 ./build/a3700_z/debug/bl2/xlat_helpers.o
+ .debug_str     0x0000000000000000      0x1e6 ./build/a3700_z/debug/bl2/xlat_helpers.o
+ .comment       0x0000000000000000       0x3d ./build/a3700_z/debug/bl2/xlat_helpers.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/xlat_helpers.o
+ .debug_frame   0x0000000000000000       0x98 ./build/a3700_z/debug/bl2/xlat_helpers.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/std.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/std.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/std.o
+ .text.snprintf_func
+                0x0000000000000000       0x2c ./build/a3700_z/debug/bl2/std.o
+ .text.abort    0x0000000000000000       0x18 ./build/a3700_z/debug/bl2/std.o
+ .text.exit     0x0000000000000000       0x18 ./build/a3700_z/debug/bl2/std.o
+ .text.memchr   0x0000000000000000       0x28 ./build/a3700_z/debug/bl2/std.o
+ .text.puts     0x0000000000000000       0x60 ./build/a3700_z/debug/bl2/std.o
+ .text.sscanf   0x0000000000000000       0x34 ./build/a3700_z/debug/bl2/std.o
+ .text.strchr   0x0000000000000000       0x24 ./build/a3700_z/debug/bl2/std.o
+ .text.strcmp   0x0000000000000000       0x2c ./build/a3700_z/debug/bl2/std.o
+ .text.strcasecmp
+                0x0000000000000000       0x74 ./build/a3700_z/debug/bl2/std.o
+ .text.strlen   0x0000000000000000       0x1c ./build/a3700_z/debug/bl2/std.o
+ .text.kvprintf
+                0x0000000000000000      0xdcc ./build/a3700_z/debug/bl2/std.o
+ .rodata.kvprintf
+                0x0000000000000000       0xb0 ./build/a3700_z/debug/bl2/std.o
+ .text.strncmp  0x0000000000000000       0x38 ./build/a3700_z/debug/bl2/std.o
+ .text.sprintf  0x0000000000000000       0x70 ./build/a3700_z/debug/bl2/std.o
+ .text.vsprintf
+                0x0000000000000000       0x4c ./build/a3700_z/debug/bl2/std.o
+ .text.vsnprintf
+                0x0000000000000000       0x5c ./build/a3700_z/debug/bl2/std.o
+ .text.printf   0x0000000000000000       0x94 ./build/a3700_z/debug/bl2/std.o
+ .text.snprintf
+                0x0000000000000000       0x50 ./build/a3700_z/debug/bl2/std.o
+ .text.vsnrprintf
+                0x0000000000000000       0x60 ./build/a3700_z/debug/bl2/std.o
+ .rodata.hex2ascii_data
+                0x0000000000000000       0x25 ./build/a3700_z/debug/bl2/std.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/a3700_z_common.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/a3700_z_common.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/a3700_z_common.o
+ .text.bl1_plat_get_image_desc
+                0x0000000000000000       0x34 ./build/a3700_z/debug/bl2/a3700_z_common.o
+ COMMON         0x0000000000000000       0x80 ./build/a3700_z/debug/bl2/a3700_z_common.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/xlat_tables.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/xlat_tables.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/xlat_tables.o
+ .text.enable_mmu_el3
+                0x0000000000000000       0xb8 ./build/a3700_z/debug/bl2/xlat_tables.o
+ .rodata.__func__.2030
+                0x0000000000000000        0xf ./build/a3700_z/debug/bl2/xlat_tables.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/marvell_common.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/marvell_common.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/marvell_common.o
+ .text.arm_configure_mmu_el3
+                0x0000000000000000       0x58 ./build/a3700_z/debug/bl2/marvell_common.o
+ .text.marvell_get_spsr_for_bl32_entry
+                0x0000000000000000        0x8 ./build/a3700_z/debug/bl2/marvell_common.o
+ .text.marvell_configure_sys_timer
+                0x0000000000000000       0x24 ./build/a3700_z/debug/bl2/marvell_common.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/plat_common.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/plat_common.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/plat_common.o
+ .text.bl31_plat_enable_mmu
+                0x0000000000000000        0x4 ./build/a3700_z/debug/bl2/plat_common.o
+ .text.bl32_plat_enable_mmu
+                0x0000000000000000        0x4 ./build/a3700_z/debug/bl2/plat_common.o
+ .text.bl31_plat_runtime_setup
+                0x0000000000000000        0x4 ./build/a3700_z/debug/bl2/plat_common.o
+ .text.platform_core_pos_helper
+                0x0000000000000000       0x38 ./build/a3700_z/debug/bl2/plat_common.o
+ .rodata.__func__.1568
+                0x0000000000000000       0x19 ./build/a3700_z/debug/bl2/plat_common.o
+ .rodata.str1.1
+                0x0000000000000000       0x2b ./build/a3700_z/debug/bl2/plat_common.o
+ .debug_info    0x0000000000000000      0x236 ./build/a3700_z/debug/bl2/plat_common.o
+ .debug_abbrev  0x0000000000000000      0x102 ./build/a3700_z/debug/bl2/plat_common.o
+ .debug_loc     0x0000000000000000       0xe1 ./build/a3700_z/debug/bl2/plat_common.o
+ .debug_aranges
+                0x0000000000000000       0x60 ./build/a3700_z/debug/bl2/plat_common.o
+ .debug_ranges  0x0000000000000000       0x50 ./build/a3700_z/debug/bl2/plat_common.o
+ .debug_line    0x0000000000000000      0x15e ./build/a3700_z/debug/bl2/plat_common.o
+ .debug_str     0x0000000000000000      0x258 ./build/a3700_z/debug/bl2/plat_common.o
+ .comment       0x0000000000000000       0x3d ./build/a3700_z/debug/bl2/plat_common.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/plat_common.o
+ .debug_frame   0x0000000000000000       0x80 ./build/a3700_z/debug/bl2/plat_common.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/platform_up_stack.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/platform_up_stack.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/platform_up_stack.o
+ .text.plat_get_my_stack
+                0x0000000000000000       0x10 ./build/a3700_z/debug/bl2/platform_up_stack.o
+ .text.deprecatedplatform_get_stack
+                0x0000000000000000        0x4 ./build/a3700_z/debug/bl2/platform_up_stack.o
+ .text.deprecatedplatform_set_stack
+                0x0000000000000000        0x4 ./build/a3700_z/debug/bl2/platform_up_stack.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/bl2_entrypoint.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/bl2_entrypoint.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/bl2_entrypoint.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/early_exceptions.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/early_exceptions.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/early_exceptions.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/spinlock.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/spinlock.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/spinlock.o
+ .text.spin_lock
+                0x0000000000000000       0x20 ./build/a3700_z/debug/bl2/spinlock.o
+ .text.spin_unlock
+                0x0000000000000000        0x8 ./build/a3700_z/debug/bl2/spinlock.o
+ .debug_line    0x0000000000000000       0x6d ./build/a3700_z/debug/bl2/spinlock.o
+ .debug_info    0x0000000000000000       0x97 ./build/a3700_z/debug/bl2/spinlock.o
+ .debug_abbrev  0x0000000000000000       0x12 ./build/a3700_z/debug/bl2/spinlock.o
+ .debug_aranges
+                0x0000000000000000       0x40 ./build/a3700_z/debug/bl2/spinlock.o
+ .debug_ranges  0x0000000000000000       0x40 ./build/a3700_z/debug/bl2/spinlock.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/debug.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/debug.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/debug.o
+ .text.asm_print_hex
+                0x0000000000000000       0x30 ./build/a3700_z/debug/bl2/debug.o
+ .rodata.panic_str
+                0x0000000000000000       0x11 ./build/a3700_z/debug/bl2/debug.o
+ .text.do_panic
+                0x0000000000000000       0x3c ./build/a3700_z/debug/bl2/debug.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/cache_helpers.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/cache_helpers.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/cache_helpers.o
+ .text.clean_dcache_range
+                0x0000000000000000       0x34 ./build/a3700_z/debug/bl2/cache_helpers.o
+ .text.do_dcsw_op
+                0x0000000000000000       0xdc ./build/a3700_z/debug/bl2/cache_helpers.o
+ .text.dcsw_op_louis
+                0x0000000000000000       0x14 ./build/a3700_z/debug/bl2/cache_helpers.o
+ .text.dcsw_op_all
+                0x0000000000000000       0x14 ./build/a3700_z/debug/bl2/cache_helpers.o
+ .text.dcsw_op_level1
+                0x0000000000000000       0x10 ./build/a3700_z/debug/bl2/cache_helpers.o
+ .text.dcsw_op_level2
+                0x0000000000000000       0x10 ./build/a3700_z/debug/bl2/cache_helpers.o
+ .text.dcsw_op_level3
+                0x0000000000000000       0x10 ./build/a3700_z/debug/bl2/cache_helpers.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/misc_helpers.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/misc_helpers.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/misc_helpers.o
+ .text.get_afflvl_shift
+                0x0000000000000000       0x14 ./build/a3700_z/debug/bl2/misc_helpers.o
+ .text.mpidr_mask_lower_afflvls
+                0x0000000000000000       0x1c ./build/a3700_z/debug/bl2/misc_helpers.o
+ .text.eret     0x0000000000000000        0x4 ./build/a3700_z/debug/bl2/misc_helpers.o
+ .text.memcpy16
+                0x0000000000000000       0x48 ./build/a3700_z/debug/bl2/misc_helpers.o
+ .text.disable_mmu_el3
+                0x0000000000000000       0x1c ./build/a3700_z/debug/bl2/misc_helpers.o
+ .text.disable_mmu_icache_el3
+                0x0000000000000000        0x8 ./build/a3700_z/debug/bl2/misc_helpers.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/platform_helpers.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/platform_helpers.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/platform_helpers.o
+ .text.deprecatedplatform_get_core_pos
+                0x0000000000000000       0x18 ./build/a3700_z/debug/bl2/platform_helpers.o
+ .text.plat_crash_console_init
+                0x0000000000000000        0x8 ./build/a3700_z/debug/bl2/platform_helpers.o
+ .text.plat_crash_console_putc
+                0x0000000000000000        0x4 ./build/a3700_z/debug/bl2/platform_helpers.o
+ .text.plat_reset_handler
+                0x0000000000000000        0x4 ./build/a3700_z/debug/bl2/platform_helpers.o
+ .text.plat_disable_acp
+                0x0000000000000000        0x4 ./build/a3700_z/debug/bl2/platform_helpers.o
+ .text.bl1_plat_prepare_exit
+                0x0000000000000000        0x4 ./build/a3700_z/debug/bl2/platform_helpers.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/console.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/console.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/console.o
+ .text.console_uninit
+                0x0000000000000000        0xc ./build/a3700_z/debug/bl2/console.o
+ .text.console_getc
+                0x0000000000000000        0xc ./build/a3700_z/debug/bl2/console.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/a3700_console.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/a3700_console.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/a3700_console.o
+ .text.console_core_getc
+                0x0000000000000000        0xc ./build/a3700_z/debug/bl2/a3700_console.o
+ .text          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/marvell_helpers.o
+ .data          0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/marvell_helpers.o
+ .bss           0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/marvell_helpers.o
+ .text.plat_my_core_pos
+                0x0000000000000000        0x8 ./build/a3700_z/debug/bl2/marvell_helpers.o
+ .text.plat_arm_calc_core_pos
+                0x0000000000000000       0x10 ./build/a3700_z/debug/bl2/marvell_helpers.o
+ .text.platform_mem_init
+                0x0000000000000000        0x4 ./build/a3700_z/debug/bl2/marvell_helpers.o
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+RAM              0x0000000004017000 0x000000000000c000 xrw
+*default*        0x0000000000000000 0xffffffffffffffff
+
+Linker script and memory map
+
+                0x0000000004017000                . = 0x4017000
+                0x0000000000000001                ASSERT ((. == ALIGN (0x1000)), BL2_BASE address is not aligned on a page boundary.)
+
+ro              0x0000000004017000     0x4000
+                0x0000000004017000                __RO_START__ = .
+ *bl2_entrypoint.o(.text*)
+ .text.bl2_entrypoint
+                0x0000000004017000       0x70 ./build/a3700_z/debug/bl2/bl2_entrypoint.o
+                0x0000000004017000                bl2_entrypoint
+ *(.text*)
+ .text.device_type_fip
+                0x0000000004017070        0x8 ./build/a3700_z/debug/bl2/io_fip.o
+                0x0000000004017070                device_type_fip
+ .text.fip_dev_close
+                0x0000000004017078       0x18 ./build/a3700_z/debug/bl2/io_fip.o
+ .text.fip_dev_init
+                0x0000000004017090       0x9c ./build/a3700_z/debug/bl2/io_fip.o
+ .text.fip_file_close
+                0x000000000401712c       0x40 ./build/a3700_z/debug/bl2/io_fip.o
+ .text.fip_file_read
+                0x000000000401716c      0x10c ./build/a3700_z/debug/bl2/io_fip.o
+ .text.fip_dev_open
+                0x0000000004017278       0x40 ./build/a3700_z/debug/bl2/io_fip.o
+ .text.fip_file_len
+                0x00000000040172b8       0x58 ./build/a3700_z/debug/bl2/io_fip.o
+ .text.fip_file_open
+                0x0000000004017310      0x124 ./build/a3700_z/debug/bl2/io_fip.o
+ .text.register_io_dev_fip
+                0x0000000004017434       0x5c ./build/a3700_z/debug/bl2/io_fip.o
+                0x0000000004017434                register_io_dev_fip
+ .text.device_type_memmap
+                0x0000000004017490        0x8 ./build/a3700_z/debug/bl2/io_memmap.o
+                0x0000000004017490                device_type_memmap
+ .text.memmap_dev_close
+                0x0000000004017498        0x8 ./build/a3700_z/debug/bl2/io_memmap.o
+ .text.memmap_dev_open
+                0x00000000040174a0       0x40 ./build/a3700_z/debug/bl2/io_memmap.o
+ .text.memmap_block_seek
+                0x00000000040174e0       0x4c ./build/a3700_z/debug/bl2/io_memmap.o
+ .text.memmap_block_open
+                0x000000000401752c       0x78 ./build/a3700_z/debug/bl2/io_memmap.o
+ .text.memmap_block_close
+                0x00000000040175a4       0x50 ./build/a3700_z/debug/bl2/io_memmap.o
+ .text.memmap_block_write
+                0x00000000040175f4       0x98 ./build/a3700_z/debug/bl2/io_memmap.o
+ .text.memmap_block_read
+                0x000000000401768c       0x8c ./build/a3700_z/debug/bl2/io_memmap.o
+ .text.register_io_dev_memmap
+                0x0000000004017718       0x5c ./build/a3700_z/debug/bl2/io_memmap.o
+                0x0000000004017718                register_io_dev_memmap
+ .text.is_valid_dev
+                0x0000000004017774       0x40 ./build/a3700_z/debug/bl2/io_storage.o
+ .text.is_valid_entity
+                0x00000000040177b4       0x2c ./build/a3700_z/debug/bl2/io_storage.o
+ .text.free_entity
+                0x00000000040177e0       0x74 ./build/a3700_z/debug/bl2/io_storage.o
+ .text.io_register_device
+                0x0000000004017854       0x50 ./build/a3700_z/debug/bl2/io_storage.o
+                0x0000000004017854                io_register_device
+ .text.io_dev_open
+                0x00000000040178a4       0x6c ./build/a3700_z/debug/bl2/io_storage.o
+                0x00000000040178a4                io_dev_open
+ .text.io_dev_init
+                0x0000000004017910       0x80 ./build/a3700_z/debug/bl2/io_storage.o
+                0x0000000004017910                io_dev_init
+ .text.io_dev_close
+                0x0000000004017990       0x78 ./build/a3700_z/debug/bl2/io_storage.o
+                0x0000000004017990                io_dev_close
+ .text.io_open  0x0000000004017a08      0x13c ./build/a3700_z/debug/bl2/io_storage.o
+                0x0000000004017a08                io_open
+ .text.io_seek  0x0000000004017b44       0x90 ./build/a3700_z/debug/bl2/io_storage.o
+                0x0000000004017b44                io_seek
+ .text.io_size  0x0000000004017bd4       0x78 ./build/a3700_z/debug/bl2/io_storage.o
+                0x0000000004017bd4                io_size
+ .text.io_read  0x0000000004017c4c       0x8c ./build/a3700_z/debug/bl2/io_storage.o
+                0x0000000004017c4c                io_read
+ .text.io_close
+                0x0000000004017cd8       0x70 ./build/a3700_z/debug/bl2/io_storage.o
+                0x0000000004017cd8                io_close
+ .text.bl2_plat_sec_mem_layout
+                0x0000000004017d48        0xc ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+                0x0000000004017d48                bl2_plat_sec_mem_layout
+ .text.bl2_plat_get_bl31_params
+                0x0000000004017d54       0xb0 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+                0x0000000004017d54                bl2_plat_get_bl31_params
+ .text.bl2_plat_flush_bl31_params
+                0x0000000004017e04       0x10 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+                0x0000000004017e04                bl2_plat_flush_bl31_params
+ .text.bl2_plat_get_bl31_ep_info
+                0x0000000004017e14       0x24 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+                0x0000000004017e14                bl2_plat_get_bl31_ep_info
+ .text.marvell_bl2_early_platform_setup
+                0x0000000004017e38       0x4c ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+                0x0000000004017e38                marvell_bl2_early_platform_setup
+ .text.bl2_early_platform_setup
+                0x0000000004017e84        0x4 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+                0x0000000004017e84                bl2_early_platform_setup
+ .text.bl2_platform_setup
+                0x0000000004017e88        0x4 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+                0x0000000004017e88                bl2_platform_setup
+ .text.marvell_bl2_plat_arch_setup
+                0x0000000004017e8c       0x24 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+                0x0000000004017e8c                marvell_bl2_plat_arch_setup
+ .text.bl2_plat_arch_setup
+                0x0000000004017eb0        0x4 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+                0x0000000004017eb0                bl2_plat_arch_setup
+ .text.bl2_plat_set_bl31_ep_info
+                0x0000000004017eb4       0x18 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+                0x0000000004017eb4                bl2_plat_set_bl31_ep_info
+ .text.bl2_plat_set_bl33_ep_info
+                0x0000000004017ecc       0x30 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+                0x0000000004017ecc                bl2_plat_set_bl33_ep_info
+ .text.bl2_plat_get_bl33_meminfo
+                0x0000000004017efc       0x10 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+                0x0000000004017efc                bl2_plat_get_bl33_meminfo
+ .text.open_fip
+                0x0000000004017f0c       0x60 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .text.open_memmap
+                0x0000000004017f6c       0x60 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .text.marvell_io_setup
+                0x0000000004017fcc       0xb8 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+                0x0000000004017fcc                marvell_io_setup
+ .text.plat_marvell_io_setup
+                0x0000000004018084        0x4 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+                0x0000000004018084                plat_marvell_io_setup
+ .text.plat_marvell_get_alt_image_source
+                0x0000000004018088        0x8 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+                0x0000000004018088                plat_marvell_get_alt_image_source
+ .text.plat_get_image_source
+                0x0000000004018090       0xb4 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+                0x0000000004018090                plat_get_image_source
+ .text.bl2_main
+                0x0000000004018144      0x13c ./build/a3700_z/debug/bl2/bl2_main.o
+                0x0000000004018144                bl2_main
+ .text.bl2_arch_setup
+                0x0000000004018280        0xc ./build/a3700_z/debug/bl2/bl2_arch_setup.o
+                0x0000000004018280                bl2_arch_setup
+ .text.reserve_mem
+                0x000000000401828c       0xd0 ./build/a3700_z/debug/bl2/bl_common.o
+                0x000000000401828c                reserve_mem
+ .text.load_image
+                0x000000000401835c      0x16c ./build/a3700_z/debug/bl2/bl_common.o
+                0x000000000401835c                load_image
+ .text.load_auth_image
+                0x00000000040184c8        0x4 ./build/a3700_z/debug/bl2/bl_common.o
+                0x00000000040184c8                load_auth_image
+ .text.unsigned_num_print
+                0x00000000040184cc       0x74 ./build/a3700_z/debug/bl2/tf_printf.o
+ .text.tf_printf
+                0x0000000004018540      0x284 ./build/a3700_z/debug/bl2/tf_printf.o
+                0x0000000004018540                tf_printf
+ .text.__assert
+                0x00000000040187c4       0x1c ./build/a3700_z/debug/bl2/std.o
+                0x00000000040187c4                __assert
+ .text.memset   0x00000000040187e0       0x1c ./build/a3700_z/debug/bl2/std.o
+                0x00000000040187e0                memset
+ .text.memcmp   0x00000000040187fc       0x34 ./build/a3700_z/debug/bl2/std.o
+                0x00000000040187fc                memcmp
+ .text.memcpy   0x0000000004018830       0x20 ./build/a3700_z/debug/bl2/std.o
+                0x0000000004018830                memcpy
+ .text.memmove  0x0000000004018850       0x48 ./build/a3700_z/debug/bl2/std.o
+                0x0000000004018850                memmove
+ .text.putchar  0x0000000004018898       0x2c ./build/a3700_z/debug/bl2/std.o
+                0x0000000004018898                putchar
+ .text.init_xlation_table
+                0x00000000040188c4      0x1e0 ./build/a3700_z/debug/bl2/xlat_tables.o
+ .text.mmap_add_region
+                0x0000000004018aa4      0x12c ./build/a3700_z/debug/bl2/xlat_tables.o
+                0x0000000004018aa4                mmap_add_region
+ .text.mmap_add
+                0x0000000004018bd0       0x38 ./build/a3700_z/debug/bl2/xlat_tables.o
+                0x0000000004018bd0                mmap_add
+ .text.init_xlat_tables
+                0x0000000004018c08       0xd0 ./build/a3700_z/debug/bl2/xlat_tables.o
+                0x0000000004018c08                init_xlat_tables
+ .text.enable_mmu_el1
+                0x0000000004018cd8       0xb4 ./build/a3700_z/debug/bl2/xlat_tables.o
+                0x0000000004018cd8                enable_mmu_el1
+ .text.arm_configure_mmu_el1
+                0x0000000004018d8c       0x58 ./build/a3700_z/debug/bl2/marvell_common.o
+                0x0000000004018d8c                arm_configure_mmu_el1
+ .text.plat_get_ns_image_entrypoint
+                0x0000000004018de4        0x8 ./build/a3700_z/debug/bl2/marvell_common.o
+                0x0000000004018de4                plat_get_ns_image_entrypoint
+ .text.marvell_get_spsr_for_bl33_entry
+                0x0000000004018dec       0x20 ./build/a3700_z/debug/bl2/marvell_common.o
+                0x0000000004018dec                marvell_get_spsr_for_bl33_entry
+ *fill*         0x0000000004018e0c        0x4 
+ .text.plat_set_my_stack
+                0x0000000004018e10       0x18 ./build/a3700_z/debug/bl2/platform_up_stack.o
+                0x0000000004018e10                plat_set_my_stack
+ .text.asm_assert
+                0x0000000004018e28       0x58 ./build/a3700_z/debug/bl2/debug.o
+                0x0000000004018e28                asm_assert
+ .text.asm_print_str
+                0x0000000004018e80       0x18 ./build/a3700_z/debug/bl2/debug.o
+                0x0000000004018e80                asm_print_str
+ .text.flush_dcache_range
+                0x0000000004018e98       0x34 ./build/a3700_z/debug/bl2/cache_helpers.o
+                0x0000000004018e98                flush_dcache_range
+ .text.inv_dcache_range
+                0x0000000004018ecc       0x34 ./build/a3700_z/debug/bl2/cache_helpers.o
+                0x0000000004018ecc                inv_dcache_range
+ .text.smc      0x0000000004018f00        0x4 ./build/a3700_z/debug/bl2/misc_helpers.o
+                0x0000000004018f00                smc
+ .text.zeromem16
+                0x0000000004018f04       0x40 ./build/a3700_z/debug/bl2/misc_helpers.o
+                0x0000000004018f04                zeromem16
+ .text.plat_report_exception
+                0x0000000004018f44        0x4 ./build/a3700_z/debug/bl2/platform_helpers.o
+                0x0000000004018f44                plat_report_exception
+ .text.plat_error_handler
+                0x0000000004018f48        0x4 ./build/a3700_z/debug/bl2/platform_helpers.o
+                0x0000000004018f48                plat_error_handler
+ .text.console_init
+                0x0000000004018f4c       0x14 ./build/a3700_z/debug/bl2/console.o
+                0x0000000004018f4c                console_init
+ .text.console_putc
+                0x0000000004018f60        0xc ./build/a3700_z/debug/bl2/console.o
+                0x0000000004018f60                console_putc
+ .text.console_core_init
+                0x0000000004018f6c       0x64 ./build/a3700_z/debug/bl2/a3700_console.o
+                0x0000000004018f6c                console_core_init
+ .text.console_core_putc
+                0x0000000004018fd0       0x44 ./build/a3700_z/debug/bl2/a3700_console.o
+                0x0000000004018fd0                console_core_putc
+ .text.plat_crash_console_init
+                0x0000000004019014       0x1c ./build/a3700_z/debug/bl2/marvell_helpers.o
+                0x0000000004019014                plat_crash_console_init
+ .text.plat_crash_console_putc
+                0x0000000004019030        0xc ./build/a3700_z/debug/bl2/marvell_helpers.o
+                0x0000000004019030                plat_crash_console_putc
+ *(.rodata*)
+ *fill*         0x000000000401903c        0x4 
+ .rodata.version_string
+                0x0000000004019040       0x1a ./build/a3700_z/debug/bl2/build_message.o
+                0x0000000004019040                version_string
+ *fill*         0x000000000401905a        0x6 
+ .rodata.build_message
+                0x0000000004019060       0x1e ./build/a3700_z/debug/bl2/build_message.o
+                0x0000000004019060                build_message
+ *fill*         0x000000000401907e        0x2 
+ .rodata.fip_dev_info
+                0x0000000004019080       0x10 ./build/a3700_z/debug/bl2/io_fip.o
+ .rodata.__func__.1782
+                0x0000000004019090        0xe ./build/a3700_z/debug/bl2/io_fip.o
+ *fill*         0x000000000401909e        0x2 
+ .rodata.fip_dev_connector
+                0x00000000040190a0        0x8 ./build/a3700_z/debug/bl2/io_fip.o
+ .rodata.__func__.1791
+                0x00000000040190a8        0xd ./build/a3700_z/debug/bl2/io_fip.o
+ .rodata.str1.1
+                0x00000000040190b5       0x99 ./build/a3700_z/debug/bl2/io_fip.o
+ *fill*         0x000000000401914e        0x2 
+ .rodata.__func__.1803
+                0x0000000004019150        0xe ./build/a3700_z/debug/bl2/io_fip.o
+ *fill*         0x000000000401915e        0x2 
+ .rodata.__func__.1758
+                0x0000000004019160        0xd ./build/a3700_z/debug/bl2/io_fip.o
+ *fill*         0x000000000401916d        0x3 
+ .rodata.uuid_null
+                0x0000000004019170       0x10 ./build/a3700_z/debug/bl2/io_fip.o
+ .rodata.fip_dev_funcs
+                0x0000000004019180       0x48 ./build/a3700_z/debug/bl2/io_fip.o
+ .rodata.__func__.1813
+                0x00000000040191c8       0x14 ./build/a3700_z/debug/bl2/io_fip.o
+ *fill*         0x00000000040191dc        0x4 
+ .rodata.memmap_dev_info
+                0x00000000040191e0       0x10 ./build/a3700_z/debug/bl2/io_memmap.o
+ .rodata.__func__.1446
+                0x00000000040191f0       0x12 ./build/a3700_z/debug/bl2/io_memmap.o
+ *fill*         0x0000000004019202        0x6 
+ .rodata.memmap_dev_funcs
+                0x0000000004019208       0x48 ./build/a3700_z/debug/bl2/io_memmap.o
+ .rodata.__func__.1453
+                0x0000000004019250       0x12 ./build/a3700_z/debug/bl2/io_memmap.o
+ *fill*         0x0000000004019262        0x6 
+ .rodata.__func__.1461
+                0x0000000004019268       0x12 ./build/a3700_z/debug/bl2/io_memmap.o
+ .rodata.str1.1
+                0x000000000401927a       0x5b ./build/a3700_z/debug/bl2/io_memmap.o
+                                         0x9f (size before relaxing)
+ *fill*         0x00000000040192d5        0x3 
+ .rodata.__func__.1473
+                0x00000000040192d8       0x13 ./build/a3700_z/debug/bl2/io_memmap.o
+ *fill*         0x00000000040192eb        0x5 
+ .rodata.__func__.1469
+                0x00000000040192f0       0x13 ./build/a3700_z/debug/bl2/io_memmap.o
+ *fill*         0x0000000004019303        0x5 
+ .rodata.__func__.1478
+                0x0000000004019308       0x17 ./build/a3700_z/debug/bl2/io_memmap.o
+ *fill*         0x000000000401931f        0x1 
+ .rodata.memmap_dev_connector
+                0x0000000004019320        0x8 ./build/a3700_z/debug/bl2/io_memmap.o
+ .rodata.__func__.1435
+                0x0000000004019328       0x10 ./build/a3700_z/debug/bl2/io_memmap.o
+ .rodata.__func__.1450
+                0x0000000004019338        0x8 ./build/a3700_z/debug/bl2/io_storage.o
+ .rodata.__func__.1402
+                0x0000000004019340       0x10 ./build/a3700_z/debug/bl2/io_storage.o
+ .rodata.__func__.1485
+                0x0000000004019350        0x9 ./build/a3700_z/debug/bl2/io_storage.o
+ .rodata.str1.1
+                0x0000000004019359      0x174 ./build/a3700_z/debug/bl2/io_storage.o
+                                        0x1a0 (size before relaxing)
+ *fill*         0x00000000040194cd        0x3 
+ .rodata.__func__.1433
+                0x00000000040194d0        0xd ./build/a3700_z/debug/bl2/io_storage.o
+ *fill*         0x00000000040194dd        0x3 
+ .rodata.__func__.1468
+                0x00000000040194e0        0x8 ./build/a3700_z/debug/bl2/io_storage.o
+ .rodata.__func__.1409
+                0x00000000040194e8        0xc ./build/a3700_z/debug/bl2/io_storage.o
+ *fill*         0x00000000040194f4        0x4 
+ .rodata.__func__.1414
+                0x00000000040194f8       0x13 ./build/a3700_z/debug/bl2/io_storage.o
+ *fill*         0x000000000401950b        0x5 
+ .rodata.__func__.1421
+                0x0000000004019510        0xc ./build/a3700_z/debug/bl2/io_storage.o
+ *fill*         0x000000000401951c        0x4 
+ .rodata.__func__.1458
+                0x0000000004019520        0x8 ./build/a3700_z/debug/bl2/io_storage.o
+ .rodata.__func__.1441
+                0x0000000004019528        0x8 ./build/a3700_z/debug/bl2/io_storage.o
+ .rodata.__func__.1427
+                0x0000000004019530        0xc ./build/a3700_z/debug/bl2/io_storage.o
+ *fill*         0x000000000401953c        0x4 
+ .rodata.__func__.1383
+                0x0000000004019540        0x9 ./build/a3700_z/debug/bl2/io_storage.o
+ *fill*         0x0000000004019549        0x7 
+ .rodata.__func__.1442
+                0x0000000004019550       0x11 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ *fill*         0x0000000004019561        0x7 
+ .rodata.bl2_uuid_spec
+                0x0000000004019568       0x10 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .rodata.bl31_uuid_spec
+                0x0000000004019578       0x10 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .rodata.__func__.1458
+                0x0000000004019588       0x16 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ *fill*         0x000000000401959e        0x2 
+ .rodata.policies
+                0x00000000040195a0       0x90 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .rodata.str1.1
+                0x0000000004019630       0x58 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .rodata.bl33_uuid_spec
+                0x0000000004019688       0x10 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .rodata.scp_bl2_uuid_spec
+                0x0000000004019698       0x10 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .rodata.fip_block_spec
+                0x00000000040196a8       0x10 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .rodata.__func__.2234
+                0x00000000040196b8        0xa ./build/a3700_z/debug/bl2/bl2_main.o
+ .rodata.str1.1
+                0x00000000040196c2       0x97 ./build/a3700_z/debug/bl2/bl2_main.o
+ *fill*         0x0000000004019759        0x7 
+ .rodata.__func__.2346
+                0x0000000004019760        0xf ./build/a3700_z/debug/bl2/bl_common.o
+ .rodata.str1.1
+                0x000000000401976f       0xcb ./build/a3700_z/debug/bl2/bl_common.o
+ *fill*         0x000000000401983a        0x6 
+ .rodata.__func__.2356
+                0x0000000004019840        0xc ./build/a3700_z/debug/bl2/bl_common.o
+ *fill*         0x000000000401984c        0x4 
+ .rodata.__func__.2383
+                0x0000000004019850        0xb ./build/a3700_z/debug/bl2/bl_common.o
+ .rodata.str1.1
+                0x000000000401985b       0x48 ./build/a3700_z/debug/bl2/std.o
+ *fill*         0x00000000040198a3        0x5 
+ .rodata.plat_arm_mmap
+                0x00000000040198a8       0x80 ./build/a3700_z/debug/bl2/a3700_z_common.o
+                0x00000000040198a8                plat_arm_mmap
+ .rodata.__func__.2000
+                0x0000000004019928       0x13 ./build/a3700_z/debug/bl2/xlat_tables.o
+ *fill*         0x000000000401993b        0x5 
+ .rodata.__func__.2010
+                0x0000000004019940       0x1d ./build/a3700_z/debug/bl2/xlat_tables.o
+ *fill*         0x000000000401995d        0x3 
+ .rodata.__func__.2014
+                0x0000000004019960       0x11 ./build/a3700_z/debug/bl2/xlat_tables.o
+ .rodata.str1.1
+                0x0000000004019971      0x13f ./build/a3700_z/debug/bl2/xlat_tables.o
+ .rodata.__func__.2022
+                0x0000000004019ab0        0xf ./build/a3700_z/debug/bl2/xlat_tables.o
+ *fill*         0x0000000004019abf        0x1 
+ .rodata.__func__.1967
+                0x0000000004019ac0       0x10 ./build/a3700_z/debug/bl2/xlat_tables.o
+ .rodata.assert_str
+                0x0000000004019ad0       0x15 ./build/a3700_z/debug/bl2/debug.o
+ .rodata.str1.1
+                0x0000000004019ae5       0x1b ./build/a3700_z/debug/bl2/misc_helpers.o
+                0x0000000004019b00                . = ALIGN (0x8)
+                0x0000000004019b00                __PARSER_LIB_DESCS_START__ = .
+ *(.img_parser_lib_descs)
+                0x0000000004019b00                __PARSER_LIB_DESCS_END__ = .
+ *(.vectors)
+ *fill*         0x0000000004019b00      0x500 
+ .vectors       0x000000000401a000      0x78c ./build/a3700_z/debug/bl2/early_exceptions.o
+                0x000000000401a000                early_exceptions
+                0x000000000401a78c                __RO_END_UNALIGNED__ = .
+                0x000000000401b000                . = NEXT (0x1000)
+ *fill*         0x000000000401a78c      0x874 
+                0x000000000401b000                __RO_END__ = .
+                0x000000000401b000                __RW_START__ = .
+
+.iplt           0x000000000401b000        0x0
+ .iplt          0x000000000401b000        0x0 ./build/a3700_z/debug/bl2/build_message.o
+
+.rela.dyn       0x000000000401b000        0x0
+ .rela.iplt     0x000000000401b000        0x0 ./build/a3700_z/debug/bl2/build_message.o
+
+.data           0x000000000401b000        0x8
+                0x000000000401b000                __DATA_START__ = .
+ *(.data*)
+ .data.console_base
+                0x000000000401b000        0x8 ./build/a3700_z/debug/bl2/console.o
+                0x000000000401b008                __DATA_END__ = .
+
+.igot.plt       0x000000000401b008        0x0
+ .igot.plt      0x000000000401b008        0x0 ./build/a3700_z/debug/bl2/build_message.o
+
+stacks          0x000000000401b040      0x400
+                0x000000000401b040                __STACKS_START__ = .
+ *(tzfw_normal_stacks)
+ tzfw_normal_stacks
+                0x000000000401b040      0x400 ./build/a3700_z/debug/bl2/platform_up_stack.o
+                0x000000000401b440                __STACKS_END__ = .
+
+.bss            0x000000000401b440      0x41c
+                0x000000000401b440                __BSS_START__ = .
+ *(SORT(.bss*))
+ .bss.bl2_tzram_layout
+                0x000000000401b440       0x20 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+ .bss.l1_xlation_table
+                0x000000000401b460       0x20 ./build/a3700_z/debug/bl2/xlat_tables.o
+ .bss.backend_image_spec
+                0x000000000401b480        0x8 ./build/a3700_z/debug/bl2/io_fip.o
+ .bss.current_file
+                0x000000000401b488       0x30 ./build/a3700_z/debug/bl2/io_fip.o
+ .bss.backend_dev_handle
+                0x000000000401b4b8        0x8 ./build/a3700_z/debug/bl2/io_fip.o
+ .bss.current_file
+                0x000000000401b4c0       0x18 ./build/a3700_z/debug/bl2/io_memmap.o
+ .bss.entity_map
+                0x000000000401b4d8       0x20 ./build/a3700_z/debug/bl2/io_storage.o
+ .bss.entity_pool
+                0x000000000401b4f8       0x40 ./build/a3700_z/debug/bl2/io_storage.o
+ .bss.bl31_params_mem
+                0x000000000401b538      0x180 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+ .bss.memmap_dev_con
+                0x000000000401b6b8        0x8 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .bss.fip_dev_handle
+                0x000000000401b6c0        0x8 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .bss.fip_dev_con
+                0x000000000401b6c8        0x8 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .bss.memmap_dev_handle
+                0x000000000401b6d0        0x8 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .bss.tcr_ps_bits
+                0x000000000401b6d8        0x8 ./build/a3700_z/debug/bl2/xlat_tables.o
+ .bss.mmap      0x000000000401b6e0      0x160 ./build/a3700_z/debug/bl2/xlat_tables.o
+ .bss.max_va    0x000000000401b840        0x8 ./build/a3700_z/debug/bl2/xlat_tables.o
+ .bss.max_pa    0x000000000401b848        0x8 ./build/a3700_z/debug/bl2/xlat_tables.o
+ .bss.entity_count
+                0x000000000401b850        0x4 ./build/a3700_z/debug/bl2/io_storage.o
+ .bss.dev_count
+                0x000000000401b854        0x4 ./build/a3700_z/debug/bl2/io_storage.o
+ .bss.next_xlat
+                0x000000000401b858        0x4 ./build/a3700_z/debug/bl2/xlat_tables.o
+ *(COMMON)
+                0x000000000401b85c                __BSS_END__ = .
+
+xlat_table      0x000000000401c000     0x4000
+ *(xlat_table)
+ xlat_table     0x000000000401c000     0x4000 ./build/a3700_z/debug/bl2/xlat_tables.o
+                0x0000000004020000                __RW_END__ = .
+                0x0000000004020000                __BL2_END__ = .
+                0x000000000000041c                __BSS_SIZE__ = SIZEOF (.bss)
+                0x0000000000000001                ASSERT ((. <= 0x4023000), BL2 image has exceeded its limit.)
+LOAD ./build/a3700_z/debug/bl2/build_message.o
+LOAD ./build/a3700_z/debug/bl2/io_fip.o
+LOAD ./build/a3700_z/debug/bl2/io_memmap.o
+LOAD ./build/a3700_z/debug/bl2/io_storage.o
+LOAD ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+LOAD ./build/a3700_z/debug/bl2/marvell_io_storage.o
+LOAD ./build/a3700_z/debug/bl2/bl2_main.o
+LOAD ./build/a3700_z/debug/bl2/bl2_arch_setup.o
+LOAD ./build/a3700_z/debug/bl2/bl_common.o
+LOAD ./build/a3700_z/debug/bl2/tf_printf.o
+LOAD ./build/a3700_z/debug/bl2/xlat_helpers.o
+LOAD ./build/a3700_z/debug/bl2/std.o
+LOAD ./build/a3700_z/debug/bl2/a3700_z_common.o
+LOAD ./build/a3700_z/debug/bl2/xlat_tables.o
+LOAD ./build/a3700_z/debug/bl2/marvell_common.o
+LOAD ./build/a3700_z/debug/bl2/plat_common.o
+LOAD ./build/a3700_z/debug/bl2/platform_up_stack.o
+LOAD ./build/a3700_z/debug/bl2/bl2_entrypoint.o
+LOAD ./build/a3700_z/debug/bl2/early_exceptions.o
+LOAD ./build/a3700_z/debug/bl2/spinlock.o
+LOAD ./build/a3700_z/debug/bl2/debug.o
+LOAD ./build/a3700_z/debug/bl2/cache_helpers.o
+LOAD ./build/a3700_z/debug/bl2/misc_helpers.o
+LOAD ./build/a3700_z/debug/bl2/platform_helpers.o
+LOAD ./build/a3700_z/debug/bl2/console.o
+LOAD ./build/a3700_z/debug/bl2/a3700_console.o
+LOAD ./build/a3700_z/debug/bl2/marvell_helpers.o
+OUTPUT(build/a3700_z/debug/bl2/bl2.elf elf64-littleaarch64)
+
+.debug_info     0x0000000000000000     0x840f
+ .debug_info    0x0000000000000000       0x7c ./build/a3700_z/debug/bl2/build_message.o
+ .debug_info    0x000000000000007c      0xe6c ./build/a3700_z/debug/bl2/io_fip.o
+ .debug_info    0x0000000000000ee8      0xc9b ./build/a3700_z/debug/bl2/io_memmap.o
+ .debug_info    0x0000000000001b83     0x1211 ./build/a3700_z/debug/bl2/io_storage.o
+ .debug_info    0x0000000000002d94      0x7b9 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+ .debug_info    0x000000000000354d      0xa84 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .debug_info    0x0000000000003fd1      0x741 ./build/a3700_z/debug/bl2/bl2_main.o
+ .debug_info    0x0000000000004712       0xe7 ./build/a3700_z/debug/bl2/bl2_arch_setup.o
+ .debug_info    0x00000000000047f9      0x9b3 ./build/a3700_z/debug/bl2/bl_common.o
+ .debug_info    0x00000000000051ac      0x2af ./build/a3700_z/debug/bl2/tf_printf.o
+ .debug_info    0x000000000000545b     0x1486 ./build/a3700_z/debug/bl2/std.o
+ .debug_info    0x00000000000068e1      0x36e ./build/a3700_z/debug/bl2/a3700_z_common.o
+ .debug_info    0x0000000000006c4f      0xce1 ./build/a3700_z/debug/bl2/xlat_tables.o
+ .debug_info    0x0000000000007930      0x4ce ./build/a3700_z/debug/bl2/marvell_common.o
+ .debug_info    0x0000000000007dfe       0xa0 ./build/a3700_z/debug/bl2/platform_up_stack.o
+ .debug_info    0x0000000000007e9e       0xa1 ./build/a3700_z/debug/bl2/bl2_entrypoint.o
+ .debug_info    0x0000000000007f3f       0xa6 ./build/a3700_z/debug/bl2/early_exceptions.o
+ .debug_info    0x0000000000007fe5       0x8f ./build/a3700_z/debug/bl2/debug.o
+ .debug_info    0x0000000000008074       0x94 ./build/a3700_z/debug/bl2/cache_helpers.o
+ .debug_info    0x0000000000008108       0x93 ./build/a3700_z/debug/bl2/misc_helpers.o
+ .debug_info    0x000000000000819b       0x9f ./build/a3700_z/debug/bl2/platform_helpers.o
+ .debug_info    0x000000000000823a       0x92 ./build/a3700_z/debug/bl2/console.o
+ .debug_info    0x00000000000082cc       0x9d ./build/a3700_z/debug/bl2/a3700_console.o
+ .debug_info    0x0000000000008369       0xa6 ./build/a3700_z/debug/bl2/marvell_helpers.o
+
+.debug_abbrev   0x0000000000000000     0x1b53
+ .debug_abbrev  0x0000000000000000       0x43 ./build/a3700_z/debug/bl2/build_message.o
+ .debug_abbrev  0x0000000000000043      0x2bb ./build/a3700_z/debug/bl2/io_fip.o
+ .debug_abbrev  0x00000000000002fe      0x1fd ./build/a3700_z/debug/bl2/io_memmap.o
+ .debug_abbrev  0x00000000000004fb      0x2e7 ./build/a3700_z/debug/bl2/io_storage.o
+ .debug_abbrev  0x00000000000007e2      0x23e ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+ .debug_abbrev  0x0000000000000a20      0x208 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .debug_abbrev  0x0000000000000c28      0x1e7 ./build/a3700_z/debug/bl2/bl2_main.o
+ .debug_abbrev  0x0000000000000e0f       0x85 ./build/a3700_z/debug/bl2/bl2_arch_setup.o
+ .debug_abbrev  0x0000000000000e94      0x26e ./build/a3700_z/debug/bl2/bl_common.o
+ .debug_abbrev  0x0000000000001102      0x185 ./build/a3700_z/debug/bl2/tf_printf.o
+ .debug_abbrev  0x0000000000001287      0x292 ./build/a3700_z/debug/bl2/std.o
+ .debug_abbrev  0x0000000000001519       0xda ./build/a3700_z/debug/bl2/a3700_z_common.o
+ .debug_abbrev  0x00000000000015f3      0x2ed ./build/a3700_z/debug/bl2/xlat_tables.o
+ .debug_abbrev  0x00000000000018e0      0x1bb ./build/a3700_z/debug/bl2/marvell_common.o
+ .debug_abbrev  0x0000000000001a9b       0x12 ./build/a3700_z/debug/bl2/platform_up_stack.o
+ .debug_abbrev  0x0000000000001aad       0x14 ./build/a3700_z/debug/bl2/bl2_entrypoint.o
+ .debug_abbrev  0x0000000000001ac1       0x14 ./build/a3700_z/debug/bl2/early_exceptions.o
+ .debug_abbrev  0x0000000000001ad5       0x12 ./build/a3700_z/debug/bl2/debug.o
+ .debug_abbrev  0x0000000000001ae7       0x12 ./build/a3700_z/debug/bl2/cache_helpers.o
+ .debug_abbrev  0x0000000000001af9       0x12 ./build/a3700_z/debug/bl2/misc_helpers.o
+ .debug_abbrev  0x0000000000001b0b       0x12 ./build/a3700_z/debug/bl2/platform_helpers.o
+ .debug_abbrev  0x0000000000001b1d       0x12 ./build/a3700_z/debug/bl2/console.o
+ .debug_abbrev  0x0000000000001b2f       0x12 ./build/a3700_z/debug/bl2/a3700_console.o
+ .debug_abbrev  0x0000000000001b41       0x12 ./build/a3700_z/debug/bl2/marvell_helpers.o
+
+.debug_aranges  0x0000000000000000      0xc20
+ .debug_aranges
+                0x0000000000000000       0x20 ./build/a3700_z/debug/bl2/build_message.o
+ .debug_aranges
+                0x0000000000000020       0xb0 ./build/a3700_z/debug/bl2/io_fip.o
+ .debug_aranges
+                0x00000000000000d0       0xb0 ./build/a3700_z/debug/bl2/io_memmap.o
+ .debug_aranges
+                0x0000000000000180       0xf0 ./build/a3700_z/debug/bl2/io_storage.o
+ .debug_aranges
+                0x0000000000000270      0x100 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+ .debug_aranges
+                0x0000000000000370       0x90 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .debug_aranges
+                0x0000000000000400       0x30 ./build/a3700_z/debug/bl2/bl2_main.o
+ .debug_aranges
+                0x0000000000000430       0x30 ./build/a3700_z/debug/bl2/bl2_arch_setup.o
+ .debug_aranges
+                0x0000000000000460       0x80 ./build/a3700_z/debug/bl2/bl_common.o
+ .debug_aranges
+                0x00000000000004e0       0x40 ./build/a3700_z/debug/bl2/tf_printf.o
+ .debug_aranges
+                0x0000000000000520      0x1a0 ./build/a3700_z/debug/bl2/std.o
+ .debug_aranges
+                0x00000000000006c0       0x30 ./build/a3700_z/debug/bl2/a3700_z_common.o
+ .debug_aranges
+                0x00000000000006f0       0x80 ./build/a3700_z/debug/bl2/xlat_tables.o
+ .debug_aranges
+                0x0000000000000770       0x80 ./build/a3700_z/debug/bl2/marvell_common.o
+ .debug_aranges
+                0x00000000000007f0       0x60 ./build/a3700_z/debug/bl2/platform_up_stack.o
+ .debug_aranges
+                0x0000000000000850       0x30 ./build/a3700_z/debug/bl2/bl2_entrypoint.o
+ .debug_aranges
+                0x0000000000000880       0x30 ./build/a3700_z/debug/bl2/early_exceptions.o
+ .debug_aranges
+                0x00000000000008b0       0x60 ./build/a3700_z/debug/bl2/debug.o
+ .debug_aranges
+                0x0000000000000910       0xb0 ./build/a3700_z/debug/bl2/cache_helpers.o
+ .debug_aranges
+                0x00000000000009c0       0xa0 ./build/a3700_z/debug/bl2/misc_helpers.o
+ .debug_aranges
+                0x0000000000000a60       0xa0 ./build/a3700_z/debug/bl2/platform_helpers.o
+ .debug_aranges
+                0x0000000000000b00       0x60 ./build/a3700_z/debug/bl2/console.o
+ .debug_aranges
+                0x0000000000000b60       0x50 ./build/a3700_z/debug/bl2/a3700_console.o
+ .debug_aranges
+                0x0000000000000bb0       0x70 ./build/a3700_z/debug/bl2/marvell_helpers.o
+
+.debug_line     0x0000000000000000     0x28cb
+ .debug_line    0x0000000000000000       0x28 ./build/a3700_z/debug/bl2/build_message.o
+ .debug_line    0x0000000000000028      0x2a1 ./build/a3700_z/debug/bl2/io_fip.o
+ .debug_line    0x00000000000002c9      0x1fb ./build/a3700_z/debug/bl2/io_memmap.o
+ .debug_line    0x00000000000004c4      0x320 ./build/a3700_z/debug/bl2/io_storage.o
+ .debug_line    0x00000000000007e4      0x2b9 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+ .debug_line    0x0000000000000a9d      0x1fb ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .debug_line    0x0000000000000c98      0x158 ./build/a3700_z/debug/bl2/bl2_main.o
+ .debug_line    0x0000000000000df0       0xbf ./build/a3700_z/debug/bl2/bl2_arch_setup.o
+ .debug_line    0x0000000000000eaf      0x228 ./build/a3700_z/debug/bl2/bl_common.o
+ .debug_line    0x00000000000010d7      0x19c ./build/a3700_z/debug/bl2/tf_printf.o
+ .debug_line    0x0000000000001273      0x920 ./build/a3700_z/debug/bl2/std.o
+ .debug_line    0x0000000000001b93       0xf6 ./build/a3700_z/debug/bl2/a3700_z_common.o
+ .debug_line    0x0000000000001c89      0x351 ./build/a3700_z/debug/bl2/xlat_tables.o
+ .debug_line    0x0000000000001fda      0x1a6 ./build/a3700_z/debug/bl2/marvell_common.o
+ .debug_line    0x0000000000002180       0x99 ./build/a3700_z/debug/bl2/platform_up_stack.o
+ .debug_line    0x0000000000002219       0x6a ./build/a3700_z/debug/bl2/bl2_entrypoint.o
+ .debug_line    0x0000000000002283       0x99 ./build/a3700_z/debug/bl2/early_exceptions.o
+ .debug_line    0x000000000000231c       0xb5 ./build/a3700_z/debug/bl2/debug.o
+ .debug_line    0x00000000000023d1      0x113 ./build/a3700_z/debug/bl2/cache_helpers.o
+ .debug_line    0x00000000000024e4      0x104 ./build/a3700_z/debug/bl2/misc_helpers.o
+ .debug_line    0x00000000000025e8       0xec ./build/a3700_z/debug/bl2/platform_helpers.o
+ .debug_line    0x00000000000026d4       0x93 ./build/a3700_z/debug/bl2/console.o
+ .debug_line    0x0000000000002767       0xaa ./build/a3700_z/debug/bl2/a3700_console.o
+ .debug_line    0x0000000000002811       0xba ./build/a3700_z/debug/bl2/marvell_helpers.o
+
+.debug_str      0x0000000000000000     0x14ff
+ .debug_str     0x0000000000000000      0x111 ./build/a3700_z/debug/bl2/build_message.o
+                                        0x116 (size before relaxing)
+ .debug_str     0x0000000000000111      0x515 ./build/a3700_z/debug/bl2/io_fip.o
+                                        0x6f5 (size before relaxing)
+ .debug_str     0x0000000000000626      0x12f ./build/a3700_z/debug/bl2/io_memmap.o
+                                        0x502 (size before relaxing)
+ .debug_str     0x0000000000000755      0x123 ./build/a3700_z/debug/bl2/io_storage.o
+                                        0x4f0 (size before relaxing)
+ .debug_str     0x0000000000000878      0x38c ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+                                        0x64c (size before relaxing)
+ .debug_str     0x0000000000000c04      0x12e ./build/a3700_z/debug/bl2/marvell_io_storage.o
+                                        0x5b9 (size before relaxing)
+ .debug_str     0x0000000000000d32       0xaa ./build/a3700_z/debug/bl2/bl2_main.o
+                                        0x52d (size before relaxing)
+ .debug_str     0x0000000000000ddc       0x2d ./build/a3700_z/debug/bl2/bl2_arch_setup.o
+                                        0x1b5 (size before relaxing)
+ .debug_str     0x0000000000000e09      0x106 ./build/a3700_z/debug/bl2/bl_common.o
+                                        0x4e7 (size before relaxing)
+ .debug_str     0x0000000000000f0f       0x91 ./build/a3700_z/debug/bl2/tf_printf.o
+                                        0x238 (size before relaxing)
+ .debug_str     0x0000000000000fa0      0x1b5 ./build/a3700_z/debug/bl2/std.o
+                                        0x431 (size before relaxing)
+ .debug_str     0x0000000000001155       0xe0 ./build/a3700_z/debug/bl2/a3700_z_common.o
+                                        0x39f (size before relaxing)
+ .debug_str     0x0000000000001235      0x224 ./build/a3700_z/debug/bl2/xlat_tables.o
+                                        0x473 (size before relaxing)
+ .debug_str     0x0000000000001459       0xa6 ./build/a3700_z/debug/bl2/marvell_common.o
+                                        0x3ad (size before relaxing)
+
+.comment        0x0000000000000000       0x3c
+ .comment       0x0000000000000000       0x3c ./build/a3700_z/debug/bl2/build_message.o
+                                         0x3d (size before relaxing)
+ .comment       0x000000000000003c       0x3d ./build/a3700_z/debug/bl2/io_fip.o
+ .comment       0x000000000000003c       0x3d ./build/a3700_z/debug/bl2/io_memmap.o
+ .comment       0x000000000000003c       0x3d ./build/a3700_z/debug/bl2/io_storage.o
+ .comment       0x000000000000003c       0x3d ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+ .comment       0x000000000000003c       0x3d ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .comment       0x000000000000003c       0x3d ./build/a3700_z/debug/bl2/bl2_main.o
+ .comment       0x000000000000003c       0x3d ./build/a3700_z/debug/bl2/bl2_arch_setup.o
+ .comment       0x000000000000003c       0x3d ./build/a3700_z/debug/bl2/bl_common.o
+ .comment       0x000000000000003c       0x3d ./build/a3700_z/debug/bl2/tf_printf.o
+ .comment       0x000000000000003c       0x3d ./build/a3700_z/debug/bl2/std.o
+ .comment       0x000000000000003c       0x3d ./build/a3700_z/debug/bl2/a3700_z_common.o
+ .comment       0x000000000000003c       0x3d ./build/a3700_z/debug/bl2/xlat_tables.o
+ .comment       0x000000000000003c       0x3d ./build/a3700_z/debug/bl2/marvell_common.o
+
+.note.GNU-stack
+                0x0000000000000000        0x0
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/build_message.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/io_fip.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/io_memmap.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/io_storage.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/bl2_main.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/bl2_arch_setup.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/bl_common.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/tf_printf.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/std.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/a3700_z_common.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/xlat_tables.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 ./build/a3700_z/debug/bl2/marvell_common.o
+
+.debug_loc      0x0000000000000000     0xb162
+ .debug_loc     0x0000000000000000      0xab7 ./build/a3700_z/debug/bl2/io_fip.o
+ .debug_loc     0x0000000000000ab7      0xd91 ./build/a3700_z/debug/bl2/io_memmap.o
+ .debug_loc     0x0000000000001848     0x1876 ./build/a3700_z/debug/bl2/io_storage.o
+ .debug_loc     0x00000000000030be      0x201 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+ .debug_loc     0x00000000000032bf      0x516 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .debug_loc     0x00000000000037d5      0x12e ./build/a3700_z/debug/bl2/bl2_main.o
+ .debug_loc     0x0000000000003903       0x26 ./build/a3700_z/debug/bl2/bl2_arch_setup.o
+ .debug_loc     0x0000000000003929      0xb0f ./build/a3700_z/debug/bl2/bl_common.o
+ .debug_loc     0x0000000000004438      0x2eb ./build/a3700_z/debug/bl2/tf_printf.o
+ .debug_loc     0x0000000000004723     0x5833 ./build/a3700_z/debug/bl2/std.o
+ .debug_loc     0x0000000000009f56       0x39 ./build/a3700_z/debug/bl2/a3700_z_common.o
+ .debug_loc     0x0000000000009f8f      0xe3d ./build/a3700_z/debug/bl2/xlat_tables.o
+ .debug_loc     0x000000000000adcc      0x396 ./build/a3700_z/debug/bl2/marvell_common.o
+
+.debug_ranges   0x0000000000000000     0x1020
+ .debug_ranges  0x0000000000000000      0x150 ./build/a3700_z/debug/bl2/io_fip.o
+ .debug_ranges  0x0000000000000150      0x120 ./build/a3700_z/debug/bl2/io_memmap.o
+ .debug_ranges  0x0000000000000270      0x250 ./build/a3700_z/debug/bl2/io_storage.o
+ .debug_ranges  0x00000000000004c0       0xf0 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+ .debug_ranges  0x00000000000005b0       0x80 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .debug_ranges  0x0000000000000630       0x20 ./build/a3700_z/debug/bl2/bl2_main.o
+ .debug_ranges  0x0000000000000650       0x20 ./build/a3700_z/debug/bl2/bl2_arch_setup.o
+ .debug_ranges  0x0000000000000670       0xa0 ./build/a3700_z/debug/bl2/bl_common.o
+ .debug_ranges  0x0000000000000710       0x30 ./build/a3700_z/debug/bl2/tf_printf.o
+ .debug_ranges  0x0000000000000740      0x3e0 ./build/a3700_z/debug/bl2/std.o
+ .debug_ranges  0x0000000000000b20       0x20 ./build/a3700_z/debug/bl2/a3700_z_common.o
+ .debug_ranges  0x0000000000000b40       0xa0 ./build/a3700_z/debug/bl2/xlat_tables.o
+ .debug_ranges  0x0000000000000be0       0x70 ./build/a3700_z/debug/bl2/marvell_common.o
+ .debug_ranges  0x0000000000000c50       0x60 ./build/a3700_z/debug/bl2/platform_up_stack.o
+ .debug_ranges  0x0000000000000cb0       0x60 ./build/a3700_z/debug/bl2/debug.o
+ .debug_ranges  0x0000000000000d10       0xb0 ./build/a3700_z/debug/bl2/cache_helpers.o
+ .debug_ranges  0x0000000000000dc0       0xa0 ./build/a3700_z/debug/bl2/misc_helpers.o
+ .debug_ranges  0x0000000000000e60       0xa0 ./build/a3700_z/debug/bl2/platform_helpers.o
+ .debug_ranges  0x0000000000000f00       0x60 ./build/a3700_z/debug/bl2/console.o
+ .debug_ranges  0x0000000000000f60       0x50 ./build/a3700_z/debug/bl2/a3700_console.o
+ .debug_ranges  0x0000000000000fb0       0x70 ./build/a3700_z/debug/bl2/marvell_helpers.o
+
+.debug_frame    0x0000000000000000     0x1098
+ .debug_frame   0x0000000000000000      0x198 ./build/a3700_z/debug/bl2/io_fip.o
+ .debug_frame   0x0000000000000198      0x180 ./build/a3700_z/debug/bl2/io_memmap.o
+ .debug_frame   0x0000000000000318      0x2d0 ./build/a3700_z/debug/bl2/io_storage.o
+ .debug_frame   0x00000000000005e8      0x1d0 ./build/a3700_z/debug/bl2/marvell_bl2_setup.o
+ .debug_frame   0x00000000000007b8      0x158 ./build/a3700_z/debug/bl2/marvell_io_storage.o
+ .debug_frame   0x0000000000000910       0x40 ./build/a3700_z/debug/bl2/bl2_main.o
+ .debug_frame   0x0000000000000950       0x28 ./build/a3700_z/debug/bl2/bl2_arch_setup.o
+ .debug_frame   0x0000000000000978       0xe8 ./build/a3700_z/debug/bl2/bl_common.o
+ .debug_frame   0x0000000000000a60       0x78 ./build/a3700_z/debug/bl2/tf_printf.o
+ .debug_frame   0x0000000000000ad8      0x388 ./build/a3700_z/debug/bl2/std.o
+ .debug_frame   0x0000000000000e60       0x28 ./build/a3700_z/debug/bl2/a3700_z_common.o
+ .debug_frame   0x0000000000000e88      0x140 ./build/a3700_z/debug/bl2/xlat_tables.o
+ .debug_frame   0x0000000000000fc8       0xd0 ./build/a3700_z/debug/bl2/marvell_common.o

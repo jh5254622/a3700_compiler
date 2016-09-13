@@ -1,0 +1,120 @@
+From 68885528ca1bbd1db969e44218cb59a8965affd5 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 17 Jan 2016 18:16:52 +0200
+Subject: [PATCH 0692/1240] kconfig: mvebu: remove customer definition
+
+in current U-Boot version, support for Marvell/Customer board
+is indicated by CONFIG_DEVEL_BOARD, hence customer defitions
+are not needed
+
+Change-Id: I741c6ddead1c76c0d5c03d0ede19947af980eadc
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26833
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ board/mvebu/Kconfig                   | 10 ----------
+ configs/mvebu_apn806_defconfig        |  1 -
+ configs/mvebu_apn806_dop_defconfig    |  1 -
+ configs/mvebu_armada38x_defconfig     |  1 -
+ configs/mvebu_armada70x0_defconfig    |  1 -
+ configs/mvebu_armada70x0_pd_defconfig |  1 -
+ configs/mvebu_armadalp_defconfig      |  1 -
+ 7 files changed, 16 deletions(-)
+
+diff --git a/board/mvebu/Kconfig b/board/mvebu/Kconfig
+index 08d3a2e..cba8e17 100644
+--- a/board/mvebu/Kconfig
++++ b/board/mvebu/Kconfig
+@@ -10,15 +10,5 @@ config DEVEL_BOARD
+ 	  You need this only if you work on a Marvell board.
+ 	  If not, keep this off to reduce code size
+ 
+-config CUSTOMER_BOARD
+-	bool "Support MVEBU customer boards"
+-	depends on MVEBU
+-	default n
+-	help
+-	  Say Y here to add support for customer boards.
+-	  You need this only if you work on a spcific
+-	  customer board.
+-	  If not, keep this off to reduce code size
+-
+ source "board/mvebu/common/Kconfig"
+ endmenu
+diff --git a/configs/mvebu_apn806_defconfig b/configs/mvebu_apn806_defconfig
+index e0947a0..3ab4488 100644
+--- a/configs/mvebu_apn806_defconfig
++++ b/configs/mvebu_apn806_defconfig
+@@ -4,7 +4,6 @@ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_TARGET_ARMADA_8K=y
+ CONFIG_MVEBU_MPP_BUS=y
+ +S:CONFIG_DEVEL_BOARD=y
+-CONFIG_CUSTOMER_BOARD=y
+ CONFIG_CMD_BOOTD=y
+ CONFIG_CMD_RUN=y
+ CONFIG_CMD_EDITENV=y
+diff --git a/configs/mvebu_apn806_dop_defconfig b/configs/mvebu_apn806_dop_defconfig
+index 7e90dfc..0bd9049 100644
+--- a/configs/mvebu_apn806_dop_defconfig
++++ b/configs/mvebu_apn806_dop_defconfig
+@@ -9,7 +9,6 @@ CONFIG_MVEBU_I2C=y
+ +S:CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT=y
+ +S:CONFIG_MVEBU_SPL_SAR_DUMP=y
+ +S:CONFIG_DEVEL_BOARD=y
+-CONFIG_CUSTOMER_BOARD=y
+ CONFIG_CMD_BOOTD=y
+ CONFIG_CMD_RUN=y
+ CONFIG_CMD_EDITENV=y
+diff --git a/configs/mvebu_armada38x_defconfig b/configs/mvebu_armada38x_defconfig
+index d0b4525..9032e3c 100644
+--- a/configs/mvebu_armada38x_defconfig
++++ b/configs/mvebu_armada38x_defconfig
+@@ -4,7 +4,6 @@ CONFIG_SPL=y
+ +S:CONFIG_MVEBU_SPL_DIFFRENT_BASE_ADDR=y
+ CONFIG_MVEBU_MPP_BUS=y
+ +S:CONFIG_DEVEL_BOARD=y
+-CONFIG_CUSTOMER_BOARD=y
+ CONFIG_CMD_BDI=y
+ CONFIG_CMD_BOOTD=y
+ CONFIG_CMD_RUN=y
+diff --git a/configs/mvebu_armada70x0_defconfig b/configs/mvebu_armada70x0_defconfig
+index 10ae2f8..2650500 100644
+--- a/configs/mvebu_armada70x0_defconfig
++++ b/configs/mvebu_armada70x0_defconfig
+@@ -4,7 +4,6 @@ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_TARGET_ARMADA_8K=y
+ CONFIG_MVEBU_MPP_BUS=y
+ +S:CONFIG_DEVEL_BOARD=y
+-CONFIG_CUSTOMER_BOARD=y
+ CONFIG_ARMADA_70X0_DB=y
+ CONFIG_CMD_BOOTD=y
+ CONFIG_CMD_RUN=y
+diff --git a/configs/mvebu_armada70x0_pd_defconfig b/configs/mvebu_armada70x0_pd_defconfig
+index 2fdae60..27111fe 100644
+--- a/configs/mvebu_armada70x0_pd_defconfig
++++ b/configs/mvebu_armada70x0_pd_defconfig
+@@ -10,7 +10,6 @@ CONFIG_MVEBU_RFU=y
+ CONFIG_MVEBU_MPP_BUS=y
+ # CONFIG_MVEBU_TOOLS_SUPPORT is not set
+ +S:CONFIG_DEVEL_BOARD=y
+-CONFIG_CUSTOMER_BOARD=y
+ # CONFIG_MVEBU_SAR is not set
+ CONFIG_CMD_BOOTD=y
+ CONFIG_CMD_RUN=y
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index 7b65db2..092cf5d 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -14,7 +14,6 @@ CONFIG_USB=y
+ CONFIG_USB_XHCI_HCD=y
+ +S:CONFIG_MVEBU_UART_ARLP=y
+ +S:CONFIG_DEVEL_BOARD=y
+-CONFIG_CUSTOMER_BOARD=y
+ +S:CONFIG_SPL_DRIVERS_MISC_SUPPORT=y
+ +S:CONFIG_MVEBU_A3700_MISC_INIT=y
+ +S:CONFIG_MVEBU_A3700_IO_ADDR_DEC=y
+-- 
+1.9.1
+

@@ -1,0 +1,116 @@
+From 995e19afef2aec5e1ce578293a87f8d469f9ae40 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Wed, 13 Jan 2016 17:36:04 +0200
+Subject: [PATCH 0685/1240] fix: mvebu: spl: Remove silence flag for
+ unsupported platforms
+
+- Add configuration parameter MVEBU_ROM_SILENCE_FLAG_SUPPORT
+  which can be enabled for non-WTP BootROM based platforms
+  This flag is passed to SPL by BootROM and surpresses
+  output to serial terminal during SPL runtime.
+- The flag is enabled in the default Apn806 configuration
+- Fixes bug JIRA SYSTEMSW-2132
+
+Change-Id: Id505f3e2d9ef31ab2885b3a193e0623e499527fc
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26786
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Kconfig     | 9 +++++++++
+ arch/arm/cpu/mvebu-common/spl.c       | 6 +++++-
+ configs/mvebu_apn806_defconfig        | 1 +
+ configs/mvebu_apn806_dop_defconfig    | 1 +
+ configs/mvebu_apn806_pd_defconfig     | 1 +
+ configs/mvebu_armada70x0_defconfig    | 1 +
+ configs/mvebu_armada70x0_pd_defconfig | 1 +
+ 7 files changed, 19 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index 99a09a6..9a9a239 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -131,6 +131,15 @@ config MVEBU_SYS_INFO
+ 	  from spl to u-boot, you need to choose
+ 	  this option.
+ 
++config MVEBU_ROM_SILENCE_FLAG_SUPPORT
++	bool "BootROM silence flag support"
++	default n
++	help
++	  Choose this option to add support for
++	  silence parameter passed to SPL by
++	  BootROM for suppressing serial all
++	  port output during SPL run.
++
+ if MVEBU_TOOLS_SUPPORT
+ source "arch/arm/cpu/mvebu-common/tools/Kconfig"
+ endif
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index d12a449..edcccb9 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -57,9 +57,13 @@ void board_init_f(ulong silent)
+ 	gd = &gdata;
+ 	gd->baudrate = CONFIG_BAUDRATE;
+ 
++#ifdef CONFIG_MVEBU_ROM_SILENCE_FLAG_SUPPORT
+ 	if (silent)
+ 		gd->flags |= GD_FLG_SILENT;
+-
++#else
++	/* Silence flag is not supported by CM3 WTP BootROM */
++	gd->flags &= ~GD_FLG_SILENT;
++#endif
+ 	/* Update the pointer to the default FDT, this is necessary only to config i2c*/
+ 	setup_fdt();
+ #ifdef CONFIG_MULTI_DT_FILE
+diff --git a/configs/mvebu_apn806_defconfig b/configs/mvebu_apn806_defconfig
+index ffeab30..e0947a0 100644
+--- a/configs/mvebu_apn806_defconfig
++++ b/configs/mvebu_apn806_defconfig
+@@ -38,3 +38,4 @@ CONFIG_MVEBU_PINCTL=y
+ CONFIG_MVEBU_THERMAL_SENSOR=y
+ CONFIG_MVEBU_THERMAL_SENSOR_28NM_V2=y
+ +S:CONFIG_MVEBU_MK6_SUPPORT=y
+++S:CONFIG_MVEBU_ROM_SILENCE_FLAG_SUPPORT=y
+diff --git a/configs/mvebu_apn806_dop_defconfig b/configs/mvebu_apn806_dop_defconfig
+index a22315c..7e90dfc 100644
+--- a/configs/mvebu_apn806_dop_defconfig
++++ b/configs/mvebu_apn806_dop_defconfig
+@@ -36,3 +36,4 @@ CONFIG_MVEBU_PINCTL=y
+ +S:CONFIG_MVEBU_MK6_SUPPORT=y
+ CONFIG_MVEBU_THERMAL_SENSOR=y
+ CONFIG_MVEBU_THERMAL_SENSOR_28NM_V2=y
+++S:CONFIG_MVEBU_ROM_SILENCE_FLAG_SUPPORT=y
+diff --git a/configs/mvebu_apn806_pd_defconfig b/configs/mvebu_apn806_pd_defconfig
+index 1eacb2d..e919c73 100644
+--- a/configs/mvebu_apn806_pd_defconfig
++++ b/configs/mvebu_apn806_pd_defconfig
+@@ -24,3 +24,4 @@ CONFIG_CMD_MVEBU_MPP=y
+ +S:CONFIG_SYS_NS16550=y
+ CONFIG_MVEBU_PINCTL=y
+ +S:# CONFIG_MVEBU_SPL_DDR_SUPPORT is not set
+++S:CONFIG_MVEBU_ROM_SILENCE_FLAG_SUPPORT=y
+diff --git a/configs/mvebu_armada70x0_defconfig b/configs/mvebu_armada70x0_defconfig
+index c07a4b8..10ae2f8 100644
+--- a/configs/mvebu_armada70x0_defconfig
++++ b/configs/mvebu_armada70x0_defconfig
+@@ -38,3 +38,4 @@ CONFIG_MVEBU_PINCTL=y
+ CONFIG_MVEBU_THERMAL_SENSOR=y
+ CONFIG_MVEBU_THERMAL_SENSOR_28NM_V2=y
+ +S:CONFIG_MVEBU_MK6_SUPPORT=y
+++S:CONFIG_MVEBU_ROM_SILENCE_FLAG_SUPPORT=y
+diff --git a/configs/mvebu_armada70x0_pd_defconfig b/configs/mvebu_armada70x0_pd_defconfig
+index 098d4a1..2fdae60 100644
+--- a/configs/mvebu_armada70x0_pd_defconfig
++++ b/configs/mvebu_armada70x0_pd_defconfig
+@@ -37,3 +37,4 @@ CONFIG_MVEBU_SPI=y
+ CONFIG_MVEBU_PINCTL=y
+ +S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+ +S:# CONFIG_MVEBU_SPL_DDR_SUPPORT is not set
+++S:CONFIG_MVEBU_ROM_SILENCE_FLAG_SUPPORT=y
+-- 
+1.9.1
+

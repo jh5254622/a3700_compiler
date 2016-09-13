@@ -1,0 +1,110 @@
+From e5a5184067eda448afcea0c3cf9834ad9160f30c Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 4 Aug 2015 12:42:16 +0300
+Subject: [PATCH 0301/1240] ddr: added done message after DDR static
+ initialization
+
+Change-Id: Ibba93e5717ab4954f2ebf8949de21caceef7a751
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22498
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/spl.c       |  3 +--
+ arch/arm/include/asm/arch-mvebu/ddr.h | 24 ++++++++++++++++++++++++
+ drivers/ddr/ddr_dunit.c               |  3 +++
+ drivers/ddr/ddr_mckinley6.c           |  3 +++
+ 4 files changed, 31 insertions(+), 2 deletions(-)
+ create mode 100644 arch/arm/include/asm/arch-mvebu/ddr.h
+
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index a2cd72f..63080da 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -22,14 +22,13 @@
+ #include <asm/arch-mvebu/fdt.h>
+ #include <asm/arch-mvebu/comphy.h>
+ #include <asm/arch-mvebu/tools.h>
++#include <asm/arch-mvebu/ddr.h>
+ #ifdef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+ #include <asm/arch-mvebu/dram_over_pci.h>
+ #endif
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+-extern void static_dram_init(void);
+-
+ static int setup_fdt(void)
+ {
+ #ifdef CONFIG_OF_CONTROL
+diff --git a/arch/arm/include/asm/arch-mvebu/ddr.h b/arch/arm/include/asm/arch-mvebu/ddr.h
+new file mode 100644
+index 0000000..0ba69b0
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/ddr.h
+@@ -0,0 +1,24 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _MVEBU_DDR_H_
++#define _MVEBU_DDR_H_
++
++void static_dram_init(void);
++
++#endif /* _MVEBU_DDR_H_ */
+diff --git a/drivers/ddr/ddr_dunit.c b/drivers/ddr/ddr_dunit.c
+index c05e472..fe5d85e 100644
+--- a/drivers/ddr/ddr_dunit.c
++++ b/drivers/ddr/ddr_dunit.c
+@@ -18,6 +18,7 @@
+ 
+ #include <common.h>
+ #include <asm/io.h>
++#include <asm/arch-mvebu/ddr.h>
+ 
+ void static_dram_init(void)
+ {
+@@ -183,4 +184,6 @@ void static_dram_init(void)
+ 	udelay(2000);
+ 	writel(0xfffdffff, 0xD00182e4);
+ 	udelay(2000);
++
++	printf("Static DRAM initialization is DONE..\n");
+ }
+diff --git a/drivers/ddr/ddr_mckinley6.c b/drivers/ddr/ddr_mckinley6.c
+index a631146..3a9a489 100644
+--- a/drivers/ddr/ddr_mckinley6.c
++++ b/drivers/ddr/ddr_mckinley6.c
+@@ -18,6 +18,7 @@
+ 
+ #include <common.h>
+ #include <asm/io.h>
++#include <asm/arch-mvebu/ddr.h>
+ 
+ void static_dram_init(void)
+ {
+@@ -203,4 +204,6 @@ void static_dram_init(void)
+ 	reg = readl(0xf0020008);
+ 	while (reg != 0x00001111)
+ 		reg = readl(0xf0020008);
++
++	printf("Static DRAM initialization is DONE..\n");
+ }
+-- 
+1.9.1
+

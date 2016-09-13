@@ -1,0 +1,44 @@
+From 43bc206f33acdfce557b1b84403cd6113d6d97b3 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 22 Feb 2016 13:51:59 +0200
+Subject: [PATCH 0887/1240] dts: cp110: enable NAND only for NAND board setup
+
+Change-Id: I916573a6d136d89f465131e4213fc0d5bb91084c
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27738
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/armada-7040-rz-db_nand.dts | 3 +++
+ arch/arm/dts/cp110.dtsi                 | 1 +
+ 2 files changed, 4 insertions(+)
+
+diff --git a/arch/arm/dts/armada-7040-rz-db_nand.dts b/arch/arm/dts/armada-7040-rz-db_nand.dts
+index 645707b..28ee397 100644
+--- a/arch/arm/dts/armada-7040-rz-db_nand.dts
++++ b/arch/arm/dts/armada-7040-rz-db_nand.dts
+@@ -67,6 +67,9 @@
+ 			mmc@780000 {
+ 				status = "okay";
+ 			};
++			nand@720000 {
++				status = "okay";
++			};
+ 
+ 			pinctl@440000 {
+ 					/* MPP Bus:
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index 909e149..671b5b1 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -117,6 +117,7 @@ nand@720000 {
+ 	num-cs = <1>;
+ 	nand-ecc-strength = <4>;
+ 	nand-ecc-step-size = <512>;
++	status = "disabled";
+ };
+ 
+ mdio0@12A200 {
+-- 
+1.9.1
+

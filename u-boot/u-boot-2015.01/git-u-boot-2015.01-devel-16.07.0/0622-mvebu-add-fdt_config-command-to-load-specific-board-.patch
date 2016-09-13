@@ -1,0 +1,432 @@
+From ef3f85c6b60ba657b1e5d7765ce3159b6e20c8f6 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Wed, 23 Dec 2015 09:39:53 +0200
+Subject: [PATCH 0622/1240] mvebu: add fdt_config command to load specific
+ board configuration using FDT
+
+	- add "fdt_config" command that handle with read/write and
+	  select Device Tree from EEPROM or flash.
+	- "fdt_config on" - enable the option to read Device Tree from eeprom at boot time.
+	- "fdt_config off" - disable the option to read Device Tree from eeprom at boot time.
+	  and the Device Tree loading will depends on the 'active select' field.
+	- "fdt_config list" - show all Device Tree that suitable to the board.
+	- "fdt_config read" - read Device Tree from EEPROM/flash to RAM.
+	- "fdt_config select" - select Device Tree from flash to loading at boot time.
+	- "fdt_config save" - write Device Tree changes from RAM to EEPROM.
+
+Change-Id: I15f52651fa582fdb67234ec27d03ad5a9bc7dd4b
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26260
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ board/mvebu/common/Makefile     |   1 +
+ board/mvebu/common/fdt_config.c | 149 ++++++++++++++++++++++++++++++++++++++++
+ board/mvebu/common/fdt_config.h |  30 ++++++++
+ common/mvebu/Kconfig            |   7 ++
+ common/mvebu/Makefile           |   1 +
+ common/mvebu/cmd_fdt_config.c   |  95 +++++++++++++++++++++++++
+ configs/mvebu_apn806_defconfig  |   1 +
+ doc/mvebu/commands/fdt_config   |  44 ++++++++++++
+ 8 files changed, 328 insertions(+)
+ create mode 100644 board/mvebu/common/fdt_config.c
+ create mode 100644 board/mvebu/common/fdt_config.h
+ create mode 100644 common/mvebu/cmd_fdt_config.c
+ create mode 100644 doc/mvebu/commands/fdt_config
+
+diff --git a/board/mvebu/common/Makefile b/board/mvebu/common/Makefile
+index 6effaf6..0405070 100644
+--- a/board/mvebu/common/Makefile
++++ b/board/mvebu/common/Makefile
+@@ -23,3 +23,4 @@ obj-$(CONFIG_CMD_NET)		+= eth_init.o
+ obj-$(CONFIG_MVEBU_SAR)		+= sar.o
+ obj-$(CONFIG_DEVEL_BOARD)	+= devel-board.o
+ obj-$(CONFIG_MULTI_DT_FILE)	+= fdt_eeprom.o
++obj-$(CONFIG_MULTI_DT_FILE)	+= fdt_config.o
+diff --git a/board/mvebu/common/fdt_config.c b/board/mvebu/common/fdt_config.c
+new file mode 100644
+index 0000000..da5761b
+--- /dev/null
++++ b/board/mvebu/common/fdt_config.c
+@@ -0,0 +1,149 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <fdtdec.h>
++#include <libfdt.h>
++#include <asm/u-boot.h>
++#include <fdt_support.h>
++#include "devel-board.h"
++#include "fdt_config.h"
++
++DECLARE_GLOBAL_DATA_PTR;
++
++static int fdt_list_size = -1;
++static int fdt_list_of_configs[MV_MAX_FDT_CONFIGURATION] = {-1};
++
++/* fdt_select_set - if the selected_index is exist, update active_fdt_selection field. else return without changing */
++int fdt_select_set(const char *selected_index)
++{
++	int i, index_int;
++
++	if (fdt_list_size == -1) {
++		printf("FDT configuration list is not available.\n");
++		printf("need to run \"fdt_config list\" command before. and choose from this list.\n");
++		return 1;
++	}
++
++	index_int = (int)simple_strtoul(selected_index, NULL, 16);
++	for (i = 0; i < fdt_list_size ; i++) {
++		if (index_int == fdt_list_of_configs[i]) {
++			fdt_config_val.board_config.active_fdt_selection = fdt_list_of_configs[i];
++			printf("To save the changes, please run the command fdt_config save.\n");
++			return 0;
++		}
++	}
++
++	printf("Index is not exist\n");
++	return 1;
++}
++
++/* fdt_select_list - print list of all fdt_config_id that compatible to the boardID */
++int fdt_select_list(void)
++{
++	int i, fdt_config_id;
++	char *fdt_model;
++	void *fdt_blob_temp = __dtb_dt_begin;
++
++	fdt_list_size = 0;
++	printf("FDT config list:\n");
++	for (i = 0; fdt_check_header(fdt_blob_temp) == 0; i++) {
++		if ((u8)fdtdec_get_int(fdt_blob_temp, 0, "board_id", -1) == fdt_config_val.man_info.boardid) {
++			fdt_list_size++;
++			fdt_model = (char *)fdt_getprop(fdt_blob_temp, 0, "model", NULL);
++			fdt_config_id = fdtdec_get_int(fdt_blob_temp, 0, "fdt_config_id", -1);
++			printf("\t%d - %s\n", fdt_config_id, fdt_model);
++			fdt_list_of_configs[fdt_list_size - 1] = fdt_config_id;
++		}
++		fdt_blob_temp += MVEBU_FDT_SIZE;
++	}
++	return 0;
++}
++
++/* fdt_cfg_read_eeprom - write FDT from EEPROM to local struct and set 'fdt addr' environment variable */
++void fdt_cfg_read_eeprom(void)
++{
++	if (upload_fdt_from_eeprom()) {
++		set_working_fdt_addr(fdt_config_val.fdt_blob);
++		printf("Loaded FDT from EEPROM successfully\n");
++		printf("To save the changes, please run the command fdt_config save.\n");
++	}
++}
++
++/* fdt_cfg_read_flash - write the required FDT to local struct, if found fdt config id in the list.
++   else return without writing anything*/
++int fdt_cfg_read_flash(const char *selected_index)
++{
++	int i, index_int;
++
++	if (fdt_list_size == -1) {
++		printf("FDT configuration list is not available.\n");
++		printf("need to run \"fdt_config list\" command before. and choose from this list.\n");
++		return 1;
++	}
++
++	index_int = (int)simple_strtoul(selected_index, NULL, 16);
++	for (i = 0; i < fdt_list_size ; i++) {
++		if (index_int == fdt_list_of_configs[i]) {
++			upload_fdt_from_flash(fdt_list_of_configs[i]);
++			set_working_fdt_addr(fdt_config_val.fdt_blob);
++			printf("To save the changes, please run the command fdt_config save.\n");
++			return 0;
++		}
++	}
++	printf("Index is not exist\n");
++	return 1;
++}
++
++/* fdt_cfg_save - write the local struct to EEPROM */
++int fdt_cfg_save(void)
++{
++	/* calculate checksum and save it in struct */
++	fdt_config_val.checksum = mvebu_checksum8((uint8_t *)&fdt_config_val.pattern,
++						   (uint32_t) fdt_config_val.length - 4);
++	/* write fdt struct to EEPROM */
++	write_fdt_struct_to_eeprom();
++	return 0;
++}
++
++/* fdt_cfg_on - enable read FDT from EEPROM */
++int fdt_cfg_on(void)
++{
++	if (fdt_config_is_enable() == false) {
++		fdt_config_val.length += MVEBU_FDT_SIZE;
++		fdt_config_val.board_config.fdt_cfg_en = 1;
++	}
++	printf("Do you want to read FDT from EEPROM? <y/N> ");
++	if (confirm_yesno()) {
++		if (upload_fdt_from_eeprom())
++			printf("Load fdt from EEprom\n");
++	}
++	printf("To save the changes, please run the command fdt_config save.\n");
++	return 0;
++}
++
++/* fdt_cfg_on - disable read FDT from EEPROM */
++int fdt_cfg_off(void)
++{
++	if (fdt_config_is_enable()) {
++		fdt_config_val.length -= MVEBU_FDT_SIZE;
++		fdt_config_val.board_config.fdt_cfg_en = 0;
++	}
++	printf("config fdt is now disable\n");
++	printf("To save the changes, please run the command fdt_config save.\n");
++	return 0;
++}
+diff --git a/board/mvebu/common/fdt_config.h b/board/mvebu/common/fdt_config.h
+new file mode 100644
+index 0000000..1a6096b
+--- /dev/null
++++ b/board/mvebu/common/fdt_config.h
+@@ -0,0 +1,30 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++#ifndef _FDT_CONFIG_H_
++#define _FDT_CONFIG_H_
++#include "fdt_eeprom.h"
++
++void fdt_cfg_read_eeprom(void);
++int fdt_cfg_read_flash(const char *selected_index);
++int fdt_cfg_save(void);
++int fdt_cfg_on(void);
++int fdt_cfg_off(void);
++int fdt_select_set(const char *selected_index);
++int fdt_select_list(void);
++
++#endif
+diff --git a/common/mvebu/Kconfig b/common/mvebu/Kconfig
+index 97f392f..38392c3 100644
+--- a/common/mvebu/Kconfig
++++ b/common/mvebu/Kconfig
+@@ -17,6 +17,13 @@ config CMD_MVEBU_SAR
+ 	help
+ 	  SatR - Modify SOC's sample at reset (SAR) values
+ 
++config CMD_MVEBU_FDT_CONFIG
++	bool "fdt_config"
++	depends on (DEVEL_BOARD && MULTI_DT_FILE)
++	default n
++	help
++	  fdt_config - Modify SOC and board configuration
++
+ config CMD_MVEBU_MPP
+ 	depends on (DEVEL_BOARD && MVEBU_MPP_BUS)
+ 	bool "mpp, mppbus"
+diff --git a/common/mvebu/Makefile b/common/mvebu/Makefile
+index 42e12db..f3f99e8 100644
+--- a/common/mvebu/Makefile
++++ b/common/mvebu/Makefile
+@@ -18,6 +18,7 @@
+ 
+ obj-$(CONFIG_CMD_MVEBU_MISC) += cmd_misc.o
+ obj-$(CONFIG_CMD_MVEBU_SAR) += cmd_sar.o
++obj-$(CONFIG_CMD_MVEBU_FDT_CONFIG) += cmd_fdt_config.o
+ obj-$(CONFIG_CMD_MVEBU_MPP) += cmd_mpp.o
+ obj-$(CONFIG_CMD_MVEBU_BUBT) += cmd_bubt.o
+ obj-$(CONFIG_CMD_MVEBU_MSS_BOOT) += cmd_mss.o
+diff --git a/common/mvebu/cmd_fdt_config.c b/common/mvebu/cmd_fdt_config.c
+new file mode 100644
+index 0000000..e8b09901
+--- /dev/null
++++ b/common/mvebu/cmd_fdt_config.c
+@@ -0,0 +1,95 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <config.h>
++#include <common.h>
++#include <command.h>
++#include <vsprintf.h>
++#include <errno.h>
++
++#include "../../board/mvebu/common/fdt_config.h"
++
++int do_fdt_config_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
++			char * const argv[])
++{
++	const char *cmd = argv[1];
++	const char *fdt_option = NULL;
++	const char *fdt_model = NULL;
++
++	if ((strcmp(cmd, "read") == 0) && (argc < 3)) {
++		error("Please specify FDT source (eeprom/flash)\n");
++		return 1;
++	}
++
++	if ((strcmp(cmd, "select") == 0) && (argc < 3)) {
++		error("Please specify FDT index option\n");
++		return 1;
++	}
++
++	if (argc > 2)
++		fdt_option = argv[2];
++
++	if (argc > 3)
++		fdt_model = argv[3];
++
++	if (strcmp(cmd, "read") == 0) {
++		if (argc < 4 && (strcmp(fdt_option, "eeprom") == 0)) {
++			fdt_cfg_read_eeprom();
++		} else if (argc > 3 && (strcmp(fdt_option, "flash") == 0)) {
++			if (fdt_cfg_read_flash(fdt_model))
++				return 1;
++		} else {
++			error("bad parameters for command \"read\"\n");
++			return 1;
++		}
++	} else if (strcmp(cmd, "save") == 0) {
++		if (fdt_cfg_save())
++			return 1;
++	} else if (strcmp(cmd, "on") == 0) {
++		if (fdt_cfg_on())
++			return 1;
++	} else if (strcmp(cmd, "off") == 0) {
++		if (fdt_cfg_off())
++			return 1;
++	} else if (strcmp(cmd, "select") == 0) {
++		if (fdt_select_set(fdt_option))
++			return 1;
++	} else if (strcmp(cmd, "list") == 0) {
++		if (fdt_select_list())
++			return 1;
++	} else {
++		printf("ERROR: unknown command to config: \"%s\"\n", cmd);
++		return 1;
++	}
++
++	return 0;
++}
++
++U_BOOT_CMD(
++	fdt_config,    6,     1,      do_fdt_config_cmd,
++	"fdt_config - Modify SOC and board configuration\n",
++	"\n"
++	"Modify SOC and board configuration\n"
++	"\tread	eeprom	  - Read FDT from EEPROM and save to DRAM\n"
++	"\tread flash <x> - Read x FDT from U-Boot and save to DRAM\n"
++	"\tsave		  - Save FDT in EEPROM\n"
++	"\toff		  - Disable the feature of loading the FDT that saved in EEPROM\n"
++	"\ton		  - Enable the feature of loading the FDT that saved in EEPROM\n"
++	"\tlist		  - Show the options of the board\n"
++	"\tselect <x>	  - Update active FDT selection\n"
++);
+diff --git a/configs/mvebu_apn806_defconfig b/configs/mvebu_apn806_defconfig
+index f4ee117..ffeab30 100644
+--- a/configs/mvebu_apn806_defconfig
++++ b/configs/mvebu_apn806_defconfig
+@@ -18,6 +18,7 @@ CONFIG_CMD_TIME=y
+ CONFIG_CMD_MISC=y
+ CONFIG_CMD_TIMER=y
+ CONFIG_CMD_MVEBU_SAR=y
++CONFIG_CMD_MVEBU_FDT_CONFIG=y
+ CONFIG_CMD_MVEBU_MPP=y
+ CONFIG_CMD_MVEBU_BUBT=y
+ CONFIG_CMD_MVEBU_TSEN=y
+diff --git a/doc/mvebu/commands/fdt_config b/doc/mvebu/commands/fdt_config
+new file mode 100644
+index 0000000..5d83d32
+--- /dev/null
++++ b/doc/mvebu/commands/fdt_config
+@@ -0,0 +1,44 @@
++fdt_config command:
++====================
++Dynamic board configurations handled by using a set of pre-defined SoC/Board configurations.
++This command allows the user to decide which configurations to boot with.
++In addition, this command gives us the ability to edit the FDT using FDT generic command of U-Boot,
++and save it to EEPROM.
++
++notes:
++------
++1. To enable/disable the option to read FDT from EEPROM use on/off.
++2. To use "fdt_config read" or "fdt_config select" needed to run "fdt_config list" command before,
++   because the option_id received from this list.
++3. All changes will be relevant only after running the save command ("fdt_config save") and reset the board.
++4. The list of all the configuration located under "doc/mvebu/a8k/board_options"
++
++
++"fdt_config on" -   enable the option to read Device Tree from eeprom at boot time.
++
++"fdt_config off" -  disable the option to read Device Tree from eeprom at boot time.
++
++"fdt_config list" - show all Device Tree that suitable to the board.
++                    print the list of fdt_config_id and fdt name for all the suitable FDT.
++
++"fdt_config read flash <option_id>"
++		  - read Device Tree from flash and save it to DRAM using address 'fdt_addr' enviorment variable
++		    as default.
++		  example:
++			$ fdt_config read flash 3
++			**read the FDT with from flash (u-boot image) with id=3 and save it to DRAM.
++			**note: to read fdt from flash needed to run "fdt_config list" command before.
++			        because the option_id received from this list.
++"fdt_config read eeprom"
++		  - read Device Tree from EEPROM and save it to DRAM using address 'fdt_addr' enviorment variable
++		    as default.
++		  example:
++			$ fdt_config read eeprom
++
++"fdt_config select <option_id>"
++		  - select Device Tree from flash to loading in bootloader at the next time.
++		    If the user want to use this option its necessary to disable read FDT from EEPROM (by runnig "fdt_config off").
++		    **note: to select fdt from flash needed to run "fdt_config list" command before.
++			    because the option_id received from this list.
++
++"fdt_config save" - write Device Tree changes from RAM to EEPROM.
+-- 
+1.9.1
+

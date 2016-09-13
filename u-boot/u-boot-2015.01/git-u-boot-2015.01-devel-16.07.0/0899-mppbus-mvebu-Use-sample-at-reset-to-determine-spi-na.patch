@@ -1,0 +1,61 @@
+From afe874aef42f1c8974e3c4f226feb37b8e66bb37 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 23 Feb 2016 12:43:05 +0200
+Subject: [PATCH 0899/1240] mppbus: mvebu: Use sample-at-reset to determine
+ spi/nand MPP configuration
+
+Change-Id: I93a7c77423708853018d36135b3d863f793561d5
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27777
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ board/mvebu/armada8k/devel-board.c | 22 +++++++++++++++-------
+ 1 file changed, 15 insertions(+), 7 deletions(-)
+
+diff --git a/board/mvebu/armada8k/devel-board.c b/board/mvebu/armada8k/devel-board.c
+index e5b3267..03caed5 100644
+--- a/board/mvebu/armada8k/devel-board.c
++++ b/board/mvebu/armada8k/devel-board.c
+@@ -22,23 +22,31 @@
+ #include <errno.h>
+ #include <asm/arch-mvebu/soc.h>
+ #include <asm/arch-mvebu/mpp.h>
++#include <mvebu_chip_sar.h>
+ #include "../common/devel-board.h"
+ #include "../common/sar.h"
+ 
+ int mvebu_devel_board_init(void)
+ {
++#ifdef CONFIG_MVEBU_MPP_BUS
++	struct sar_val sar;
++#endif
++
+ #ifdef CONFIG_MVEBU_SAR
+ 	sar_init();
+ #endif
+ 
+-
+ #ifdef CONFIG_MVEBU_MPP_BUS
+-#ifdef CONFIG_MVEBU_NAND_BOOT
+-	mpp_enable_bus("nand");
+-#endif
+-#ifdef CONFIG_MVEBU_SPI_BOOT
+-	mpp_enable_bus("spi1");
+-#endif
++	mvebu_sar_value_get(SAR_BOOT_SRC, &sar);
++
++	if (sar.bootsrc.type == BOOTSRC_NAND)
++		mpp_enable_bus("nand");
++
++	if (sar.bootsrc.type == BOOTSRC_SPI) {
++		char name[8];
++		sprintf(name, "spi%d", sar.bootsrc.index);
++		mpp_enable_bus(name);
++	}
+ #endif /* CONFIG_MVEBU_MPP_BUS */
+ 
+ 	return 0;
+-- 
+1.9.1
+

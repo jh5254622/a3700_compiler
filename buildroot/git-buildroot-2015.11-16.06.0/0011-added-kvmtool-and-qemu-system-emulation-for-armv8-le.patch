@@ -1,0 +1,40 @@
+From 841c59124ed387d23fd50491b6897d5e52aa663f Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Tue, 30 Jun 2015 14:49:28 +0300
+Subject: [PATCH 11/66] added kvmtool and qemu system emulation for armv8 le
+ config
+
+Change-Id: Idc9dc5ca132c6bac72fa5a2e32af59876ade2eee
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20598
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Tested-by: Shadi Ammouri <shadi@marvell.com>
+---
+ configs/mvebu_armv8_le_defconfig | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/configs/mvebu_armv8_le_defconfig b/configs/mvebu_armv8_le_defconfig
+index 49fd82f..65277fd 100644
+--- a/configs/mvebu_armv8_le_defconfig
++++ b/configs/mvebu_armv8_le_defconfig
+@@ -12,6 +12,7 @@ BR2_PACKAGE_WHETSTONE=y
+ BR2_PACKAGE_E2FSPROGS=y
+ BR2_PACKAGE_I2C_TOOLS=y
+ BR2_PACKAGE_IOSTAT=y
++BR2_PACKAGE_KVMTOOL=y
+ BR2_PACKAGE_LM_SENSORS=y
+ BR2_PACKAGE_LSHW=y
+ BR2_PACKAGE_MDADM=y
+@@ -20,6 +21,9 @@ BR2_PACKAGE_SDPARM=y
+ BR2_PACKAGE_SMARTMONTOOLS=y
+ BR2_PACKAGE_SYSSTAT=y
+ BR2_PACKAGE_BC=y
++BR2_PACKAGE_QEMU=y
++BR2_PACKAGE_QEMU_CUSTOM_TARGETS="aarch64-softmmu"
++BR2_PACKAGE_QEMU_FDT=y
+ BR2_PACKAGE_ARPTABLES=y
+ BR2_PACKAGE_BRIDGE_UTILS=y
+ BR2_PACKAGE_DHCPCD=y
+-- 
+1.9.1
+

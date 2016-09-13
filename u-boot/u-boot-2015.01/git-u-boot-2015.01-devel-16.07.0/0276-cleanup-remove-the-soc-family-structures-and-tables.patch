@@ -1,0 +1,362 @@
+From 29b4c5dcc63353247c078e38fdcc8bd72347b68f Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 23 Jul 2015 16:36:53 +0300
+Subject: [PATCH 0276/1240] cleanup: remove the soc family structures and
+ tables
+
+Now that we use the FDT approach the tables are not needed anymore
+Future patches will add a device tree based soc init call.M*
+
+Change-Id: I0756afe996e91cb61c937b49c75f340b2cad5ec1
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22122
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv7/armada38x/Makefile   |  1 -
+ arch/arm/cpu/armv7/armada38x/soc-init.c |  4 +--
+ arch/arm/cpu/armv7/armada38x/tables.c   | 49 ---------------------------------
+ arch/arm/cpu/armv7/armadalp/Makefile    |  1 -
+ arch/arm/cpu/armv7/armadalp/soc-init.c  |  4 +--
+ arch/arm/cpu/armv7/armadalp/tables.c    | 44 -----------------------------
+ arch/arm/cpu/armv8/armada8k/Makefile    |  1 -
+ arch/arm/cpu/armv8/armada8k/soc-init.c  |  5 ++--
+ arch/arm/cpu/armv8/armada8k/tables.c    | 42 ----------------------------
+ arch/arm/cpu/mvebu-common/soc-init.c    | 31 +--------------------
+ arch/arm/include/asm/arch-mvebu/soc.h   | 20 +-------------
+ 11 files changed, 8 insertions(+), 194 deletions(-)
+ delete mode 100644 arch/arm/cpu/armv7/armada38x/tables.c
+ delete mode 100644 arch/arm/cpu/armv7/armadalp/tables.c
+ delete mode 100644 arch/arm/cpu/armv8/armada8k/tables.c
+
+diff --git a/arch/arm/cpu/armv7/armada38x/Makefile b/arch/arm/cpu/armv7/armada38x/Makefile
+index c99db44..ad290db 100644
+--- a/arch/arm/cpu/armv7/armada38x/Makefile
++++ b/arch/arm/cpu/armv7/armada38x/Makefile
+@@ -17,5 +17,4 @@
+ #
+ 
+ obj-y += soc-init.o
+-obj-y += tables.o
+ obj-y += clock.o
+diff --git a/arch/arm/cpu/armv7/armada38x/soc-init.c b/arch/arm/cpu/armv7/armada38x/soc-init.c
+index 6cefe1d..f33f4e8 100644
+--- a/arch/arm/cpu/armv7/armada38x/soc-init.c
++++ b/arch/arm/cpu/armv7/armada38x/soc-init.c
+@@ -34,7 +34,7 @@ int soc_early_init_f(void)
+ 	return 0;
+ }
+ 
+-struct mvebu_soc_family *soc_init(void)
++void soc_init(void)
+ {
+ 	/* Do early SOC specific init here */
+ 
+@@ -43,7 +43,7 @@ struct mvebu_soc_family *soc_init(void)
+ 	 * no device attached */
+ 	writel(0, MVEBU_IO_ERR_CTL_REG);
+ 
+-	return &a38x_family_info;
++	return;
+ }
+ 
+ int dram_init(void)
+diff --git a/arch/arm/cpu/armv7/armada38x/tables.c b/arch/arm/cpu/armv7/armada38x/tables.c
+deleted file mode 100644
+index ba05209..0000000
+--- a/arch/arm/cpu/armv7/armada38x/tables.c
++++ /dev/null
+@@ -1,49 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#include <common.h>
+-#include <asm/io.h>
+-#include <asm/arch/regs-base.h>
+-#include <asm/arch-mvebu/soc.h>
+-
+-struct mvebu_soc_info a38x_soc_info[] = {
+-	/* Armda 380 */
+-	{
+-		.name = "MV-6280",
+-		.id = 0x6820,
+-	},
+-	/* Armda 385 */
+-	{
+-		.name = "MV-6285",
+-		.id = 0x6825,
+-	},
+-	/* Armda 388 */
+-	{
+-		.name = "MV-6288",
+-		.id = 0x6828,
+-	},
+-	/* Delimiter */
+-	{.id = 0}
+-};
+-
+-struct mvebu_soc_family a38x_family_info = {
+-	.name = "MV-80xx",
+-	.id   = 8000,
+-	.rev_name = {"Z1", "A0"},
+-	.soc_table = a38x_soc_info,
+-};
+diff --git a/arch/arm/cpu/armv7/armadalp/Makefile b/arch/arm/cpu/armv7/armadalp/Makefile
+index c99db44..ad290db 100644
+--- a/arch/arm/cpu/armv7/armadalp/Makefile
++++ b/arch/arm/cpu/armv7/armadalp/Makefile
+@@ -17,5 +17,4 @@
+ #
+ 
+ obj-y += soc-init.o
+-obj-y += tables.o
+ obj-y += clock.o
+diff --git a/arch/arm/cpu/armv7/armadalp/soc-init.c b/arch/arm/cpu/armv7/armadalp/soc-init.c
+index d06b24b..8f17b6d 100644
+--- a/arch/arm/cpu/armv7/armadalp/soc-init.c
++++ b/arch/arm/cpu/armv7/armadalp/soc-init.c
+@@ -37,11 +37,11 @@ int soc_get_id(void)
+ 	return id;
+ }
+ 
+-struct mvebu_soc_family *soc_init(void)
++void soc_init(void)
+ {
+ 	/* Do early SOC specific init here */
+ 
+-	return &armadalp_family_info;
++	return;
+ }
+ 
+ int dram_init(void)
+diff --git a/arch/arm/cpu/armv7/armadalp/tables.c b/arch/arm/cpu/armv7/armadalp/tables.c
+deleted file mode 100644
+index bb20039..0000000
+--- a/arch/arm/cpu/armv7/armadalp/tables.c
++++ /dev/null
+@@ -1,44 +0,0 @@
+-/*
+-* ***************************************************************************
+-* Copyright (C) 2015 Marvell International Ltd.
+-* ***************************************************************************
+-* This program is free software: you can redistribute it and/or modify it
+-* under the terms of the GNU General Public License as published by the Free
+-* Software Foundation, either version 2 of the License, or any later version.
+-*
+-* This program is distributed in the hope that it will be useful,
+-* but WITHOUT ANY WARRANTY; without even the implied warranty of
+-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-* GNU General Public License for more details.
+-*
+-* You should have received a copy of the GNU General Public License
+-* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-* ***************************************************************************
+-*/
+-
+-#include <common.h>
+-#include <asm/io.h>
+-#include <asm/arch/regs-base.h>
+-#include <asm/arch-mvebu/soc.h>
+-
+-struct mvebu_soc_info armadalp_soc_info[] = {
+-	/* Armada LP A */
+-	{
+-		.name = "MV-ARMADALP_A", /* temp SOC name and SOC ID */
+-		.id = 0x9991,
+-	},
+-	/* Armada LP B */
+-	{
+-		.name = "MV-ARMADALP_B", /* temp SOC name and SOC ID */
+-		.id = 0x9992,
+-	},
+-	/* Delimiter */
+-	{.id = 0}
+-};
+-
+-struct mvebu_soc_family armadalp_family_info = {
+-	.name = "MV-99xx", /* temp SOC name and SOC ID */
+-	.id   = 9990,
+-	.rev_name = {"Z1", "A0"},
+-	.soc_table = armadalp_soc_info,
+-};
+diff --git a/arch/arm/cpu/armv8/armada8k/Makefile b/arch/arm/cpu/armv8/armada8k/Makefile
+index 230caf8..5533f20 100644
+--- a/arch/arm/cpu/armv8/armada8k/Makefile
++++ b/arch/arm/cpu/armv8/armada8k/Makefile
+@@ -17,7 +17,6 @@
+ #
+ 
+ obj-y += soc-init.o
+-obj-y += tables.o
+ obj-y += clock.o
+ obj-$(CONFIG_ARMV8_PSCI)	+= psci.o
+ obj-$(CONFIG_ARMV8_PSCI)	+= cache_llc.o
+diff --git a/arch/arm/cpu/armv8/armada8k/soc-init.c b/arch/arm/cpu/armv8/armada8k/soc-init.c
+index 5294ecc..f7a6fa6 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc-init.c
++++ b/arch/arm/cpu/armv8/armada8k/soc-init.c
+@@ -74,13 +74,12 @@ static void soc_pcie_init(void)
+ }
+ #endif
+ 
+-struct mvebu_soc_family *soc_init(void)
++void soc_init(void)
+ {
+ #ifdef CONFIG_MVEBU_PCIE
+ 	soc_pcie_init();
+ #endif
+-
+-	return &a8k_family_info;
++	return;
+ }
+ 
+ int dram_init(void)
+diff --git a/arch/arm/cpu/armv8/armada8k/tables.c b/arch/arm/cpu/armv8/armada8k/tables.c
+deleted file mode 100644
+index 7a2f7a3..0000000
+--- a/arch/arm/cpu/armv8/armada8k/tables.c
++++ /dev/null
+@@ -1,42 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#include <common.h>
+-#include <asm/io.h>
+-#include <asm/arch-mvebu/soc.h>
+-
+-struct mvebu_soc_info a8k_soc_info[] = {
+-	/* Armda 8021 */
+-	{
+-		.name = "MV-8021",
+-		.id = 8021,
+-	},
+-	/* Armda 8022 */
+-	{
+-		.name = "MV-8022",
+-		.id = 8022,
+-	},
+-	/* Delimiter */
+-	{.id = 0}
+-};
+-
+-struct mvebu_soc_family a8k_family_info = {
+-	.name = "MV-80xx",
+-	.id   = 8000,
+-	.soc_table = a8k_soc_info,
+-};
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index 60e9c8f..331d531 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -47,38 +47,9 @@ int soc_late_init(void) __attribute__((weak, alias("__soc_late_init")));
+ 
+ int mvebu_soc_init()
+ {
+-	struct mvebu_soc_info *soc;
+-	struct mvebu_soc_family *soc_family;
+-	int soc_id, soc_rev;
+ 	int ret;
+ 
+-	set_soc_family(soc_init());
+-	soc_family = get_soc_family();
+-	if (!soc_family)
+-		error("Failed to get SOC Family info\n");
+-
+-	soc_id  = soc_get_id();
+-	soc_rev = soc_get_rev();
+-	debug("Current device ID  = %x\n", soc_id);
+-	debug("Current device Rev = %x\n", soc_rev);
+-
+-	/* Find the exact SOC out of the family */
+-	soc = soc_family->soc_table;
+-	while (soc->id != 0) {
+-		if (soc->id == soc_id) {
+-			soc_family->curr_soc = soc;
+-			break;
+-		}
+-		soc++;
+-	}
+-
+-	if (soc_family->curr_soc == NULL) {
+-		error("Can't find soc info %d", soc_id);
+-		return -ENODEV;
+-	}
+-
+-	/* Store global variable to SOC */
+-	debug("Current device name = %s %s\n", soc->name, soc_family->rev_name[soc_rev]);
++	soc_init();
+ 
+ 	/* Initialize physical memory map */
+ #ifdef CONFIG_MVEBU_CCU
+diff --git a/arch/arm/include/asm/arch-mvebu/soc.h b/arch/arm/include/asm/arch-mvebu/soc.h
+index e6c8e83..c9c7943 100644
+--- a/arch/arm/include/asm/arch-mvebu/soc.h
++++ b/arch/arm/include/asm/arch-mvebu/soc.h
+@@ -25,33 +25,15 @@
+ #define MAX_SOC_REVS	8
+ #define MAX_REV_NAME	4
+ 
+-struct mvebu_soc_info {
+-	char	name[MAX_SOC_NAME];
+-	int	id;
+-};
+-
+-struct mvebu_soc_family {
+-	int	id;
+-	char	name[MAX_SOC_NAME];
+-	char	rev_name[MAX_SOC_REVS][MAX_REV_NAME];
+-	struct	mvebu_soc_info *soc_table;
+-	struct	mvebu_soc_info *curr_soc;
+-};
+-
+-int common_soc_init(struct mvebu_soc_family *soc_family_info);
+-
+ /* API required from all SOCs */
+ int soc_get_rev(void);
+ int soc_get_id(void);
+-struct mvebu_soc_family *soc_init(void);
++void soc_init(void);
+ 
+ /* Common SOC API */
+ int mvebu_soc_init(void);
+ void mvebu_print_soc_info(void);
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+-#define get_soc_family()  (struct mvebu_soc_family *)(gd->arch.soc_family)
+-#define set_soc_family(x) (gd->arch.soc_family = (struct mvebu_soc_family *)(x))
+-#define get_soc_info()  (struct mvebu_soc_info *)(gd->arch.soc_family->curr_soc)
+ 
+ #endif /* _SOC_H_ */
+-- 
+1.9.1
+

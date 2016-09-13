@@ -1,0 +1,1581 @@
+From 32a104fdaf13a4643903e2edc35601fabbda2fdf Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 30 Mar 2014 08:56:10 +0300
+Subject: [PATCH 0019/1240] restructured and generalized init flow
+
+Change-Id: I20dca3bb50b27dfd0d9c9dab21d5fb66c50488ef
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Makefile       |   6 +-
+ arch/arm/cpu/mvebu-common/cpuinfo.c      |  68 +++++
+ arch/arm/cpu/mvebu-common/misc.c         |  66 +++++
+ arch/arm/cpu/mvebu-common/platform.S     | 106 ++++++++
+ arch/arm/cpu/mvebu-common/soc-init.c     |  98 +++++---
+ arch/arm/cpu/mvebu-common/timer_aurora.c | 226 +++++++++++++++++
+ arch/arm/include/asm/arch-mvebu/adec.h   |   5 +
+ arch/arm/include/asm/arch-mvebu/clock.h  |  29 +++
+ arch/arm/include/asm/arch-mvebu/mvebu.h  |  43 ++++
+ arch/arm/include/asm/arch-mvebu/soc.h    |  39 ++-
+ arch/arm/include/asm/global_data.h       |   5 +
+ arch/arm/lib/board.c                     |   9 +
+ board/mvebu/common/Makefile              |   2 +
+ board/mvebu/common/entry.c               |  24 ++
+ board/mvebu/common/init.c                | 122 +++++++++
+ build.pl                                 |   7 +-
+ common/mvebu/Makefile                    |   4 +-
+ drivers/serial/ns16550.c                 |   7 +-
+ include/configs/mvebu-common.h           | 417 ++++++++++++++++++++++++++++++-
+ 19 files changed, 1221 insertions(+), 62 deletions(-)
+ create mode 100644 arch/arm/cpu/mvebu-common/cpuinfo.c
+ create mode 100644 arch/arm/cpu/mvebu-common/misc.c
+ create mode 100644 arch/arm/cpu/mvebu-common/platform.S
+ create mode 100644 arch/arm/cpu/mvebu-common/timer_aurora.c
+ create mode 100644 arch/arm/include/asm/arch-mvebu/clock.h
+ create mode 100644 board/mvebu/common/entry.c
+ create mode 100644 board/mvebu/common/init.c
+
+diff --git a/arch/arm/cpu/mvebu-common/Makefile b/arch/arm/cpu/mvebu-common/Makefile
+index 52d82a5..bd13609 100644
+--- a/arch/arm/cpu/mvebu-common/Makefile
++++ b/arch/arm/cpu/mvebu-common/Makefile
+@@ -17,6 +17,10 @@
+ # *****************************************************************************
+ #
+ 
+-obj-$(CONFIG_ADEC) += adec.o
+ obj-y += unit-info.o
+ obj-y += soc-init.o
++obj-y += misc.o
++obj-$(CONFIG_AURORA_TIMER) += timer_aurora.o
++obj-$(CONFIG_MVEBU_CA9) += platform.o
++obj-$(CONFIG_ADEC) += adec.o
++obj-$(CONFIG_DISPLAY_CPUINFO) += cpuinfo.o
+diff --git a/arch/arm/cpu/mvebu-common/cpuinfo.c b/arch/arm/cpu/mvebu-common/cpuinfo.c
+new file mode 100644
+index 0000000..2492a06
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/cpuinfo.c
+@@ -0,0 +1,68 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <asm/arch-mvebu/clock.h>
++
++/* Enable each SOC to print its own info */
++void __print_soc_info(void)
++{
++	return;
++}
++
++void print_soc_info(void)
++	__attribute__((weak, alias("__print_soc_info")));
++
++int print_cpuinfo(void)
++{
++#if 0
++	char *device, *rev;
++	char name[50];
++	mvBoardIdSet();
++	mvBoardNameGet(name);
++	printf("Board: %s\n",  name);
++	if (!mvCtrlIsValidSatR())
++		printf("       Custom configuration\n");
++	device = soc_get_device_name();
++	device = soc_get_rev_name();
++	printf("SoC:   %s-%s\n", device, rev);
++	if (soc_get_cpu_cnt())
++		printf("       running %d CPUs\n", mvCtrlGetCpuNum()+1);
++
++	mvCpuNameGet(name);
++	printf("CPU:   %s LE",  name);
++	if (mvCtrlGetCpuNum())
++		printf("       CPU %d\n",  whoAmI());
++#endif
++	printf("       CPU    @ %d [MHz]\n", soc_cpu_clk_get() / 1000000);
++	printf("       L2     @ %d [MHz]\n", soc_l2_clk_get() / 1000000);
++	printf("       TClock @ %d [MHz]\n", soc_tclk_get() / 1000000);
++	printf("       DDR    @ %d [MHz]\n", soc_ddr_clk_get() / 1000000);
++#if 0
++	printf("       DDR %dBit Width, %s Memory Access\n", mvCtrlDDRBusWidth(), mvCtrlDDRThruXbar()?"XBAR":"FastPath");
++#if defined(CONFIG_ECC_SUPPORT)
++	printf("       DDR ECC %s\n", mvCtrlDDRECC()?"Enabled":"Disabled");
++#endif
++#endif
++
++	print_soc_info();
++
++	return 0;
++}
++
+diff --git a/arch/arm/cpu/mvebu-common/misc.c b/arch/arm/cpu/mvebu-common/misc.c
+new file mode 100644
+index 0000000..e9035a6
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/misc.c
+@@ -0,0 +1,66 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch/regs-base.h>
++
++#define DEVICE_ID_OFFSET	16
++#define DEVICE_REV_OFFSET	8
++
++
++int __soc_get_rev(void)
++{
++	u32 rev = readl(MVEBU_DEVICE_REV_REG) >> DEVICE_REV_OFFSET;
++	return rev;
++}
++int soc_get_rev(void) __attribute__((weak, alias("__soc_get_rev")));
++
++int __soc_get_id(void)
++{
++	u32 id = readl(MVEBU_DEVICE_ID_REG) >> DEVICE_ID_OFFSET;
++	return id;
++}
++int soc_get_id(void) __attribute__((weak, alias("__soc_get_id")));
++
++void print_mv_banner(void)
++{
++#ifdef CONFIG_SILENT_CONSOLE
++	DECLARE_GLOBAL_DATA_PTR;
++	gd->flags |= GD_FLG_SILENT;
++#endif
++	printf("\n");
++	printf(" __   __                      _ _\n");
++	printf("|  \\/  | __ _ _ ____   _____| | |\n");
++	printf("| |\\/| |/ _` | '__\\ \\ / / _ \\ | |\n");
++	printf("| |  | | (_| | |   \\ V /  __/ | |\n");
++	printf("|_|  |_|\\__,_|_|    \\_/ \\___|_|_|\n");
++	printf("         _   _     ____              _\n");
++	printf("        | | | |   | __ )  ___   ___ | |_\n");
++	printf("        | | | |___|  _ \\ / _ \\ / _ \\| __|\n");
++	printf("        | |_| |___| |_) | (_) | (_) | |_\n");
++	printf("         \\___/    |____/ \\___/ \\___/ \\__|\n");
++	return;
++}
++
++void enable_caches(void)
++{
++	/* Nothing to be done */
++}
++
+diff --git a/arch/arm/cpu/mvebu-common/platform.S b/arch/arm/cpu/mvebu-common/platform.S
+new file mode 100644
+index 0000000..44f8c4d
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/platform.S
+@@ -0,0 +1,106 @@
++/*******************************************************************************
++Copyright (C) Marvell International Ltd. and its affiliates
++
++********************************************************************************
++Marvell GPL License Option
++
++If you received this File from Marvell, you may opt to use, redistribute and/or
++modify this File in accordance with the terms and conditions of the General
++Public License Version 2, June 1991 (the "GPL License"), a copy of which is
++available along with the File in the license.txt file or by writing to the Free
++Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
++on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++
++THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
++DISCLAIMED.  The GPL License provides additional details about this warranty
++disclaimer.
++
++*******************************************************************************/
++
++#define MV_ASMLANGUAGE
++#include <config.h>
++#include <version.h>
++
++.globl lowlevel_init
++
++/************************************************/
++/*              lowlevel_init                   *
++/************************************************/
++
++lowlevel_init:
++	mov	r2, lr
++
++	/* Multicore support - read MPIDR register (Multiprocessor Affinity) */
++	mrc	p15, 0, r0, c0, c0, 5
++exit:
++	mov	lr, r2
++	mov 	pc, lr
++
++.globl _lowlevel_init_val
++_lowlevel_init_val:
++	.word lowlevel_init
++
++/*
++ *************************************************************************
++ *
++ * Flush DCache
++ *
++ *************************************************************************
++ */
++
++.globl _dcache_index_max
++_dcache_index_max:
++	.word 0x0
++
++.globl _dcache_index_inc
++_dcache_index_inc:
++	.word 0x0
++
++.globl _dcache_set_max
++_dcache_set_max:
++	.word 0x0
++
++.globl _dcache_set_index
++_dcache_set_index:
++         .word 0x0
++
++
++#define s_max   r0
++#define s_inc   r1
++#define i_max   r2
++#define i_inc   r3
++
++.globl cpu_dcache_flush_all
++cpu_dcache_flush_all:
++
++        stmdb	sp!, {r0-r3,ip}
++
++        ldr i_max, _dcache_index_max
++        ldr i_inc, _dcache_index_inc
++        ldr s_max, _dcache_set_max
++        ldr s_inc, _dcache_set_index
++
++Lnext_set_inv:
++        orr     ip, s_max, i_max
++Lnext_index_inv:
++        mcr     p15, 0, ip, c7, c14, 2  /* Purge D cache SE with Set/Index */
++        sub     ip, ip, i_inc
++        tst     ip, i_max               /* Index 0 is last one */
++        bne     Lnext_index_inv         /* Next index */
++        mcr     p15, 0, ip, c7, c14, 2  /* Purge D cache SE with Set/Index */
++        subs    s_max, s_max, s_inc
++        bpl     Lnext_set_inv           /* Next set */
++        ldmia	sp!, {r0-r3,ip}
++
++        mov	pc, lr   /* back to my caller */
++
++.globl cpu_icache_flush_invalidate_all
++cpu_icache_flush_invalidate_all:
++        stmdb	sp!, {r0}
++
++        ldr     r0,=0
++        mcr     p15, 0, r0, c7, c5, 0   /* Flush Invalidate D and I caches */
++        ldmia	sp!, {r0}
++
++        mov	pc, lr   /* back to my caller */
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index 41dbeab..9376024 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -17,56 +17,40 @@
+  * ***************************************************************************
+  */
+ 
+-#define DEBUG
+-
+ #include <config.h>
+ #include <common.h>
+ #include <errno.h>
+ #include <asm/system.h>
+ #include <asm/bitops.h>
++#include <asm/arch-mvebu/mvebu.h>
+ #include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/adec.h>
+ #include <asm/arch-mvebu/soc.h>
+ #include <asm/arch-mvebu/tables.h>
+ 
+-struct mvebu_soc_family *soc_family;
+ 
+-static struct mvebu_soc_info *get_soc_info(int soc_id)
++/* Weak function for boards who need specific init seqeunce */
++int __soc_late_init(void)
+ {
+-	struct mvebu_soc_info *soc = soc_family->soc_table;
+-
+-	/* Avoid searching on each access */
+-	if (soc_family->curr_soc)
+-		return soc_family->curr_soc;
+-
+-	while (soc->id != 0) {
+-		if (soc->id == soc_id) {
+-			soc_family->curr_soc = soc;
+-			break;
+-		}
+-		soc++;
+-	}
+-
+-	if (soc_family->curr_soc == NULL)
+-		printf("Error: %s: Can't find soc info %d\n", __func__, soc_id);
+-
+-	return soc_family->curr_soc;
++	return 0;
+ }
++int soc_late_init(void) __attribute__((weak, alias("__soc_late_init")));
+ 
+ u16 *soc_get_unit_mask_table(void)
+ {
++	struct mvebu_soc_family *soc_family = get_soc_family();
+ 	return soc_family->base_unit_info;
+ }
+ 
+-char *soc_get_mpp_desc_table(void)
++char **soc_get_mpp_desc_table(void)
+ {
++	struct mvebu_soc_family *soc_family = get_soc_family();
+ 	return soc_family->mpp_desc;
+ }
+ 
+ 
+-static int update_soc_units(int soc_id)
++static int update_soc_units(struct mvebu_soc_info *soc)
+ {
+-	struct mvebu_soc_info *soc = get_soc_info(soc_id);
+ 	u16 *unit_mask = soc_get_unit_mask_table();
+ 
+ 	if (soc->unit_disable)
+@@ -75,33 +59,73 @@ static int update_soc_units(int soc_id)
+ 	return 0;
+ }
+ 
+-static int soc_init_memory_map(int soc_id)
++static int soc_init_memory_map(struct mvebu_soc_info *soc)
+ {
+-	struct mvebu_soc_info *soc_info = get_soc_info(soc_id);
+-	struct adec_win *memory_map = soc_info->memory_map;
++	struct mvebu_soc_family *soc_family = get_soc_family();
++	struct adec_win *memory_map = soc->memory_map;
+ 
+-	if (soc_family->adec_type == 0) {
++	if (soc_family->adec_type == ADEC_CCU) {
+ 		adec_ap_init(memory_map);
+-	} else if (soc_family->adec_type == 1) {
+-		printf(" Error: No MBUS support yet\n");
++	} else if (soc_family->adec_type == ADEC_MBUS) {
++		error("No MBUS support yet");
+ 		return -EINVAL;
+ 	}
+ 
+ 	return 0;
+ }
+ 
+-int common_soc_init(struct mvebu_soc_family *soc_family_info)
++int mvebu_soc_init()
+ {
+-	int soc_id = soc_get_id();
++	struct mvebu_soc_info *soc;
++	struct mvebu_soc_family *soc_family;
++	int soc_id, soc_rev;
+ 	int ret;
+ 
+-	soc_family = soc_family_info;
++	debug_enter();
++
++	set_soc_family(soc_init());
++	soc_family = get_soc_family();
++	if (!soc_family)
++		printf("Error: Failed to get SOC Family info\n");
++
++	soc_id  = soc_get_id();
++	soc_rev = soc_get_rev();
++	debug("Current device ID  = %x\n", soc_id);
++	debug("Current device Rev = %x\n", soc_rev);
+ 
+-	update_soc_units(soc_id);
++	/* Find the exact SOC out of the family */
++	soc = soc_family->soc_table;
++	while (soc->id != 0) {
++		if (soc->id == soc_id) {
++			soc_family->curr_soc = soc;
++			break;
++		}
++		soc++;
++	}
+ 
+-	ret = soc_init_memory_map(soc_id);
++	if (soc_family->curr_soc == NULL) {
++		error("Can't find soc info %d", soc_id);
++		return -ENODEV;
++	}
++
++	/* Store global variable to SOC */
++	debug("Current device name = %s %s\n", soc->name, soc_family->rev_name[soc_rev]);
++
++	/* Update SOC info according to family */
++	update_soc_units(soc);
++
++	/* Initialize physical memory map */
++	ret = soc_init_memory_map(soc);
+ 	if (ret)
+-		return ret;
++		error("Failed to initialize memory map");
++
++	/* Soc specific init */
++	ret = soc_late_init();
++	if (ret)
++		error("SOC late init failed");
++
++	debug_exit();
+ 
+ 	return 0;
+ }
++
+diff --git a/arch/arm/cpu/mvebu-common/timer_aurora.c b/arch/arm/cpu/mvebu-common/timer_aurora.c
+new file mode 100644
+index 0000000..e99b382
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/timer_aurora.c
+@@ -0,0 +1,226 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch/regs-base.h>
++#include <asm/arch-mvebu/clock.h>
++
++
++
++/* Global timer source clock is the Punit clock (which is L2 clock divided by 2) */
++#ifdef MV88F68XX
++#define MV_BOARD_REFCLK MV_BOARD_REFCLK_25MHZ
++#else
++#define MV_BOARD_REFCLK (soc_l2_clk_get() / 2)
++#endif
++
++#define TIMER_BASE(x)			MVEBU_GLOBAL_TIMER_BASE
++#define TIMER_CTRL_REG(x)		TIMER_BASE(x)
++#define TIMER_RELOAD_REG(x)		(TIMER_BASE(x) + 0x10 + (x * 8))
++#define TIMER_VAL_REG(x)		(TIMER_BASE(x) + 0x14 + (x * 8))
++
++#define TIMER_ENABLE(x)			(1 << (0 + (2 * x)))
++#define TIMER_AUTO(x)			(1 << (1 + (2 * x)))
++#define TIMER_25MHZ(x)			(1 << (11 +  x))
++
++#define TIMER_LOAD_VAL 0xFFFFFFFF
++
++static ulong timestamp;
++static ulong lastdec;
++
++int timer_init_done;
++
++int read_timer(void)
++{
++	return readl(TIMER_VAL_REG(0));
++}
++
++int timer_init(void)
++{
++	unsigned int ctrl;
++
++	if (timer_init_done)
++		return 0;
++
++	/* init the counter */
++	writel(TIMER_LOAD_VAL, TIMER_RELOAD_REG(0));
++	writel(TIMER_LOAD_VAL, TIMER_VAL_REG(0));
++
++	/* set control for timer cunter and enable */
++	ctrl = readl(TIMER_CTRL_REG(0));
++	ctrl |= TIMER_ENABLE(0);
++	ctrl |= TIMER_AUTO(0);
++#ifdef MV88F68XX
++	ctrl |= TIMER_25MHZ(0);
++#else
++	ctrl &= ~TIMER_25MHZ(0);
++#endif
++	writel(ctrl, TIMER_CTRL_REG(0));
++
++	/* init the timestamp and lastdec value */
++	reset_timer_masked();
++
++	timer_init_done = 1;
++
++	return 0;
++}
++
++void reset_timer(void)
++{
++	reset_timer_masked();
++}
++
++ulong get_timer(ulong base)
++{
++	return get_timer_masked() - base;
++}
++
++void set_timer(ulong t)
++{
++	timestamp = t;
++}
++
++/* delay x useconds AND perserve advance timstamp value */
++#ifndef CONFIG_MARVELL
++void udelay(unsigned long usec)
++{
++	ulong tmo, tmp;
++
++	if (usec >= 1000) {             /* if "big" number, spread normalization to seconds */
++		tmo = usec / 1000;      /* start to normalize for usec to ticks per sec */
++		tmo *= CONFIG_SYS_HZ;   /* find number of "ticks" to wait to achieve target */
++		tmo /= 1000;            /* finish normalize. */
++	} else {                          /* else small number, don't kill it prior to HZ multiply */
++		tmo = usec * CONFIG_SYS_HZ;
++		tmo /= (1000 * 1000);
++	}
++
++	tmp = get_timer(0);                     /* get current timestamp */
++	if ((tmo + tmp + 1) < tmp)             /* if setting this fordward will roll time stamp */
++		reset_timer_masked();           /* reset "advancing" timestamp to 0, set lastdec value */
++	else
++		tmo += tmp;                     /* else, set advancing stamp wake up time */
++
++	while (get_timer_masked() < tmo)        /* loop till event */
++		/*NOP*/;
++}
++
++#else
++/* FIXME: udelay supports only the maximum time needed for one round of the counter */
++void __udelay(unsigned long usec)
++{
++	uint current;
++	ulong delayticks;
++
++	/* In case udelay is called before timier was initialized */
++	if (!timer_init_done)
++		timer_init();
++
++	delayticks = (usec * (MV_BOARD_REFCLK / 1000000));
++
++	current = read_timer();
++	if (current < delayticks) {
++		delayticks -= current;
++		while (read_timer() < current)
++			/*NOP*/;
++		while ((TIMER_LOAD_VAL - delayticks) < read_timer())
++			/*NOP*/;
++	} else {
++		while (read_timer() > (current - delayticks))
++			/*NOP*/;
++	}
++}
++
++#endif
++
++void reset_timer_masked(void)
++{
++	/* reset time */
++	lastdec = read_timer() / (MV_BOARD_REFCLK / 1000);
++	timestamp = 0;
++}
++
++ulong get_timer_masked(void)
++{
++	ulong now = read_timer() / (MV_BOARD_REFCLK / 1000);
++
++	if (lastdec >= now) {                   /* normal mode (non roll) */
++		/* normal mode */
++		timestamp += lastdec - now;     /* move stamp fordward with absoulte diff ticks */
++	} else {                                /* we have overflow of the count down timer */
++		/* nts = ts + ld + (TLV - now)
++		 * ts=old stamp, ld=time that passed before passing through -1
++		 * (TLV-now) amount of time after passing though -1
++		 * nts = new "advancing time stamp"...it could also roll and cause problems.
++		 */
++		timestamp += lastdec + (TIMER_LOAD_VAL / (MV_BOARD_REFCLK / 1000)) - now;
++	}
++	lastdec = now;
++
++	return timestamp;
++}
++
++/* waits specified delay value and resets timestamp */
++void udelay_masked(unsigned long usec)
++{
++	ulong tmo;
++	ulong endtime;
++	signed long diff;
++
++	if (usec >= 1000) {
++		/* if "big" number, spread normalization to seconds */
++		tmo = usec / 1000;
++		/* start to normalize for usec to ticks per sec */
++		tmo *= CONFIG_SYS_HZ; /* find number of "ticks" to wait to achieve target */
++		tmo /= 1000;          /* finish normalize. */
++	} else {
++		/* else small number, don't kill it prior to HZ multiply */
++		tmo = usec * CONFIG_SYS_HZ;
++		tmo /= (1000 * 1000);
++	}
++
++	endtime = get_timer_masked() + tmo;
++
++	do {
++		ulong now = get_timer_masked();
++		diff = endtime - now;
++	} while (diff >= 0);
++}
++
++/*
++ * This function is derived from PowerPC code (read timebase as long long).
++ * On ARM it just returns the timer value.
++ */
++unsigned long long get_ticks(void)
++{
++	return get_timer(0);
++}
++
++/*
++ * This function is derived from PowerPC code (timebase clock frequency).
++ * On ARM it returns the number of timer ticks per second.
++ */
++ulong get_tbclk(void)
++{
++	ulong tbclk;
++
++	tbclk = CONFIG_SYS_HZ;
++	return tbclk;
++}
+diff --git a/arch/arm/include/asm/arch-mvebu/adec.h b/arch/arm/include/asm/arch-mvebu/adec.h
+index 160f919..e1bb695 100644
+--- a/arch/arm/include/asm/arch-mvebu/adec.h
++++ b/arch/arm/include/asm/arch-mvebu/adec.h
+@@ -36,6 +36,11 @@
+ #define CCU_WIN_ALR_OFFSET(win)	(4 + (12 * win))
+ #define CCU_WIN_AHR_OFFSET(win)	(8 + (12 * win))
+ 
++enum adec_types {
++	ADEC_CCU	= 0,
++	ADEC_MBUS	= 1
++};
++
+ enum adec_target_ids_ap {
+ 	IO_0_TID    = 0x0,
+ 	DRAM_0_TID  = 0x3,
+diff --git a/arch/arm/include/asm/arch-mvebu/clock.h b/arch/arm/include/asm/arch-mvebu/clock.h
+new file mode 100644
+index 0000000..652965a
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/clock.h
+@@ -0,0 +1,29 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#ifndef _MVEBU_CLOCK_H_
++#define _MVEBU_CLOCK_H_
++
++u32 soc_tclk_get(void);
++u32 soc_l2_clk_get(void);
++u32 soc_cpu_clk_get(void);
++u32 soc_ddr_clk_get(void);
++u32 soc_timer_clk_get(void);
++
++#endif /* _MVEBU_CLOCK_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/mvebu.h b/arch/arm/include/asm/arch-mvebu/mvebu.h
+index a52a876..4d5fdcf 100644
+--- a/arch/arm/include/asm/arch-mvebu/mvebu.h
++++ b/arch/arm/include/asm/arch-mvebu/mvebu.h
+@@ -20,5 +20,48 @@
+ #ifndef _MVEBU_H_
+ #define _MVEBU_H_
+ 
++/* Bit definitions */
++#define NO_BIT		0x00000000
++#define BIT0		0x00000001
++#define BIT1		0x00000002
++#define BIT2		0x00000004
++#define BIT3		0x00000008
++#define BIT4		0x00000010
++#define BIT5		0x00000020
++#define BIT6		0x00000040
++#define BIT7		0x00000080
++#define BIT8		0x00000100
++#define BIT9		0x00000200
++#define BIT10		0x00000400
++#define BIT11		0x00000800
++#define BIT12		0x00001000
++#define BIT13		0x00002000
++#define BIT14		0x00004000
++#define BIT15		0x00008000
++#define BIT16		0x00010000
++#define BIT17		0x00020000
++#define BIT18		0x00040000
++#define BIT19		0x00080000
++#define BIT20		0x00100000
++#define BIT21		0x00200000
++#define BIT22		0x00400000
++#define BIT23		0x00800000
++#define BIT24		0x01000000
++#define BIT25		0x02000000
++#define BIT26		0x04000000
++#define BIT27		0x08000000
++#define BIT28		0x10000000
++#define BIT29		0x20000000
++#define BIT30		0x40000000
++#define BIT31		0x80000000
++
++/* Use this functions only when printf is allowed */
++#if defined(CONFIG_MVEBU_DEBUG_FUNC_IN_OUT) || defined(DEBUG)
++#define debug_enter()	printf("----> Enter %s\n", __func__);
++#define debug_exit()  printf("<---- Exit  %s\n", __func__);
++#else
++#define debug_enter()
++#define debug_exit()
++#endif
+ 
+ #endif	/* MVEBU_H */
+diff --git a/arch/arm/include/asm/arch-mvebu/soc.h b/arch/arm/include/asm/arch-mvebu/soc.h
+index dee18cd..6024311 100644
+--- a/arch/arm/include/asm/arch-mvebu/soc.h
++++ b/arch/arm/include/asm/arch-mvebu/soc.h
+@@ -25,30 +25,43 @@
+ #include <asm/arch-mvebu/mpp.h>
+ #include <asm/arch/soc-info.h>
+ 
+-#define MAX_SOC_NAME	   (32)
+-
+-struct mvebu_soc_family {
+-	char name[MAX_SOC_NAME];
+-	int	 id;
+-	u16	*base_unit_info;
+-	char	*mpp_desc[MAX_MPP_OPTS][MAX_MPP_NAME];
+-	struct mvebu_soc_info *soc_table;
+-	struct mvebu_soc_info *curr_soc;
+-	int adec_type;
+-};
++#define MAX_SOC_NAME	32
++#define MAX_SOC_REVS	8
++#define MAX_REV_NAME	4
+ 
+ struct mvebu_soc_info {
+-	char name[MAX_SOC_NAME];
+-	int	 id;
++	char	name[MAX_SOC_NAME];
++	int	id;
+ 	u16	*unit_disable;
+ 	struct adec_win *memory_map;
+ };
+ 
++struct mvebu_soc_family {
++	int	id;
++	char	name[MAX_SOC_NAME];
++	char	rev_name[MAX_SOC_REVS][MAX_REV_NAME];
++	u16	*base_unit_info;
++	char	**mpp_desc;
++	struct	mvebu_soc_info *soc_table;
++	struct	mvebu_soc_info *curr_soc;
++	enum adec_types adec_type;
++};
++
++
+ int common_soc_init(struct mvebu_soc_family *soc_family_info);
+ 
+ /* API required from all SOCs */
+ int soc_get_rev(void);
+ int soc_get_id(void);
++struct mvebu_soc_family *soc_init(void);
++
++/* Common SOC API */
++int mvebu_soc_init(void);
++
+ u16 *soc_get_unit_mask_table(void);
+ 
++DECLARE_GLOBAL_DATA_PTR;
++#define get_soc_family()  (struct mvebu_soc_family *)(gd->arch.soc_family)
++#define set_soc_family(x) (gd->arch.soc_family = (struct mvebu_soc_family *)(x))
++
+ #endif /* _SOC_H_ */
+diff --git a/arch/arm/include/asm/global_data.h b/arch/arm/include/asm/global_data.h
+index 438f128..2bd9dc0 100644
+--- a/arch/arm/include/asm/global_data.h
++++ b/arch/arm/include/asm/global_data.h
+@@ -48,6 +48,11 @@ struct arch_global_data {
+ #ifdef CONFIG_OMAP
+ 	struct omap_boot_parameters omap_boot_params;
+ #endif
++#ifdef CONFIG_MVEBU
++	void *soc_family;
++	void *board_family;
++#endif
++
+ };
+ 
+ #include <asm-generic/global_data.h>
+diff --git a/arch/arm/lib/board.c b/arch/arm/lib/board.c
+index f606255..6e0db2d 100644
+--- a/arch/arm/lib/board.c
++++ b/arch/arm/lib/board.c
+@@ -45,6 +45,7 @@
+ #include <miiphy.h>
+ #endif
+ 
++
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+ ulong monitor_flash_len;
+@@ -93,8 +94,16 @@ static int init_baudrate(void)
+ 	return 0;
+ }
+ 
++#ifdef CONFIG_MVEBU
++void print_mv_banner(void);
++#endif
++
+ static int display_banner(void)
+ {
++#ifdef CONFIG_MVEBU
++	print_mv_banner();
++#endif
++
+ 	printf("\n\n%s\n\n", version_string);
+ 	debug("U-Boot code: %08lX -> %08lX  BSS: -> %08lX\n",
+ 	       (ulong)&_start,
+diff --git a/board/mvebu/common/Makefile b/board/mvebu/common/Makefile
+index 1ce6390..705a21b 100644
+--- a/board/mvebu/common/Makefile
++++ b/board/mvebu/common/Makefile
+@@ -18,5 +18,7 @@
+ #
+ 
+ obj-y	+= board-common.o
++obj-y	+= entry.o
++obj-y	+= init.o
+ obj-y	+= sar.o
+ obj-y	+= config.o
+diff --git a/board/mvebu/common/entry.c b/board/mvebu/common/entry.c
+new file mode 100644
+index 0000000..585c735
+--- /dev/null
++++ b/board/mvebu/common/entry.c
+@@ -0,0 +1,24 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG*/
++
++#include <common.h>
++
++
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+new file mode 100644
+index 0000000..bed92f9
+--- /dev/null
++++ b/board/mvebu/common/init.c
+@@ -0,0 +1,122 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG */
++
++#include <common.h>
++#include <malloc.h>
++#include <errno.h>
++#include <asm/io.h>
++#include <linux/compiler.h>
++#include <asm/arch-mvebu/unit-info.h>
++#include <asm/arch-mvebu/soc.h>
++#include "board.h"
++
++DECLARE_GLOBAL_DATA_PTR;
++
++struct mvebu_board_family *board_family;
++
++#ifdef CONFIG_BOARD_LATE_INIT
++int board_late_init(void)
++{
++	return 0;
++}
++#endif
++
++#ifdef CONFIG_BOARD_EARLY_INIT_F
++/* Do very basic stuff like board and soc detection */
++int board_early_init_f(void)
++{
++	return 0;
++}
++#endif
++
++#ifdef CONFIG_MISC_INIT_R
++int misc_init_r(void)
++{
++	/* Boot progress. */
++#if 0
++	/* Initialize special environment variables. */
++	misc_init_r_env();
++
++	/* CPU Init (part of it depends on env varisables. */
++	mv_cpu_init();
++
++	/* USB init (according to usbMode).
++	** XOR init
++	*/
++	// ACS-TODO: Why do we need this?
++
++	/* Boot Progress. */
++
++	/* Print of MPP configuration and modules. */
++	mvBoardMppModuleTypePrint();
++	mvBoardOtherModuleTypePrint();
++
++	/* Boot Progress. */
++
++	/* Phy Initialization. */
++	/* Init the PHY or Switch of the board */
++	mvebu_board_phy_switch_init();
++#endif
++	return 0;
++}
++#endif
++
++
++int mvebu_io_init(void)
++{
++	return 0;
++}
++
++int mvebu_board_init(void)
++{
++	debug("Initializing board\n");
++
++	/*board_family = board_init_family();*/
++
++	return 0;
++}
++
++
++int board_init(void)
++{
++	mvebu_soc_init();
++
++	mvebu_board_init();
++
++	mvebu_io_init();
++	
++	return 0;
++}
++
++int dram_init(void)
++{
++
++	gd->ram_size = 0x20000000;
++	return 0;
++}
++
++/*
++ * Board specific reset that is system reset.
++ */
++void reset_cpu(ulong addr)
++{
++}
++
+diff --git a/build.pl b/build.pl
+index 9dfe9de..d3d72be 100755
+--- a/build.pl
++++ b/build.pl
+@@ -2,6 +2,8 @@
+ 
+ use Cwd qw();
+ 
++our @supported_boards = ("armada8k", "armada8021-pxp", "armada38x");
++
+ sub bin2hex
+ {
+ 	system ("\${CROSS_COMPILE}objcopy -O verilog -I binary u-boot.bin u-boot.tmp");
+@@ -59,7 +61,7 @@ sub usage
+ 	print "\n";
+ 	print "Options:\n";
+ 	print "\t-f\tBoot device. Accepts spi, nor, nand\n";
+-	print "\t-b\tBoard type. Accepts: armada8k, armada8021-pxp\n";
++	print "\t-b\tBoard type. Accepts: armada8k, armada8021-pxp, armada38x\n";
+ 	print "\t-c\tClean build. calls \"make mrproper\"\n";
+ 	print "\t-o\tOutput directory. Build products will be copied to here\n";
+ 	print "\t-h\tPrints this help message\n";
+@@ -114,8 +116,7 @@ my $flash = $opt_f;
+ # Handle clean build
+ if($opt_c eq 1)
+ {
+-	unless(($board eq "armada8021-pxp") or 
+-	       ($board eq "armada8k")) {
++	unless($board ~~ @supported_boards) {
+ 		print "\nError: Unsupported board \"$opt_b\"\n\n";
+ 		usage();
+ 		exit 1;
+diff --git a/common/mvebu/Makefile b/common/mvebu/Makefile
+index f8b9222..ce73efd 100644
+--- a/common/mvebu/Makefile
++++ b/common/mvebu/Makefile
+@@ -18,5 +18,5 @@
+ #
+ 
+ obj-y += cmd_misc.o
+-obj-y += cmd_sar.o
+-obj-y += cmd_config.o
++obj-$(CONFIG_CMD_MVEBU_SAR) += cmd_sar.o
++obj-$(CONFIG_CMD_MVEBU_CONFIG) += cmd_config.o
+diff --git a/drivers/serial/ns16550.c b/drivers/serial/ns16550.c
+index af5beba..b9d6d9e 100644
+--- a/drivers/serial/ns16550.c
++++ b/drivers/serial/ns16550.c
+@@ -13,6 +13,9 @@
+ #include <watchdog.h>
+ #include <linux/types.h>
+ #include <asm/io.h>
++#ifdef CONFIG_MVEBU
++#include <asm/arch-mvebu/clock.h>
++#endif
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+@@ -118,7 +121,9 @@ int ns16550_calc_divisor(NS16550_t port, int clock, int baudrate)
+ 	}
+ 	port->osc_12m_sel = 0;			/* clear if previsouly set */
+ #endif
+-
++#ifdef CONFIG_MVEBU
++	return (soc_tclk_get() / 16) / gd->baudrate;
++#endif
+ 	return DIV_ROUND_CLOSEST(clock, mode_x_div * baudrate);
+ }
+ 
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index b318924..02dc3f4 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -19,14 +19,421 @@
+ 
+ #ifndef _MVEBU_COMMON_H_
+ #define _MVEBU_COMMON_H_
+-#include <asm/sizes.h>
+-#include <linux/stringify.h>
++
++#include <asm/arch/regs-base.h>
++#include <config_cmd_default.h>
++
++/* High Level Configuration Options */
++#define CONFIG_MVEBU	/* an mvebu generic machine */
++
++/* Temp */
++#define CONFIG_ADEC
++
++/* Udefull Debug */
++#define DEBUG
++#define CONFIG_BOOTSTAGE
++#define CONFIG_BOOTSTAGE_REPORT
++#define CONFIG_MVEBU_DEBUG_FUNC_IN_OUT
++/* #define CONFIG_MV_DEBUG_PUTS */
++
++/* Global definitions */
++#define CONFIG_SYS_TEXT_BASE            0x00000000
++#define CONFIG_SYS_SDRAM_BASE           0x00000000
++#define CONFIG_SYS_RESET_ADDRESS        0xffff0000
++#define CONFIG_SYS_MALLOC_BASE          (CONFIG_SYS_TEXT_BASE + (3 << 20))  /* TEXT_BASE + 3M */
++#define CONFIG_SYS_MALLOC_LEN           (5 << 20)    /* Reserve 5MB for malloc*/
++#define CONFIG_SYS_INIT_SP_ADDR         0x00FF0000   /* End of 16M scrubbed by training in bootrom */
++#define CONFIG_SYS_GBL_DATA_SIZE        128          /* Size in bytes reserved for init data */
++#define CONFIG_SYS_MAXARGS		32      /* Max number of command argg */
++#define CONFIG_UBOOT_SIZE		0x100000
++#undef  CONFIG_USE_IRQ
++
++/* Memory reserve */
++#define CONFIG_UBOOT_MAX_MEM_SIZE	(3ll << 30)	/* Limit u-boot to 3GB */
++#define MVEBU_IO_RESERVE_BASE		0xC0000000ll
++
++/* Board init functions */
++#define CONFIG_BOARD_EARLY_INIT_F	/* pre relloc board init */
++#define CONFIG_MISC_INIT_R              /* post relloc board init */
++#define CONFIG_BOARD_LATE_INIT		/* late  board init */
++#define CONFIG_DISPLAY_CPUINFO
++#define CONFIG_ENV_OVERWRITE            /* allow to change env parameters */
++#undef  CONFIG_WATCHDOG                 /* watchdog disabled */
++
++/* Cache */
++#define CONFIG_SYS_CACHELINE_SIZE       32
+ 
+ /*
+- * High Level Configuration Options
++ * For booting Linux, the board info and command line data
++ * have to be in the first 8 MB of memory, since this is
++ * the maximum mapped by the Linux kernel during initialization.
+  */
+-#define CONFIG_MVEBU			/* an mvebu generic machine */
++#define CONFIG_SYS_BOOTMAPSZ	(16 << 20)	/* Initial Memory map for Linux */
++#define CONFIG_CMDLINE_TAG              1	/* enable passing of ATAGs  */
++#define CONFIG_CMDLINE_EDITING          1
++#define CONFIG_INITRD_TAG               1       /* enable INITRD tag for ramdisk data */
++#define CONFIG_SETUP_MEMORY_TAGS        1
++#define CONFIG_MARVELL_TAG
++#define ATAG_MARVELL                    0x41000403
++#define CONFIG_ZERO_BOOTDELAY_CHECK
++#define CONFIG_SYS_LOAD_ADDR		0x02000000      /* default load address	*/
++#define CONFIG_SYS_MIN_HDR_DEL_SIZE	0x100
++#undef  CONFIG_BOOTARGS
++
++/* Recovery */
++#ifdef MV_INCLUDE_RCVR
++#define CONFIG_CMD_RCVR
++#define RCVR_IP_ADDR			"169.254.100.100"
++#define RCVR_LOAD_ADDR			"0x02000000"
++#endif /* MV_INCLUDE_RCVR */
++
++/* Parser */
++#define CONFIG_SYS_HUSH_PARSER
++#define CONFIG_AUTO_COMPLETE
++#define CONFIG_SYS_PROMPT_HUSH_PS2      "> "
++#define CONFIG_SYS_LONGHELP             /* undef to save memory	*/
++#define CONFIG_SYS_PROMPT               "Marvell>> "  /* Command Prompt	*/
++#define CONFIG_SYS_CBSIZE               1024          /* Console I/O Buffer Size */
++#define CONFIG_SYS_PBSIZE               (CONFIG_SYS_CBSIZE + sizeof(CONFIG_SYS_PROMPT) + 16)  /* Print Buffer Size */
++#define CONFIG_LOADS_ECHO		0       /* Echo off for serial download */
++#define CONFIG_SYS_CONSOLE_INFO_QUIET		/* Don't print In/Out/Err console assignment. */
++
++
++/* Default Env vars */
++#define CONFIG_SYS_BARGSIZE             CONFIG_SYS_CBSIZE       /* Boot Argument Buffer Size */
++#define CONFIG_BOOTDELAY                3
++#define CONFIG_ROOTPATH                 "/srv/nfs/"             /* Default Dir for NFS */
++#define MV_BOOTARGS_END			":10.4.50.254:255.255.255.0:Marvell:eth0:none"
++#define MV_BOOTARGS_END_SWITCH		":::Marvell:eth0:none"
++
++/* U-Boot Commands */
++/* #define CONFIG_BOOTP_MASK       (CONFIG_BOOTP_DEFAULT | CONFIG_BOOTP_BOOTFILESIZE) */
++#define CONFIG_CMD_BSP		/* Enable board specfic commands */
++#define CONFIG_CMD_ELF
++#define CONFIG_CMD_STAGE_BOOT
++
++
++/* No flash setup */
++#if !defined(MV_INCLUDE_NOR) && !defined(MV_INCLUDE_NAND) && !defined(MV_INCLUDE_SPI)
++	#undef CONFIG_CMD_FLASH
++	#undef CONFIG_CMD_IMLS
++	#define CONFIG_ENV_IS_NOWHERE
++	#define CONFIG_ENV_SIZE		0x10000  /* environment takes one erase block */
++	#define CONFIG_SYS_NO_FLASH
++#endif
++
++
++/*********  IO Definitions **********/
++
++/* UART */
++#ifdef MV_INCLUDE_UART
++	#define CONFIG_SYS_NS16550
++	#define CONFIG_SYS_NS16550_SERIAL
++	#define CONFIG_SYS_NS16550_MEM32
++	#define CONFIG_SYS_NS16550_REG_SIZE	(-4)
++	#define CONFIG_SYS_NS16550_COM1		MVEBU_UART_BASE(0)
++	#define CONFIG_SYS_NS16550_CLK		200000000
++	#define CONFIG_CONS_INDEX		1
++	#define CONFIG_BAUDRATE			115200
++	#define CONFIG_SYS_LOADS_BAUD_CHANGE	/* allow baudrate changes */
++	/*#define CONFIG_SYS_DUART_CHAN		0*/
++#endif /* MV_INCLUDE_UART */
++
++
++/* GPIO */
++#ifdef MV_INCLUDE_GPIO
++	#define CONFIG_KIRKWOOD_GPIO
++#endif /* MV_INCLUDE_GPIO */
++
++/* I2C */
++#if defined(MV_INCLUDE_I2C)
++	#define CONFIG_CMD_MVEBU_SAR
++	#define CONFIG_CMD_MVEBU_CONFIG
++	#define CONFIG_CMD_EEPROM
++	#define CONFIG_CMD_I2C
++	#define CONFIG_I2C_MVEBU
++	#define CONFIG_I2C_MULTI_BUS
++	#define CONFIG_SYS_MAX_I2C_BUS          2
++	#define CONFIG_SYS_I2C_EEPROM_ADDR_LEN  1
++	#define CONFIG_SYS_I2C_MULTI_EEPROMS
++	#define CONFIG_SYS_I2C_SLAVE		0x0
++	#define CONFIG_SYS_I2C_SPEED            100000  /* I2C speed default */
++#endif
++
++/* RTC */
++#if defined(MV_INCLUDE_RTC)
++	#define CONFIG_CMD_DATE
++	#define CONFIG_RTC_MVEBU
++	#define CONFIG_SYS_NVRAM_SIZE  0x00                     /* dummy */
++	#define CONFIG_SYS_NVRAM_BASE_ADDR DEVICE_CS1_BASE      /* dummy */
++#endif
++
++/* USB */
++#ifdef MV_INCLUDE_USB
++	#define CONFIG_CMD_USB
++	#define CONFIG_USB_STORAGE
++	#define CONFIG_USB_EHCI
++	#define CONFIG_USB_EHCI_MARVELL
++	#define CONFIG_EHCI_IS_TDI
++	#define CONFIG_DOS_PARTITION
++	#define CONFIG_ISO_PARTITION
++	#define ENV_USB0_MODE   "host"
++	#define ENV_USB1_MODE   "host"
++	#define ENV_USB2_MODE   "device"
++	#define ENV_USB_ACTIVE  "0"
++#endif
++
++/* MMC-SD */
++#if MV_INCLUDE_SDIO
++	#define  CONFIG_MMC
++	#define  CONFIG_CMD_MMC
++	#define  CONFIG_GENERIC_MMC
++	#define  CONFIG_MRVL_MMC
++	#define  CONFIG_SYS_MMC_BASE
++	#define  CONFIG_SYS_MMC_MAX_DEVICE
++#endif
++
++/* PCI */
++#ifdef MV_INCLUDE_PEX
++	#define CONFIG_PCI
++	#define CONFIG_CMD_PCI
++	#define CONFIG_PCI_HOST PCI_HOST_FORCE  /* select pci host function     */
++	#define CONFIG_PCI_PNP                  /* do pci plug-and-play         */
++
++	/* PnP PCI Network cards */
++	#define CONFIG_EEPRO100 /* Support for Intel 82557/82559/82559ER chips */
++	#define CONFIG_E1000
++	/*#define CONFIG_SK98
++	#define YUK_ETHADDR                     "00:00:00:EE:51:81"*/
++
++	#undef MV_MEM_OVER_PEX_WA
++
++	#define PCI_HOST_ADAPTER 0      /* configure ar pci adapter     */
++	#define PCI_HOST_FORCE   1      /* configure as pci host        */
++	#define PCI_HOST_AUTO    2      /* detected via arbiter enable  */
++
++#endif /* MV_INCLUDE_PEX */
++
++
++/* Network */
++#ifdef CONFIG_MV_ETH_NETA
++	#define CONFIG_CMD_NET
++	#define CONFIG_CMD_DHCP
++	#define CONFIG_CMD_PING
++	#define MV_INCLUDE_GIG_ETH
++	#define CONFIG_MV_INCLUDE_GIG_ETH
++	#define MV_ETH_NETA
++	#define CONFIG_NET_MULTI
++	#define CONFIG_IPADDR           10.4.50.154
++	#define CONFIG_SERVERIP         10.4.50.3
++	#define CONFIG_NETMASK          255.255.255.0
++	#define ETHADDR                 "00:00:00:00:51:81"
++	#define ENV_ETH_PRIME           "egiga0"
++#else
++	#undef CONFIG_CMD_NET
++#endif /* CONFIG_MV_ETH_NETA */
++
++/* IDE / SATA */
++#ifdef MV_INCLUDE_SATA
++	#define __io
++
++	#define CONFIG_CMD_SCSI
++	#define CONFIG_CMD_EXT2
++	#define CONFIG_CMD_EXT4
++	#define CONFIG_FS_EXT4
++	#define CONFIG_CMD_EXT4_WRITE
++	#define CONFIG_EXT4_WRITE
++	#define CONFIG_CMD_JFFS2
++	#define CONFIG_CMD_FAT
++	#define CONFIG_FS_FAT
++	#define CONFIG_SUPPORT_VFAT
++	#define CONFIG_CMD_IDE
++
++	#define CONFIG_SYS_ATA_BASE_ADDR        0x20000000
++	#define CONFIG_SYS_ATA_REG_OFFSET       0x0000          /* Offset for normal register accesses*/
++	#define CONFIG_SYS_ATA_DATA_OFFSET      0x0000          /* Offset for data I/O */
++
++	#undef CONFIG_IDE_8xx_PCCARD		/* Use IDE with PC Card	Adapter	*/
++
++	#undef	CONFIG_IDE_8xx_DIRECT		/* Direct IDE    not supported	*/
++	#undef	CONFIG_IDE_LED			/* LED   for ide not supported	*/
++	#undef	CONFIG_IDE_RESET		/* reset for ide not supported	*/
++
++	#define CONFIG_SYS_IDE_MAXBUS		4				/* max. 1 IDE bus		*/
++	#define CONFIG_SYS_IDE_MAXDEVICE	CONFIG_SYS_IDE_MAXBUS * 8	/* max. 1 drive per IDE bus	*/
++
++	#define CONFIG_SYS_ATA_IDE0_OFFSET	0x0000
++
++	#undef CONFIG_MAC_PARTITION
++	#define CONFIG_DOS_PARTITION
++	#define CONFIG_EFI_PARTITION
++
++	#define CONFIG_SYS_64BIT_LBA			/*    Support disk over 2TB        */
++
++	#define CONFIG_LBA48
++	/* #define CONFIG_SCSI_AHCI */
++	#ifdef CONFIG_SCSI_AHCI
++		#define CONFIG_SATA_6121
++		#define CONFIG_SYS_SCSI_MAX_SCSI_ID	4
++		#define CONFIG_SYS_SCSI_MAX_LUN	1
++		#define CONFIG_SYS_SCSI_MAX_DEVICE	(CONFIG_SYS_SCSI_MAX_SCSI_ID * CONFIG_SYS_SCSI_MAX_LUN)
++	#endif /* CONFIG_SCSI_AHCI */
++
++	#define CONFIG_SCSI_MV94XX
++	#ifdef CONFIG_SCSI_MV94XX
++		#define CONFIG_SYS_SCSI_MAX_SCSI_ID	40 /*8 PM * 5 sata port*/
++		#define CONFIG_SYS_SCSI_MAX_LUN	1
++		#define CONFIG_SYS_SCSI_MAX_DEVICE	(CONFIG_SYS_SCSI_MAX_SCSI_ID * CONFIG_SYS_SCSI_MAX_LUN)
++	#endif /* CONFIG_SCSI_AHCI */
++#endif /* MV_INCLUDE_SATA */
++
++/* NAND */
++#ifdef MV_INCLUDE_NAND
++	#define NFLASH_CS_BASE 0xfd000000 /* not relevant for the new controller */
++	#define NFLASH_CS_SIZE _2M
++	#define DEVICE_CS0_BASE		NFLASH_CS_BASE
++	#define DEVICE_CS0_SIZE		NFLASH_CS_SIZE
++	#define CONFIG_SYS_NAND_BASE	DEVICE_CS0_BASE
++
++	#ifndef RD_78460_SERVER_REV2
++		#define CONFIG_CMD_NAND
++		#define CONFIG_CMD_NAND_TRIMFFS  /*  add this line to support "nand write.trimffs" command */
++	#endif
++	#define CONFIG_SYS_MAX_NAND_DEVICE 1
++
++	#if defined(CONFIG_MTD_NAND_LNC)
++		/* Use Software BCH */
++		#define CONFIG_BCH
++		#define CONFIG_NAND_ECC_BCH
++		#define MV_NAND_1CS_MODE
++		/* Allow to use both NAND and NOR at once */
++		#define MTD_NAND_LNC_WITH_NOR
++	#elif defined(CONFIG_MTD_NAND_NFC)
++		/* #define CONFIG_NAND_RS_ECC_SUPPORT */
++		#define CONFIG_MV_MTD_GANG_SUPPORT
++		#define CONFIG_MV_MTD_MLC_NAND_SUPPORT
++		#define CONFIG_SYS_64BIT_VSPRINTF
++		#define CONFIG_SKIP_BAD_BLOCK
++		#undef MV_NFC_DBG
++
++		#define MV_NAND_PIO_MODE
++		#define MV_NAND_1CS_MODE
++	#ifndef MV_NAND_READ_OOB
++		#define MV_NAND_4BIT_MODE
++	#endif
++		#define MTD_NAND_NFC_INIT_RESET
++	#endif /* CONFIG_MTD_NAND_NFC */
++
++	#if defined(MV_NAND_2CS_MODE)
++		#define CONFIG_SYS_NAND_MAX_CHIPS 2
++	#elif defined(MV_NAND_1CS_MODE)
++		#define CONFIG_SYS_NAND_MAX_CHIPS 1
++	#endif
++
++	/* Boot from NAND settings */
++	#if defined(MV_NAND_BOOT)
++		#define CONFIG_ENV_IS_IN_NAND
++
++		#define CONFIG_ENV_SIZE                 0x80000  /* environment takes one erase block */
++		#define CONFIG_ENV_OFFSET               nand_get_env_offs() /* environment starts here  */
++		#define CONFIG_ENV_ADDR                 CONFIG_ENV_OFFSET
++		#define MONITOR_HEADER_LEN              0x200
++		#define CONFIG_SYS_MONITOR_BASE         0
++		#define CONFIG_SYS_MONITOR_LEN          0x80000           /* Reserve 512 kB for Monitor */
++		#define CONFIG_ENV_RANGE                CONFIG_ENV_SIZE * 8
++
++		#define MV_NBOOT_BASE                   0
++		#define MV_NBOOT_LEN                    (4 << 10)       /* Reserved 4KB for boot strap */
++	#endif /* MV_NAND_BOOT */
++#endif /* MV_INCLUDE_NAND */
++
++/* SPI Flash */
++#ifdef MV_INCLUDE_SPI
++	#define CONFIG_MVEBU_SPI
++	#define CONFIG_CMD_SPI
++	#define CONFIG_CMD_SF
++	#define CONFIG_SPI_FLASH
++	#define CONFIG_SPI_FLASH_STMICRO
++	#define CONFIG_SPI_FLASH_MACRONIX
++	#define CONFIG_ENV_SPI_MAX_HZ           10000000        /*Max 50Mhz- will sattle on SPI bus max 41.5Mhz */
++	#define CONFIG_ENV_SPI_CS               0
++	#define CONFIG_ENV_SPI_BUS              0
++
++	#ifndef CONFIG_SF_DEFAULT_SPEED
++	#define CONFIG_SF_DEFAULT_SPEED        1000000
++	#endif
++
++	#ifndef CONFIG_SF_DEFAULT_MODE
++	#define CONFIG_SF_DEFAULT_MODE         SPI_MODE_3
++	#endif
++
++	/* Boot from SPI settings */
++	#if defined(MV_SPI_BOOT)
++	#define CONFIG_ENV_IS_IN_SPI_FLASH
++
++	#if defined(MV_SEC_64K)
++	#define CONFIG_ENV_SECT_SIZE            0x10000
++	#elif defined(MV_SEC_128K)
++	#define CONFIG_ENV_SECT_SIZE            0x20000
++	#elif defined(MV_SEC_256K)
++	#define CONFIG_ENV_SECT_SIZE            0x40000
++	#endif
++
++	#define CONFIG_ENV_SIZE		CONFIG_ENV_SECT_SIZE    /* environment takes one sector */
++	#define CONFIG_ENV_OFFSET	0x100000    /* (1MB For Image) environment starts here  */
++	#define CONFIG_ENV_ADDR		CONFIG_ENV_OFFSET
++	#define MONITOR_HEADER_LEN	0x200
++	#define CONFIG_SYS_MONITOR_BASE	0
++	#define CONFIG_SYS_MONITOR_LEN	0x80000        /*(512 << 10) Reserve 512 kB for Monitor */
++
++	#ifndef MV_INCLUDE_NOR
++	#ifdef MV_BOOTROM
++	#define CONFIG_SYS_FLASH_BASE           DEVICE_SPI_BASE
++	#define CONFIG_SYS_FLASH_SIZE           _16M
++	#else
++	#define CONFIG_SYS_FLASH_BASE           BOOTDEV_CS_BASE
++	#define CONFIG_SYS_FLASH_SIZE           BOOTDEV_CS_SIZE
++	#endif  /* MV_BOOTROM */
++	#endif  /* MV_INCLUDE_NOR */
++	#endif  /* MV_SPI_BOOT */
++#endif  /* MV_INCLUDE_SPI */
++
++
++/* NOR Flash */
++#ifdef MV_INCLUDE_NOR
++
++	#define DEVICE_CS0_BASE NOR_CS_BASE
++	#define DEVICE_CS0_SIZE NOR_CS_SIZE
++
++	#define CONFIG_SYS_MAX_FLASH_BANKS              1
++
++	#define CONFIG_SYS_FLASH_CFI
++	#define CONFIG_SYS_FLASH_PROTECTION
++	#define CONFIG_FLASH_CFI_DRIVER
++
++	#define CONFIG_SYS_MAX_FLASH_SECT               128
++	#define CONFIG_SYS_FLASH_BASE                   NOR_CS_BASE
++	#define CONFIG_SYS_FLASH_CFI_WIDTH              FLASH_CFI_8BIT
++
++	#define CONFIG_FLASH_SHOW_PROGRESS              1
++	#define CONFIG_SYS_FLASH_EMPTY_INFO
++	#define CONFIG_SYS_FLASH_USE_BUFFER_WRITE
++
++	#define CONFIG_CMD_FLASH
++	#undef  CONFIG_CMD_IMLS
+ 
+-#define CONFIG_SYS_PROMPT		"Marvell>> "
++	#if defined(MV_NOR_BOOT)
++	#define CONFIG_ENV_IS_IN_FLASH
++	#define CONFIG_ENV_SIZE                 0x10000
++	#define CONFIG_ENV_SECT_SIZE            0x10000
++	#define CONFIG_ENV_OFFSET               0x60000
++	#define CONFIG_ENV_RANGE                CONFIG_ENV_SIZE * 8
++	#define CONFIG_ENV_ADDR                 (NOR_CS_BASE + CONFIG_ENV_OFFSET)
++	#define MONITOR_HEADER_LEN              0x200
++	#define CONFIG_SYS_MONITOR_LEN          0x70000 /* 448 K */
++	#define CONFIG_SYS_MONITOR_BASE		(0 + CONFIG_ENV_SECT_SIZE)
++	#define CONFIG_SYS_MONITOR_END		(CONFIG_SYS_MONITOR_BASE + CONFIG_SYS_MONITOR_LEN)
++	#endif /* MV_NOR_BOOT */
++#endif /* MV_INCLUDE_NOR */
+ 
+ #endif /* _MVEBU_COMMON_H_ */
+-- 
+1.9.1
+

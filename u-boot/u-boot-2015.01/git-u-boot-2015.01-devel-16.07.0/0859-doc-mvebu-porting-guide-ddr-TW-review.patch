@@ -1,0 +1,50 @@
+From 44e5049d4cac83bd0361ab425dbc2babc1c33161 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Sun, 14 Feb 2016 17:43:34 +0200
+Subject: [PATCH 0859/1240] doc: mvebu: porting guide ddr - TW review
+
+Change-Id: Ib02f402cc7a92b46b5cf824b1cdb01a52a955600
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27493
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ doc/device-tree-bindings/ddr/mvebu_ddr.txt | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/doc/device-tree-bindings/ddr/mvebu_ddr.txt b/doc/device-tree-bindings/ddr/mvebu_ddr.txt
+index 0692536..552ab50 100644
+--- a/doc/device-tree-bindings/ddr/mvebu_ddr.txt
++++ b/doc/device-tree-bindings/ddr/mvebu_ddr.txt
+@@ -1,17 +1,20 @@
+ Marvell DDR bindings
+ ====================
+ 
+-The DDR node includes description about the DDR controller and PHY configuration.
+-The driver runs in SPL mode, and is responsible to initial the DDR PHY and controller
+-according to user define paramters.
++The DDR node includes a description of the DDR controller and PHY configuration.
++The driver runs in SPL mode, and is responsible for initializing the DDR PHY and controller
++according to user-defined paramters.
+ 
+ DDR PHY mandatory properties:
++SoC specific:
+ 	- compatible: "marvell,mvebu-ddr-phy"
+ 	- reg: Base address of the DDR PHY registers.
+ 
+ DDR MAC mandatory properties:
++SoC specific:
+ 	- compatible: "marvell,mvebu-ddr-mac"
+ 	- reg: Base address of the DDR MAC registers.
++Board specific:
+ 	- cs_count: Number of DDR Chip-Selects on board.
+ 	- bus_width: DDR bus width
+ 	  One out of DDR_BUS_WIDTH_16, DDR_BUS_WIDTH_32, DDR_BUS_WIDTH_64
+@@ -36,4 +39,3 @@ Example:
+ 			size = <0x00000000 0x20000000>;
+ 		};
+ 	};
+-
+-- 
+1.9.1
+

@@ -1,0 +1,46 @@
+From 2245ba5e2283f9d6fb4d6c2257e5888b4910bb8e Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Mon, 1 Feb 2016 17:37:01 +0800
+Subject: [PATCH 0757/1240] fix: neta: a3700: remove neta1 node from
+ armada-lp-db.dts
+
+- For A3700, there is only one RGMII PHY, so in
+  armada-lp-db.dts, two neta interfaces all using
+  RGMII PHY is uncorrected.
+
+Change-Id: Iecc255ac05891d9d3fef2f4100d560123f435134
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27093
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/armada-lp-db.dts | 6 ------
+ 1 file changed, 6 deletions(-)
+
+diff --git a/arch/arm/dts/armada-lp-db.dts b/arch/arm/dts/armada-lp-db.dts
+index 8aaa82b..f8002c6 100644
+--- a/arch/arm/dts/armada-lp-db.dts
++++ b/arch/arm/dts/armada-lp-db.dts
+@@ -14,7 +14,6 @@
+  * PHY1 (PCIe/SGMII0)	:	PCIe (WiFi via mini_PCIe module)
+  * PHY2 (SATA)		:	SATA
+  * RGMII-0		:	Ethernet via PHY (1 Lane)
+- * RGMII-1		:	Ethernet via PHY (1 Lane)
+  * USB2 Port 0		:	USB2 as part USB3
+  * USB2 Port 1		:	USB2 Host
+  * eMMC*		:	eMMC NAND
+@@ -50,11 +49,6 @@
+ 				phy_addr = <0x0>;
+ 				phy_mode = "rgmii";
+ 			};
+-			neta1: neta@40000 {
+-				status = "okay";
+-				phy_addr = <0x1>;
+-				phy_mode = "rgmii";
+-			};
+ 			i2c: i2c@11000 {
+ 				status = "okay";
+ 			};
+-- 
+1.9.1
+

@@ -1,0 +1,38 @@
+From 5d0fabe190323a4fa837414e5000db2f7b8d199e Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Wed, 17 Feb 2016 21:42:54 +0800
+Subject: [PATCH 0876/1240] fix: bubt: mvebu: fix bubt failure after running
+ tftp command
+
+- Issue found when load a u-boot to the flash using bubt command,
+  and bubt command use the saved load address (in global variable in u-boot)
+  the global variable may be updated if the u-boot failed to get file from network
+- This patch update the load_addr global variable before tftp image to be the load
+  address in DRAM to make sure that bubt load to the right address.
+- SYSTEMSW-2281
+
+Change-Id: I7c725488a658b56e928b11c59fd57690350dbe9a
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27565
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ common/mvebu/cmd_bubt.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/common/mvebu/cmd_bubt.c b/common/mvebu/cmd_bubt.c
+index 79bfabe..269bba9 100644
+--- a/common/mvebu/cmd_bubt.c
++++ b/common/mvebu/cmd_bubt.c
+@@ -357,6 +357,8 @@ int is_usb_active(void)
+ #ifdef CONFIG_CMD_NET
+ static int tftp_read_file(const char *file_name)
+ {
++	/* update global variable load_addr before tftp file from network */
++	load_addr = get_load_addr();
+ 	return NetLoop(TFTPGET);
+ }
+ 
+-- 
+1.9.1
+

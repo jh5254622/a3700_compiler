@@ -1,0 +1,130 @@
+From f70d31673b4cf1d7c9a26a588a847d466af18f19 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 9 Mar 2016 15:11:40 +0200
+Subject: [PATCH 049/239] a7040: ble: add support for ble compilation
+
+Change-Id: I77a7bad4bf625fd368268ba0cc4622cc196e7c29
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28148
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ .../plat/marvell/a8k/a7040_rz/board/common/board_marvell_def.h   | 5 +++++
+ include/plat/marvell/a8k/common/arm_def.h                        | 6 ++++++
+ plat/marvell/a8k/a7040_rz/aarch64/a7040_rz_common.c              | 9 +++++++++
+ plat/marvell/a8k/a7040_rz/include/platform_def.h                 | 3 +++
+ plat/marvell/a8k/a7040_rz/platform.mk                            | 3 +++
+ plat/marvell/a8k/apn806/platform.mk                              | 3 +++
+ 6 files changed, 29 insertions(+)
+
+diff --git a/include/plat/marvell/a8k/a7040_rz/board/common/board_marvell_def.h b/include/plat/marvell/a8k/a7040_rz/board/common/board_marvell_def.h
+index eb0f24a..945f763 100644
+--- a/include/plat/marvell/a8k/a7040_rz/board/common/board_marvell_def.h
++++ b/include/plat/marvell/a8k/a7040_rz/board/common/board_marvell_def.h
+@@ -91,6 +91,9 @@
+  * PLAT_MARVELL_MMAP_ENTRIES depends on the number of entries in the
+  * plat_arm_mmap array defined for each BL stage.
+  */
++#if IMAGE_BLE
++#  define PLAT_MARVELL_MMAP_ENTRIES	3
++#endif
+ #if IMAGE_BL1
+ #  if TRUSTED_BOARD_BOOT
+ #   define PLAT_MARVELL_MMAP_ENTRIES	7
+@@ -110,6 +113,8 @@
+  */
+ #if IMAGE_BL1
+ #define MAX_XLAT_TABLES			4
++#elif IMAGE_BLE
++#  define MAX_XLAT_TABLES		4
+ #elif IMAGE_BL2
+ #  define MAX_XLAT_TABLES		4
+ #elif IMAGE_BL31
+diff --git a/include/plat/marvell/a8k/common/arm_def.h b/include/plat/marvell/a8k/common/arm_def.h
+index de4ef3e..df8471a 100644
+--- a/include/plat/marvell/a8k/common/arm_def.h
++++ b/include/plat/marvell/a8k/common/arm_def.h
+@@ -248,6 +248,12 @@
+ #define BL1_RW_LIMIT		(MARVELL_BL_RAM_BASE + MARVELL_BL_RAM_SIZE)
+ 
+ /*******************************************************************************
++ * BLE specific defines.
++ ******************************************************************************/
++#define BLE_BASE			PLAT_MARVELL_SRAM_BASE
++#define BLE_LIMIT			PLAT_MARVELL_SRAM_END
++
++/*******************************************************************************
+  * BL2 specific defines.
+  ******************************************************************************/
+ /*
+diff --git a/plat/marvell/a8k/a7040_rz/aarch64/a7040_rz_common.c b/plat/marvell/a8k/a7040_rz/aarch64/a7040_rz_common.c
+index 0e64e06..38486a6 100644
+--- a/plat/marvell/a8k/a7040_rz/aarch64/a7040_rz_common.c
++++ b/plat/marvell/a8k/a7040_rz/aarch64/a7040_rz_common.c
+@@ -58,12 +58,21 @@ const mmap_region_t plat_arm_mmap[] = {
+ 	{0}
+ };
+ #endif
++
+ #if IMAGE_BL2U
+ const mmap_region_t plat_arm_mmap[] = {
+ 	MAP_DEVICE0,
+ 	{0}
+ };
+ #endif
++
++#if IMAGE_BLE
++const mmap_region_t plat_arm_mmap[] = {
++	MAP_DEVICE0,
++	{0}
++};
++#endif
++
+ #if IMAGE_BL31
+ const mmap_region_t plat_arm_mmap[] = {
+ 	MARVELL_MAP_SHARED_RAM,
+diff --git a/plat/marvell/a8k/a7040_rz/include/platform_def.h b/plat/marvell/a8k/a7040_rz/include/platform_def.h
+index dcc591a..c5d1ab2 100644
+--- a/plat/marvell/a8k/a7040_rz/include/platform_def.h
++++ b/plat/marvell/a8k/a7040_rz/include/platform_def.h
+@@ -102,6 +102,9 @@ Trusted SRAM section 0x4000000..0x4200000:
+ #define PLAT_ALLOW_ZERO_ADDR_COPY
+ #endif
+ 
++#define PLAT_MARVELL_SRAM_BASE	0xFFE1C048
++#define PLAT_MARVELL_SRAM_END	0xFFE3C000
++
+ #define PLAT_MARVELL_ATF_BASE			0x4000000
+ #define PLAT_MARVELL_ATF_LOAD_ADDR		(PLAT_MARVELL_ATF_BASE + 0x100000)
+ 
+diff --git a/plat/marvell/a8k/a7040_rz/platform.mk b/plat/marvell/a8k/a7040_rz/platform.mk
+index c1c2880..5ed2790 100644
+--- a/plat/marvell/a8k/a7040_rz/platform.mk
++++ b/plat/marvell/a8k/a7040_rz/platform.mk
+@@ -65,6 +65,9 @@ PLAT_BL_COMMON_SOURCES	:=	$(PLAT_SRC_BASE)/aarch64/a7040_rz_common.c	\
+ 				drivers/console/console.S							\
+ 				drivers/ti/uart/16550_console.S
+ 
++BLE_SOURCES		:=	$(PLAT_SRC_BASE)/dram_setup.c			\
++				plat/marvell/common/sys_info.c
++
+ BL1_SOURCES		+=	$(PLAT_SRC_BASE)/aarch64/plat_helpers.S	\
+ 				lib/cpus/aarch64/cortex_a72.S
+ 
+diff --git a/plat/marvell/a8k/apn806/platform.mk b/plat/marvell/a8k/apn806/platform.mk
+index 03874b9..687df30 100644
+--- a/plat/marvell/a8k/apn806/platform.mk
++++ b/plat/marvell/a8k/apn806/platform.mk
+@@ -68,6 +68,9 @@ PLAT_BL_COMMON_SOURCES	:=	$(PLAT_SRC_BASE)/aarch64/a7040_rz_common.c	\
+ 				drivers/console/console.S							\
+ 				drivers/ti/uart/16550_console.S
+ 
++BLE_SOURCES		:=	$(PLAT_SRC_BASE)/dram_setup.c			\
++				plat/marvell/common/sys_info.c
++
+ BL1_SOURCES		+=	$(PLAT_SRC_BASE)/aarch64/plat_helpers.S	\
+ 				lib/cpus/aarch64/cortex_a72.S
+ 
+-- 
+1.9.1
+

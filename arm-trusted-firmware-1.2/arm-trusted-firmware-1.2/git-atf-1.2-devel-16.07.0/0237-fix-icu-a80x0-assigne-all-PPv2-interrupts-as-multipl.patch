@@ -1,0 +1,69 @@
+From ffeddda0d9f36dc0e71029ab8bbf762f3f68406d Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Tue, 28 Jun 2016 12:12:29 +0300
+Subject: [PATCH 237/239] fix: icu: a80x0: assigne all PPv2 interrupts as
+ multiple for CP1
+
+PPv2 interrupts ICU_ID[55-59] were assigned as single interrupts
+(same SPI ID for all CPs)
+
+These interrupts need dedicated SPI ID's for CP1 PPv2, so they are now
+reassigned as multi interrupts (duplicated with unique SPI_IDs for each CP)
+
+Current SPI_ID assignment is kept the same, since used the same
+SPI ID's as before: SPI_ID[60-63].
+
+ICU_ID	CP0_SPI_ID	CP0_GIC_SPI	CP1_SPI_ID	CP0_GIC_SPI
+55	60		92		124		316
+56	61		93		125		317
+57	62		94		126		318
+58	63		95		127		329
+
+Change-Id: I3dbcd0aba0f8757d0b9c5f6e8cdaee3b82ef4bae
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30773
+Verified-Armada8K: Yuval Caduri <cyuval@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ drivers/marvell/icu.c | 15 ++++++++-------
+ 1 file changed, 8 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/marvell/icu.c b/drivers/marvell/icu.c
+index 19d2f4a..a39b084 100644
+--- a/drivers/marvell/icu.c
++++ b/drivers/marvell/icu.c
+@@ -128,6 +128,14 @@ static struct icu_irq irq_map_ns_multi[] = {
+ 	{127, 34, 0}, /* GOP-3 irq */
+ 	{128, 35, 0}, /* GOP-2 irq */
+ 	{129, 36, 0}, /* GOP-0 irq */
++
++	/* PPv2 interrupts which originally assigned as single interrupts.
++	 * To avoid updating Device tree, left original SPI assignment 60-63,
++	 * hence there is a gap between previous multi interrupts */
++	{55, 60, 0}, /* PPv2 irq */
++	{56, 61, 0}, /* PPv2 irq */
++	{57, 62, 0}, /* PPv2 irq */
++	{58, 63, 0}, /* PPv2 irq */
+ };
+ 
+ /* Single instance sources, not multiplies in dual CP mode */
+@@ -155,13 +163,6 @@ static struct icu_irq irq_map_ns_single[] = {
+ 	{123, 57, 0}, /* UART 1 irq */
+ 	{124, 58, 0}, /* UART 2 irq */
+ 	{125, 59, 0}, /* UART 3 irq */
+-
+-	/* Temporary PPv2 interrupts
+-	 * should be moved to second interrupt bank */
+-	{55, 60, 0}, /* PPv2 irq */
+-	{56, 61, 0}, /* PPv2 irq */
+-	{57, 62, 0}, /* PPv2 irq */
+-	{58, 63, 0}, /* PPv2 irq */
+ };
+ 
+ /* SEI - System Error Interrupts */
+-- 
+1.9.1
+

@@ -1,0 +1,156 @@
+From 12affce36c773633cb7d5b7ac26386cb3f865751 Mon Sep 17 00:00:00 2001
+From: Terry Zhou <bjzhou@marvell.com>
+Date: Sun, 26 Jun 2016 16:45:23 +0300
+Subject: [PATCH 1224/1240] dts: a3700: add support for DDR4 modular board
+
+Added new DTS and new BoardID for DDR4 modular board.
+
+Change-Id: Iecb9b553360dd1a00a38d9122d6eff6f258c851e
+Signed-off-by: Terry Zhou <bjzhou@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30326
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/dts/Makefile                             |  1 +
+ arch/arm/dts/armada-3700-ddr4-db.dts              | 27 +++++++++++++++++++++++
+ arch/arm/include/asm/arch-armada3700/board-info.h | 20 ++++++-----------
+ include/dt-bindings/multi-fdt/multi-fdt.h         | 22 +++++++++++++-----
+ 4 files changed, 52 insertions(+), 18 deletions(-)
+ create mode 100644 arch/arm/dts/armada-3700-ddr4-db.dts
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index 55fe2f4..5e67c14 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -59,6 +59,7 @@ ifndef CONFIG_DEVEL_BOARD
+ dtb-y += armada-3700-customer0.dtb
+ endif #CONFIG_DEVEL_BOARD
+ dtb-$(CONFIG_DEVEL_BOARD) += armada-3700-db.dtb \
++			     armada-3700-ddr4-db.dtb \
+ 			     armada-3700-db-sgmii1.dtb \
+ 			     armada-3700-db-sfp2_5g.dtb
+ endif #CONFIG_TARGET_ARMADA_3700
+diff --git a/arch/arm/dts/armada-3700-ddr4-db.dts b/arch/arm/dts/armada-3700-ddr4-db.dts
+new file mode 100644
+index 0000000..33e72d9
+--- /dev/null
++++ b/arch/arm/dts/armada-3700-ddr4-db.dts
+@@ -0,0 +1,27 @@
++
++#include "armada-3700-db.dts"
++
++/* detail board setup:
++ * Pcie Jumper slot	:	DB-88F3720-PCIe-mPCIe-Jumper
++ * SGMII module slot	:	DB-88F3720-SerDes-Jumper
++ * RGMII module slot	:	DB-88F3720-PHY module
++ * eMMC slot		:	DB-88F3720-eMMC_NAND module
++ * SDIO slot		:	DB-88F3720-SDcard module
++ *
++ * PHY0 (USB3/SGMII1)	:	USB3
++ * PHY1 (PCIe/SGMII0)	:	PCIe (WiFi via mini_PCIe module)
++ * PHY2 (SATA)		:	SATA
++ * RGMII-0		:	Ethernet via PHY (1 Lane)
++ * USB2 Port 0		:	USB2 as part USB3
++ * USB2 Port 1		:	USB2 Host
++ * eMMC*		:	eMMC NAND
++ * SDIO*		:	SD card
++ * BOOT device*		:	SPI Flash
++*/
++
++/ {
++	model = "DB-88F3720-DDR4-Modular";
++	compatible = "marvell,armada-3700-db0", "marvell,armada-3700";
++	fdt_config_id = <A3700_DDR4_DB_CONFIG_ID_DEFAULT>;
++	board_id = <A3700_DDR4_DB_ID>;
++};
+diff --git a/arch/arm/include/asm/arch-armada3700/board-info.h b/arch/arm/include/asm/arch-armada3700/board-info.h
+index 793934d..d29f64b 100644
+--- a/arch/arm/include/asm/arch-armada3700/board-info.h
++++ b/arch/arm/include/asm/arch-armada3700/board-info.h
+@@ -20,15 +20,14 @@
+ #include <dt-bindings/multi-fdt/multi-fdt.h>
+ 
+ /*
+-	ARMAMA3700_MARVELL_BOARD_ID_BASE = 0x10, for multi-fdt feature,
+-	each Soc takes 0x10 boards that starts from 0x10, A8K has taken
+-	0x10 to 0x1f, but since A8K and A3700 would not be compiled
+-	together, to align with A8K, A3700 should also take 0x10 to 0x1f.
+-	And as A3700 DB, it is the first board, should take board_id as 0x10.
++	ARMAMA3700_MARVELL_BOARD_ID_BASE = 0x20, for multi-fdt feature,
++	each Soc takes 0x10 boards, so, A3700 should take 0x20 to 0x2f.
++	And as A3700 DB, it is the first board, should take board_id as 0x20.
+ */
+ #define ARMAMA3700_MARVELL_BOARD_ID_BASE	 A3700_DB_ID
+ #define ARMAMA3700_DB			(ARMAMA3700_MARVELL_BOARD_ID_BASE + 0)
+-#define ARMAMA3700_MARVELL_MAX_BOARD_ID	(ARMAMA3700_MARVELL_BOARD_ID_BASE + 1)
++#define ARMAMA3700_DDR4_DB		(ARMAMA3700_MARVELL_BOARD_ID_BASE + 1)
++#define ARMAMA3700_MARVELL_MAX_BOARD_ID	(ARMAMA3700_MARVELL_BOARD_ID_BASE + 2)
+ #define ARMAMA3700_MARVELL_BOARD_NUM	(ARMAMA3700_MARVELL_MAX_BOARD_ID - ARMAMA3700_MARVELL_BOARD_ID_BASE)
+ 
+ #define MARVELL_BOARD_ID_BASE		ARMAMA3700_MARVELL_BOARD_ID_BASE
+@@ -39,15 +38,10 @@
+ #define BOARD_DEV_TWSI_INIT_EEPROM 0x57
+ #define MULTI_FDT_EEPROM_ADDR_LEN 2
+ 
+-/*
+-	fdt_config_id is ID for each dts for a certain board.
+-	It starts from 1.
+-	+ arch/arm/dts/armada-lp-db.dts, board_id = A3700_DB_CONFIG_ID_USB3..
+-	+ arch/arm/dts/armada-lp-db-sgmii1.dts, board_id = A3700_DB_CONFIG_ID_SGMII1.
+-	+ arch/arm/dts/armada-lp-db-sfp2_5G.dts, board_id = A3700_DB_CONFIG_ID_SFP_2_5G
+-*/
+ #define DEFAULT_FDT_CONFIG_ID	A3700_DB_CONFIG_ID_USB3
++#define DEFAULT_DDR4_FDT_CONFIG_ID	A3700_DDR4_DB_CONFIG_ID_USB3
+ 
+ #define DEFAULT_FDT_PER_BOARD { \
+ 	DEFAULT_FDT_CONFIG_ID,	/* default fdt_config_id for armada-3700-db board */	\
++	DEFAULT_DDR4_FDT_CONFIG_ID,	/* default fdt_config_id for armada-3700-ddr4-db board */	\
+ }
+diff --git a/include/dt-bindings/multi-fdt/multi-fdt.h b/include/dt-bindings/multi-fdt/multi-fdt.h
+index c8197d5..41e63db 100644
+--- a/include/dt-bindings/multi-fdt/multi-fdt.h
++++ b/include/dt-bindings/multi-fdt/multi-fdt.h
+@@ -20,23 +20,35 @@
+ #define _MULTI_FDT_H_
+ 
+ #define A3700_DB_ID			0x20
++#define A3700_DDR4_DB_ID		0x21
+ /*
+- * There are two main presets for Armada3700 DB, between
+- * these two presets, most of the configurations are the same:
+-   - CPU 600MHz and DDR 600MHz
++ * There are three main presets for Armada3700 DB, between
++ * these three presets, most of the configurations are the same:
++   - CPU 800MHz and DDR 800MHz
+    - SATA
+    - neta0 - RGMII
+    - PCIe(COMPHY-0)
+  *
+  * The only difference is COMPHY-1
+  * preset 1: COMPHY-1 is working as USB3.
+- * preset 2. COMPHY-1 is working as SGMII-1
++ * preset 2. COMPHY-1 is working as SGMII-1 connected with PHY
++ * preset 3. COMPHY-1 is working as SGMII-1 connected with SFP2.5G
+  */
+ #define A3700_DB_CONFIG_ID_USB3		1
+ #define A3700_DB_CONFIG_ID_SGMII1	2
+ #define A3700_DB_CONFIG_ID_SFP_2_5G	3
+ 
++/*
++ * Add new preset for Armada3700 DDR4 DB
++   - CPU 1000MHz and DDR4 800MHz
++   - SATA
++   - neta0 - RGMII
++   - PCIe(COMPHY-0)
++   - USB3(COMPHY-1)
++ */
++#define A3700_DDR4_DB_CONFIG_ID_USB3 4
++
+ #define A3700_DB_CONFIG_ID_DEFAULT	A3700_DB_CONFIG_ID_USB3
++#define A3700_DDR4_DB_CONFIG_ID_DEFAULT	A3700_DDR4_DB_CONFIG_ID_USB3
+ 
+ #endif /* _MULTI_FDT_H_ */
+-
+-- 
+1.9.1
+

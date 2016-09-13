@@ -1,0 +1,67 @@
+From c961c90f7b7fc4257581dcb654c679a1fb6aecb2 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Tue, 10 Nov 2015 18:47:01 +0800
+Subject: [PATCH 0484/1240] armada3700: emmc: remove clock and address decode
+
+Since clock and io address decode window are set
+in dedicated modules, need to remove the clock setting
+and address decode window relevant code
+
+Change-Id: Ic815c50a0e0816267f3fc86f6153941b00fee286
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24709
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/mmc/xenon_mmc.c | 7 -------
+ include/xenon_mmc.h     | 9 ---------
+ 2 files changed, 16 deletions(-)
+
+diff --git a/drivers/mmc/xenon_mmc.c b/drivers/mmc/xenon_mmc.c
+index de9d0b8..3e39a0f 100644
+--- a/drivers/mmc/xenon_mmc.c
++++ b/drivers/mmc/xenon_mmc.c
+@@ -735,13 +735,6 @@ static int xenon_mmc_init(struct mmc *mmc)
+ 	debug("reg_base(%llx) version(%d) quirks(%x) clk(%d) bus_width(%d)\n",
+ 	      mmc_cfg->reg_base, mmc_cfg->version, mmc_cfg->quirks, mmc_cfg->clk, mmc_cfg->bus_width);
+ 
+-#ifdef CONFIG_PALLADIUM
+-	/* Enable clock */
+-	ctrl = readl(MVEBU_NB_CLK_BASE + ARLP_NB_CLK_SEL_REG);
+-	writel((ctrl | 0x1), MVEBU_NB_CLK_BASE + ARLP_NB_CLK_SEL_REG);
+-
+-#endif
+-
+ 	/* Set FIFO */
+ 	xenon_mmc_writel(mmc_cfg, SDHC_SLOT_FIFO_CTRL, 0x315);
+ 
+diff --git a/include/xenon_mmc.h b/include/xenon_mmc.h
+index 1950605..bff4a01 100644
+--- a/include/xenon_mmc.h
++++ b/include/xenon_mmc.h
+@@ -165,9 +165,6 @@
+ #define MMC_TIMING_MMC_HS200	8
+ #define MMC_TIMING_MMC_HS400	10
+ 
+-/* North bridge clock select offset*/
+-#define ARLP_NB_CLK_SEL_REG	0x10
+-
+ /* Data time out default value 0xE: TMCLK x 227 */
+ #define DATA_TIMEOUT_DEF_VAL	0xe
+ 
+@@ -181,12 +178,6 @@
+ 
+ #define  SDHCI_RETUNE_EVT_INTSIG	0x00001000
+ 
+-/* Fabric decode window */
+-#define SDHCI_WIN_CTRL(dev, win)		((MVEBU_SD_MMC_DECODE_BASE(dev) + (10 * win)))
+-#define SDHCI_WIN_BASE(dev, win)		((MVEBU_SD_MMC_DECODE_BASE(dev) + (10 * win) + 4))
+-#define SDHCI_WIN_REMAP(dev, win)		((MVEBU_SD_MMC_DECODE_BASE(dev) + (10 * win) + 8))
+-#define SDHCI_WIN_ATTR(dev)			((MVEBU_SD_MMC_DECODE_BASE(dev) + 0xE0))
+-
+ struct xenon_mmc_cfg {
+ 	u64 reg_base;
+ 	u32 version;
+-- 
+1.9.1
+

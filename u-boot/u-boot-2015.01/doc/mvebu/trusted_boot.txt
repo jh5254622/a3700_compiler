@@ -1,0 +1,104 @@
+###########################
+Trusted (secure mode) Boot
+###########################
+
+The trusted boot setup requires configuration of several components:
+- eFuse module - Allows burning boot device, authentication key digest, encryption key, etc.
+- boot image format - Provides the trusted boot information to BootROM.
+
+=========
+1. eFuses
+=========
+The eFuse command module and driver provides RW access to SoC eFuses through the "efuse" command.
+In order to enable this SW component, the following configuration entry should be set:
+	CONFIG_MVEBU_EFUSE_SUPPORT=y
+The same parameter can be selected using "make menuconfig":
+-> Device Drivers
+	-> eFuse support
+		-> eFuse support
+The above configuration enables the eFuse driver and eFuse command module.
+Please refer to SoC and BootROM manuals for details about supported eFuses
+and their role in the trusted boot flow.
+Since the eFuse command module and driver are only used for simplified access
+to eFuse HW values, the presence of these components in the final trusted boot image
+is not required.
+
+/////////////
+A8K platforms
+/////////////
+
+TBD
+
+///////////////
+A3700 platforms
+///////////////
+
+TBD
+
+====================
+2. Boot image format
+====================
+The boot image should be properly formatted for the trusted boot mode, so the BootROM extracts
+the required information from the image headers and uses it for authentication against eFuse
+values and digital signatures and for image decryption.
+Various platforms use different BootROMs and boot image formats. For a specific details please refer
+to the SoC functional specification, BootROM manual and to the section related to a selected platform below.
+
+/////////////
+A8K platforms
+/////////////
+
+TBD
+
+///////////////
+A3700 platforms
+///////////////
+
+TBD
+
+
+==================================
+3. Work order - target preparation
+==================================
+After the trusted boot mode is selected by SoC eFuse, the BootROM enforces security checks upon
+boot image load. Therefore a right work order is essential for target preparation and preventing
+the system from self-locking.
+
+/////////////
+A8K platforms
+/////////////
+
+TBD
+
+///////////////
+A3700 platforms
+///////////////
+
+1. Create an UNTRUSTED boot image with eFuse command module support (as stated in "eFuses" chapter above)
+   and burn it on target flash device using the regular "bubt" command.
+2. Create a TRUSTED boot image (as stated in "Boot image format" chapter above) and save it for later use.
+   When the trusted boot image is created, the the TBB tool saves the Key Authentication Key digest in file
+   named OtpHash.txt. This digest value will be used for eFuse programming so save this file.
+   The OtpHash.txt file lists the KAK digest in groups of 4-bytes values, organized in the following
+   order:
+       LSB
+       ...
+       ...
+       MSB
+   These values should be converted to a single 32-bytes value for eFuse burning:
+       MSB ... ... ... LSB.
+   For instance, the following OTP hash:
+       0x1887C298
+       0x59C9AFD9
+       0x6E814E34
+       0x25CD518B
+       0x3CDB7EED
+       0x33CC58B1
+       0x2C69997A
+       0xC27B7242
+   Will be used in the following form in eFuse KAK digest write command:
+       C27B72422C69997A33CC58B13CDB7EED25CD518B6E814E3459C9AFD91887C298
+3. Boot the target board with the UNTRUSTED boot image.
+4. Using the "efuse" command, program eFuse values as required, but do not reset the target board yet.
+5. Burn the TRUSTED boot image using regular "bubt" command.
+6. Reset the board and verify that the trusted boot mode works.

@@ -1,0 +1,62 @@
+From d27157ed717544eb120025f28f62d4e7fd2c5a92 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 16 Aug 2015 10:26:18 +0300
+Subject: [PATCH 0321/1240] Revert: e1000: fix sw fw sync on igb i210/i211
+
+This reverts commit 17da7120249bfdef877f46be5bbcb3cc01212eb9.
+
+The i210/i211 do have the SW_FW_SYNC (0x5b5c) register and this is what should
+be used when acquiring the semaphore.
+
+I believe the issue that this patch was trying to resolve is now resolved
+by properly releasing the semaphore once no longer needed.
+
+Change-Id: Icd414aabb2e6a7272abe375dfb87f8689dd2806b
+Signed-off-by: Tim Harvey <tharvey at gateworks.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22854
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/net/e1000.c | 6 ++----
+ drivers/net/e1000.h | 1 -
+ 2 files changed, 2 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/net/e1000.c b/drivers/net/e1000.c
+index 4becb7e..326c7db 100644
+--- a/drivers/net/e1000.c
++++ b/drivers/net/e1000.c
+@@ -1124,10 +1124,7 @@ e1000_swfw_sync_acquire(struct e1000_hw *hw, uint16_t mask)
+ 		if (e1000_get_hw_eeprom_semaphore(hw))
+ 			return -E1000_ERR_SWFW_SYNC;
+ 
+-		if (hw->mac_type == e1000_igb)
+-			swfw_sync = E1000_READ_REG(hw, I210_SW_FW_SYNC);
+-		else
+-			swfw_sync = E1000_READ_REG(hw, SW_FW_SYNC);
++		swfw_sync = E1000_READ_REG(hw, SW_FW_SYNC);
+ 		if (!(swfw_sync & (fwmask | swmask)))
+ 			break;
+ 
+@@ -4462,6 +4459,7 @@ e1000_phy_hw_reset(struct e1000_hw *hw)
+ 
+ 		if (hw->mac_type >= e1000_82571)
+ 			mdelay(10);
++
+ 	} else {
+ 		/* Read the Extended Device Control Register, assert the PHY_RESET_DIR
+ 		 * bit to put the PHY into reset. Then, take it out of reset.
+diff --git a/drivers/net/e1000.h b/drivers/net/e1000.h
+index 6d110eb..b025ecc 100644
+--- a/drivers/net/e1000.h
++++ b/drivers/net/e1000.h
+@@ -2497,7 +2497,6 @@ struct e1000_hw {
+ #define ICH_GFPREG_BASE_MASK       0x1FFF
+ #define ICH_FLASH_LINEAR_ADDR_MASK 0x00FFFFFF
+ 
+-#define E1000_I210_SW_FW_SYNC 0x5B50 /* Software-Firmware Synchronization - RW */
+ #define E1000_SW_FW_SYNC 0x05B5C /* Software-Firmware Synchronization - RW */
+ 
+ /* SPI EEPROM Status Register */
+-- 
+1.9.1
+

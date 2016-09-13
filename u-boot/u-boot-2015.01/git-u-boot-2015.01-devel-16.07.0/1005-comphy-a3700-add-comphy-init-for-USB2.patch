@@ -1,0 +1,166 @@
+From 4dc27f223d3847474802e3db628bd17837289c1c Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Wed, 16 Mar 2016 23:07:03 +0800
+Subject: [PATCH 1005/1240] comphy: a3700: add comphy init for USB2
+
+- add support for second UTMI (USB2) init
+- SYSTEMSW-2055
+
+Change-Id: I8e9e14bc698690c97e08f76fa0ad30df4f42d9ad
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28285
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/phy/comphy_a3700.c | 81 ++++++++++++++++++++++++----------------------
+ drivers/phy/comphy_a3700.h | 15 +++++++++
+ 2 files changed, 58 insertions(+), 38 deletions(-)
+
+diff --git a/drivers/phy/comphy_a3700.c b/drivers/phy/comphy_a3700.c
+index e8aa6d9..ad46431 100644
+--- a/drivers/phy/comphy_a3700.c
++++ b/drivers/phy/comphy_a3700.c
+@@ -434,69 +434,74 @@ static int comphy_usb2_power_up(u8 usb32)
+ 
+ 	debug_enter();
+ 
+-	/* TODO - add support for second USB2 UTMI - JIRA SYSTEMSW-2055 */
+-	if (usb32 == 0)
+-		return 1;
++	if (usb32 != 0 && usb32 != 1) {
++		error("invalid usb32 value: (%d), should be either 0 or 1\n", usb32);
++		debug_exit();
++		return 0;
++	}
+ 
+ 	/*
+ 	 * 0. Setup PLL. 40MHz clock uses defaults.
+ 	 *    See "PLL Settings for Typical REFCLK" table
+ 	 */
+ 	if (get_ref_clk() == 25)
+-		reg_set((void __iomem *)USB2PHY_BASE,
++		reg_set((void __iomem *)USB2_PHY_BASE(usb32),
+ 			5 | (96 << 16), 0x3F | (0xFF << 16) | (0x3 << 28));
+ 
+ 	/*
+ 	 * 1. PHY pull up and disable USB2 suspend
+ 	 */
+-	reg_set((void __iomem *)USB2_OTG_PHY_CTRL_ADDR,
+-		rb_usb2phy_suspm | rb_usb2phy_pu, 0);
+-
+-	/*
+-	 * 2. Power up OTG module
+-	 */
+-	reg_set((void __iomem *)USB2_PHY_OTG_CTRL_ADDR, rb_pu_otg, 0);
+-
+-	/*
+-	 * 3. Configure PHY charger detection
+-	 */
+-	reg_set((void __iomem *)USB2_PHY_CHRGR_DET_ADDR, 0,
+-		rb_cdp_en | rb_dcp_en | rb_pd_en | rb_cdp_dm_auto |
+-		rb_enswitch_dp | rb_enswitch_dm | rb_pu_chrg_dtc);
++	reg_set((void __iomem *)USB2_PHY_CTRL_ADDR(usb32),
++		RB_USB2PHY_SUSPM(usb32) | RB_USB2PHY_PU(usb32), 0);
++
++	if (usb32 != 0) {
++		/*
++		 * 2. Power up OTG module
++		 */
++		reg_set((void __iomem *)USB2_PHY_OTG_CTRL_ADDR, rb_pu_otg, 0);
++
++		/*
++		 * 3. Configure PHY charger detection
++		 */
++		reg_set((void __iomem *)USB2_PHY_CHRGR_DET_ADDR, 0,
++			rb_cdp_en | rb_dcp_en | rb_pd_en | rb_cdp_dm_auto |
++			rb_enswitch_dp | rb_enswitch_dm | rb_pu_chrg_dtc);
++	}
+ 
+ 	/* Assert PLL calibration done */
+-	ret = comphy_poll_reg((void *)USB2_CAL_CTRL_ADDR,	/* address */
+-			      rb_usb2phy_pllcal_done,		/* value */
+-			      rb_usb2phy_pllcal_done,		/* mask */
+-			      PLL_LOCK_TIMEOUT,			/* timeout */
+-			      POLL_32B_REG);			/* 32bit */
++	ret = comphy_poll_reg((void *)USB2_PHY_CAL_CTRL_ADDR(usb32),	/* address */
++				  rb_usb2phy_pllcal_done,		/* value */
++				  rb_usb2phy_pllcal_done,		/* mask */
++				  PLL_LOCK_TIMEOUT,		/* timeout */
++				  POLL_32B_REG);			/* 32bit */
+ 	if (ret == 0)
+ 		error("Failed to end USB2 PLL calibration\n");
+ 
+ 	/* Assert impedance calibration done */
+-	ret = comphy_poll_reg((void *)USB2_CAL_CTRL_ADDR,	/* address */
+-			      rb_usb2phy_impcal_done,		/* value */
+-			      rb_usb2phy_impcal_done,		/* mask */
+-			      PLL_LOCK_TIMEOUT,			/* timeout */
+-			      POLL_32B_REG);			/* 32bit */
++	ret = comphy_poll_reg((void *)USB2_PHY_CAL_CTRL_ADDR(usb32),	/* address */
++				  rb_usb2phy_impcal_done,		/* value */
++				  rb_usb2phy_impcal_done,		/* mask */
++				  PLL_LOCK_TIMEOUT,		/* timeout */
++				  POLL_32B_REG);			/* 32bit */
+ 	if (ret == 0)
+ 		error("Failed to end USB2 impedance calibration\n");
+ 
+ 	/* Assert squetch calibration done */
+-	ret = comphy_poll_reg((void *)USB2_RX_CHAN_CTRL1_ADDR,	/* address */
+-			      rb_usb2phy_sqcal_done,		/* value */
+-			      rb_usb2phy_sqcal_done,		/* mask */
+-			      PLL_LOCK_TIMEOUT,			/* timeout */
+-			      POLL_32B_REG);			/* 32bit */
++	ret = comphy_poll_reg((void *)USB2_PHY_RX_CHAN_CTRL1_ADDR(usb32),	/* address */
++				  rb_usb2phy_sqcal_done,		/* value */
++				  rb_usb2phy_sqcal_done,		/* mask */
++				  PLL_LOCK_TIMEOUT,		/* timeout */
++				  POLL_32B_REG);			/* 32bit */
+ 	if (ret == 0)
+ 		error("Failed to end USB2 unknown calibration\n");
+ 
+ 	/* Assert PLL is ready */
+-	ret = comphy_poll_reg((void *)USB2_PLL_CTRL0_ADDR,	/* address */
+-			      rb_usb2phy_pll_ready,		/* value */
+-			      rb_usb2phy_pll_ready,		/* mask */
+-			      PLL_LOCK_TIMEOUT,			/* timeout */
+-			      POLL_32B_REG);			/* 32bit */
++	ret = comphy_poll_reg((void *)USB2_PHY_PLL_CTRL0_ADDR(usb32), /* address */
++				  rb_usb2phy_pll_ready,		/* value */
++				  rb_usb2phy_pll_ready,		/* mask */
++				  PLL_LOCK_TIMEOUT,		/* timeout */
++				  POLL_32B_REG);			/* 32bit */
++
+ 	if (ret == 0)
+ 		error("Failed to lock USB2 PLL\n");
+ 
+diff --git a/drivers/phy/comphy_a3700.h b/drivers/phy/comphy_a3700.h
+index 1ba5358..8c8002e 100644
+--- a/drivers/phy/comphy_a3700.h
++++ b/drivers/phy/comphy_a3700.h
+@@ -203,6 +203,21 @@
+ #define USB2_RX_CHAN_CTRL1_ADDR		(0x18 + USB2PHY_BASE)
+ #define rb_usb2phy_sqcal_done		BIT31
+ 
++#define USB2_PHY2_CTRL_ADDR		(0x804 + USB2PHY2_BASE)
++#define rb_usb2phy2_suspm		BIT7
++#define rb_usb2phy2_pu			BIT0
++#define USB2_PHY2_CAL_CTRL_ADDR		(0x8 + USB2PHY2_BASE)
++#define USB2_PHY2_PLL_CTRL0_ADDR	(0x0 + USB2PHY2_BASE)
++#define USB2_PHY2_RX_CHAN_CTRL1_ADDR	(0x18 + USB2PHY2_BASE)
++
++#define USB2_PHY_BASE(usb32) (usb32 == 0 ? USB2PHY2_BASE : USB2PHY_BASE)
++#define USB2_PHY_CTRL_ADDR(usb32) (usb32 == 0 ? USB2_PHY2_CTRL_ADDR : USB2_OTG_PHY_CTRL_ADDR)
++#define RB_USB2PHY_SUSPM(usb32) (usb32 == 0 ? rb_usb2phy2_suspm : rb_usb2phy_suspm)
++#define RB_USB2PHY_PU(usb32) (usb32 == 0 ? rb_usb2phy2_pu : rb_usb2phy_pu)
++#define USB2_PHY_CAL_CTRL_ADDR(usb32) (usb32 == 0 ? USB2_PHY2_CAL_CTRL_ADDR : USB2_CAL_CTRL_ADDR)
++#define USB2_PHY_RX_CHAN_CTRL1_ADDR(usb32) (usb32 == 0 ? USB2_PHY2_RX_CHAN_CTRL1_ADDR : USB2_RX_CHAN_CTRL1_ADDR)
++#define USB2_PHY_PLL_CTRL0_ADDR(usb32) (usb32 == 0 ? USB2_PHY2_PLL_CTRL0_ADDR : USB2_PLL_CTRL0_ADDR)
++
+ /********************/
+ /* SATA definitions */
+ /********************/
+-- 
+1.9.1
+

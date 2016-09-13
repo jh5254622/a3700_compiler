@@ -1,0 +1,38 @@
+From 9d3891655997dc8c7e311523e2e3f1cc473dd603 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 16 Aug 2015 10:51:42 +0300
+Subject: [PATCH 0322/1240] e1000: remove unnecessary clearing of
+ SWSM.SWSM_SMBI
+
+remove unnecessary clearing of SWSM.SWSM_SMBI when obtaining the SW
+semaphore. This was introduced in 951860634fdb557bbb58e0f99215391bc0c29779
+while adding i210 support and should be now resolved by releasing the
+semaphore when no longer needed.
+
+Change-Id: I86523408d07c14255feaaf8b534d844796102357
+Signed-off-by: Tim Harvey <tharvey at gateworks.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22855
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/net/e1000.c | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/drivers/net/e1000.c b/drivers/net/e1000.c
+index 326c7db..f5078f2 100644
+--- a/drivers/net/e1000.c
++++ b/drivers/net/e1000.c
+@@ -1000,10 +1000,6 @@ e1000_get_software_semaphore(struct e1000_hw *hw)
+ 
+ 	DEBUGFUNC();
+ 
+-		swsm = E1000_READ_REG(hw, SWSM);
+-		swsm &= ~E1000_SWSM_SMBI;
+-		E1000_WRITE_REG(hw, SWSM, swsm);
+-
+ 	if (hw->mac_type != e1000_80003es2lan)
+ 		return E1000_SUCCESS;
+ 
+-- 
+1.9.1
+

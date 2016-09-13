@@ -1,0 +1,206 @@
+From 125e9696e0cce7cc2684a17794cca37eb5eb4b70 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 24 Aug 2015 11:31:54 +0300
+Subject: [PATCH 0359/1240] mvebu: apn-806: update Armada-8k board files names
+
+Change-Id: Iddb0771b05f7cc6d78b74d128e4fcd539c5184bc
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23067
+Tested-by: Star_Automation <star@marvell.com>
+---
+ board/mvebu/armada8k/Makefile         |  4 +--
+ board/mvebu/armada8k/armada8021-pxp.c | 47 -----------------------------------
+ board/mvebu/armada8k/armada8k.c       | 47 +++++++++++++++++++++++++++++++++++
+ board/mvebu/armada8k/db-8210-info.c   | 26 -------------------
+ board/mvebu/armada8k/db-apn806-info.c | 26 +++++++++++++++++++
+ 5 files changed, 75 insertions(+), 75 deletions(-)
+ delete mode 100644 board/mvebu/armada8k/armada8021-pxp.c
+ create mode 100644 board/mvebu/armada8k/armada8k.c
+ delete mode 100644 board/mvebu/armada8k/db-8210-info.c
+ create mode 100644 board/mvebu/armada8k/db-apn806-info.c
+
+diff --git a/board/mvebu/armada8k/Makefile b/board/mvebu/armada8k/Makefile
+index c28d48a..78c6af5 100644
+--- a/board/mvebu/armada8k/Makefile
++++ b/board/mvebu/armada8k/Makefile
+@@ -16,5 +16,5 @@
+ # ***************************************************************************
+ #
+ 
+-obj-y	+= armada8021-pxp.o
+-obj-$(CONFIG_APN_806_DB)	+= db-8210-info.o
++obj-y	+= armada8k.o
++obj-$(CONFIG_APN_806_DB)	+= db-apn806-info.o
+diff --git a/board/mvebu/armada8k/armada8021-pxp.c b/board/mvebu/armada8k/armada8021-pxp.c
+deleted file mode 100644
+index fd7ad29..0000000
+--- a/board/mvebu/armada8k/armada8021-pxp.c
++++ /dev/null
+@@ -1,47 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-/* #define DEBUG*/
+-
+-#include <common.h>
+-#include <malloc.h>
+-#include <errno.h>
+-#include <netdev.h>
+-#include <asm/io.h>
+-#include <asm/arch-armada8k/armada8k.h>
+-#include <linux/compiler.h>
+-#include "board-info.h"
+-
+-struct mvebu_board_info *mvebu_board_info_get(enum fdt_compat_id compat_id)
+-{
+-	switch (compat_id) {
+-#ifdef CONFIG_APN_806_DB
+-	case COMPAT_MVEBU_APN_806_DB:
+-		return &a8021_db_info;
+-#endif
+-	case COMPAT_MVEBU_APN_806_CUSTOMER:
+-	default:
+-		error("Missing board information for compatible string = %d\n", compat_id);
+-#ifdef CONFIG_APN_806_DB
+-		return &a8021_db_info;
+-#else
+-		return NULL;
+-#endif
+-	}
+-}
+-
+diff --git a/board/mvebu/armada8k/armada8k.c b/board/mvebu/armada8k/armada8k.c
+new file mode 100644
+index 0000000..fd7ad29
+--- /dev/null
++++ b/board/mvebu/armada8k/armada8k.c
+@@ -0,0 +1,47 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG*/
++
++#include <common.h>
++#include <malloc.h>
++#include <errno.h>
++#include <netdev.h>
++#include <asm/io.h>
++#include <asm/arch-armada8k/armada8k.h>
++#include <linux/compiler.h>
++#include "board-info.h"
++
++struct mvebu_board_info *mvebu_board_info_get(enum fdt_compat_id compat_id)
++{
++	switch (compat_id) {
++#ifdef CONFIG_APN_806_DB
++	case COMPAT_MVEBU_APN_806_DB:
++		return &a8021_db_info;
++#endif
++	case COMPAT_MVEBU_APN_806_CUSTOMER:
++	default:
++		error("Missing board information for compatible string = %d\n", compat_id);
++#ifdef CONFIG_APN_806_DB
++		return &a8021_db_info;
++#else
++		return NULL;
++#endif
++	}
++}
++
+diff --git a/board/mvebu/armada8k/db-8210-info.c b/board/mvebu/armada8k/db-8210-info.c
+deleted file mode 100644
+index 29ee3fa..0000000
+--- a/board/mvebu/armada8k/db-8210-info.c
++++ /dev/null
+@@ -1,26 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#include <common.h>
+-#include <linux/compiler.h>
+-#include "board-info.h"
+-
+-struct mvebu_board_info a8021_db_info = {
+-	.id = ARMADA_8021_DB_ID,
+-};
+-
+diff --git a/board/mvebu/armada8k/db-apn806-info.c b/board/mvebu/armada8k/db-apn806-info.c
+new file mode 100644
+index 0000000..29ee3fa
+--- /dev/null
++++ b/board/mvebu/armada8k/db-apn806-info.c
+@@ -0,0 +1,26 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <linux/compiler.h>
++#include "board-info.h"
++
++struct mvebu_board_info a8021_db_info = {
++	.id = ARMADA_8021_DB_ID,
++};
++
+-- 
+1.9.1
+

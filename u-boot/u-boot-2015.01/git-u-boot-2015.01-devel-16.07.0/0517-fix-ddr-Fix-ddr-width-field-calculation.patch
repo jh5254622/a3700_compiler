@@ -1,0 +1,31 @@
+From 519ee2fed32d4bbcd6c4334aa19e6e2f00a9fbb6 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Sun, 22 Nov 2015 17:40:39 +0200
+Subject: [PATCH 0517/1240] fix: ddr: Fix ddr width field calculation
+
+Change-Id: Ia445b58c3c64ee6fa3326dbf198238d2c44687c2
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25151
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/ddr/ddr_mckinley6.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/ddr/ddr_mckinley6.c b/drivers/ddr/ddr_mckinley6.c
+index bc7c919..3c4ca0a 100644
+--- a/drivers/ddr/ddr_mckinley6.c
++++ b/drivers/ddr/ddr_mckinley6.c
+@@ -29,7 +29,8 @@
+ 
+ #define MCK6_CTRL_0_REG		(0x44)
+ #define CTRL_DATA_WIDTH_MASK	(0xF << 8)
+-#define CTRL_DATA_WIDTH(w)	(((w) / 8) << 8)
++#define BUS_WIDTH_2_IDX(w)	(((w) <= 16) ? ((w) / 8) : (((w) / 32) + 2))
++#define CTRL_DATA_WIDTH(w)	(BUS_WIDTH_2_IDX(w) << 8)
+ 
+ #define MCK6_MMAP0_LOW_CH0_REG	(0x200)
+ #define MMAP_AREA_LEN_MASK	(0x1F << 16)
+-- 
+1.9.1
+

@@ -1,0 +1,1054 @@
+From 077a67f33dfd79f38f19df6d7a4918d1ce9aefca Mon Sep 17 00:00:00 2001
+From: Wilson Ding <dingwei@marvell.com>
+Date: Tue, 16 Feb 2016 18:27:52 +0800
+Subject: [PATCH 0869/1240] fix: a3700: rename the device tree files
+
+- Change the dtsi/dts file names to armada-3700-xxx.dts(i).
+- Change the compatible string to "marvell,armada-3700-xxx".
+
+Change-Id: I0efa95f7b14afbf99b20732bf137a96dfc351beb
+Signed-off-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27553
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada3700/soc-init.c     |   2 +-
+ arch/arm/dts/Makefile                        |   8 +-
+ arch/arm/dts/armada-3700-customer0.dts       |  72 ++++++++++++
+ arch/arm/dts/armada-3700-db-sgmii1.dts       |  43 +++++++
+ arch/arm/dts/armada-3700-db.dts              | 124 ++++++++++++++++++++
+ arch/arm/dts/armada-3700-palladium.dts       |  45 ++++++++
+ arch/arm/dts/armada-3700.dtsi                | 162 +++++++++++++++++++++++++++
+ arch/arm/dts/armada-lp-customer0.dts         |  72 ------------
+ arch/arm/dts/armada-lp-db-sgmii1.dts         |  43 -------
+ arch/arm/dts/armada-lp-db.dts                | 124 --------------------
+ arch/arm/dts/armada-lp-palladium.dts         |  45 --------
+ arch/arm/dts/armada-lp.dtsi                  | 162 ---------------------------
+ configs/mvebu_armada3700_defconfig           |   2 +-
+ configs/mvebu_armada3700_palladium_defconfig |   2 +-
+ 14 files changed, 453 insertions(+), 453 deletions(-)
+ create mode 100644 arch/arm/dts/armada-3700-customer0.dts
+ create mode 100644 arch/arm/dts/armada-3700-db-sgmii1.dts
+ create mode 100644 arch/arm/dts/armada-3700-db.dts
+ create mode 100644 arch/arm/dts/armada-3700-palladium.dts
+ create mode 100644 arch/arm/dts/armada-3700.dtsi
+ delete mode 100644 arch/arm/dts/armada-lp-customer0.dts
+ delete mode 100644 arch/arm/dts/armada-lp-db-sgmii1.dts
+ delete mode 100644 arch/arm/dts/armada-lp-db.dts
+ delete mode 100644 arch/arm/dts/armada-lp-palladium.dts
+ delete mode 100644 arch/arm/dts/armada-lp.dtsi
+
+diff --git a/arch/arm/cpu/armv8/armada3700/soc-init.c b/arch/arm/cpu/armv8/armada3700/soc-init.c
+index 2938228..4500d27 100644
+--- a/arch/arm/cpu/armv8/armada3700/soc-init.c
++++ b/arch/arm/cpu/armv8/armada3700/soc-init.c
+@@ -192,7 +192,7 @@ void board_usb_vbus_init(void)
+ 	const void *blob = gd->fdt_blob;
+ 
+ 	/* Make sure board is supported (currently only A3700-DB is supported) */
+-	if (fdt_node_check_compatible(blob, 0, "marvell,armada-lp-db0") != 0) {
++	if (fdt_node_check_compatible(blob, 0, "marvell,armada-3700-db0") != 0) {
+ 		error("Missing USB VBUS power configuration for current board.\n");
+ 		return;
+ 	}
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index 1f6970c..912beb6 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -56,11 +56,11 @@ dtb-$(CONFIG_SOCFPGA) += socfpga_cyclone5_socrates.dtb
+ dtb-$(CONFIG_TARGET_ARMADA_38X) += armada-385-db.dtb
+ ifdef CONFIG_TARGET_ARMADA_3700
+ ifndef CONFIG_DEVEL_BOARD
+-dtb-y += armada-lp-customer0.dtb
++dtb-y += armada-3700-customer0.dtb
+ endif #CONFIG_DEVEL_BOARD
+-dtb-$(CONFIG_DEVEL_BOARD) += armada-lp-db.dtb \
+-			     armada-lp-db-sgmii1.dtb
+-dtb-$(CONFIG_PALLADIUM) += armada-lp-palladium.dtb
++dtb-$(CONFIG_DEVEL_BOARD) += armada-3700-db.dtb \
++			     armada-3700-db-sgmii1.dtb
++dtb-$(CONFIG_PALLADIUM) += armada-3700-palladium.dtb
+ endif #CONFIG_TARGET_ARMADA_3700
+ 
+ ifdef CONFIG_TARGET_ARMADA_8K
+diff --git a/arch/arm/dts/armada-3700-customer0.dts b/arch/arm/dts/armada-3700-customer0.dts
+new file mode 100644
+index 0000000..c69dd98
+--- /dev/null
++++ b/arch/arm/dts/armada-3700-customer0.dts
+@@ -0,0 +1,72 @@
++
++/dts-v1/;
++
++#include "armada-3700.dtsi"
++#include <dt-bindings/ddr/ddr_data.h>
++
++/ {
++	model = "DB-88F37XX-Customer0";
++	compatible = "marvell,armada-3700-db0", "marvell,armada-3700";
++
++	soc {
++		freq {
++			preset = <PRESET_CPU_600_DDR_600>;
++		};
++
++		internal-regs {
++			ddr-mac {
++				cs_count = <1>;
++				bus_width = <DDR_BUS_WIDTH_16>;
++				cs0 {
++					size = <0x00000000 0x10000000>;
++				};
++			};
++			serial: serial@12000 {
++				status = "okay";
++			};
++			spi0: spi@10600 {
++				status = "okay";
++			};
++			neta0: neta@30000 {
++				status = "okay";
++				phy_addr = <0x1>;
++				phy_mode = "sgmii";
++			};
++			neta1: neta@40000 {
++				status = "disabled";
++				phy_addr = <0x0>;
++				phy_mode = "rgmii";
++			};
++			i2c: i2c@11000 {
++				status = "okay";
++			};
++			comphy {
++				phy0 {
++					phy-type = <PHY_TYPE_SGMII0>;
++					phy-speed = <PHY_SPEED_1_25G>;
++				};
++				phy1 {
++					phy-type = <PHY_TYPE_UNCONNECTED>;
++					phy-speed = <PHY_SPEED_1_25G>;
++				};
++			};
++			pcie-controller {
++				pcie@1,0 {
++					status = "disabled";
++				};
++			};
++			sata: sata@e0000 {
++				status = "okay";
++			};
++			mmc0: mmc@D8000 {
++				status = "disabled";
++			};
++			mmc1: mmc@D0000 {
++				status = "disabled";
++			};
++			usb3: usb3@58000 {
++				status = "disabled";
++			};
++		};
++	};
++};
+diff --git a/arch/arm/dts/armada-3700-db-sgmii1.dts b/arch/arm/dts/armada-3700-db-sgmii1.dts
+new file mode 100644
+index 0000000..68e0473
+--- /dev/null
++++ b/arch/arm/dts/armada-3700-db-sgmii1.dts
+@@ -0,0 +1,43 @@
++
++#include "armada-3700-db.dts"
++
++/* detail board setup:
++ * Pcie Jumper slot	:	DB-88F3720-PCIe-mPCIe-Jumper
++ * SGMII module slot	:	DB-88F3720-SerDes-Jumper
++ * RGMII module slot	:	DB-88F3720-PHY module
++ * eMMC slot		:	DB-88F3720-eMMC_NAND module
++ * SDIO slot		:	DB-88F3720-SDcard module
++ *
++ * PHY0 (USB3/SGMII1)	:	SGMII1_Ethernet via PHY (1 Lane)
++ * PHY1 (PCIe/SGMII0)	:	PCIe (WiFi via mini_PCIe module)
++ * PHY2 (SATA)		:	SATA
++ * RGMII		:	Ethernet via PHY (1 Lane)
++ * USB2 Port 0		:	USB2 only
++ * USB2 Port 1		:	USB2 Host
++ * eMMC*		:	eMMC NAND
++ * SDIO*		:	SD card
++ * BOOT device*		:	SPI Flash
++*/
++
++/ {
++	model = "DB-88F3720-DDR3-Modular-SGMII1";
++	compatible = "marvell,armada-3700-db0", "marvell,armada-3700";
++	fdt_config_id = <A3700_DB_CONFIG_ID_SGMII1>;
++	board_id = <A3700_DB_ID>;
++
++	soc {
++		internal-regs {
++			neta1: neta@40000 {
++				status = "okay";
++				phy_addr = <0x1>;
++				phy_mode = "sgmii";
++			};
++			comphy {
++				phy1 {
++					phy-type = <PHY_TYPE_SGMII1>;
++					phy-speed = <PHY_SPEED_1_25G>;
++				};
++			};
++		};
++	};
++};
+diff --git a/arch/arm/dts/armada-3700-db.dts b/arch/arm/dts/armada-3700-db.dts
+new file mode 100644
+index 0000000..d706d55
+--- /dev/null
++++ b/arch/arm/dts/armada-3700-db.dts
+@@ -0,0 +1,124 @@
++
++/dts-v1/;
++#include <dt-bindings/ddr/ddr_data.h>
++#include "armada-3700.dtsi"
++#include <dt-bindings/multi-fdt/multi-fdt.h>
++
++/* detail board setup:
++ * Pcie Jumper slot	:	DB-88F3720-PCIe-mPCIe-Jumper
++ * SGMII module slot	:	DB-88F3720-SerDes-Jumper
++ * RGMII module slot	:	DB-88F3720-PHY module
++ * eMMC slot		:	DB-88F3720-eMMC_NAND module
++ * SDIO slot		:	DB-88F3720-SDcard module
++ *
++ * PHY0 (USB3/SGMII1)	:	USB3
++ * PHY1 (PCIe/SGMII0)	:	PCIe (WiFi via mini_PCIe module)
++ * PHY2 (SATA)		:	SATA
++ * RGMII-0		:	Ethernet via PHY (1 Lane)
++ * USB2 Port 0		:	USB2 as part USB3
++ * USB2 Port 1		:	USB2 Host
++ * eMMC*		:	eMMC NAND
++ * SDIO*		:	SD card
++ * BOOT device*		:	SPI Flash
++*/
++
++/ {
++	model = "DB-88F3720-DDR3-Modular";
++	compatible = "marvell,armada-3700-db0", "marvell,armada-3700";
++	fdt_config_id = <A3700_DB_CONFIG_ID_DEFAULT>;
++	board_id = <A3700_DB_ID>;
++
++	soc {
++		freq {
++			preset = <PRESET_CPU_800_DDR_800>;
++		};
++
++		internal-regs {
++			ddr-mac {
++				cs_count = <1>;
++				bus_width = <DDR_BUS_WIDTH_16>;
++				cs0 {
++					size = <0x00000000 0x20000000>;
++				};
++			};
++			serial: serial@12000 {
++				status = "okay";
++			};
++			spi0: spi@10600 {
++				status = "okay";
++			};
++			neta0: neta@30000 {
++				status = "okay";
++				phy_addr = <0x0>;
++				phy_mode = "rgmii";
++			};
++			i2c: i2c@11000 {
++				status = "okay";
++			};
++			comphy {
++				phy0 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_2_5G>;
++				};
++				phy1 {
++					phy-type = <PHY_TYPE_USB3_HOST0>;
++					phy-speed = <PHY_SPEED_5G>;
++				};
++			};
++			pcie-controller {
++				pcie@1,0 {
++					status = "okay";
++				};
++			};
++			sata: sata@e0000 {
++				status = "okay";
++			};
++			mmc0: mmc@D8000 {
++				xenon,emmc;
++				status = "okay";
++			};
++			mmc1: mmc@D0000 {
++				status = "okay";
++			};
++			usb3: usb3@58000 {
++				status = "okay";
++			};
++		};
++	};
++};
++
++&pinctl0 { /* north bridge */
++		/* MPP Bus:
++		   JTAG     0
++		   SDIO     1
++		   eMMC     2
++		   PWM      [3-6]
++		   PMIC     [7-8]
++		   I2C      [9-10]
++		   SPI      [15]
++		   ONEWIRE  [16]
++		   UART     [17]
++		   SPI_QUAD [18]
++		   UART2    [19]
++		   LED      [20-23]
++		*/
++			/* 0 1 2 3 4 5 6 7 */
++	pin-func = < 0 1 0 1 1 1 1 1
++			   1 1 0 0 1 1 1 0
++			   1 0 0 0 0 0 0 0 >;
++};
++
++&pinctl1 { /* south bridge */
++		/* MPP Bus:
++		   USB32    0
++		   USB2     1
++		   SB-SDIO  2
++		   RGMII    3
++		   PCIE     4
++		   PTP      [5-7]
++		   MII      8
++		*/
++			/* 0 1 2 3 4 5 6 7 */
++	pin-func = < 1 1 0 0 1 1 0 0
++			   0 >;
++};
+diff --git a/arch/arm/dts/armada-3700-palladium.dts b/arch/arm/dts/armada-3700-palladium.dts
+new file mode 100644
+index 0000000..a485518
+--- /dev/null
++++ b/arch/arm/dts/armada-3700-palladium.dts
+@@ -0,0 +1,45 @@
++
++/dts-v1/;
++
++#include "armada-3700.dtsi"
++
++/ {
++	model = "PD-MV-ARMADA3700";
++	compatible = "marvell,armada-3700-db0", "marvell,armada-3700";
++
++	soc {
++		internal-regs {
++			serial: serial@12000 {
++				clock_frequency = <4800>;
++				baudrate = <300>;
++				status = "okay";
++			};
++			spi0: spi@10600 {
++				status = "okay";
++			};
++			neta0: neta@30000 {
++				status = "okay";
++			};
++			neta1: neta@40000 {
++				status = "okay";
++			};
++			i2c: i2c@11000 {
++				status = "okay";
++			};
++			pcie-controller {
++				pcie@1,0 {
++					status = "okay";
++				};
++			};
++			sata: sata@e0000 {
++				status = "okay";
++			};
++			mmc0: mmc@D8000 {
++				status = "okay";
++			};
++			usb3: usb3@58000 {
++				status = "okay";
++			};
++		};
++	};
++};
+diff --git a/arch/arm/dts/armada-3700.dtsi b/arch/arm/dts/armada-3700.dtsi
+new file mode 100644
+index 0000000..666af78
+--- /dev/null
++++ b/arch/arm/dts/armada-3700.dtsi
+@@ -0,0 +1,162 @@
++#define ATTR(remapped, target, attributes) (((remapped) << 12) | ((target) << 8) | (attributes))
++#define IO_ATTR(max_win, max_remap, remap_size, win_offset) (((max_win) << 24) | ((max_remap) << 16) | ((remap_size) << 8) | (win_offset))
++
++#include <dt-bindings/comphy/comphy_data.h>
++#include <dt-bindings/clock/freq_data.h>
++/ {
++	model = "Marvell Armada 3700 Development Board";
++	compatible = "marvell,armada-3700";
++
++	#address-cells = <2>;
++	#size-cells = <2>;
++
++	soc {
++	compatible = "marvell,armadalp-mbus";
++	#address-cells = <1>;
++	#size-cells = <0>;
++
++		freq {
++			compatible = "marvell,a3700-freq";
++			preset = <PRESET_CPU_600_DDR_600>;
++		};
++
++		internal-regs {
++			compatible = "marvell,internal-regs";
++			#address-cells = <1>;
++			#size-cells = <1>;
++			ranges = <0x0000 0xd0000000 0x2000000>;
++
++			serial: serial@12000 {
++				compatible = "marvell,armadalp-uart";
++				reg = <0x12000 0x20>;
++				clock_frequency = <25804800>;
++				baudrate = <115200>;
++				status = "disabled";
++			};
++
++			spi0: spi@10600 {
++				compatible = "marvell,armadalp-spi";
++				reg = <0x10600 0x50>;
++				#clock-cells = <0>;
++				clock-frequency = <160000>;
++				spi-max-frequency = <40000>;
++				status = "disabled";
++			};
++
++			pinctl0: pinctl@13830 { /* north bridge */
++				compatible = "marvell,mvebu-pinctl";
++				bank-name ="armadalp-nb";
++				reg = <0x13830 0x4>;
++				pin-count = <24>;
++				max-func = <1>;
++			};
++
++			pinctl1: pinctl@18830 { /* south bridge */
++				compatible = "marvell,mvebu-pinctl";
++				bank-name ="armadalp-sb";
++				reg = <0x18830 0x4>;
++				pin-count = <9>;
++				max-func = <1>;
++			};
++
++			mbus {
++				compatible = "marvell,mvebu-mbus";
++				reg = <0xcf00 0xf0>;
++				max-win = <5>;
++				max-remap = <5>;
++				remap-size = <32>;
++				internal-win = <6>;
++				windows = <0x0 0x20000000 ATTR(0x1, 0x0, 0x0)
++					0xE0000000 0x8000000 ATTR(0x1, 0x5, 0x0)
++					0xE8000000 0x8000000 ATTR(0x1, 0x2, 0x0)
++					0xF0000000 0x20000 ATTR(0x1, 0x7, 0x0)
++					0x80000000 0x10000000 ATTR(0x1, 0x3, 0x0)>;
++			};
++
++			io-decode {
++				compatible = "marvell,mvebu-io-decode";
++				#address-cells = <1>;
++				#size-cells = <1>;
++
++				unit_io_decode_info =
++					/* reg_base, range, IO_ATTR(max_win, max_remap, remap_size, win_offset) */
++					<0xcb00 0x30 IO_ATTR(3, 0, 32, 0x10) /* eMMC */
++					0xc800 0x30 IO_ATTR(3, 0, 32, 0x10)> /* SATA */;
++			};
++
++			neta0: neta@30000 {
++				compatible = "marvell,armadalp-neta";
++				reg = <0x30000 0x20>;
++				status = "disabled";
++			};
++			neta1: neta@40000 {
++				compatible = "marvell,armadalp-neta";
++				reg = <0x40000 0x20>;
++				status = "disabled";
++			};
++			i2c: i2c@11000 {
++				compatible = "marvell,armadalp-i2c";
++				reg = <0x11000 0x100>;
++				status = "disabled";
++			};
++			comphy {
++				compatible = "marvell,mvebu-comphy", "marvell,comphy-armadalp";
++				mux-bitcount = <1>;
++				max-lanes = <2>;
++				reg-comphy = <0x18300 0x28>;
++				reg-hpipe3 = <0x1F300 0x3D000>;
++				/* phy-type & phy-speed selection should be done in board level device tree */
++				phy0 {
++					phy-type = <PHY_TYPE_UNCONNECTED>;
++					phy-speed = <PHY_SPEED_1_25G>;
++				};
++				phy1 {
++					phy-type = <PHY_TYPE_UNCONNECTED>;
++					phy-speed = <PHY_SPEED_1_25G>;
++				};
++			};
++			pcie-controller {
++				#address-cells = <1>;
++				#size-cells = <1>;
++				compatible = "marvell,advk-pcie";
++
++				pcie@1,0 {
++					reg = <0x70000 0x20000>;
++					mem = <0xE8000000 0x8000000>;
++					status = "disabled";
++				};
++			};
++			sata: sata@e0000 {
++				compatible = "marvell,mvebu-sata";
++				reg = <0xe0000 0x200>;
++				status = "disabled";
++			};
++			mmc0: mmc@D8000 {
++				compatible = "marvell,xenon-sdhci";
++				reg = <0xD8000 0x300>;
++				status = "disabled";
++			};
++			mmc1: mmc@D0000 {
++				compatible = "marvell,xenon-sdhci";
++				reg = <0xD0000 0x300>;
++				status = "disabled";
++			};
++			usb3: usb3@58000 {
++				compatible = "marvell,mvebu-usb3";
++				reg = <0x58000 0x450>;
++				status = "disabled";
++			};
++			ddr-mac {
++				compatible = "marvell,mvebu-ddr-mac";
++				reg = <0x0000 0x1000>;
++				status = "okay";
++			};
++
++			ddr-phy {
++				compatible = "marvell,mvebu-ddr-phy";
++				reg = <0x1000 0x1000>;
++				status = "okay";
++			};
++		};
++	};
++};
+diff --git a/arch/arm/dts/armada-lp-customer0.dts b/arch/arm/dts/armada-lp-customer0.dts
+deleted file mode 100644
+index edec422..0000000
+--- a/arch/arm/dts/armada-lp-customer0.dts
++++ /dev/null
+@@ -1,72 +0,0 @@
+-
+-/dts-v1/;
+-
+-#include "armada-lp.dtsi"
+-#include <dt-bindings/ddr/ddr_data.h>
+-
+-/ {
+-	model = "DB-88F37XX-Customer0";
+-	compatible = "marvell,armada-lp-db0", "marvell,armada-lp";
+-
+-	soc {
+-		freq {
+-			preset = <PRESET_CPU_600_DDR_600>;
+-		};
+-
+-		internal-regs {
+-			ddr-mac {
+-				cs_count = <1>;
+-				bus_width = <DDR_BUS_WIDTH_16>;
+-				cs0 {
+-					size = <0x00000000 0x10000000>;
+-				};
+-			};
+-			serial: serial@12000 {
+-				status = "okay";
+-			};
+-			spi0: spi@10600 {
+-				status = "okay";
+-			};
+-			neta0: neta@30000 {
+-				status = "okay";
+-				phy_addr = <0x1>;
+-				phy_mode = "sgmii";
+-			};
+-			neta1: neta@40000 {
+-				status = "disabled";
+-				phy_addr = <0x0>;
+-				phy_mode = "rgmii";
+-			};
+-			i2c: i2c@11000 {
+-				status = "okay";
+-			};
+-			comphy {
+-				phy0 {
+-					phy-type = <PHY_TYPE_SGMII0>;
+-					phy-speed = <PHY_SPEED_1_25G>;
+-				};
+-				phy1 {
+-					phy-type = <PHY_TYPE_UNCONNECTED>;
+-					phy-speed = <PHY_SPEED_1_25G>;
+-				};
+-			};
+-			pcie-controller {
+-				pcie@1,0 {
+-					status = "disabled";
+-				};
+-			};
+-			sata: sata@e0000 {
+-				status = "okay";
+-			};
+-			mmc0: mmc@D8000 {
+-				status = "disabled";
+-			};
+-			mmc1: mmc@D0000 {
+-				status = "disabled";
+-			};
+-			usb3: usb3@58000 {
+-				status = "disabled";
+-			};
+-		};
+-	};
+-};
+diff --git a/arch/arm/dts/armada-lp-db-sgmii1.dts b/arch/arm/dts/armada-lp-db-sgmii1.dts
+deleted file mode 100644
+index a3300c7..0000000
+--- a/arch/arm/dts/armada-lp-db-sgmii1.dts
++++ /dev/null
+@@ -1,43 +0,0 @@
+-
+-#include "armada-lp-db.dts"
+-
+-/* detail board setup:
+- * Pcie Jumper slot	:	DB-88F3720-PCIe-mPCIe-Jumper
+- * SGMII module slot	:	DB-88F3720-SerDes-Jumper
+- * RGMII module slot	:	DB-88F3720-PHY module
+- * eMMC slot		:	DB-88F3720-eMMC_NAND module
+- * SDIO slot		:	DB-88F3720-SDcard module
+- *
+- * PHY0 (USB3/SGMII1)	:	SGMII1_Ethernet via PHY (1 Lane)
+- * PHY1 (PCIe/SGMII0)	:	PCIe (WiFi via mini_PCIe module)
+- * PHY2 (SATA)		:	SATA
+- * RGMII		:	Ethernet via PHY (1 Lane)
+- * USB2 Port 0		:	USB2 only
+- * USB2 Port 1		:	USB2 Host
+- * eMMC*		:	eMMC NAND
+- * SDIO*		:	SD card
+- * BOOT device*		:	SPI Flash
+-*/
+-
+-/ {
+-	model = "DB-88F3720-DDR3-Modular-SGMII1";
+-	compatible = "marvell,armada-lp-db0", "marvell,armada-lp";
+-	fdt_config_id = <A3700_DB_CONFIG_ID_SGMII1>;
+-	board_id = <A3700_DB_ID>;
+-
+-	soc {
+-		internal-regs {
+-			neta1: neta@40000 {
+-				status = "okay";
+-				phy_addr = <0x1>;
+-				phy_mode = "sgmii";
+-			};
+-			comphy {
+-				phy1 {
+-					phy-type = <PHY_TYPE_SGMII1>;
+-					phy-speed = <PHY_SPEED_1_25G>;
+-				};
+-			};
+-		};
+-	};
+-};
+diff --git a/arch/arm/dts/armada-lp-db.dts b/arch/arm/dts/armada-lp-db.dts
+deleted file mode 100644
+index a1da1b7..0000000
+--- a/arch/arm/dts/armada-lp-db.dts
++++ /dev/null
+@@ -1,124 +0,0 @@
+-
+-/dts-v1/;
+-#include <dt-bindings/ddr/ddr_data.h>
+-#include "armada-lp.dtsi"
+-#include <dt-bindings/multi-fdt/multi-fdt.h>
+-
+-/* detail board setup:
+- * Pcie Jumper slot	:	DB-88F3720-PCIe-mPCIe-Jumper
+- * SGMII module slot	:	DB-88F3720-SerDes-Jumper
+- * RGMII module slot	:	DB-88F3720-PHY module
+- * eMMC slot		:	DB-88F3720-eMMC_NAND module
+- * SDIO slot		:	DB-88F3720-SDcard module
+- *
+- * PHY0 (USB3/SGMII1)	:	USB3
+- * PHY1 (PCIe/SGMII0)	:	PCIe (WiFi via mini_PCIe module)
+- * PHY2 (SATA)		:	SATA
+- * RGMII-0		:	Ethernet via PHY (1 Lane)
+- * USB2 Port 0		:	USB2 as part USB3
+- * USB2 Port 1		:	USB2 Host
+- * eMMC*		:	eMMC NAND
+- * SDIO*		:	SD card
+- * BOOT device*		:	SPI Flash
+-*/
+-
+-/ {
+-	model = "DB-88F3720-DDR3-Modular";
+-	compatible = "marvell,armada-lp-db0", "marvell,armada-lp";
+-	fdt_config_id = <A3700_DB_CONFIG_ID_DEFAULT>;
+-	board_id = <A3700_DB_ID>;
+-
+-	soc {
+-		freq {
+-			preset = <PRESET_CPU_800_DDR_800>;
+-		};
+-
+-		internal-regs {
+-			ddr-mac {
+-				cs_count = <1>;
+-				bus_width = <DDR_BUS_WIDTH_16>;
+-				cs0 {
+-					size = <0x00000000 0x20000000>;
+-				};
+-			};
+-			serial: serial@12000 {
+-				status = "okay";
+-			};
+-			spi0: spi@10600 {
+-				status = "okay";
+-			};
+-			neta0: neta@30000 {
+-				status = "okay";
+-				phy_addr = <0x0>;
+-				phy_mode = "rgmii";
+-			};
+-			i2c: i2c@11000 {
+-				status = "okay";
+-			};
+-			comphy {
+-				phy0 {
+-					phy-type = <PHY_TYPE_PEX0>;
+-					phy-speed = <PHY_SPEED_2_5G>;
+-				};
+-				phy1 {
+-					phy-type = <PHY_TYPE_USB3_HOST0>;
+-					phy-speed = <PHY_SPEED_5G>;
+-				};
+-			};
+-			pcie-controller {
+-				pcie@1,0 {
+-					status = "okay";
+-				};
+-			};
+-			sata: sata@e0000 {
+-				status = "okay";
+-			};
+-			mmc0: mmc@D8000 {
+-				xenon,emmc;
+-				status = "okay";
+-			};
+-			mmc1: mmc@D0000 {
+-				status = "okay";
+-			};
+-			usb3: usb3@58000 {
+-				status = "okay";
+-			};
+-		};
+-	};
+-};
+-
+-&pinctl0 { /* north bridge */
+-		/* MPP Bus:
+-		   JTAG     0
+-		   SDIO     1
+-		   eMMC     2
+-		   PWM      [3-6]
+-		   PMIC     [7-8]
+-		   I2C      [9-10]
+-		   SPI      [15]
+-		   ONEWIRE  [16]
+-		   UART     [17]
+-		   SPI_QUAD [18]
+-		   UART2    [19]
+-		   LED      [20-23]
+-		*/
+-			/* 0 1 2 3 4 5 6 7 */
+-	pin-func = < 0 1 0 1 1 1 1 1
+-			   1 1 0 0 1 1 1 0
+-			   1 0 0 0 0 0 0 0 >;
+-};
+-
+-&pinctl1 { /* south bridge */
+-		/* MPP Bus:
+-		   USB32    0
+-		   USB2     1
+-		   SB-SDIO  2
+-		   RGMII    3
+-		   PCIE     4
+-		   PTP      [5-7]
+-		   MII      8
+-		*/
+-			/* 0 1 2 3 4 5 6 7 */
+-	pin-func = < 1 1 0 0 1 1 0 0
+-			   0 >;
+-};
+diff --git a/arch/arm/dts/armada-lp-palladium.dts b/arch/arm/dts/armada-lp-palladium.dts
+deleted file mode 100644
+index af7ad21..0000000
+--- a/arch/arm/dts/armada-lp-palladium.dts
++++ /dev/null
+@@ -1,45 +0,0 @@
+-
+-/dts-v1/;
+-
+-#include "armada-lp.dtsi"
+-
+-/ {
+-	model = "PD-MV-ARMADALP";
+-	compatible = "marvell,armada-lp-db0", "marvell,armada-lp";
+-
+-	soc {
+-		internal-regs {
+-			serial: serial@12000 {
+-				clock_frequency = <4800>;
+-				baudrate = <300>;
+-				status = "okay";
+-			};
+-			spi0: spi@10600 {
+-				status = "okay";
+-			};
+-			neta0: neta@30000 {
+-				status = "okay";
+-			};
+-			neta1: neta@40000 {
+-				status = "okay";
+-			};
+-			i2c: i2c@11000 {
+-				status = "okay";
+-			};
+-			pcie-controller {
+-				pcie@1,0 {
+-					status = "okay";
+-				};
+-			};
+-			sata: sata@e0000 {
+-				status = "okay";
+-			};
+-			mmc0: mmc@D8000 {
+-				status = "okay";
+-			};
+-			usb3: usb3@58000 {
+-				status = "okay";
+-			};
+-		};
+-	};
+-};
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+deleted file mode 100644
+index 41c57b3..0000000
+--- a/arch/arm/dts/armada-lp.dtsi
++++ /dev/null
+@@ -1,162 +0,0 @@
+-#define ATTR(remapped, target, attributes) (((remapped) << 12) | ((target) << 8) | (attributes))
+-#define IO_ATTR(max_win, max_remap, remap_size, win_offset) (((max_win) << 24) | ((max_remap) << 16) | ((remap_size) << 8) | (win_offset))
+-
+-#include <dt-bindings/comphy/comphy_data.h>
+-#include <dt-bindings/clock/freq_data.h>
+-/ {
+-	model = "Marvell Armada_LP Development Board";
+-	compatible = "marvell,armada-lp";
+-
+-	#address-cells = <2>;
+-	#size-cells = <2>;
+-
+-	soc {
+-	compatible = "marvell,armadalp-mbus";
+-	#address-cells = <1>;
+-	#size-cells = <0>;
+-
+-		freq {
+-			compatible = "marvell,a3700-freq";
+-			preset = <PRESET_CPU_600_DDR_600>;
+-		};
+-
+-		internal-regs {
+-			compatible = "marvell,internal-regs";
+-			#address-cells = <1>;
+-			#size-cells = <1>;
+-			ranges = <0x0000 0xd0000000 0x2000000>;
+-
+-			serial: serial@12000 {
+-				compatible = "marvell,armadalp-uart";
+-				reg = <0x12000 0x20>;
+-				clock_frequency = <25804800>;
+-				baudrate = <115200>;
+-				status = "disabled";
+-			};
+-
+-			spi0: spi@10600 {
+-				compatible = "marvell,armadalp-spi";
+-				reg = <0x10600 0x50>;
+-				#clock-cells = <0>;
+-				clock-frequency = <160000>;
+-				spi-max-frequency = <40000>;
+-				status = "disabled";
+-			};
+-
+-			pinctl0: pinctl@13830 { /* north bridge */
+-				compatible = "marvell,mvebu-pinctl";
+-				bank-name ="armadalp-nb";
+-				reg = <0x13830 0x4>;
+-				pin-count = <24>;
+-				max-func = <1>;
+-			};
+-
+-			pinctl1: pinctl@18830 { /* south bridge */
+-				compatible = "marvell,mvebu-pinctl";
+-				bank-name ="armadalp-sb";
+-				reg = <0x18830 0x4>;
+-				pin-count = <9>;
+-				max-func = <1>;
+-			};
+-
+-			mbus {
+-				compatible = "marvell,mvebu-mbus";
+-				reg = <0xcf00 0xf0>;
+-				max-win = <5>;
+-				max-remap = <5>;
+-				remap-size = <32>;
+-				internal-win = <6>;
+-				windows = <0x0 0x20000000 ATTR(0x1, 0x0, 0x0)
+-					0xE0000000 0x8000000 ATTR(0x1, 0x5, 0x0)
+-					0xE8000000 0x8000000 ATTR(0x1, 0x2, 0x0)
+-					0xF0000000 0x20000 ATTR(0x1, 0x7, 0x0)
+-					0x80000000 0x10000000 ATTR(0x1, 0x3, 0x0)>;
+-			};
+-
+-			io-decode {
+-				compatible = "marvell,mvebu-io-decode";
+-				#address-cells = <1>;
+-				#size-cells = <1>;
+-
+-				unit_io_decode_info =
+-					/* reg_base, range, IO_ATTR(max_win, max_remap, remap_size, win_offset) */
+-					<0xcb00 0x30 IO_ATTR(3, 0, 32, 0x10) /* eMMC */
+-					0xc800 0x30 IO_ATTR(3, 0, 32, 0x10)> /* SATA */;
+-			};
+-
+-			neta0: neta@30000 {
+-				compatible = "marvell,armadalp-neta";
+-				reg = <0x30000 0x20>;
+-				status = "disabled";
+-			};
+-			neta1: neta@40000 {
+-				compatible = "marvell,armadalp-neta";
+-				reg = <0x40000 0x20>;
+-				status = "disabled";
+-			};
+-			i2c: i2c@11000 {
+-				compatible = "marvell,armadalp-i2c";
+-				reg = <0x11000 0x100>;
+-				status = "disabled";
+-			};
+-			comphy {
+-				compatible = "marvell,mvebu-comphy", "marvell,comphy-armadalp";
+-				mux-bitcount = <1>;
+-				max-lanes = <2>;
+-				reg-comphy = <0x18300 0x28>;
+-				reg-hpipe3 = <0x1F300 0x3D000>;
+-				/* phy-type & phy-speed selection should be done in board level device tree */
+-				phy0 {
+-					phy-type = <PHY_TYPE_UNCONNECTED>;
+-					phy-speed = <PHY_SPEED_1_25G>;
+-				};
+-				phy1 {
+-					phy-type = <PHY_TYPE_UNCONNECTED>;
+-					phy-speed = <PHY_SPEED_1_25G>;
+-				};
+-			};
+-			pcie-controller {
+-				#address-cells = <1>;
+-				#size-cells = <1>;
+-				compatible = "marvell,advk-pcie";
+-
+-				pcie@1,0 {
+-					reg = <0x70000 0x20000>;
+-					mem = <0xE8000000 0x8000000>;
+-					status = "disabled";
+-				};
+-			};
+-			sata: sata@e0000 {
+-				compatible = "marvell,mvebu-sata";
+-				reg = <0xe0000 0x200>;
+-				status = "disabled";
+-			};
+-			mmc0: mmc@D8000 {
+-				compatible = "marvell,xenon-sdhci";
+-				reg = <0xD8000 0x300>;
+-				status = "disabled";
+-			};
+-			mmc1: mmc@D0000 {
+-				compatible = "marvell,xenon-sdhci";
+-				reg = <0xD0000 0x300>;
+-				status = "disabled";
+-			};
+-			usb3: usb3@58000 {
+-				compatible = "marvell,mvebu-usb3";
+-				reg = <0x58000 0x450>;
+-				status = "disabled";
+-			};
+-			ddr-mac {
+-				compatible = "marvell,mvebu-ddr-mac";
+-				reg = <0x0000 0x1000>;
+-				status = "okay";
+-			};
+-
+-			ddr-phy {
+-				compatible = "marvell,mvebu-ddr-phy";
+-				reg = <0x1000 0x1000>;
+-				status = "okay";
+-			};
+-		};
+-	};
+-};
+diff --git a/configs/mvebu_armada3700_defconfig b/configs/mvebu_armada3700_defconfig
+index 0db11b5..1ebc227 100644
+--- a/configs/mvebu_armada3700_defconfig
++++ b/configs/mvebu_armada3700_defconfig
+@@ -26,7 +26,7 @@ CONFIG_CMD_MVEBU_BUBT=y
+ CONFIG_CMD_MVEBU_HW_INFO=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+-+S:CONFIG_DEFAULT_DEVICE_TREE="armada-lp-db"
+++S:CONFIG_DEFAULT_DEVICE_TREE="armada-3700-db"
+ CONFIG_MVEBU_ADVK_PCIE=y
+ CONFIG_MV_INCLUDE_SATA=y
+ CONFIG_SCSI_AHCI_PLAT=y
+diff --git a/configs/mvebu_armada3700_palladium_defconfig b/configs/mvebu_armada3700_palladium_defconfig
+index ee9c0c5..f1be796 100644
+--- a/configs/mvebu_armada3700_palladium_defconfig
++++ b/configs/mvebu_armada3700_palladium_defconfig
+@@ -20,7 +20,7 @@ CONFIG_CMD_NET=y
+ CONFIG_CMD_PING=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+-+S:CONFIG_DEFAULT_DEVICE_TREE="armada-lp-palladium"
+++S:CONFIG_DEFAULT_DEVICE_TREE="armada-3700-palladium"
+ CONFIG_MVEBU_ADVK_PCIE=y
+ CONFIG_MV_INCLUDE_SATA=y
+ CONFIG_SCSI_AHCI_PLAT=y
+-- 
+1.9.1
+

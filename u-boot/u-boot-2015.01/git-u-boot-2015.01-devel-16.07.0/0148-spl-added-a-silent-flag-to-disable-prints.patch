@@ -1,0 +1,55 @@
+From f221d77d72b896392009219e274d2f2c800ce023 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 16 Mar 2015 11:54:22 +0200
+Subject: [PATCH 0148/1240] spl: added a silent flag to disable prints
+
+The flag is passed by bootrom in cases where printing
+is not allowed such at UART boot or when the bootrom header
+explictly requests to disable prints
+
+Change-Id: Iac8d3dadf08ae5e5268edc53a8d4c0e619641285
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17571
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/spl.c | 5 ++++-
+ include/configs/mvebu-common.h  | 1 +
+ 2 files changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index e7b05c6..b52ca02 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -40,11 +40,14 @@ static int setup_fdt(void)
+ }
+ #endif
+ 
+-void board_init_f(ulong bootflag)
++void board_init_f(ulong silent)
+ {
+ 	gd = &gdata;
+ 	gd->baudrate = CONFIG_BAUDRATE;
+ 
++	if (silent)
++		gd->flags |= GD_FLG_SILENT;
++
+ #ifndef CONFIG_PALLADIUM
+ 	setup_fdt();
+ 	static_dram_init();
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 10afaed..34b1927 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -102,6 +102,7 @@
+ #endif /* MV_INCLUDE_RCVR */
+ 
+ /* Parser */
++#define CONFIG_SILENT_CONSOLE
+ #define CONFIG_SYS_HUSH_PARSER
+ #define CONFIG_AUTO_COMPLETE
+ #define CONFIG_SYS_PROMPT_HUSH_PS2      "> "
+-- 
+1.9.1
+

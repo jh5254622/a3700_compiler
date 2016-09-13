@@ -1,0 +1,30 @@
+From b7a3fb2742360999149c852d019d3020bafebb8c Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 2 Jun 2015 13:26:06 +0300
+Subject: [PATCH 0184/1240] fix: clock: fdt: fix the compatible string of tclk
+
+Change-Id: Icfbe265b5292b6a83404e3942685bf0b971e0dd7
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/19695
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv7/armada38x/clock.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/armv7/armada38x/clock.c b/arch/arm/cpu/armv7/armada38x/clock.c
+index fb66145..c0717f9 100644
+--- a/arch/arm/cpu/armv7/armada38x/clock.c
++++ b/arch/arm/cpu/armv7/armada38x/clock.c
+@@ -54,7 +54,7 @@ u32 get_fdt_tclk(const void *blob, int node)
+ 	void *reg;
+ 
+ 	if (node == -1)
+-		node = fdt_node_offset_by_compatible(blob, -1, "marvell,t-clock");
++		node = fdt_node_offset_by_compatible(blob, -1, "marvell,tclk");
+ 
+ 	reg = fdt_get_regs_offs(blob, node, "reg");
+ 
+-- 
+1.9.1
+

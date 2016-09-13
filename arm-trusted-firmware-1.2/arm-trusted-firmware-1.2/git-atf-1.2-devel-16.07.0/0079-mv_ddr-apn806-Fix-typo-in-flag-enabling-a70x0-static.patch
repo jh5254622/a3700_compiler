@@ -1,0 +1,31 @@
+From 05c4b612ce0852ea3ca1ad0d506b7447cfe20793 Mon Sep 17 00:00:00 2001
+From: Victor Axelrod <victora@marvell.com>
+Date: Tue, 5 Apr 2016 11:32:49 +0300
+Subject: [PATCH 079/239] mv_ddr: apn806: Fix typo in flag enabling a70x0
+ static config
+
+Change-Id: Ifbcc8306b00bcd5769bb332130be7e1a91e71119
+Signed-off-by: Victor Axelrod <victora@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28782
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_static.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_static.h b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_static.h
+index 3acbf83..85fc490 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_static.h
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_static.h
+@@ -2162,7 +2162,7 @@ struct mk6_reg_data mk6_phy_setup[] = {
+ 	{ 0x8d0, 0x00000019},
+ 	{-1, -1},
+ };
+-#elif defined(70x0)
++#elif defined(a70x0)
+ #if defined(CONFIG_DUNIT_STATIC)
+ struct mk6_reg_data ddr_static_setup[] = {
+ 	/* Traffic thru Tip::TIP init for MISL BOARD 2CS 4Gb x8 devices of micron - 2133P */
+-- 
+1.9.1
+

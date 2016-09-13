@@ -1,0 +1,35 @@
+From 5121874e26a199f534f8ed4d007407a6aed54bc6 Mon Sep 17 00:00:00 2001
+From: Hezi Shahmoon <hezi@marvell.com>
+Date: Mon, 16 Nov 2015 15:26:53 +0300
+Subject: [PATCH 0553/1240] fix: dts: a3700: Set correct UART clock frequency
+
+Details:
+ The frequency was calculated given the divider that
+ was used in the Bootrom which was 7.
+ The Value of 7 x 115200 x 32 yeilds 25804800
+
+Change-Id: Ie6f9e94d420913cabac84ef930c1d9c2dcbc8604
+Signed-off-by: Hezi Shahmoon <hezi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24909
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/armada-lp.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index 3f44204..0157c2f 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -23,7 +23,7 @@
+ 			serial: serial@12000 {
+ 				compatible = "marvell,armadalp-uart";
+ 				reg = <0x12000 0x20>;
+-				clock_frequency = <40000000>;
++				clock_frequency = <25804800>;
+ 				baudrate = <115200>;
+ 				status = "disabled";
+ 			};
+-- 
+1.9.1
+

@@ -1,0 +1,178 @@
+From 4f9bf169c976783cae231da3403b040e9178ac37 Mon Sep 17 00:00:00 2001
+From: Terry Zhou <bjzhou@marvell.com>
+Date: Fri, 1 Apr 2016 14:38:53 +0800
+Subject: [PATCH 1022/1240] dts: a3700: add new dts for SFP 2.5G setup
+
+- In this new fdt, the SFP 2.5G module is connected to
+  GBE port 1, while GBE port 0 still works in rgmii mode.
+- Only support the fixed-link for SFP 2.5G module.
+
+Change-Id: I14a75fa79224b092d83f4d9e292e3503f1e3a463
+Signed-off-by: Terry Zhou <bjzhou@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28724
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/Makefile                             |  3 +-
+ arch/arm/dts/armada-3700-db-sfp2_5g.dts           | 51 +++++++++++++++++++++++
+ arch/arm/include/asm/arch-armada3700/board-info.h |  1 +
+ doc/mvebu/a3700/armada-3700-db-setup.txt          | 42 +++++++++----------
+ include/dt-bindings/multi-fdt/multi-fdt.h         |  1 +
+ 5 files changed, 76 insertions(+), 22 deletions(-)
+ create mode 100644 arch/arm/dts/armada-3700-db-sfp2_5g.dts
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index cfa4e19..366a21d 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -59,7 +59,8 @@ ifndef CONFIG_DEVEL_BOARD
+ dtb-y += armada-3700-customer0.dtb
+ endif #CONFIG_DEVEL_BOARD
+ dtb-$(CONFIG_DEVEL_BOARD) += armada-3700-db.dtb \
+-			     armada-3700-db-sgmii1.dtb
++			     armada-3700-db-sgmii1.dtb \
++			     armada-3700-db-sfp2_5g.dtb
+ dtb-$(CONFIG_PALLADIUM) += armada-3700-palladium.dtb
+ endif #CONFIG_TARGET_ARMADA_3700
+ 
+diff --git a/arch/arm/dts/armada-3700-db-sfp2_5g.dts b/arch/arm/dts/armada-3700-db-sfp2_5g.dts
+new file mode 100644
+index 0000000..e276e06
+--- /dev/null
++++ b/arch/arm/dts/armada-3700-db-sfp2_5g.dts
+@@ -0,0 +1,51 @@
++
++#include "armada-3700-db.dts"
++
++/* detail board setup:
++ * Pcie Jumper slot	:	DB-88F3720-PCIe-mPCIe-Jumper
++ * SGMII module slot	:	DB-88F3720-SerDes-Jumper
++ * RGMII module slot	:	DB-88F3720-PHY module
++ * eMMC slot		:	DB-88F3720-eMMC_NAND module
++ * SDIO slot		:	DB-88F3720-SDcard module
++ *
++ * PHY0 (USB3/SGMII1)	:	SGMII1_Ethernet via SFP2.5G (1 Lane)
++ * PHY1 (PCIe/SGMII0)	:	PCIe (WiFi via mini_PCIe module)
++ * PHY2 (SATA)		:	SATA
++ * RGMII		:	Ethernet via PHY (1 Lane)
++ * USB2 Port 0		:	USB2 only
++ * USB2 Port 1		:	USB2 Host
++ * eMMC*		:	eMMC NAND
++ * SDIO*		:	SD card
++ * BOOT device*		:	SPI Flash
++*/
++
++/ {
++	model = "DB-88F3720-DDR3-Modular-SFP2.5G";
++	compatible = "marvell,armada-3700-db0", "marvell,armada-3700";
++	fdt_config_id = <A3700_DB_CONFIG_ID_SFP_2_5G>;
++	board_id = <A3700_DB_ID>;
++
++	soc {
++		internal-regs {
++			neta1: neta@40000 {
++				status = "okay";
++				phy_mode = "sgmii";
++				fixed-link {
++					/* Here "speed" is set to 1000, GBE MAC is running in 1G mode,
++					 * but the actuall PHY speed may be 1 Gbps or 2.5 Gbps,
++					 * it's up to the corresponding SERDES speed in comphy node.
++					 * If SERDES speed is set to 3.125G, it implies sgmii 2.5 Gbps;
++					 * if SERDES speed is set to 1.25G, it implies sgmii 1 Gbps. */
++					speed = <1000>;
++					full-duplex;
++				};
++			};
++			comphy {
++				phy1 {
++					phy-type = <PHY_TYPE_SGMII1>;
++					phy-speed = <PHY_SPEED_3_125G>;
++				};
++			};
++		};
++	};
++};
+diff --git a/arch/arm/include/asm/arch-armada3700/board-info.h b/arch/arm/include/asm/arch-armada3700/board-info.h
+index 0487267..793934d 100644
+--- a/arch/arm/include/asm/arch-armada3700/board-info.h
++++ b/arch/arm/include/asm/arch-armada3700/board-info.h
+@@ -44,6 +44,7 @@
+ 	It starts from 1.
+ 	+ arch/arm/dts/armada-lp-db.dts, board_id = A3700_DB_CONFIG_ID_USB3..
+ 	+ arch/arm/dts/armada-lp-db-sgmii1.dts, board_id = A3700_DB_CONFIG_ID_SGMII1.
++	+ arch/arm/dts/armada-lp-db-sfp2_5G.dts, board_id = A3700_DB_CONFIG_ID_SFP_2_5G
+ */
+ #define DEFAULT_FDT_CONFIG_ID	A3700_DB_CONFIG_ID_USB3
+ 
+diff --git a/doc/mvebu/a3700/armada-3700-db-setup.txt b/doc/mvebu/a3700/armada-3700-db-setup.txt
+index ddbc241..f7eba5c 100644
+--- a/doc/mvebu/a3700/armada-3700-db-setup.txt
++++ b/doc/mvebu/a3700/armada-3700-db-setup.txt
+@@ -14,30 +14,30 @@ Once completed, change the FDT file used by U-BOOT by running the U-BOOT command
+ Board Physical Setup (Connectors, Jumpers, and modules)
+ -------------------------------------------------------
+ 
+-		|	Setup-1				|	Setup-2				|
+-Connector	|     Default(USB3)			|     	SGMII1 				|
+-------------------------------------------------------------------------------------------------|
+-CON8		| eMMC_NAND module 	(SLM1506-v1)	| eMMC_NAND module 	(SLM1506-v1)	|
+-CON15		| SDcard module		(SLM1505-v1)	| SDcard module		(SLM1505-v1)	|
+-CON17(PCIe)	| PCIe-mPCIe-Jumper: SLM-1496(Optional*)| PCIe-mPCIe-Jumper: SLM-1496(Optional*)|
+-CON19		| SerDes-Jumper 	(SLM1502-v1)	| 88E1512 Module 	(SLM-1496-v1)	|
+-CON21		| 88E1512 Module 	(SLM-1496-v1)	| 88E1512 Module 	(SLM-1496-v1)	|
+-------------------------------------------------------------------------------------------------|
++		|	Setup-1				|	Setup-2				|	Setup-3				|
++Connector	|     Default(USB3)			|     	SGMII1 				|     	SGMII1-SFP2.5G 			|
++----------------------------------------------------------------------------------------------------------------------------------------|
++CON8		| eMMC_NAND module 	(SLM1506-v1)	| eMMC_NAND module 	(SLM1506-v1)	| eMMC_NAND module 	(SLM1506-v1)	|
++CON15		| SDcard module		(SLM1505-v1)	| SDcard module		(SLM1505-v1)	| SDcard module		(SLM1505-v1)	|
++CON17(PCIe)	| PCIe-mPCIe-Jumper: SLM-1496(Optional*)| PCIe-mPCIe-Jumper: SLM-1496(Optional*)| PCIe-mPCIe-Jumper: SLM-1496(Optional*)|
++CON19		| SerDes-Jumper 	(SLM1502-v1)	| 88E1512 Module 	(SLM-1496-v1)	| 88F3720-2xSFP Module 	(SLM-1504-v1)	|
++CON21		| 88E1512 Module 	(SLM-1496-v1)	| 88E1512 Module 	(SLM-1496-v1)	| 88E1512 Module 	(SLM-1496-v1)	|
++----------------------------------------------------------------------------------------------------------------------------------------|
+ * PCIe-mPCIe-Jumper is used to enable mini PCIe0 port (CON12)
+ 
+ The tables below summarizes the interface configuration of each setup
+ 
+ 
+-setup  #	|	1	|	2	|
+-name   #	|     Default 	|   SGMII1	|
+--------------------------------------------------
+-SerDes PHY0	| PCIe0		| PCIe0		|
+-SerDes PHY1	| USB3_H0	| SGMII1	|
+-SerDes PHY2	| SATA		| SATA		|
+-SATA		| CON6		| CON6		|
+-PCIe		| CON12/17	| CON12/17	|
+-USB3		| CON13		| N/A		|
+-SGMII1		| N/A		| PHY1 (CON19)	|
+-RGMII		| PHY0 (CON21)	| PHY0 (CON21)	|
+--------------------------------------------------
++setup  #	|	1	|	2	|	3	|
++name   #	|     Default 	|   SGMII1	| SGMII1-SFP2.5G|
++-----------------------------------------------------------------
++SerDes PHY0	| PCIe0		| PCIe0		| PCIe0		|
++SerDes PHY1	| USB3_H0	| SGMII1	| SGMII1-SFP2.5G|
++SerDes PHY2	| SATA		| SATA		| SATA		|
++SATA		| CON6		| CON6		| CON6		|
++PCIe		| CON12/17	| CON12/17	| CON12/17	|
++USB3		| CON13		| N/A		| N/A		|
++SGMII1		| N/A		| PHY1 (CON19)	| PHY1 (CON19)	|
++RGMII		| PHY0 (CON21)	| PHY0 (CON21)	| PHY0 (CON21)	|
++-----------------------------------------------------------------
+ 
+diff --git a/include/dt-bindings/multi-fdt/multi-fdt.h b/include/dt-bindings/multi-fdt/multi-fdt.h
+index 93ee4fb..c8197d5 100644
+--- a/include/dt-bindings/multi-fdt/multi-fdt.h
++++ b/include/dt-bindings/multi-fdt/multi-fdt.h
+@@ -34,6 +34,7 @@
+  */
+ #define A3700_DB_CONFIG_ID_USB3		1
+ #define A3700_DB_CONFIG_ID_SGMII1	2
++#define A3700_DB_CONFIG_ID_SFP_2_5G	3
+ 
+ #define A3700_DB_CONFIG_ID_DEFAULT	A3700_DB_CONFIG_ID_USB3
+ 
+-- 
+1.9.1
+

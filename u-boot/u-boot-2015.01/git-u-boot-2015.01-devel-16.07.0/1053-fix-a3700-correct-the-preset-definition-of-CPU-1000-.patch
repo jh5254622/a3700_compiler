@@ -1,0 +1,37 @@
+From ecd0512d368840350751d7d94ef5613aad40bd02 Mon Sep 17 00:00:00 2001
+From: Wilson Ding <dingwei@marvell.com>
+Date: Sun, 17 Apr 2016 19:53:26 +0800
+Subject: [PATCH 1053/1240] fix: a3700: correct the preset definition of
+ CPU-1000 DDR-800
+
+- The definition of CPU-1000 DDR-800 in Kconfig is not
+  aligned to that in Makefile. It causes the compilation
+  error when selecting the frequency preset.
+- The patche is to aligned this definition between Kconfig
+  and Makefile.
+
+Change-Id: I4620b59187822cff8e6737ad2c05f4d3950e0c02
+Signed-off-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29113
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv8/armada3700/Kconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/armv8/armada3700/Kconfig b/arch/arm/cpu/armv8/armada3700/Kconfig
+index 64a3d91..469146f 100644
+--- a/arch/arm/cpu/armv8/armada3700/Kconfig
++++ b/arch/arm/cpu/armv8/armada3700/Kconfig
+@@ -68,7 +68,7 @@ config PRESET_CPU_800_DDR_800
+ 	  tree configuration preset:
+ 	  CPU at 800 MHz, DDR3 at 800 MHz
+ 
+-config PRESET_CPU_1000_DDR800
++config PRESET_CPU_1000_DDR_800
+ 	bool "CPU at 1000 MHz, DDR at 800 MHz"
+ 	help
+ 	  Run system with the following clock
+-- 
+1.9.1
+

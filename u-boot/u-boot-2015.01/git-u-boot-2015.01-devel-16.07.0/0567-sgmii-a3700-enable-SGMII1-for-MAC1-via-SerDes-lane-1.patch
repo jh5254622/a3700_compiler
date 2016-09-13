@@ -1,0 +1,33 @@
+From 176c46d13e6e151b0cddddaf611f4f416056aca8 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Thu, 26 Nov 2015 16:00:12 +0200
+Subject: [PATCH 0567/1240] sgmii: a3700: enable SGMII1 for MAC1 via SerDes
+ lane#1
+
+- set NETA1 unit as 'sgmii' mode
+
+Change-Id: I3a4d29c8f4e6bcb2ab388f200e2a0580e7fc27a8
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25556
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/armada-lp.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index 70619b6..657c2e1 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -73,7 +73,7 @@
+ 				compatible = "marvell,armadalp-neta";
+ 				reg = <0x40000 0x20>;
+ 				phy_addr = <0x1>;
+-				phy_mode = "rgmii";
++				phy_mode = "sgmii";
+ 				status = "disabled";
+ 			};
+ 			i2c: i2c@11000 {
+-- 
+1.9.1
+

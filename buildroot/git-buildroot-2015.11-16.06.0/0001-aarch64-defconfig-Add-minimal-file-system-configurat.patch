@@ -1,0 +1,31 @@
+From b5b415c4d01d2121aaac0c3fa92906f650430f37 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 3 Mar 2015 12:16:27 +0200
+Subject: [PATCH 01/66] aarch64: defconfig: Add minimal file-system
+ configuration
+
+	This configuration includes the minimal set of utilities for aarch64
+	targets. This is useful as a ramfs file-system (for emulation platforms).
+
+Change-Id: I32248ce3df2e01d6814ce72b6ed418c60716abdf
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+---
+ configs/mvebu_armv8_tiny_defconfig | 6 ++++++
+ 1 file changed, 6 insertions(+)
+ create mode 100644 configs/mvebu_armv8_tiny_defconfig
+
+diff --git a/configs/mvebu_armv8_tiny_defconfig b/configs/mvebu_armv8_tiny_defconfig
+new file mode 100644
+index 0000000..53d8b6f
+--- /dev/null
++++ b/configs/mvebu_armv8_tiny_defconfig
+@@ -0,0 +1,6 @@
++BR2_aarch64=y
++BR2_TOOLCHAIN_EXTERNAL=y
++BR2_TARGET_GENERIC_GETTY_PORT="ttyAMA0"
++BR2_TARGET_ROOTFS_CPIO=y
++BR2_TARGET_ROOTFS_TAR_GZIP=y
++BR2_PACKAGE_HOST_MKE2IMG=y
+-- 
+1.9.1
+

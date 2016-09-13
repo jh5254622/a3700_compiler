@@ -1,0 +1,126 @@
+From a5b93880ec88ef04e1adb36c57975448c49a8a2e Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Tue, 9 Feb 2016 17:19:47 +0200
+Subject: [PATCH 013/239] atf: implemented psci reset handler
+
+this handler is called by linux upon 'reboot' command
+
+Change-Id: I2c322b895d939160f94eaaa69d73a4e913d3a8d2
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27389
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/plat/marvell/a8k/common/plat_marvell.h |  7 +++++++
+ plat/marvell/a8k/a7040_rz/aarch64/plat_psci.S  | 12 +++++++++---
+ plat/marvell/a8k/a7040_rz/plat_def.h           |  7 ++++---
+ plat/marvell/a8k/a7040_rz/plat_pm.c            |  9 ++-------
+ 4 files changed, 22 insertions(+), 13 deletions(-)
+
+diff --git a/include/plat/marvell/a8k/common/plat_marvell.h b/include/plat/marvell/a8k/common/plat_marvell.h
+index 3669651..b343c37 100644
+--- a/include/plat/marvell/a8k/common/plat_marvell.h
++++ b/include/plat/marvell/a8k/common/plat_marvell.h
+@@ -111,6 +111,13 @@ void plat_marvell_gic_driver_init(void);
+ void plat_marvell_gic_init(void);
+ 
+ /*
++ * PSCI functionality
++ */
++void psci_0_2_cpu_on_64(u_register_t mpidr);
++void psci_0_2_system_reset(void);
++void psci_save_cpu_entrypoint(uintptr_t entrypoint);
++
++/*
+  * Optional functions required in Marvell standard platforms
+  */
+ void plat_marvell_io_setup(void);
+diff --git a/plat/marvell/a8k/a7040_rz/aarch64/plat_psci.S b/plat/marvell/a8k/a7040_rz/aarch64/plat_psci.S
+index 82676af..88872bb 100644
+--- a/plat/marvell/a8k/a7040_rz/aarch64/plat_psci.S
++++ b/plat/marvell/a8k/a7040_rz/aarch64/plat_psci.S
+@@ -168,13 +168,12 @@ enable_affinity:
+ 	lsl     x1, x3, x2
+ 	orr	x1, x1, #(MVEBU_IO_AFFINITY)
+ 	str     w1, [x0]
+-#if 1 /* TODO - SMP enable stucks linux boot */
++
+ 	/* Activate Affinity in CA-57 configuration
+ 	 * Enable the SMPEN bit in CPUECTLR_EL1 */
+ 	mrs x0, S3_1_c15_c2_1
+ 	orr x0, x0, #0x40
+ 	msr S3_1_c15_c2_1, x0
+-#endif
+ 	ret
+ 
+ .globl	psci_arch_init
+@@ -209,6 +208,14 @@ psci_build_stack:
+ 
+ 	ret
+ 
++.globl	psci_0_2_system_reset
++psci_0_2_system_reset:
++	mov	x0, #(MVEBU_RFU_BASE)
++	add	x3, x0, #(MVEBU_RFU_GLOBL_SW_RST)
++	mov	w0, #0
++	str	w0, [x3]
++	ret
++
+ /* x0 = target CPU */
+ .globl	psci_0_2_cpu_on_64
+ psci_0_2_cpu_on_64:
+@@ -258,4 +265,3 @@ _target_pc:
+ 
+ text_end:
+ 	.popsection
+-
+diff --git a/plat/marvell/a8k/a7040_rz/plat_def.h b/plat/marvell/a8k/a7040_rz/plat_def.h
+index 56ed687..893cfff 100644
+--- a/plat/marvell/a8k/a7040_rz/plat_def.h
++++ b/plat/marvell/a8k/a7040_rz/plat_def.h
+@@ -34,11 +34,12 @@
+ 
+ #define MVEBU_MAX_CPUS_PER_CLUSTER	4
+ 
+-#define MVEBU_PRIMARY_CPU			0x0
++#define MVEBU_PRIMARY_CPU		0x0
+ 
+-#define COUNTER_FREQUENCY			25000000
++#define COUNTER_FREQUENCY		25000000
+ 
+-#define MVEBU_REGS_BASE				0xF0000000
++#define MVEBU_REGS_BASE			0xF0000000
++#define MVEBU_RFU_BASE			(MVEBU_REGS_BASE + 0x6F0000)
+ 
+ /*******************************************************************************
+  * MVEBU memory map related constants
+diff --git a/plat/marvell/a8k/a7040_rz/plat_pm.c b/plat/marvell/a8k/a7040_rz/plat_pm.c
+index 24ab046..2aa6725 100644
+--- a/plat/marvell/a8k/a7040_rz/plat_pm.c
++++ b/plat/marvell/a8k/a7040_rz/plat_pm.c
+@@ -38,9 +38,6 @@
+ #include <debug.h>
+ 
+ 
+-extern void psci_0_2_cpu_on_64(u_register_t mpidr);
+-extern void psci_save_cpu_entrypoint(uintptr_t entrypoint);
+-
+ /*******************************************************************************
+  * A8K handler called to check the validity of the power state
+  * parameter.
+@@ -140,10 +137,8 @@ static void __dead2 a8k_system_off(void)
+ 
+ static void __dead2 a8k_system_reset(void)
+ {
+-	ERROR("a8k_system_reset needs to be implemented\n");
+-	panic();
+-	wfi();
+-	ERROR("A8K System Reset: operation not handled.\n");
++	psci_0_2_system_reset();
++	/* we shouldn't get to this point */
+ 	panic();
+ }
+ 
+-- 
+1.9.1
+

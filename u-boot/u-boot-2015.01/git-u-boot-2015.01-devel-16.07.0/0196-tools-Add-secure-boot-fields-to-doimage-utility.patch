@@ -1,0 +1,1539 @@
+From 48fc5af7152333a54b3e455ac71d4e6ec8baa76e Mon Sep 17 00:00:00 2001
+From: kostap <kostap@marvell.com>
+Date: Sun, 14 Jun 2015 16:57:05 +0300
+Subject: [PATCH 0196/1240] tools: Add secure boot fields to doimage utility
+
+	- Add support for trusted boot configuration file
+	  Requires installation of Libconfig GPL library on host
+	- Add support for secure header build into the boot image
+	  Required installation of PolarSSL/mbedTLS GPL library on host.
+	- Add extra folder "secure" under "tools".
+	  The folder contains example trusted boot configuration file,
+	  example CSK and KAK RSA keys and example AES-256 key file.
+
+Change-Id: Ib573c28c36046e78cd43f73ccf7b56572456975e
+Signed-off-by: kostap <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20184
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ Makefile                          |  30 +-
+ arch/arm/cpu/mvebu-common/Kconfig |  15 +
+ tools/Makefile                    |   5 +
+ tools/doimage.c                   | 987 ++++++++++++++++++++++++++++++++++++--
+ tools/secure/aes_key.txt          |   1 +
+ tools/secure/csk_priv_pem0.key    |  27 ++
+ tools/secure/csk_priv_pem1.key    |  27 ++
+ tools/secure/csk_priv_pem2.key    |  27 ++
+ tools/secure/csk_priv_pem3.key    |  27 ++
+ tools/secure/kak_priv_pem.key     |  27 ++
+ tools/secure/sec_img.cfg          |  25 +
+ 11 files changed, 1152 insertions(+), 46 deletions(-)
+ create mode 100644 tools/secure/aes_key.txt
+ create mode 100644 tools/secure/csk_priv_pem0.key
+ create mode 100644 tools/secure/csk_priv_pem1.key
+ create mode 100644 tools/secure/csk_priv_pem2.key
+ create mode 100644 tools/secure/csk_priv_pem3.key
+ create mode 100644 tools/secure/kak_priv_pem.key
+ create mode 100644 tools/secure/sec_img.cfg
+
+diff --git a/Makefile b/Makefile
+index 89e5a69..1da83e5 100644
+--- a/Makefile
++++ b/Makefile
+@@ -842,12 +842,40 @@ SPLIMAGE	:= $(srctree)/spl/u-boot-spl.bin
+ ifneq ($(CONFIG_TARGET_ARMADA_8K), $(CONFIG_TARGET_ARMADA_LP))
+ DOIMAGE		:=  $(srctree)/tools/doimage
+ BIN2PHEX	:= $(srctree)/scripts/bin2phex.pl
++DOIMAGE_SEC	:= $(srctree)/tools/secure/sec_img.cfg
++
++ifdef CONFIG_MVEBU_SECURE_BOOT
++DOIMAGE_SEC_FLAGS := -c $(DOIMAGE_SEC)
++DOIMAGE_LIBS_CHECK = \
++	if ! [ -d "/usr/include/polarssl" ]; then \
++			echo "****************************************" >&2; \
++			echo "Missing PolarSSL installation! " >&2; \
++			echo "Please download it from \"tls.mbed.org\"" >&2; \
++			echo "Make sure to use version 1.3.11 or later" >&2; \
++			echo "****************************************" >&2; \
++		exit 1; \
++	else if ! [ -f "/usr/include/libconfig.h" ]; then \
++			echo "********************************************************" >&2; \
++			echo "Missing Libconfig installation!" >&2; \
++			echo "Please download it from \"www.hyperrealm.com/libconfig/\"" >&2; \
++			echo "Alternatively on Debian/Ubuntu system install packages" >&2; \
++			echo "\"libconfig8\" and \"libconfig8-dev\"" >&2; \
++			echo "********************************************************" >&2; \
++		exit 1; \
++	fi \
++	fi
++else
++DOIMAGE_LIBS_CHECK =
++DOIMAGE_SEC_FLAGS =
++endif
++
+ ifdef CONFIG_MVEBU_NAND_BLOCK_SIZE
+ NAND_DOIMAGE_FLAGS := -t $(CONFIG_MVEBU_NAND_CELL_TYPE) -n $(CONFIG_MVEBU_NAND_BLOCK_SIZE)
+ endif
+-DOIMAGE_FLAGS	:= -b $(SPLIMAGE) $(NAND_DOIMAGE_FLAGS)
++DOIMAGE_FLAGS	:= -b $(SPLIMAGE) $(NAND_DOIMAGE_FLAGS) $(DOIMAGE_SEC_FLAGS)
+ 
+ doimage: $(obj)/u-boot.bin $(DOIMAGE) $(SPLIMAGE)
++		@$(DOIMAGE_LIBS_CHECK)
+ 		$(DOIMAGE) $(DOIMAGE_FLAGS) u-boot.bin u-boot-$(CONFIG_SYS_SOC).bin
+ 
+ bin2phex: doimage
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index a9a00f1..d0baa19 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -8,6 +8,21 @@ config MVEBU
+ 	depends on $SYS_VENDOR="mvebu"
+ 	default y
+ 
++config MVEBU_SECURE_BOOT
++	bool "Trusted Boot Image format"
++	depends on MVEBU
++	default n
++	help
++	  Instructs the u-boot to create a trusted
++	  boot image for MVEBU device. The trusted
++	  boot image will boot normally on devices
++	  that have secure mode option turned OFF
++	  in their eFUSE. Once the secure boot mode
++	  is selected by eFuse, the trusted boot
++	  image will be verified according to secure
++	  boot flow algorithm described in details
++	  in appropriate device specification.
++
+ menu "IO support"
+ 
+ config MVEBU_NAND
+diff --git a/tools/Makefile b/tools/Makefile
+index 9a6700a..3a23837 100644
+--- a/tools/Makefile
++++ b/tools/Makefile
+@@ -148,6 +148,11 @@ hostprogs-$(CONFIG_MVEBU) += doimage
+ hostprogs-y += proftool
+ hostprogs-$(CONFIG_STATIC_RELA) += relocate-rela
+ 
++ifneq ($(CONFIG_MVEBU_SECURE_BOOT),)
++HOSTCFLAGS_doimage.o := -DCONFIG_MVEBU_SECURE_BOOT
++HOSTLOADLIBES_doimage += -lconfig -lpolarssl
++endif
++
+ # We build some files with extra pedantic flags to try to minimize things
+ # that won't build on some weird host compiler -- though there are lots of
+ # exceptions for files that aren't complaint.
+diff --git a/tools/doimage.c b/tools/doimage.c
+index f86591c..a91911a 100644
+--- a/tools/doimage.c
++++ b/tools/doimage.c
+@@ -23,9 +23,44 @@
+ #include <stddef.h>
+ #include <string.h>
+ #include <sys/stat.h>
+-
+-#define MAX_FILENAME	256
+-
++#include <sys/time.h>
++
++#ifdef CONFIG_MVEBU_SECURE_BOOT
++#include <libconfig.h>	/* for parsing config file */
++
++#if !defined(POLARSSL_CONFIG_FILE)
++#include "polarssl/config.h"
++#else
++#include POLARSSL_CONFIG_FILE
++#endif
++
++/* PolarSSL (mbedTLS) stuff */
++#if defined(POLARSSL_BIGNUM_C) && defined(POLARSSL_ENTROPY_C) && \
++	defined(POLARSSL_SHA256_C) && \
++	defined(POLARSSL_PK_PARSE_C) && defined(POLARSSL_FS_IO) && \
++	defined(POLARSSL_CTR_DRBG_C)
++#include <polarssl/error.h>
++#include <polarssl/entropy.h>
++#include <polarssl/ctr_drbg.h>
++#include <polarssl/md.h>
++#include <polarssl/pk.h>
++#include <polarssl/sha256.h>
++#include <polarssl/x509.h>
++#else
++#error "Bad PolarSSL/mbedTLS configuration!"
++#endif
++#endif /* CONFIG_MVEBU_SECURE_BOOT */
++
++#define MAX_FILENAME		256
++#define CSK_ARR_SZ		16
++#define CSK_ARR_EMPTY_FILE	"*"
++#define AES_KEY_BIT_LEN		256
++#define AES_KEY_BYTE_LEN	(AES_KEY_BIT_LEN >> 3)
++#define AES_BLOCK_SZ		16
++#define RSA_SIGN_BYTE_LEN	256
++#define MAX_RSA_DER_BYTE_LEN	524
++
++#define VERSION_STRING		"Marvell(C) doimage utility version 3.0"
+ 
+ /* A8K definitions */
+ 
+@@ -85,6 +120,20 @@ typedef struct _reg_entry {
+ 	uint32_t	value;
+ } reg_entry_t;
+ 
++typedef struct _sec_entry {
++	uint8_t		kak_key[MAX_RSA_DER_BYTE_LEN];
++	uint32_t	jtag_delay;
++	uint32_t	box_id;
++	uint32_t	flash_id;
++	uint32_t	jtag_en;
++	uint32_t	encrypt_en;
++	uint32_t	efuse_dis;
++	uint8_t		header_sign[RSA_SIGN_BYTE_LEN];
++	uint8_t		image_sign[RSA_SIGN_BYTE_LEN];
++	uint8_t		csk_keys[CSK_ARR_SZ][MAX_RSA_DER_BYTE_LEN];
++	uint8_t		csk_sign[RSA_SIGN_BYTE_LEN];
++} sec_entry_t;
++
+ /* A8K definitions end */
+ 
+ /* UART argument bitfield */
+@@ -94,13 +143,36 @@ typedef struct _reg_entry {
+ 
+ #define uart_set_mode(arg, mode)	(arg |= (mode & 0x3))
+ 
++typedef struct _sec_options {
++#ifdef CONFIG_MVEBU_SECURE_BOOT
++	char aes_key_file[MAX_FILENAME];
++	char kak_key_file[MAX_FILENAME];
++	char csk_key_file[CSK_ARR_SZ][MAX_FILENAME];
++	uint32_t	box_id;
++	uint32_t	flash_id;
++	uint32_t	jtag_delay;
++	uint8_t		csk_index;
++	uint8_t		jtag_enable;
++	uint8_t		efuse_disable;
++	uint32_t	*control;
++	pk_context	kak_pk;
++	pk_context	csk_pk[CSK_ARR_SZ];
++	uint8_t		aes_key[AES_KEY_BYTE_LEN];
++	uint8_t		*encrypted_image;
++	uint32_t	enc_image_sz;
++#endif
++} sec_options;
++
+ typedef struct _options {
+ 	char bin_ext_file[MAX_FILENAME];
+ 	char reg_ext_file[MAX_FILENAME];
++	char sec_cfg_file[MAX_FILENAME];
++	sec_options *sec_opts;
+ 	uint32_t  load_addr;
+ 	uint32_t  exec_addr;
+ 	uint32_t  baudrate;
+ 	uint8_t	  disable_print;
++	int8_t    key_index; /* For header signatures verification only */
+ 	uint32_t  nfc_io_args;
+ } options_t;
+ 
+@@ -113,6 +185,7 @@ void usage_err(char *msg)
+ 
+ void usage(void)
+ {
++	printf("\n\n%s\n\n", VERSION_STRING);
+ 	printf("Usage: doimage [options] <input_file> [output_file]\n");
+ 	printf("create bootrom image from u-boot and boot extensions\n\n");
+ 
+@@ -137,7 +210,13 @@ void usage(void)
+ 	printf("            A text file containing pairs of register address and value.\n");
+ 	printf("            These values are written before the execution of the boot image.\n");
+ 	printf("            Currently supports only a single file.\n");
++#ifdef CONFIG_MVEBU_SECURE_BOOT
++	printf("  -c        Make trusted boot image using parameters from the configuration file.\n");
++#endif
+ 	printf("  -p        Parse and display a pre-built boot image\n");
++#ifdef CONFIG_MVEBU_SECURE_BOOT
++	printf("  -k        Key index for RSA signatures verification when parsing the boot image\n");
++#endif
+ 	printf("  -m        Disable prints of bootrom and binary extension\n");
+ 	printf("  -u        UART baudrate used for bootrom prints. Must be multiple of 1200\n");
+ 	printf("  -h        Dispalys this help message\n");
+@@ -154,10 +233,13 @@ void usage(void)
+ options_t opts = {
+ 	.bin_ext_file = "NA",
+ 	.reg_ext_file = "NA",
++	.sec_cfg_file = "NA",
++	.sec_opts = 0,
+ 	.load_addr = 0x0,
+ 	.exec_addr = 0x0,
+ 	.disable_print = 0,
+ 	.baudrate = 0,
++	.key_index = -1,
+ };
+ 
+ int get_file_size(char *filename)
+@@ -184,6 +266,749 @@ uint32_t checksum32(uint32_t *start, uint32_t len)
+ 	return sum;
+ }
+ 
++/*******************************************************************************
++*    create_rsa_signature (memory buffer content)
++*          Create RSASSA-PSS/SHA-256 signature for memory buffer
++*          using RSA Private Key
++*    INPUT:
++*          pk_ctx     Private Key context
++*          input      memory buffer
++*          ilen       buffer length
++*          pers       personalization string for seeding the RNG.
++*                     For instance a private key file name.
++*    OUTPUT:
++*          signature  RSA-2048 signature
++*    RETURN:
++*          0 on success
++*******************************************************************************/
++#ifdef CONFIG_MVEBU_SECURE_BOOT
++int create_rsa_signature(pk_context		*pk_ctx,
++			 const unsigned char	*input,
++			 size_t			ilen,
++			 const char		*pers,
++			 uint8_t		*signature)
++{
++	entropy_context		entropy;
++	ctr_drbg_context	ctr_drbg;
++	unsigned char		hash[32];
++	unsigned char		buf[POLARSSL_MPI_MAX_SIZE];
++	int					rval;
++
++	/* Not sure this is required, but it's safer to start with empty buffers */
++	memset(hash, 0, sizeof(hash));
++	memset(buf, 0, sizeof(buf));
++
++	entropy_init(&entropy);
++
++	/* Seed the random number generator */
++	rval = ctr_drbg_init(&ctr_drbg, entropy_func, &entropy,
++			     (const unsigned char *)pers, strlen(pers));
++	if (rval != 0) {
++		fprintf(stderr, " Failed in ctr_drbg_init call (%d)!\n", rval);
++		goto sign_exit;
++	}
++
++	/* The PK context should be already initalized.
++	   Set the padding type for this PK context */
++	rsa_set_padding(pk_rsa(*pk_ctx), RSA_PKCS_V21, POLARSSL_MD_SHA256);
++
++	/* First compute the SHA256 hash for the input blob */
++	sha256(input, ilen, hash, 0);
++
++	/* Then calculate the hash signature */
++	rval = rsa_rsassa_pss_sign(pk_rsa(*pk_ctx), ctr_drbg_random, &ctr_drbg,
++				   RSA_PRIVATE, POLARSSL_MD_SHA256, 0, hash, buf);
++	if (rval != 0) {
++		fprintf(stderr,  "Failed to create RSA signature for %s. Error %d\n", pers, rval);
++		goto sign_exit;
++	}
++	memcpy(signature, buf, 256);
++
++sign_exit:
++	ctr_drbg_free(&ctr_drbg);
++	entropy_free(&entropy);
++
++	return rval;
++} /* end of create_rsa_signature */
++
++/*******************************************************************************
++*    verify_rsa_signature (memory buffer content)
++*          Verify RSASSA-PSS/SHA-256 signature for memory buffer
++*          using RSA Public Key
++*    INPUT:
++*          pub_key    Public Key buffer
++*          ilen       Public Key buffer length
++*          input      memory buffer
++*          ilen       buffer length
++*          pers       personalization string for seeding the RNG.
++*          signature  RSA-2048 signature
++*    OUTPUT:
++*          none
++*    RETURN:
++*          0 on success
++*******************************************************************************/
++int verify_rsa_signature(const unsigned char	*pub_key,
++			 size_t			klen,
++			 const unsigned char	*input,
++			 size_t			ilen,
++			 const char		*pers,
++			 uint8_t		*signature)
++{
++	entropy_context		entropy;
++	ctr_drbg_context	ctr_drbg;
++	pk_context		pk_ctx;
++	unsigned char		hash[32];
++	int			rval;
++
++	/* Not sure this is required, but it's safer to start with empty buffer */
++	memset(hash, 0, sizeof(hash));
++
++	pk_init(&pk_ctx);
++	entropy_init(&entropy);
++
++	/* Seed the random number generator */
++	rval = ctr_drbg_init(&ctr_drbg, entropy_func, &entropy,
++			     (const unsigned char *)pers, strlen(pers));
++	if (rval != 0) {
++		fprintf(stderr, " Failed in ctr_drbg_init call (%d)!\n", rval);
++		goto verify_exit;
++	}
++
++	/* Check ability to read the public key */
++	rval = pk_parse_public_key(&pk_ctx, pub_key, MAX_RSA_DER_BYTE_LEN);
++	if (rval != 0) {
++		fprintf(stderr, " Failed in pk_parse_public_key (%#x)!\n", rval);
++		goto verify_exit;
++	}
++
++	/* Set the padding type for the new PK context */
++	rsa_set_padding(pk_rsa(pk_ctx), RSA_PKCS_V21, POLARSSL_MD_SHA256);
++
++	/* Compute the SHA256 hash for the input buffer */
++	sha256(input, ilen, hash, 0);
++
++	rval = rsa_rsassa_pss_verify(pk_rsa(pk_ctx), ctr_drbg_random, &ctr_drbg,
++				     RSA_PUBLIC, POLARSSL_MD_SHA256, 0, hash, signature);
++	if (rval != 0)
++		fprintf(stderr, "Failed to verify signature (%d)!\n", rval);
++
++verify_exit:
++
++	pk_free(&pk_ctx);
++	ctr_drbg_free(&ctr_drbg);
++	entropy_free(&entropy);
++	return rval;
++} /* end of verify_rsa_signature */
++
++/*******************************************************************************
++*    image_encrypt
++*           Encrypt image buffer using AES-256-CBC scheme.
++*           The resulting image is saved into opts.sec_opts->encrypted_image
++*           and the adjusted image size into opts.sec_opts->enc_image_sz
++*           First AES_BLOCK_SZ bytes of the output image contain IV
++*    INPUT:
++*          buf        Source buffer to encrypt
++*          blen       Source buffer length
++*    OUTPUT:
++*          none
++*    RETURN:
++*          0 on success
++*******************************************************************************/
++int image_encrypt(uint8_t *buf, uint32_t blen)
++{
++	struct timeval	tv;
++	char			*ptmp = (char *)&tv;
++	unsigned char	digest[32];
++	unsigned char	IV[AES_BLOCK_SZ];
++	int				i, k;
++	aes_context		aes_ctx;
++	int				rval = -1;
++	uint8_t			*test_img = 0;
++
++	if (AES_BLOCK_SZ > 32) {
++		fprintf(stderr, "Unsupported AES block size %d\n", AES_BLOCK_SZ);
++		return rval;
++	}
++
++	aes_init(&aes_ctx);
++	memset(IV, 0, AES_BLOCK_SZ);
++	memset(digest, 0, 32);
++
++	/* Generate initialization vector and init the AES engine */
++	/* Use file name XOR current time and finaly SHA-256 [0...AES_BLOCK_SZ-1] */
++	k = strlen(opts.sec_opts->aes_key_file);
++	if (k > AES_BLOCK_SZ)
++		k = AES_BLOCK_SZ;
++	memcpy(IV, opts.sec_opts->aes_key_file, k);
++	gettimeofday(&tv, 0);
++
++	for (i = 0, k = 0; i < AES_BLOCK_SZ; i++, k = (k+1) % sizeof(struct timeval))
++		IV[i] ^= ptmp[k];
++
++	/* compute SHA-256 digest of the results and use it as the init vector (IV) */
++	sha256(IV, AES_BLOCK_SZ, digest, 0);
++	memcpy(IV, digest, AES_BLOCK_SZ);
++	aes_setkey_enc(&aes_ctx, opts.sec_opts->aes_key, AES_KEY_BIT_LEN);
++
++	/* The output image has to include extra space for IV
++	   and to be aligned to the AES block size.
++	   The input image buffer has to be already aligned to AES_BLOCK_SZ
++	   and padded with zeroes */
++	opts.sec_opts->enc_image_sz = (blen + 2 * AES_BLOCK_SZ - 1) & ~(AES_BLOCK_SZ - 1);
++	opts.sec_opts->encrypted_image = calloc(opts.sec_opts->enc_image_sz, 1);
++	if (opts.sec_opts->encrypted_image == 0) {
++		fprintf(stderr, "Failed to allocate encrypted image!\n");
++		goto encrypt_exit;
++	}
++
++	/* Put IV into the output buffer next to the encrypted image
++	   Since the IV is modified by the encryption function,
++	   this should be done now */
++	memcpy(opts.sec_opts->encrypted_image +
++		   opts.sec_opts->enc_image_sz - AES_BLOCK_SZ,
++		   IV, AES_BLOCK_SZ);
++	rval = aes_crypt_cbc(&aes_ctx, AES_ENCRYPT,
++			     opts.sec_opts->enc_image_sz - AES_BLOCK_SZ,
++			     IV, buf, opts.sec_opts->encrypted_image);
++	if (rval != 0) {
++		fprintf(stderr, "Failed to encrypt the image! Error %d\n", rval);
++		goto encrypt_exit;
++	}
++
++	aes_free(&aes_ctx);
++
++	/* Try to decrypt the image and compare it with the original data */
++	aes_init(&aes_ctx);
++	aes_setkey_dec(&aes_ctx, opts.sec_opts->aes_key, AES_KEY_BIT_LEN);
++
++	test_img = calloc(opts.sec_opts->enc_image_sz - AES_BLOCK_SZ, 1);
++	if (test_img == 0) {
++		fprintf(stderr, "Failed to allocate test image!d\n");
++		rval = -1;
++		goto encrypt_exit;
++	}
++
++	memcpy(IV, opts.sec_opts->encrypted_image +
++		   opts.sec_opts->enc_image_sz - AES_BLOCK_SZ,
++		   AES_BLOCK_SZ);
++	rval = aes_crypt_cbc(&aes_ctx, AES_DECRYPT,
++			     opts.sec_opts->enc_image_sz - AES_BLOCK_SZ,
++			     IV, opts.sec_opts->encrypted_image, test_img);
++	if (rval != 0) {
++		fprintf(stderr, "Failed to decrypt the image! Error %d\n", rval);
++		goto encrypt_exit;
++	}
++
++	for (i = 0; i < blen; i++) {
++		if (buf[i] != test_img[i]) {
++			fprintf(stderr, "Failed to compare the image after decryption! Byte count %d\n", i);
++			rval = -1;
++			goto encrypt_exit;
++		}
++	}
++
++encrypt_exit:
++
++	aes_free(&aes_ctx);
++	if (test_img)
++		free(test_img);
++
++	return rval;
++} /* end of image_encrypt */
++
++/*******************************************************************************
++*    verify_secure_header_signatures
++*          Verify CSK array, header and image signatures and print results
++*    INPUT:
++*          main_hdr       Main header
++*          sec_ext        Secure extention
++*    OUTPUT:
++*          none
++*    RETURN:
++*          0 on success
++*******************************************************************************/
++int verify_secure_header_signatures(header_t *main_hdr, sec_entry_t *sec_ext)
++{
++	uint8_t	*image = (uint8_t *)main_hdr + main_hdr->prolog_size;
++	uint8_t	signature[RSA_SIGN_BYTE_LEN];
++	int		rval = -1;
++
++	/* Save headers signature and reset it in the secure header */
++	memcpy(signature, sec_ext->header_sign, RSA_SIGN_BYTE_LEN);
++	memset(sec_ext->header_sign, 0, RSA_SIGN_BYTE_LEN);
++
++	fprintf(stdout, "\nCheck RSA Signatures\n");
++	fprintf(stdout, "#########################\n");
++	fprintf(stdout, "CSK Block Signature: ");
++	if (verify_rsa_signature(sec_ext->kak_key, MAX_RSA_DER_BYTE_LEN,
++				 &sec_ext->csk_keys[0][0], sizeof(sec_ext->csk_keys),
++				 "CSK Block Signature: ",
++				 sec_ext->csk_sign) != 0) {
++		fprintf(stdout, "ERROR\n");
++		goto ver_error;
++	}
++	fprintf(stdout, "OK\n");
++
++	if (opts.key_index != -1) {
++		fprintf(stdout, "Image Signature:     ");
++		if (verify_rsa_signature(sec_ext->csk_keys[opts.key_index], MAX_RSA_DER_BYTE_LEN,
++					 image, main_hdr->boot_image_size,
++					 "Image Signature: ",
++					 sec_ext->image_sign) != 0) {
++			fprintf(stdout, "ERROR\n");
++			goto ver_error;
++		}
++		fprintf(stdout, "OK\n");
++
++		fprintf(stdout, "Header Signature:    ");
++		if (verify_rsa_signature(sec_ext->csk_keys[opts.key_index], MAX_RSA_DER_BYTE_LEN,
++					 (uint8_t *)main_hdr, main_hdr->prolog_size,
++					 "Header Signature: ",
++					 signature) != 0) {
++			fprintf(stdout, "ERROR\n");
++			goto ver_error;
++		}
++		fprintf(stdout, "OK\n");
++	}
++	fprintf(stdout, "SKIP Image and Header Signatures check (undefined key index)\n");
++
++	rval = 0;
++
++ver_error:
++	memcpy(sec_ext->header_sign, signature, RSA_SIGN_BYTE_LEN);
++	return rval;
++}
++
++/*******************************************************************************
++*    verify_and_copy_file_name_entry
++*    INPUT:
++*          element_name
++*          element
++*    OUTPUT:
++*          copy_to
++*    RETURN:
++*          0 on success
++*******************************************************************************/
++int verify_and_copy_file_name_entry(const char *element_name, const char *element, char *copy_to)
++{
++	int element_length = strlen(element);
++
++	if (element_length >= MAX_FILENAME) {
++		fprintf(stderr, "The file name %s for %s is too long (%d). Maximum allowed %d characters!\n",
++			element, element_name, element_length, MAX_FILENAME);
++		return -1;
++	} else if (element_length == 0) {
++		fprintf(stderr, "The file name for %s is empty!\n", element_name);
++		return -1;
++	}
++	memcpy(copy_to, element, element_length);
++
++	return 0;
++}
++
++/*******************************************************************************
++*    parse_sec_config_file
++*          Read the secure boot configuration from a file
++*          into internal structures
++*    INPUT:
++*          filename      File name
++*    OUTPUT:
++*          none
++*    RETURN:
++*          0 on success
++*******************************************************************************/
++int parse_sec_config_file(char *filename)
++{
++	config_t		sec_cfg;
++	int			array_sz, element, rval = -1;
++	const char		*cfg_string;
++	int			cfg_int;
++	long			cfg_long;
++	const config_setting_t	*csk_array, *control_aray;
++	sec_options		*sec_opt = 0;
++
++	config_init(&sec_cfg);
++
++	if (config_read_file(&sec_cfg, filename) != CONFIG_TRUE) {
++		fprintf(stderr, "Failed to read data from config file %s\n\t%s at line %d\n",
++			filename, config_error_text(&sec_cfg), config_error_line(&sec_cfg));
++		goto exit_parse;
++	}
++
++	sec_opt = (sec_options *)calloc(sizeof(sec_options), 1);
++	if (sec_opt == 0) {
++		fprintf(stderr, "Cannot allocate memory for secure boot options!\n");
++		goto exit_parse;
++	}
++
++	/* KAK file name */
++	if (config_lookup_string(&sec_cfg, "kak_key_file", &cfg_string) != CONFIG_TRUE) {
++		fprintf(stderr, "The \"kak_key_file\" undefined!\n");
++		goto exit_parse;
++	}
++	if (verify_and_copy_file_name_entry("kak_key_file", cfg_string, sec_opt->kak_key_file))
++		goto exit_parse;
++
++
++	/* AES file name - can be empty/undefined */
++	if (config_lookup_string(&sec_cfg, "aes_key_file", &cfg_string) == CONFIG_TRUE) {
++		if (verify_and_copy_file_name_entry("aes_key_file", cfg_string, sec_opt->aes_key_file))
++			goto exit_parse;
++	}
++
++	/* CSK file names array */
++	csk_array = config_lookup(&sec_cfg, "csk_key_file");
++	if (csk_array == NULL) {
++		fprintf(stderr, "The \"csk_key_file\" undefined!\n");
++		goto exit_parse;
++	}
++	array_sz = config_setting_length(csk_array);
++	if (array_sz > CSK_ARR_SZ) {
++		fprintf(stderr, "The \"csk_key_file\" array is too big! "
++			"Only first %d elements will be used\n",
++			CSK_ARR_SZ);
++		array_sz = CSK_ARR_SZ;
++	} else if (array_sz == 0) {
++		fprintf(stderr, "The \"csk_key_file\" array is empty!\n");
++		goto exit_parse;
++	}
++
++	for (element = 0; element < array_sz; element++) {
++		cfg_string = config_setting_get_string_elem(csk_array, element);
++		if (verify_and_copy_file_name_entry(
++				"csk_key_file", cfg_string, sec_opt->csk_key_file[element])) {
++			fprintf(stderr, "Bad csk_key_file[%d] entry!\n", element);
++			goto exit_parse;
++		}
++	}
++
++	/* JTAG options */
++	if (config_lookup_bool(&sec_cfg, "jtag.enable", &cfg_int) != CONFIG_TRUE) {
++		fprintf(stderr, "Error obtaining \"jtag.enable\" element. Using default - FALSE\n");
++		cfg_int = 0;
++	}
++	sec_opt->jtag_enable = cfg_int;
++
++	if (config_lookup_int(&sec_cfg, "jtag.delay", &cfg_long) != CONFIG_TRUE) {
++		fprintf(stderr, "Error obtaining \"jtag.delay\" element. Using default - 0us\n");
++		cfg_long = 0;
++	}
++	sec_opt->jtag_delay = cfg_long;
++
++	/* eFUSE option */
++	if (config_lookup_bool(&sec_cfg, "efuse_disable", &cfg_int) != CONFIG_TRUE) {
++		fprintf(stderr, "Error obtaining \"efuse_disable\" element. Using default - FALSE\n");
++		cfg_int = 0;
++	}
++	sec_opt->efuse_disable = cfg_int;
++
++	/* Box ID option */
++	if (config_lookup_int(&sec_cfg, "box_id", &cfg_long) != CONFIG_TRUE) {
++		fprintf(stderr, "Error obtaining \"box_id\" element. Using default - 0x0\n");
++		cfg_long = 0;
++	}
++	sec_opt->box_id = cfg_long;
++
++	/* Flash ID option */
++	if (config_lookup_int(&sec_cfg, "flash_id", &cfg_long) != CONFIG_TRUE) {
++		fprintf(stderr, "Error obtaining \"flash_id\" element. Using default - 0x0\n");
++		cfg_long = 0;
++	}
++	sec_opt->flash_id = cfg_long;
++
++	/* CSK index option */
++	if (config_lookup_int(&sec_cfg, "csk_key_index", &cfg_long) != CONFIG_TRUE) {
++		fprintf(stderr, "Error obtaining \"flash_id\" element. Using default - 0x0\n");
++		cfg_long = 0;
++	}
++	sec_opt->csk_index = cfg_long;
++
++	/* Secure boot control array */
++	control_aray = config_lookup(&sec_cfg, "control");
++	if (csk_array != NULL) {
++		array_sz = config_setting_length(control_aray);
++		if (array_sz == 0)
++			fprintf(stderr, "The \"control\" array is empty!\n");
++	} else {
++		fprintf(stderr, "The \"control\" is undefined!\n");
++		array_sz = 0;
++	}
++
++	sec_opt->control = (uint32_t *)malloc(sizeof(array_sz + 1)); /* 1 DWORD for the size */
++	if (sec_opt->control == 0) {
++		fprintf(stderr, "Cannot allocate memory for secure boot control block!\n");
++		goto exit_parse;
++	}
++	memset(sec_opt->control, 0, sizeof(uint32_t));
++
++	sec_opt->control[0] = array_sz;
++	for (element = 0; element < array_sz; element++)
++		sec_opt->control[element + 1] = config_setting_get_int_elem(control_aray, element);
++
++	opts.sec_opts = sec_opt;
++	rval = 0;
++
++exit_parse:
++	config_destroy(&sec_cfg);
++	if (sec_opt && (rval != 0))
++		free(sec_opt);
++	return rval;
++} /* end of parse_sec_config_file */
++
++int format_sec_ext(char *filename, FILE *out_fd)
++{
++	ext_header_t	header;
++	sec_entry_t	sec_ext;
++	int		index;
++	int		written;
++
++#define DER_BUF_SZ	1600
++
++	/* First, parse the configuration file */
++	if (parse_sec_config_file(filename)) {
++		printf("failed parsing configuration file %s\n", filename);
++		return 1;
++	}
++
++	/* Everything except signatures can be created at this stage */
++	header.type = EXT_TYPE_SECURITY;
++	header.offset = 0;
++	/* Size of secure boot extention can vary only in control block content */
++	header.size = sizeof(sec_entry_t) + sizeof(uint32_t) * (opts.sec_opts->control[0] + 1);
++	header.reserved = 0;
++
++	/* Bring up RSA context and read private keys from their files */
++	for (index = 0; index < (CSK_ARR_SZ + 1); index++) {
++		/* for every private key file */
++		pk_context	*pk_ctx = (index == CSK_ARR_SZ) ?
++					&opts.sec_opts->kak_pk :
++					&opts.sec_opts->csk_pk[index];
++		char		*fname = (index == CSK_ARR_SZ) ?
++					opts.sec_opts->kak_key_file :
++					opts.sec_opts->csk_key_file[index];
++		uint8_t		*out_der_key = (index == CSK_ARR_SZ) ?
++					sec_ext.kak_key : sec_ext.csk_keys[index];
++		size_t		output_len;
++		unsigned char	output_buf[DER_BUF_SZ];
++		unsigned char	*der_buf_start;
++
++		/* Handle invalid/reserved file names */
++		if (strncmp(CSK_ARR_EMPTY_FILE, fname, strlen(CSK_ARR_EMPTY_FILE)) == 0) {
++			if (opts.sec_opts->csk_index == index) {
++				fprintf(stderr, "CSK file name with index %d cannot be %s\n",
++					index, CSK_ARR_EMPTY_FILE);
++				return 1;
++			} else if (index == CSK_ARR_SZ) {
++				fprintf(stderr, "KAK file name cannot be %s\n", CSK_ARR_EMPTY_FILE);
++				return 1;
++			}
++			/* this key will be empty in CSK array */
++			continue;
++		}
++
++		pk_init(pk_ctx);
++		/* Read the private RSA key into the context and verify it (no password) */
++		if (pk_parse_keyfile(pk_ctx, fname, "") != 0) {
++			fprintf(stderr, "Cannot read RSA private key file %s\n", fname);
++			return 1;
++		}
++
++		/* Create a public key out of private one and store it in DER format */
++		output_len = pk_write_pubkey_der(pk_ctx, output_buf, DER_BUF_SZ);
++		if (output_len < 0) {
++			fprintf(stderr, "Failed to create DER coded PUB key (%s)\n", fname);
++			return 1;
++		}
++		/* Data in the output buffer is aligned to the buffer end */
++		der_buf_start = output_buf + sizeof(output_buf) - output_len;
++		/* In the header DER data is aligned to the start of appropriate field */
++		memcpy(out_der_key, der_buf_start, output_len);
++
++	} /* for every private key file */
++
++	/* The CSK block signature can be created here */
++	if (create_rsa_signature(&opts.sec_opts->kak_pk,
++				 &sec_ext.csk_keys[0][0], sizeof(sec_ext.csk_keys),
++				 opts.sec_opts->csk_key_file[opts.sec_opts->csk_index],
++				 sec_ext.csk_sign) != 0) {
++		fprintf(stderr, "Failed to sign CSK keys block!\n");
++		return 1;
++	}
++	/* Check that everything is correct */
++	if (verify_rsa_signature(sec_ext.kak_key, MAX_RSA_DER_BYTE_LEN,
++				 &sec_ext.csk_keys[0][0], sizeof(sec_ext.csk_keys),
++				 opts.sec_opts->kak_key_file,
++				 sec_ext.csk_sign) != 0) {
++		fprintf(stderr, "Failed to verify CSK keys block signature!\n");
++		return 1;
++	}
++
++	/* AES encryption stuff */
++	if (strlen(opts.sec_opts->aes_key_file) != 0) {
++		FILE		*in_fd;
++		uint8_t		key_buf[AES_KEY_BYTE_LEN];
++
++		in_fd = fopen(opts.sec_opts->aes_key_file, "rb");
++		if (in_fd == NULL) {
++			fprintf(stderr, "Failed to open AES key file %s\n", opts.sec_opts->aes_key_file);
++			return 1;
++		}
++
++		/* Read the AES key in ASCII format byte by byte */
++		for (index = 0; index < AES_KEY_BYTE_LEN; index++) {
++			if (fscanf(in_fd, "%02hhx", key_buf + index) != 1) {
++				fprintf(stderr, "Failed to read AES key byte %d from file %s\n",
++					index, opts.sec_opts->aes_key_file);
++				fclose(in_fd);
++				return 1;
++			}
++		}
++		fclose(in_fd);
++		sec_ext.encrypt_en = 1;
++	} else {
++		sec_ext.encrypt_en = 0;
++	}
++
++	/* Fill the rest of the trusted boot extension fields */
++	sec_ext.box_id		= opts.sec_opts->box_id;
++	sec_ext.flash_id	= opts.sec_opts->flash_id;
++	sec_ext.efuse_dis	= opts.sec_opts->efuse_disable;
++	sec_ext.jtag_delay	= opts.sec_opts->jtag_delay;
++	sec_ext.jtag_en		= opts.sec_opts->jtag_enable;
++
++	/* Write the resulting extention to file
++	   (image and header signature fields are still empty) */
++
++	/* Write extention header */
++	written = fwrite(&header, sizeof(ext_header_t), 1, out_fd);
++	if (written != 1) {
++		fprintf(stderr, "Failed to write SEC extension header to the file\n");
++		return 1;
++	}
++	/* Write extention body */
++	written = fwrite(&sec_ext, sizeof(sec_entry_t), 1, out_fd);
++	if (written != 1) {
++		fprintf(stderr, "Failed to write SEC extension body to the file\n");
++		return 1;
++	}
++	/* Write secure control field */
++	written = fwrite(opts.sec_opts->control, sizeof(uint32_t) * (opts.sec_opts->control[0] + 1), 1, out_fd);
++	if (written != 1) {
++		fprintf(stderr, "Failed to write SEC extension control field to the file\n");
++		return 1;
++	}
++
++	return 0;
++}
++
++/*******************************************************************************
++*    finalize_secure_ext
++*          Make final changes to secure extension - calculate image and header
++*          signatures and encrypt the image if needed.
++*          The main header checksum and image size fileds are updated accordingly
++*    INPUT:
++*          header       Main header
++*          prolog_buf   the entire prolog buffer
++*          prolog_size  prolog buffer length
++*          image_buf    buffer containing the input binary image
++*          image_size   image buffer size.
++*    OUTPUT:
++*          none
++*    RETURN:
++*          0 on success
++*******************************************************************************/
++int finalize_secure_ext(header_t *header,
++			uint8_t *prolog_buf, uint32_t prolog_size,
++			uint8_t *image_buf, int image_size)
++{
++	int		cur_ext, offset;
++	uint8_t		*final_image = image_buf;
++	uint32_t	final_image_sz = image_size;
++	uint8_t		hdr_sign[RSA_SIGN_BYTE_LEN];
++	sec_entry_t	*sec_ext = 0;
++
++	/* Find the Trusted Boot Header between available extensions */
++	for (cur_ext = 0, offset = sizeof(header_t); cur_ext < header->ext_count; cur_ext++) {
++		ext_header_t *ext_hdr = (ext_header_t *)(prolog_buf + offset);
++
++		if (ext_hdr->type == EXT_TYPE_SECURITY) {
++			sec_ext = (sec_entry_t *)(prolog_buf + offset + sizeof(ext_header_t) + ext_hdr->offset);
++			break;
++		}
++
++		offset += sizeof(ext_header_t);
++		/* If offset is Zero, the extention follows its header */
++		if (ext_hdr->offset == 0)
++			offset += ext_hdr->size;
++	}
++
++	if (sec_ext == 0) {
++		fprintf(stderr, "Error: No Trusted Boot extension found!\n");
++		return -1;
++	}
++
++	if (sec_ext->encrypt_en) {
++		/* Encrypt the image if needed */
++		fprintf(stdout, "Encrypting the image...\n");
++
++		if (image_encrypt(image_buf, image_size) != 0) {
++			fprintf(stderr, "Failed to encrypt the image!\n");
++			return -1;
++		}
++
++		/* Image size and checksum should be updated after encryption.
++		   This way the image could be verified by BootROM before decryption. */
++		final_image = opts.sec_opts->encrypted_image;
++		final_image_sz = opts.sec_opts->enc_image_sz;
++
++		header->boot_image_size = final_image_sz;
++		header->boot_image_checksum = checksum32((uint32_t *)final_image, final_image_sz);
++	} /* AES encryption */
++
++	/* Create the image signature first, since it will be later
++	   signed along with the header signature */
++	if (create_rsa_signature(&opts.sec_opts->csk_pk[opts.sec_opts->csk_index],
++				 final_image, final_image_sz,
++				 opts.sec_opts->csk_key_file[opts.sec_opts->csk_index],
++				 sec_ext->image_sign) != 0) {
++		fprintf(stderr, "Failed to sign image!\n");
++		return -1;
++	}
++	/* Check that the image signature is correct */
++	if (verify_rsa_signature(sec_ext->csk_keys[opts.sec_opts->csk_index], MAX_RSA_DER_BYTE_LEN,
++				 final_image, final_image_sz,
++				 opts.sec_opts->csk_key_file[opts.sec_opts->csk_index],
++				 sec_ext->image_sign) != 0) {
++		fprintf(stderr, "Failed to verify image signature!\n");
++		return -1;
++	}
++
++	/* Sign the headers and all the extensions block
++	   when the header signature field is empty */
++	if (create_rsa_signature(&opts.sec_opts->csk_pk[opts.sec_opts->csk_index],
++				 prolog_buf, prolog_size,
++				 opts.sec_opts->csk_key_file[opts.sec_opts->csk_index],
++				 hdr_sign) != 0) {
++		fprintf(stderr, "Failed to sign header!\n");
++		return -1;
++	}
++	/* Check that the header signature is correct */
++	if (verify_rsa_signature(sec_ext->csk_keys[opts.sec_opts->csk_index], MAX_RSA_DER_BYTE_LEN,
++				 prolog_buf, prolog_size,
++				 opts.sec_opts->csk_key_file[opts.sec_opts->csk_index],
++				 hdr_sign) != 0) {
++		fprintf(stderr, "Failed to verify header signature!\n");
++		return -1;
++	}
++
++	/* Finally, copy the header signature into the trusted boot extension */
++	memcpy(sec_ext->header_sign, hdr_sign, RSA_SIGN_BYTE_LEN);
++
++	return 0;
++}
++
++#endif /* CONFIG_MVEBU_SECURE_BOOT */
++
+ 
+ #define FMT_HEX		0
+ #define FMT_DEC		1
+@@ -252,10 +1077,35 @@ int print_ext_hdr(ext_header_t *ext_hdr, int base)
+ 
+ void print_sec_ext(ext_header_t *ext_hdr, int base)
+ {
+-	printf("\n########### Secure extension ###########\n");
++	uint32_t	*control;
++	sec_entry_t	*sec_entry;
++	uint32_t	new_base;
++
++	fprintf(stdout, "\n########### Secure extension ###########\n");
++
++	new_base = print_ext_hdr(ext_hdr, base);
++
++	sec_entry = (sec_entry_t *)(ext_hdr + 1);
++	control = (uint32_t *)(sec_entry + 1);
++
++	do_print_field(0, "KAK key", new_base, MAX_RSA_DER_BYTE_LEN, FMT_NONE);
++	new_base += MAX_RSA_DER_BYTE_LEN;
++	print_field(sec_entry, sec_entry_t, jtag_delay, FMT_DEC, base);
++	print_field(sec_entry, sec_entry_t, box_id, FMT_HEX, base);
++	print_field(sec_entry, sec_entry_t, flash_id, FMT_HEX, base);
++	print_field(sec_entry, sec_entry_t, encrypt_en, FMT_DEC, base);
++	print_field(sec_entry, sec_entry_t, efuse_dis, FMT_DEC, base);
++	new_base += 6 * sizeof(uint32_t);
++	do_print_field(0, "header signature", new_base, RSA_SIGN_BYTE_LEN, FMT_NONE);
++	new_base += RSA_SIGN_BYTE_LEN;
++	do_print_field(0, "image signature", new_base, RSA_SIGN_BYTE_LEN, FMT_NONE);
++	new_base += RSA_SIGN_BYTE_LEN;
++	do_print_field(0, "CSK keys", new_base, CSK_ARR_SZ * MAX_RSA_DER_BYTE_LEN, FMT_NONE);
++	new_base += CSK_ARR_SZ * MAX_RSA_DER_BYTE_LEN;
++	do_print_field(0, "CSK block signature", new_base, RSA_SIGN_BYTE_LEN, FMT_NONE);
++	new_base += RSA_SIGN_BYTE_LEN;
++	do_print_field(control[0], "control", new_base, sizeof(uint32_t) * (control[0] + 1), FMT_HEX);
+ 
+-	base = print_ext_hdr(ext_hdr, base);
+-	/* TODO - Add secure header parsing */
+ }
+ 
+ void print_reg_ext(ext_header_t *ext_hdr, int base)
+@@ -295,7 +1145,7 @@ int print_extension(void *buf, int base, int count, int ext_size)
+ 			print_bin_ext(ext_hdr, base);
+ 		else if (ext_hdr->type == EXT_TYPE_REGISTER)
+ 			print_reg_ext(ext_hdr, base);
+-		else if (ext_hdr->type == EXT_TYPE_REGISTER)
++		else if (ext_hdr->type == EXT_TYPE_SECURITY)
+ 			print_sec_ext(ext_hdr, base);
+ 
+ 		curr_size = sizeof(ext_header_t) + ext_hdr->size;
+@@ -315,7 +1165,6 @@ int parse_image(uint8_t *buf, int size)
+ {
+ 	int base = 0;
+ 	int ret = 1;
+-	int prolog_size;
+ 	header_t *main_hdr;
+ 	uint32_t checksum, prolog_checksum;
+ 
+@@ -328,8 +1177,6 @@ int parse_image(uint8_t *buf, int size)
+ 		base += print_extension(buf + base, base, main_hdr->ext_count,
+ 					main_hdr->prolog_size - sizeof(header_t));
+ 
+-	prolog_size = base;
+-
+ 	if (base < main_hdr->prolog_size) {
+ 		printf("\n########### Padding ##############\n");
+ 		do_print_field(0, "prolog padding", base, main_hdr->prolog_size - base, FMT_HEX);
+@@ -357,7 +1204,7 @@ int parse_image(uint8_t *buf, int size)
+ 	/* clear the checksum field in header to calculate checksum */
+ 	prolog_checksum = main_hdr->prolog_checksum;
+ 	main_hdr->prolog_checksum = 0;
+-	checksum = checksum32((uint32_t *)buf, prolog_size);
++	checksum = checksum32((uint32_t *)buf, main_hdr->prolog_size);
+ 
+ 	if (checksum == prolog_checksum) {
+ 		printf("Headers checksum: OK!\n");
+@@ -368,7 +1215,7 @@ int parse_image(uint8_t *buf, int size)
+ 	}
+ 
+ 	/* boot image checksum */
+-	checksum = checksum32((uint32_t *)(buf + base), size - base - 4);
++	checksum = checksum32((uint32_t *)(buf + main_hdr->prolog_size), main_hdr->boot_image_size);
+ 	if (checksum == main_hdr->boot_image_checksum) {
+ 		printf("Image checksum:   OK!\n");
+ 	} else {
+@@ -377,6 +1224,27 @@ int parse_image(uint8_t *buf, int size)
+ 		goto error;
+ 	}
+ 
++#ifdef CONFIG_MVEBU_SECURE_BOOT
++	/* RSA signatures */
++	if (main_hdr->ext_count) {
++		uint8_t		ext_num = main_hdr->ext_count;
++		ext_header_t	*ext_hdr = (ext_header_t *)(main_hdr + 1);
++
++		while (ext_num--) {
++			if (ext_hdr->type == EXT_TYPE_SECURITY) {
++				sec_entry_t  *sec_entry = (sec_entry_t *)(ext_hdr + 1);
++
++				ret = verify_secure_header_signatures(main_hdr, sec_entry);
++				if (ret != 0) {
++					fprintf(stderr, "\n****** FAILED TO VERIFY RSA SIGNATURES ********\n");
++					goto error;
++				}
++				break;
++			}
++			ext_hdr = (ext_header_t *)((uint8_t *)(ext_hdr + 1) + ext_hdr->size);
++		}
++	}
++#endif
+ 
+ 	ret = 0;
+ error:
+@@ -532,7 +1400,14 @@ int format_extensions(char *ext_filename)
+ 			goto error;
+ 		}
+ 	}
+-
++#ifdef CONFIG_MVEBU_SECURE_BOOT
++	if (strncmp(opts.sec_cfg_file, "NA", MAX_FILENAME)) {
++		if (format_sec_ext(opts.sec_cfg_file, out_fd)) {
++			ret = 1;
++			goto error;
++		}
++	}
++#endif
+ 
+ error:
+ 	fflush(out_fd);
+@@ -561,7 +1436,7 @@ void update_uart(header_t *header)
+ 
+ int write_prolog(int ext_cnt, char *ext_filename, uint8_t *image_buf, int image_size, FILE *out_fd)
+ {
+-	header_t header;
++	header_t		*header;
+ 	int main_hdr_size = sizeof(header_t);
+ 	int prolog_size = main_hdr_size;
+ 	FILE *ext_fd;
+@@ -569,25 +1444,12 @@ int write_prolog(int ext_cnt, char *ext_filename, uint8_t *image_buf, int image_
+ 	int written, read;
+ 	int ret = 1;
+ 
+-	memset(&header, 0, main_hdr_size);
+ 
+ 	if (ext_cnt)
+ 		prolog_size +=  get_file_size(ext_filename);
+ 
+ 	prolog_size = ((prolog_size + PROLOG_ALIGNMENT) & (~(PROLOG_ALIGNMENT-1)));
+ 
+-	header.magic       = MAIN_HDR_MAGIC;
+-	header.prolog_size = prolog_size;
+-	header.load_addr   = opts.load_addr;
+-	header.exec_addr   = opts.exec_addr;
+-	header.io_arg_0    = opts.nfc_io_args;
+-	header.ext_count   = ext_cnt;
+-	header.aux_flags     = 0;
+-	header.boot_image_size = (image_size + 3) & (~0x3);
+-	header.boot_image_checksum = checksum32((uint32_t *)image_buf, image_size);
+-
+-	update_uart(&header);
+-
+ 	/* Allocate a zeroed buffer to zero the padding bytes */
+ 	buf = calloc(prolog_size, 1);
+ 	if (buf == NULL) {
+@@ -595,8 +1457,19 @@ int write_prolog(int ext_cnt, char *ext_filename, uint8_t *image_buf, int image_
+ 		return 1;
+ 	}
+ 
++	header = (header_t *)buf;
++	header->magic       = MAIN_HDR_MAGIC;
++	header->prolog_size = prolog_size;
++	header->load_addr   = opts.load_addr;
++	header->exec_addr   = opts.exec_addr;
++	header->ext_count   = ext_cnt;
++	header->aux_flags     = 0;
++	header->boot_image_size = (image_size + 3) & (~0x3);
++	header->boot_image_checksum = checksum32((uint32_t *)image_buf, image_size);
++
++	update_uart(header);
++
+ 	/* Populate buffer with main header and extensions */
+-	memcpy(buf, &header, main_hdr_size);
+ 	if (ext_cnt) {
+ 		ext_fd = fopen(ext_filename, "rb");
+ 		if (ext_fd == NULL) {
+@@ -609,18 +1482,27 @@ int write_prolog(int ext_cnt, char *ext_filename, uint8_t *image_buf, int image_
+ 			printf("Error: failed to open extensions file\n");
+ 			goto error;
+ 		}
++
++#ifdef CONFIG_MVEBU_SECURE_BOOT
++		/* Secure boot mode? */
++		if (opts.sec_opts != 0) {
++			ret = finalize_secure_ext(header, (uint8_t *)buf,
++						  prolog_size, image_buf, image_size);
++			if (ret != 0) {
++				printf("Error: failed to handle secure extension!\n");
++				goto error;
++			}
++		} /* secure boot mode */
++#endif
+ 	}
+ 
+ 	/* Update the total prolog checksum */
+-	header.prolog_checksum = checksum32((uint32_t *)buf, prolog_size);
+-
+-	/* Update the header in the buffer */
+-	memcpy(buf, &header, main_hdr_size);
++	header->prolog_checksum = checksum32((uint32_t *)buf, prolog_size);
+ 
+ 	/* Now spill everything to output file */
+ 	written = fwrite(buf, prolog_size, 1, out_fd);
+ 	if (written != 1) {
+-		printf("Error: failed to write headers to output file\n");
++		printf("Error: failed to write prolog to output file\n");
+ 		goto error;
+ 	}
+ 
+@@ -634,21 +1516,11 @@ error:
+ int write_boot_image(uint8_t *buf, uint32_t image_size, FILE *out_fd)
+ {
+ 	int aligned_size;
+-	int post_pad;
+-	uint8_t pad_val = 0;
+ 	int written;
+ 
+ 	/* Image size must be aligned to 4 bytes */
+ 	aligned_size = (image_size + 3) & (~0x3);
+-	post_pad = aligned_size - image_size;
+ 
+-	/* Pad the buffer to be 4 bytes aligned */
+-	while (post_pad) {
+-		buf[aligned_size - post_pad] = pad_val;
+-		post_pad--;
+-	}
+-
+-	/* Write the aligned buffer to file */
+ 	written = fwrite(buf, aligned_size, 1, out_fd);
+ 	if (written != 1) {
+ 		printf("Error: Failed to write boot image\n");
+@@ -675,7 +1547,7 @@ int main(int argc, char *argv[])
+ 	int read;
+ 	uint32_t nand_block_size_kb, mlc_nand;
+ 
+-	while ((opt = getopt(argc, argv, "hpms:i:l:e:a:b:r:u:n:t:")) != -1) {
++	while ((opt = getopt(argc, argv, "hpms:i:l:e:a:b:r:u:n:t:c:k:")) != -1) {
+ 		switch (opt) {
+ 		case 'h':
+ 			usage();
+@@ -713,6 +1585,15 @@ int main(int argc, char *argv[])
+ 				mlc_nand = 1;
+ 			opts.nfc_io_args |= (mlc_nand << 8);
+ 			break;
++#ifdef CONFIG_MVEBU_SECURE_BOOT
++		case 'c': /* SEC extension */
++			strncpy(opts.sec_cfg_file, optarg, MAX_FILENAME);
++			ext_cnt++;
++			break;
++		case 'k':
++			opts.key_index = strtoul(optarg, NULL, 0);
++			break;
++#endif
+ 		default: /* '?' */
+ 			usage_err("Unknown argument");
+ 			exit(EXIT_FAILURE);
+@@ -751,7 +1632,7 @@ int main(int argc, char *argv[])
+ 
+ 	/* Read the input file to buffer */
+ 	image_size = get_file_size(in_file);
+-	image_buf = malloc((image_size + 3) & (~3));
++	image_buf = calloc((image_size + AES_BLOCK_SZ - 1) & ~(AES_BLOCK_SZ - 1), 1);
+ 	if (image_buf == NULL) {
+ 		printf("Error: failed allocating input buffer\n");
+ 		return 1;
+@@ -765,6 +1646,10 @@ int main(int argc, char *argv[])
+ 
+ 	/* Parse the input image and leave */
+ 	if (parse) {
++		if (opts.key_index >= CSK_ARR_SZ) {
++			fprintf(stderr, "Wrong key index value. Supported values 0 - %d\n", CSK_ARR_SZ - 1);
++			goto main_exit;
++		}
+ 		ret = parse_image(image_buf, image_size);
+ 		goto main_exit;
+ 	}
+@@ -786,6 +1671,11 @@ int main(int argc, char *argv[])
+ 	if (ret)
+ 		goto main_exit;
+ 
++#ifdef CONFIG_MVEBU_SECURE_BOOT
++	if ((opts.sec_opts->encrypted_image != 0) && (opts.sec_opts->enc_image_sz != 0))
++		ret = write_boot_image(opts.sec_opts->encrypted_image, opts.sec_opts->enc_image_sz, out_fd);
++	else
++#endif
+ 	ret = write_boot_image(image_buf, image_size, out_fd);
+ 	if (ret)
+ 		goto main_exit;
+@@ -800,6 +1690,13 @@ main_exit:
+ 	if (image_buf)
+ 		free(image_buf);
+ 
++#ifdef CONFIG_MVEBU_SECURE_BOOT
++	if (opts.sec_opts) {
++		if (opts.sec_opts->encrypted_image)
++			free(opts.sec_opts->encrypted_image);
++		free(opts.sec_opts);
++	}
++#endif
+ 	exit(ret);
+ }
+ 
+diff --git a/tools/secure/aes_key.txt b/tools/secure/aes_key.txt
+new file mode 100644
+index 0000000..3e8a888
+--- /dev/null
++++ b/tools/secure/aes_key.txt
+@@ -0,0 +1 @@
++ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890
+diff --git a/tools/secure/csk_priv_pem0.key b/tools/secure/csk_priv_pem0.key
+new file mode 100644
+index 0000000..0840c2a
+--- /dev/null
++++ b/tools/secure/csk_priv_pem0.key
+@@ -0,0 +1,27 @@
++-----BEGIN RSA PRIVATE KEY-----
++MIIEogIBAAKCAQEAm6jN6o2zQmtyUlvfkfDbSjPJ7Vlpp/KgK/eznoVBBsDIZakX
++cIgf8TSLpNVkc+ZE0f/n8X7mEZIyjuSBObLOm9vbkoZcR7DlKUL7RNNOUCv55Ozl
++hQwrzpH/uIyIJTvmek29G5wroi0wGbPoxzhelIRTjVCibleBWhYCmZQ6SIRmTY8L
++JT8VkX8I/Mhu62DjvxF3BnV6pXuh/FdgDN7MbldzM8Y+GOxVGi5Kcm5WHY7eyMxl
++4Y0Yko31Xv7T1PcXahVBIciT+11w+fLc4wQuCJ6GUf9JbzQ0ZllY/FdRG0AhuRMH
++zN0jAc/sKrIFoAErED6qlcoQg0vl7gmWN5x+2wIDAQABAoIBACtnPFOkw1FH6I6y
++c3qcMGlWW33FKsLb0nGwFfOjsGgTpU1Dgver3UxCnJWPsvzmPlZYBvK9saVAoLxb
++VvUhuJ6ZBXar5FtRJfUFak7cpL+SI5IDxFP++tAUwbtR5DyNoUyFFK/4Mep8sybX
++lZbHTwgWhb2nuEMQP09BR+RPAplpcitkIoPkhmbGfbt9Hsd25I3bb5Z9R4S/2Rcf
++7tmaxndQamij7/pUI7xtd8L6cMESJGIWrgEt/MaT2z8nNPE3EDctDSlH9yKqA2O7
++/LTfrxNDnw5gGRtOgahloThKljVM6pQa4mi91FufD67pHwnKn8urNbt8/3AWg6uU
++x4FzZdECgYEA0k2UYzBM+dU6T1bZZ176YI0cZrP1tbf/JwnZGHicQYS7lPLAqgfO
++u5oRQzuDimOXaV4xCPBO2nadd6aBxbZTXaglR7GG2uCHX6w2DnOr8/d66YTErTVV
++u7/Bf8gMKT9mM4rWPrOEXfXfF0fvcpkBQ+QDynIB37tx/mj2lXRkLx0CgYEAvXuX
++Dbe2QgSK0ajrcH7YJyx3RVx9RonOqL4yjCVCELmaDQd307Ef3j+gkd59XIewm+HA
++mPyeWEUd8EzH+UvjckfKFuF2I4lEUUWtVZTa7me7mvsFqeEOu5KusD4+Hs+B9Kqd
++3Evqcpj2lcMBI519Hvr9BTKfDBcH1EUos6A9rFcCgYAxsyPeTQvj/wBIv72hMFD7
++gF2159GpoFIsZ6dmoRpMYZHzIWtmw3GX5FEwEmCD1AV0YU41TpVUC7QrEq6Yiv4o
++pBQrXUkBcQ6NDaW4xJ1eip4Bkd7pEDGyrR6NlDlLhjAg/i6joskla3XNirKL4pzp
++7nj23vqSZToLZcLgjyEeAQKBgD5EvDo80j9VwMzvpxecB6qv+S4pG94vcWOQxYm6
++wMBATjjT6HP/9EoUPM9S/32F9er0QFfGRL8bT6Blix4I62Dl6KqmQy2gcXwH2tOS
++DHRmUIe40H6oQDAyHwg6HC4B4WInI6N+qzgnvnku0VQD8FdbAgVQQmY1t1PxulN1
++aG8XAoGAPWAr4i8KkVAx4wLlMF8E/ecKcsX1J0+UuKket7Dvk7xJfwtkSLPeV8Bp
++HuoHXMM3KYoZ93Hlto5rAT1VQhYuj7heU10v+9UtYTFHgaitptYmxovoCKKiZICl
++48aPUI377e5jQ6RhhGYy8ltKsJ80K1T9DIkThJPSS+9NAI+jrmg=
++-----END RSA PRIVATE KEY-----
+diff --git a/tools/secure/csk_priv_pem1.key b/tools/secure/csk_priv_pem1.key
+new file mode 100644
+index 0000000..91d1aeb
+--- /dev/null
++++ b/tools/secure/csk_priv_pem1.key
+@@ -0,0 +1,27 @@
++-----BEGIN RSA PRIVATE KEY-----
++MIIEogIBAAKCAQEAgwHXB0AaIhT15Z9lHpQ2YT1W8i4oMvvRiLGQCrba5l7BJ03E
++ct0x3zagNKZEnpNndT4EAy98ihkhwVlUhxZCparJ2L3JsTs5RgV0wyQkQzwMLM8g
++QI5EMmJCgFAVRHmVICOsisGGfNVUHjGdGwPOipyQCsX2MAm3E139VpB7NYj+Q4IR
++4kvcb+59LZxKuRJTFKRDIqMGJu98P/ga70+YLXPCBPKSfnZnUppuaI86jF1E6xt8
++o7YtfEPCHDd2LXxKPZ670OapVqwo0t7ZSzEG63NkLp56FXc1OpfC69C8VPiZ8JqW
++wxvS/vL8MMCxsBnjSuqnmOAbcNR2GFtUwJOGwwIDAQABAoIBAFcfoiDwQHDp/531
++ownzBzcj0+67Q4Ckd3SwoVp+wJTz7wB0d3DsKX6IlYJuELRk0yjlVUXJDsnIbOpo
++vg4Yf7otGo9JqBh1imFGv6AHKRaNmIs0M/66nh/juNYcbAhd0w7MqrKcgRQDyy1J
++UXHl1jXYaPLBNDg+PcJjf1dSPp4axzmW2Pk2rXnJCsPcZXL/0YmEvqhfOze0GdjR
++hOkbbr6MPPVM66tA00xSwg9XEYJvHtwH6oB0rnANM8ieNK1mtcWkTU5di17CCrjS
++ohIhXQrdVpxt549EJoUqEFSgo8OOMm2npDbFrjlukb5euakvMacwoT1te79blSKf
++hrTvjgECgYEA0VqoFL0Vqe1qleikYDJ7S5xcv1oruEV31TeuBhDuf0c4PADCnBrV
++/RnCEYuXs6wCk60chHg5s0jxg+nGbiY6jRTHkJLRU3ZhDtrtfidEZ78GRzFF3shl
++Uzt7dHkKK1ZdiMH4sWzyRLom91TKWMrNKC1AD7v4/zjEXy6phall3ZcCgYEAoDJa
++0dIKvVCS6dM2E2kMqi/45mJqsJzFvYL1s4mbma/BAC47bBju/YEse90x+iIi3Gg/
++NoXmNfGPrtgdl+/J/Y6Pohxf/e7gGN71tYVETzgc2Jv09wqmzmTjCmo3wyepyWf+
++pIAE39kdhwnqXVw5xwOG1N3xrQ9TomOO+1QiXbUCgYAF84TJqiJehUA9aLKbhXPZ
++z2UXj3GkuFzSs9V/mKWe+qBPnFnr5BtnKX9JzmUOl3ovRoGEBoLlZNJwxIl+ghmx
++/wA5TOMkcz4JFRIhPu6D4HtGNNFepuWyewNkaThvyPG5vIHcUVOFvqDy8PcblRBF
++7xteFyLZ5nw2lHX/NbSOmwKBgFxLZqPIPcPArkPlGhyow1Ex/lbNkOZcDFkZIHHl
++8C3lYm62NCodW2PWjkh2shqInEkcDn9dObsOh1eWz8X/swJQplQhwPROMfJiUnHY
++a/iwPX5WrBXAn0X+Pgh8FdBsA5g0QDOKRkSplCd/APX08pzEXWQ60siAMhE3BuOq
++H3qZAoGAVnzFidlXuyn+fbNaNVepK9hbuoxHHbzYYWSkpi+73EchN8kXktC+AdEf
++owr9TPILbwWWJyisa3wW4xdbMifCgVLTedWZpZ09BENVqC+7g7ksX0pNMGYuFLOh
++Td7mFAgmclxG5UiKexajOLjjdnAsJyrDaNKhHn8NQNN6L93N0sE=
++-----END RSA PRIVATE KEY-----
+diff --git a/tools/secure/csk_priv_pem2.key b/tools/secure/csk_priv_pem2.key
+new file mode 100644
+index 0000000..ea47ac5
+--- /dev/null
++++ b/tools/secure/csk_priv_pem2.key
+@@ -0,0 +1,27 @@
++-----BEGIN RSA PRIVATE KEY-----
++MIIEogIBAAKCAQEAjxTSTh57/5njUpE200+Qb3ySAn8lKeufgaa0K2Xc6Ri7lDZR
++ZJ2BPuQZV4lYGqgWUf0IOzNf2WnE2lPfVnLMx08h7NhBqJ83yJVajpr+itnOmW+r
++M7h76TFyuna1xz2kw1uhgI5Y4FRnJ4Cg4AexCSyViXSzEN/7LQwxa5z5WGDiNX5N
++3/tgjGu+dzSMOiIQhXwIcK/XaiQNm3WHqqnAhPb5Q9IBuuqBfpZoFfH4XmbFWrC8
++neSMMMxX5Ti9pKhLd1EsiaP0aUNQlF8gNWuC/tNaf+OCtwVelVa3sGSRjRFe06VQ
++sAE9oyXKri11yD5Dwp1xXivbpOrf7xjUe5gILwIDAQABAoIBABTr94CCxqDucKYP
++I9QsSzNyJKuGyfliQdWkea3q3C2ddzhJ5QbwXQjEM8xwAdkMAQ+GD2EQtxBEfgtq
++vjqW2MjAEnbefGNavL5w0GgP0+6bwLEA+ii67iuAFoWbfCMhKWmDiY8RwX8z+E13
++ao63sTRlN4x86v4pskG5CbTxpCg+8m7KklLns4SwRGf5gGQcgKRtNSR5nE4g2UNl
++dghbDdNlvUncm4zxUcTh0kquhF5Tef5w+6L7W8Hv9Pky3b1c2OK1BMhJlxYrtt69
++/zhIJs89CLx5ACfam+DT/xs0uUiuRQq/e1CCQLCnUO02JqpeN/schtDCd0ZWhbtB
++nT7fwTECgYEAx+COhys+7AZI0U+PeuTkI86GUsWHoBislXThxbxyGvMFjgyADZD+
++q/XEGAcxd4eTA1fr0Q9cLuuHZubjGQ7+OIXMZ6arXUsrmMrjRu3kHO+y6K6r4s8j
++5bxN/iQ0bymUtJRfJSLI172plszusiPWhCL5+yhYlNoh4mNZJuJnzXkCgYEAt0Gz
++07P19YPsxk5ow7ZnSNOMOkkEPP0SuHHWekMIK9KMjiRUSygOAk07zTL7MUoFn9Gy
++Prfi0ybFArNhIa4Xio3Fbjfig7rGgaApK4Y3d9A/CGPv/Nj7C2OTepqlEzRLmU9e
++Xw5yhbccCydXLyAYFAET2XHsmbewpvHyeYUSoOcCgYBRMJEUrOdhPmhDxZqVo/Zb
++6R887gnaaUtpZlHzXUnIUqEWA1PcruIT/b/KttlMIWEBQayDfkbGtFuK3AyxeBqh
++4Q+XpucC/W7XIMrTW/yGGIPG6nTdq6B8SFIyAojeArjp5T8Eua11nRAPNm1bJR2V
++DRQYBlp9FGIhMJPdLKhXmQKBgGeywSyR0COfBHPu2K+u3uFB/D7bJI/ScS54FHLY
++zZ3mpeylOCHTR6IbzDRAng31Ihue0KtW6P6tGJx/nv4tAltAADFvZDlAjqW5WLKt
++X2PoLlL0IlBFBEIclc6yBalJVWIqnG9TwJBT3oWdPGOJWLaxKWdJZSZS4J6HmLsV
++B0aPAoGAduLsOt8C5z48jPqmJxyPwsmT0Q424FccPMcvGOJ13yxq3xNsfAsbmg9l
++L2i/ktE0wCMA+Pm7cuFgxwD7xTr67POZgt9022KsOSonjPsIn24UQeP46vAX/Qtx
++Qf3sfvzf57vNy2Hybe38T8RsVOZla+v/QctfSfmb8Y95XL/SZzA=
++-----END RSA PRIVATE KEY-----
+diff --git a/tools/secure/csk_priv_pem3.key b/tools/secure/csk_priv_pem3.key
+new file mode 100644
+index 0000000..e40a864
+--- /dev/null
++++ b/tools/secure/csk_priv_pem3.key
+@@ -0,0 +1,27 @@
++-----BEGIN RSA PRIVATE KEY-----
++MIIEowIBAAKCAQEAlA/T/5IMTPTu+k5PeesB2oeP80Y6nq0ls8vXLul0TVEJoJ+O
++InbPYNqYPu4dbQQg/u8qp8BeXm2ujtJbBTcdn0jKIiDTKYEnlsGfUt9GHnuuzvFh
++rORSKuAolUqvo/zcSCo1uykaFvSuyTovSPlwllzSixD9XBbHfn3kXneiIUa45vsJ
++AyjTn2qCJt0WgvX42NTxH6Q/OWLeOuKTyRHf25eabucIv77KYy0mlEPq5jjiV5AJ
++gl5F1h5G8n07JCIWjkZ2QV4wr+Hv9uGNaSb0WGppBp4CbdQa0eUI75cKzz4WXqds
++HZaYiX/a8YC+EUfvqDD02vKREIKFL/1zL53P/wIDAQABAoIBAGzBj5w7oBNrGpr7
++qL9KEyt8xg0Q+gAR+Q6vXRlVXBtquiKk8Jd6I+vlxUz8RNsN3FrGPNPJpse/0yeP
++dlJHYNfedLNK3zCucPD4uln6LRw5B3d0sKV5dK2Px9+ZY5iWJQxRDPS0RTi1dCnV
++NmRo7P1Vo0WJLkFVbiYIvRVy1MGRfF9ejN41G6U4MoBAQ9WqLp+JasUMTspZI49a
++z8tOiJPT94MHBwbKnz8Mcq8sy02LR7U5h82+0T7JoRVix/OXiOoiQExNjZ9yGar0
++wBnl0SL1UW5UUaYzbyNH0mlMXLD+qowbDZM2pBWPfqXK+CMOsL6STIwnns7lY+ZJ
++ILbaVmECgYEA2kQXE1PZ25A87a81wCEld402WJ2KegrZC719EWv+xeoS72Ji8uv7
++V0PxVGJQOcG1N+dzJ5tN59SQ/NvVTrjwqNUxQqsygmWq/TcfGb9ONZRmyzcehYLb
++m4xTjqJKQ6Kwm5SoaCYmzEb/xaeLwLS9HmR9MdB1dxtDOLpjaK/8qPECgYEArait
++QhgaknlxG8pcAimPsEUrLHYWSFRE/MUk4+YvZg/5+YJ8csvY0SO2h0tF/ARwUrdI
++DaLEifHm4vqgN03K/0gqj7TKxcNlV16PvVx7Vz97xejdqdHZLDfAo4lcotsgvFQW
++zIqoQGGPLf6WhFixZ8mEYj8xnmzLGPvHQmf1h+8CgYEA0LDl917nIN4qw4ARPqDy
++t/pXCienrcUNfgIxwSSnNwj2DdjejzI+4VNfPbW6y16BLPCp1CbUOGOwNXTj4R9H
++S8Z8ESirZK5c7Tt1CyM1XlmEZ61OC43w+CsWAXz+0OiPQFLFKr+/vPXtvEjUgO7P
++HG4sniKZDccNYQIl5oTOaaECgYAPU4u3AZmWw9EPutRT/IcJ75DX47Qjvgw4os2W
++r4IPZ+mP88w39XW1P4mkdyg+DcY8BqD9Uxg1dHwEHEp3lw4LabsX48Thn1UaWOYm
++uDrKgHfUB7FIg5S/Kkx+ImliliRVerZoZvRiejnAvW9bTtiZaFeetCUU7lUeZ1o2
++qiYpUQKBgHQDfdDhguBGPKpkJ7pVwHkJA/lyRWaN1hwplw4TvX2oH14NsHg5Q5Fd
++lHqHFs2Ry/6X3bKgF0E6q4cx0V1Xnnj9sGsemlrHdiSxplDYRQql7X5OeYPGF/Bg
++ZTTG8rDwy+ey6EP9BZUb03hISx/LyMynOzjGl6uOcdAcy2d9Vno0
++-----END RSA PRIVATE KEY-----
+diff --git a/tools/secure/kak_priv_pem.key b/tools/secure/kak_priv_pem.key
+new file mode 100644
+index 0000000..dfceaba
+--- /dev/null
++++ b/tools/secure/kak_priv_pem.key
+@@ -0,0 +1,27 @@
++-----BEGIN RSA PRIVATE KEY-----
++MIIEowIBAAKCAQEAsj2cHcrE2pdyCqNr+oVcQULiRx6RivkrhLl2DTqWXpP33BPm
++MP0W0X0z98X7E3kZO+JIGRZ8q+6AWmUpL+53aOGItNeUgT7jQKViPJIo9ZcEnv/n
++PJqdgDd4xFhnwYMgq8uVYN9IPfaKDwB3EoOqjNox2JholUVxvLw6W8DAC8La3zwb
++0hiqtIlirQOQ/KaTHxC6dPYkrai+jSK5uAX7Vt8RKYg5qfDxSdZckmC2xVKYURhV
++bZAlyKki4h6f8CwYCJMQDpHL6mVYCuJ1Ju/OJEXvthDKD0CD2hwILhksdey3qMOC
++I5lHSO1b+sTvnVHGs65wI7A+ZYwnadMNvS9e2QIDAQABAoIBAH2uu9q2FEEe8SdX
++PNiWGQtbojsL7wzTzj/0lq2VVlqyc+AXmAWLMP/fDTn1vKlqhsSXNseZ96c0sgUL
++uBM4T7MA9WivauQH+C6pb6/OUFt8daG4SNGPJOg4NUweGmt1jyAUmeyJBWPL6GXT
++qiK//Q78/JECRxyaryyqfWwdak3flzfwONBJ03tQ9EO+L7hf9gAP7OYnAsuNp+Bz
++tj1xzNMumYYYiHvsEXx8UTe8HGrmYuO53ZY5fBLGB6Jj7hRlAHNfcdVDvvoBU5cI
++Zwi+5YsBuSP2Hr9Gt2Odu+KitH3gFdS0HIiDh44AT+Trj29NMANFDfkDbVHUmE0q
++YBL75NECgYEA2E+fJzdaYyyPIcvQgVM8g52hltR5IRgJICND3NOdB/Zb2teBGZh+
++1XJ6ZqQMDcOQZo0CMbX9UNRnf3NU55k48/EEITxCgUJTx/WdfJeTVlWGspt5+U/r
++hDnQmkePdU1en63+u9eqsla9+VhLwU3fl/pIOpsBAnoEzs3hMQZ1G0cCgYEA0vHH
++ilm3AztIoZlH3wgDAl2Gu5/YopqEofKA8G4Jp89rlkk919P/GNjEc6575wjgztDB
++0Xab+H7Nqxjs3HqQX/DTTuAxzAggBg3j/ijpHnmjrCHLeMT5ciyH+EH5Bg///cLq
+++Cwn7aOWuSK1hGdDYxUycHylAYZXXFJzmEIEhN8CgYEA1qTrwPZkctTckyS0GiCG
++g/P/TLQ6HmTDaWiVBqPVxvjn3RjLuqJf+V5Hp2JRs7bDq39xFfMJExQyP34qWkbp
++BOe8uV4agDlY+ar4Q5IFWj40EzfEqWhsxCC6pt0rtbK4mqsFg1BWyfDZQnwjcAXe
++QejRk5YMQnDiJHSXaRaHTjECgYAv6ecvD624ODEJM63VhRZZ5TCDUY19caeKuXB8
++LCJZUY3Ydw5rBaY92I7Wz90o3yVhFJ3RnCVVTkgdAu5aLiS5BhSZJ+dntri/Z0xQ
++IK7C01JP+OUkq2kVe/Pued28eMnms+13LWBsY+oKZ03foyz1Ro1Ma6N3MzKIr9m9
++zdEE9QKBgECfoh0xE2T/cbJrtH0mwMCUM6eMVGq+yQBKNvuuPg6kaQUsah1n1rp6
++OyvjwRAXdhshszEzNTX1WTT6/i+vZX277Ax50pPo9UhQ9kVteVt1frN6+u5sy07V
++fg1f2+m0iFx4BD/irU0fzSyfGE+QkBnmXFBUNSYjp2PSqYIdufmW
++-----END RSA PRIVATE KEY-----
+diff --git a/tools/secure/sec_img.cfg b/tools/secure/sec_img.cfg
+new file mode 100644
+index 0000000..200e752
+--- /dev/null
++++ b/tools/secure/sec_img.cfg
+@@ -0,0 +1,25 @@
++# Trusted boot image extention definitions
++
++kak_key_file = "tools/secure/kak_priv_pem.key";
++
++# CSK keys array - 16 entries total.
++# Only a key with csk_key_index will be used for signing the image
++# use "*" string instead of file name for specifying an empty key
++csk_key_file = ["tools/secure/csk_priv_pem0.key", "tools/secure/csk_priv_pem1.key",
++                "tools/secure/csk_priv_pem2.key", "tools/secure/csk_priv_pem3.key",
++                "*", "*", "*", "*", "*", "*", "*", "*", "*", "*", "*", "*"];
++
++# index of CSK key in the array. Valid range is 0 to 15
++csk_key_index = 3;
++
++# AES-256 symmetric key for image encryption
++aes_key_file = "tools/secure/aes_key.txt";
++
++efuse_disable = false;
++jtag = { enable = true; delay = 20; };
++
++box_id = 0xdeadbeef;
++flash_id = 0xbaddf00d;
++
++# Secure Boot Control addresses array
++control = [0xff000000, 0xfff00000, 0xabcd000];
+-- 
+1.9.1
+

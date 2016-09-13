@@ -1,0 +1,57 @@
+From ae03afd1005312f2461a1aafce327732dfcbeea2 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Wed, 20 Jan 2016 11:30:41 +0200
+Subject: [PATCH 0721/1240] doc: mvebu: add booting linux kernel documentation
+
+Change-Id: I0cfd2125bc165034c7fac78a7f390588a228970e
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26908
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ doc/mvebu/linux_boot.txt | 31 +++++++++++++++++++++++++++++++
+ 1 file changed, 31 insertions(+)
+ create mode 100644 doc/mvebu/linux_boot.txt
+
+diff --git a/doc/mvebu/linux_boot.txt b/doc/mvebu/linux_boot.txt
+new file mode 100644
+index 0000000..e614129
+--- /dev/null
++++ b/doc/mvebu/linux_boot.txt
+@@ -0,0 +1,31 @@
++Booting Linux Kernel
++--------------------
++
++U-Boot supports loading the Linux kernel with the following images:
++- Linux image
++- Device Tree Blob (DTB) image
++- RAM File System (RAMFS) image - optional
++
++To load images from a TFTP server, set the TFTP server with the relevant image file.
++
++Run the following commands from the U-Boot prompt:
++	- setenv serverip <IP address of the TFTP server>
++	- setenv ipaddr <IP address of the board>
++	- setenv gatewayip <IP address of the Gateway>
++	- setenv image_name <Linux image name>
++	- setenv fdt_name <DTB image name>
++
++To mount the file-system via NFS:
++- Set the NFS server with the appropriate file system.
++- Run the following commands from the U-Boot prompt:
++	- setenv rootpath <path to filesystem in the NFS server>
++	- setenv netdev <NFS interface name, eth0 for example>
++	- setenv ramfs_name -
++
++To load RAMFS:
++Run the following commands from the U-Boot prompt:
++	- setenv ramfs_name <RAMFS image name>
++	- setenv root <the ram device. for example, /dev/ram0 rw>
++
++To boot Linux Kerenl, run from U-Boot prompt:
++	- boot
+-- 
+1.9.1
+

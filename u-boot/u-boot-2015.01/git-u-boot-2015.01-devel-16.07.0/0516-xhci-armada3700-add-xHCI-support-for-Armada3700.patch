@@ -1,0 +1,115 @@
+From 32edc75d6bbe4e62655ace99d097f12dbf165df8 Mon Sep 17 00:00:00 2001
+From: Jing Hua <jinghua@marvell.com>
+Date: Wed, 11 Nov 2015 20:51:26 +0800
+Subject: [PATCH 0516/1240] xhci: armada3700: add xHCI support for Armada3700
+
+	1. Added support for xHCI for Armada3700.
+	2. This patch has not be fully tested on Palladium.
+	   Have not been able to detect any USB device since
+	   we do not have the speed bridge on Palladium, but
+	   I did run the test and see the USB start successfully.
+
+Change-Id: Iebb50da489ec276539aaf01f509586e5c46a8141
+Signed-off-by: Jing Hua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24741
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ arch/arm/dts/armada-lp-db.dts              | 3 +++
+ arch/arm/dts/armada-lp-palladium.dts       | 3 +++
+ arch/arm/dts/armada-lp.dtsi                | 5 +++++
+ configs/mvebu_armadalp_defconfig           | 4 ++++
+ configs/mvebu_armadalp_palladium_defconfig | 4 ++++
+ 5 files changed, 19 insertions(+)
+
+diff --git a/arch/arm/dts/armada-lp-db.dts b/arch/arm/dts/armada-lp-db.dts
+index d510df1..49d3bca 100644
+--- a/arch/arm/dts/armada-lp-db.dts
++++ b/arch/arm/dts/armada-lp-db.dts
+@@ -35,6 +35,9 @@
+ 			mmc0: mmc@D8000 {
+ 				status = "okay";
+ 			};
++			usb3: usb3@58000 {
++				status = "okay";
++			};
+ 		};
+ 	};
+ };
+diff --git a/arch/arm/dts/armada-lp-palladium.dts b/arch/arm/dts/armada-lp-palladium.dts
+index ac7bb61..af7ad21 100644
+--- a/arch/arm/dts/armada-lp-palladium.dts
++++ b/arch/arm/dts/armada-lp-palladium.dts
+@@ -37,6 +37,9 @@
+ 			mmc0: mmc@D8000 {
+ 				status = "okay";
+ 			};
++			usb3: usb3@58000 {
++				status = "okay";
++			};
+ 		};
+ 	};
+ };
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index 573db25..0d185ec 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -117,6 +117,11 @@
+ 				reg = <0xD8000 0x300>;
+ 				status = "disabled";
+ 			};
++			usb3: usb3@58000 {
++				compatible = "marvell,mvebu-usb3";
++				reg = <0x58000 0x450>;
++				status = "disabled";
++			};
+ 		};
+ 	};
+ };
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index 826b185..88f08f7 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -9,6 +9,9 @@ CONFIG_SCSI_AHCI_PLAT=y
+ CONFIG_MVEBU_NETA_BYPASS_DEC_WIN=y
+ CONFIG_I2C_MV=y
+ CONFIG_I2C_MV_PAD_REG=n
++CONFIG_USB=y
++CONFIG_USB_XHCI_HCD=y
++CONFIG_USB_STORAGE=y
+ +S:CONFIG_MVEBU_UART_ARLP=y
+ +S:CONFIG_DEVEL_BOARD=y
+ CONFIG_CUSTOMER_BOARD=y
+@@ -26,6 +29,7 @@ CONFIG_CMD_RUN=y
+ CONFIG_CMD_EDITENV=y
+ CONFIG_CMD_SAVEENV=y
+ CONFIG_CMD_MEMORY=y
++CONFIG_CMD_USB=y
+ CONFIG_CMD_NET=y
+ CONFIG_CMD_PING=y
+ +S:CONFIG_OF_CONTROL=y
+diff --git a/configs/mvebu_armadalp_palladium_defconfig b/configs/mvebu_armadalp_palladium_defconfig
+index 8d2f0f0..d58289d 100644
+--- a/configs/mvebu_armadalp_palladium_defconfig
++++ b/configs/mvebu_armadalp_palladium_defconfig
+@@ -8,6 +8,9 @@ CONFIG_SCSI_AHCI_PLAT=y
+ CONFIG_MVEBU_NETA_BYPASS_DEC_WIN=y
+ CONFIG_I2C_MV=y
+ CONFIG_I2C_MV_PAD_REG=n
++CONFIG_USB=y
++CONFIG_USB_XHCI_HCD=y
++CONFIG_USB_STORAGE=y
+ +S:CONFIG_MVEBU_UART_ARLP=y
+ +S:CONFIG_DEVEL_BOARD=y
+ +S:CONFIG_SPL_DRIVERS_MISC_SUPPORT=y
+@@ -24,6 +27,7 @@ CONFIG_CMD_RUN=y
+ CONFIG_CMD_EDITENV=y
+ CONFIG_CMD_SAVEENV=y
+ CONFIG_CMD_MEMORY=y
++CONFIG_CMD_USB=y
+ CONFIG_CMD_NET=y
+ CONFIG_CMD_PING=y
+ +S:CONFIG_OF_CONTROL=y
+-- 
+1.9.1
+

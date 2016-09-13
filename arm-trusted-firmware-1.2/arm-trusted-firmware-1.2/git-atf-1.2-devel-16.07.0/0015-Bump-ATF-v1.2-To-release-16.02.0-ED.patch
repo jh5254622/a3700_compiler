@@ -1,0 +1,38 @@
+From cfa4fd6842cb5fcb0efb2a126e4f6c2102946b44 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 15 Feb 2016 16:41:25 +0200
+Subject: [PATCH 015/239] Bump ATF v1.2 To release 16.02.0 ED
+
+Change-Id: I0a0e32a5d603259f0301b82c6343a36c5c75e264
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27520
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ Makefile   | 1 +
+ version.mk | 1 +
+ 2 files changed, 2 insertions(+)
+ create mode 100644 version.mk
+
+diff --git a/Makefile b/Makefile
+index d58518b..9cfcb81 100644
+--- a/Makefile
++++ b/Makefile
+@@ -39,6 +39,7 @@ VERSION_MINOR			:= 2
+ 
+ include make_helpers/build_macros.mk
+ include tools/doimage/doimage.mk
++include version.mk
+ 
+ ################################################################################
+ # Default values for build configurations
+diff --git a/version.mk b/version.mk
+new file mode 100644
+index 0000000..11d12ef
+--- /dev/null
++++ b/version.mk
+@@ -0,0 +1 @@
++BUILD_STRING = 16.02.0 ED
+-- 
+1.9.1
+

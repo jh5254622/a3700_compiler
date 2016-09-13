@@ -1,0 +1,43 @@
+From d4df96d76044a68dee8f9767df6ecddec52e761f Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 15 Dec 2015 11:33:53 +0200
+Subject: [PATCH 0603/1240] llc: Add exclusive info to LLC status printout in
+ uboot log
+
+Change-Id: I9aba58788158de5ab55b2eb5f78da2614a9800e0
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25909
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/soc.c | 11 ++++++++---
+ 1 file changed, 8 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/soc.c b/arch/arm/cpu/armv8/armada8k/soc.c
+index 1c40bcb..c74b52e 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc.c
++++ b/arch/arm/cpu/armv8/armada8k/soc.c
+@@ -116,12 +116,17 @@ void reset_cpu(ulong ignored)
+ 
+ void print_soc_specific_info(void)
+ {
++	printf("\n");
+ #ifdef CONFIG_MVEBU_SYS_INFO
+ 	printf("\tDDR %d Bit width\n", get_info(DRAM_BUS_WIDTH));
+ #endif
+ #ifdef CONFIG_MVEBU_LLC_ENABLE
+-	printf("\tLLC cache is enabled\n");
+-#else
+-	printf("\tLLC cache is disabled\n");
++	printf("\tLLC Enabled");
++#ifdef CONFIG_MVEBU_LLC_EXCLUSIVE_EN
++	printf(" (Exclusive Mode)");
++#endif
++	printf("\n");
++#else /* CONFIG_MVEBU_LLC_ENABLE */
++	printf("\tLLC Disabled\n");
+ #endif
+ }
+-- 
+1.9.1
+

@@ -1,0 +1,44 @@
+From 3157f2f1d3a30278359a1024846242210a1fe351 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Thu, 25 Feb 2016 17:42:03 +0200
+Subject: [PATCH 031/239] fix: a3700: psci: Remove bad GIC initialization code
+
+- Remove bad GIC initialization code from A3700 PSCI
+- The reason for patch is preparation for gic_64.S
+  removal and moving to usage of ATF GIC driver code
+  in both BL31 stage on Master CPU and upon bring up
+  of slave CPUs
+
+Change-Id: If966d886e3ccb03861b44597aeee09d08d830b87
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27902
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ plat/marvell/a3700/a3700_z/aarch64/plat_psci.S | 10 +---------
+ 1 file changed, 1 insertion(+), 9 deletions(-)
+
+diff --git a/plat/marvell/a3700/a3700_z/aarch64/plat_psci.S b/plat/marvell/a3700/a3700_z/aarch64/plat_psci.S
+index de45d7d..ab8123e 100644
+--- a/plat/marvell/a3700/a3700_z/aarch64/plat_psci.S
++++ b/plat/marvell/a3700/a3700_z/aarch64/plat_psci.S
+@@ -106,15 +106,7 @@ _armada3700_cpu_entry:
+ 	mov	x0, #3 << 20
+ 	msr	cpacr_el1, x0			/* Enable FP/SIMD */
+ 0:
+-
+-#if defined(CONFIG_GICV3)
+-	ldr	x0, =PLAT_MARVELL_GICR_BASE
+-	bl	gic_init_secure_percpu
+-#elif defined(CONFIG_GICV2)
+-	ldr	x0, =PLAT_MARVELL_GICD_BASE
+-	ldr	x1, =PLAT_MARVELL_GICC_BASE
+-	bl	gic_init_secure_percpu
+-#endif
++	/* Add correct GICV3 initialization code here */
+ 
+ 	bl	psci_build_stack
+ 
+-- 
+1.9.1
+

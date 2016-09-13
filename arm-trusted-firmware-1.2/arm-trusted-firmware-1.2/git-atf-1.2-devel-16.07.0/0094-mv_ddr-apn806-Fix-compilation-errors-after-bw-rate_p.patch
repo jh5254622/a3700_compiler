@@ -1,0 +1,47 @@
+From 2f55ce665a09ec6eb2ed4c9507c2aa750f499c0c Mon Sep 17 00:00:00 2001
+From: Victor Axelrod <victora@marvell.com>
+Date: Thu, 7 Apr 2016 17:57:44 +0300
+Subject: [PATCH 094/239] mv_ddr: apn806: Fix compilation errors after
+ bw/rate_per_freq removal
+
+Change-Id: I5eff3205bf95f4e113679973c5b15730e3021557
+Signed-off-by: Victor Axelrod <victora@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28891
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c | 8 +++-----
+ 1 file changed, 3 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+index 7f9d7d4..84777e8 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+@@ -149,6 +149,7 @@ static u8 mv_ddr_tip_clk_ratio_get(u32 freq)
+ 	return 2;
+ }
+ 
++
+ /*
+  * Name:	mv_ddr_tip_freq_config_get
+  * Desc:
+@@ -160,14 +161,11 @@ static int mv_ddr_tip_freq_config_get(u8 dev_num, enum hws_ddr_freq freq,
+ 				      struct hws_tip_freq_config_info
+ 					*freq_config_info)
+ {
+-	if (bw_per_freq[freq] == 0xff)
+-		return MV_NOT_SUPPORTED;
+-
+ 	if (freq_config_info == NULL)
+ 		return MV_BAD_PARAM;
+ 
+-	freq_config_info->bw_per_freq = NULL;
+-	freq_config_info->rate_per_freq = NULL;
++	freq_config_info->bw_per_freq = 0xff; /* TODO: TBD */
++	freq_config_info->rate_per_freq = 0xff; /* TODO: TBD */
+ 	freq_config_info->is_supported = 1;
+ 
+ 	return MV_OK;
+-- 
+1.9.1
+

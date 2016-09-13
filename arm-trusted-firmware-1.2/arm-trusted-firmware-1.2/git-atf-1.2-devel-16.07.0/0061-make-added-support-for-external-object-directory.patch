@@ -1,0 +1,75 @@
+From 5c22d38367011ae5ed7024fb7772c09cf280dd71 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Tue, 15 Mar 2016 09:53:10 +0200
+Subject: [PATCH 061/239] make: added support for external object directory
+
+Change-Id: Iba26ddef2cd2d589570609640fc0bd862d6fd662
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ drivers/marvell/dram/Makefile | 25 +++++++++++++++++--------
+ 1 file changed, 17 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/marvell/dram/Makefile b/drivers/marvell/dram/Makefile
+index d5a1bcf..fd399b7 100644
+--- a/drivers/marvell/dram/Makefile
++++ b/drivers/marvell/dram/Makefile
+@@ -35,11 +35,12 @@ CAT      = @cat
+ PWD      = @pwd
+ ECHO     = @echo
+ 
+-LIB = dramlib.a
+ 
++OBJ_DIR  ?= .
+ SRCDIRS  = .
+ INCPATH  = $(SRCDIRS) ./include
+ INCLUDE	  = $(addprefix -I, $(INCPATH))
++LIB = $(OBJ_DIR)/dramlib.a
+ 
+ CFLAGS   = -Wall -Werror -Os -ffreestanding -mlittle-endian -g -gdwarf-2
+ CFLAGS   += -march=armv8-a -fpie $(INCLUDE) -D$(PLATFORM)
+@@ -48,27 +49,35 @@ LDFLAGS  = -Xlinker --discard-all -Wl,--build-id=none -static -nostartfiles
+ CSRC = $(foreach DIR, $(SRCDIRS), $(wildcard $(DIR)/*.c))
+ ASRC = $(foreach DIR, $(SRCDIRS), $(wildcard $(DIR)/*.S))
+ 
+-COBJ  = $(foreach FILE, $(CSRC), $(patsubst %.c,%.o,$(FILE)))
+-COBJ += $(foreach FILE, $(ASRC), $(patsubst %.S,%.o,$(FILE)))
+-
++COBJ  = $(patsubst %.c,$(OBJ_DIR)/%.o,$(CSRC))
++COBJ += $(patsubst %.S,$(OBJ_DIR)/%.o,$(ASRC))
+ 
+ .SILENT:
+ 
+-all: header $(LIB)
++all: check_env header $(LIB)
+ 
+-%.o: %.c
++$(OBJ_DIR)/%.o: %.c
+ 	$(ECHO) "  CC    $<"
+ 	$(CC) -c $(CFLAGS) -o $@ $<
+ 
+-%.o: %.S
++$(OBJ_DIR)/%.o: %.S
+ 	$(ECHO) "  AS    $<"
+ 	$(CC) -c $(CFLAGS) -o $@ $<
+ 
+-$(LIB): $(COBJ)
++$(OBJ_DIR):
++	@mkdir -p $(OBJ_DIR)
++
++$(LIB): $(OBJ_DIR) $(COBJ)
+ 	$(AR) r $(LIB) $(COBJ)
+ 
+ header:
+ 	$(ECHO) "\n  Building DRAM driver"
++	$(ECHO) "\n  COBJ = $(COBJ)"
++
++check_env:
++ifndef PLATFORM
++	$(error PLATFORM is undefined. please set PLATFORM variable)
++endif
+ 
+ clean:
+ 	$(ECHO) "  CLEAN"
+-- 
+1.9.1
+

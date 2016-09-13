@@ -1,0 +1,83 @@
+From dc31b8c500ff6522a0dc969dc919b118feb789df Mon Sep 17 00:00:00 2001
+From: Jing Hua <jinghua@marvell.com>
+Date: Wed, 22 Jul 2015 18:06:35 +0800
+Subject: [PATCH 0286/1240] fix: arlp: add FDT file and defconfig for aramdaLP
+ Palladium
+
+	When testing ArmadaLP on Palladium, there are several things are
+	not the same with real DB board, like UART frequency, baudrate,
+	SPI clock, etc. So create a new dts file specially for palladium.
+	- Add mvebu_armadalp_palladium_defconfig for armadaLP Palladium.
+	- Add armada-lp-palladium.dts for armadaLP Palladium.
+
+Change-Id: I5f44e07d00e7b75e04c3fea19eeb37000a08f635
+Signed-off-by: Jing Hua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22071
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ arch/arm/dts/Makefile                      |  1 +
+ arch/arm/dts/armada-lp-palladium.dts       | 17 +++++++++++++++++
+ configs/mvebu_armadalp_palladium_defconfig | 14 ++++++++++++++
+ 3 files changed, 32 insertions(+)
+ create mode 100644 arch/arm/dts/armada-lp-palladium.dts
+ create mode 100644 configs/mvebu_armadalp_palladium_defconfig
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index 518e23a..19d8e9d 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -53,6 +53,7 @@ dtb-$(CONFIG_SOCFPGA) += socfpga_cyclone5_socrates.dtb
+ 
+ dtb-$(CONFIG_MVEBU) += armada-385-db.dtb
+ dtb-$(CONFIG_MVEBU) += armada-lp-db.dtb
++dtb-$(CONFIG_MVEBU) += armada-lp-palladium.dtb
+ dtb-$(CONFIG_MVEBU) += apn-806-db.dtb
+ 
+ targets += $(dtb-y)
+diff --git a/arch/arm/dts/armada-lp-palladium.dts b/arch/arm/dts/armada-lp-palladium.dts
+new file mode 100644
+index 0000000..ced9f96
+--- /dev/null
++++ b/arch/arm/dts/armada-lp-palladium.dts
+@@ -0,0 +1,17 @@
++
++/dts-v1/;
++
++#include "armada-lp.dtsi"
++
++/ {
++	model = "Marvell Armada_LP Palladium";
++	compatible = "marvell,armada-lp-palladium", "marvell,armada-lp";
++
++	soc {
++		internal-regs {
++			serial: serial@12000 {
++				status = "okay";
++			};
++		};
++	};
++};
+diff --git a/configs/mvebu_armadalp_palladium_defconfig b/configs/mvebu_armadalp_palladium_defconfig
+new file mode 100644
+index 0000000..f55f170
+--- /dev/null
++++ b/configs/mvebu_armadalp_palladium_defconfig
+@@ -0,0 +1,14 @@
++CONFIG_SPL=y
+++S:CONFIG_ARM=y
+++S:CONFIG_TARGET_ARMADA_LP=y
+++S:CONFIG_DEVEL_BOARD=y
+++S:CONFIG_MVEBU_UART_ARLP=y
++CONFIG_CMD_BDI=y
++CONFIG_CMD_BOOTD=y
++CONFIG_CMD_RUN=y
++CONFIG_CMD_EDITENV=y
++CONFIG_CMD_SAVEENV=y
++CONFIG_CMD_MEMORY=y
+++S:CONFIG_OF_CONTROL=y
+++S:CONFIG_OF_EMBED=y
+++S:CONFIG_DEFAULT_DEVICE_TREE="armada-lp-palladium"
+-- 
+1.9.1
+

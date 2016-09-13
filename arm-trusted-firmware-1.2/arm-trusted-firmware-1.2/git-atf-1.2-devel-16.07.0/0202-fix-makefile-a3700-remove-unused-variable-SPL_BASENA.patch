@@ -1,0 +1,36 @@
+From 6cff0b5da023085a4450e705b9eab81280037848 Mon Sep 17 00:00:00 2001
+From: Ken Ma <make@marvell.com>
+Date: Thu, 16 Jun 2016 22:00:16 +0800
+Subject: [PATCH 202/239] fix: makefile: a3700: remove unused variable -
+ SPL_BASENAME
+
+- Since SPL is removed from atf, then the variable SPL_BASENAME will be
+  not used any longer, it can be removed
+
+Change-Id: Iaf9390066b390f8292e95f6e2058875da54852be
+Signed-off-by: Ken Ma <make@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30498
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hua Jing <jinghua@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ Makefile | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 800c876..e02302d 100644
+--- a/Makefile
++++ b/Makefile
+@@ -403,8 +403,6 @@ BOOTDEV			:= SATA
+ PARTNUM			:= 0
+ endif
+ 
+-SPL_BASENAME		:= $(shell basename $(SPL_IMAGE))
+-
+ TIM_IMAGE		:= $$(grep "Image Filename:" -m 1 $(DOIMAGE_CFG) | cut -c 17-)
+ TIMBLDARGS		:= $(SECURE) $(BOOTDEV) $(IMAGESPATH) $(CLOCKSPATH) $(CLOCKSPRESET) \
+ 				$(PARTNUM) $(DOIMAGE_CFG) $(TIMNCFG) $(TIMNSIG)
+-- 
+1.9.1
+

@@ -1,0 +1,33 @@
+From f3989e46dd1d2aa43fdda7981bb7728fe9fc2551 Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Thu, 7 Jan 2016 13:17:58 +0200
+Subject: [PATCH 0645/1240] fix: a8k: increase spl image size to 156kb
+
+this is done to allow all the link of all different dtb
+which were added for 7040-rz
+
+Change-Id: Iec0800544d4845954e93378ca9d20b3e2490daeb
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26614
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/armada8k.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index f120e51..2670aa2 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -57,7 +57,7 @@
+ /* SPL */
+ /* Defines for SPL */
+ #define CONFIG_SPL_TEXT_BASE		0xFFE1C048
+-#define CONFIG_SPL_MAX_SIZE		(0x1ffc0)
++#define CONFIG_SPL_MAX_SIZE		(0x27000)
+ 
+ #ifndef __ASSEMBLY__
+ extern char __end_of_spl[];
+-- 
+1.9.1
+

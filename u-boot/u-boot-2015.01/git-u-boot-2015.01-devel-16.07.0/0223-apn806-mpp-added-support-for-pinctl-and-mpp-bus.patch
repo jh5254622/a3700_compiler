@@ -1,0 +1,101 @@
+From 0d4a6c75ab7823b0013ea6b7e1eae28fb355a022 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Fri, 26 Jun 2015 10:40:39 +0300
+Subject: [PATCH 0223/1240] apn806: mpp: added support for pinctl and mpp bus
+
+Change-Id: Ied3ee825c6c6570c1ddc3d62077b151367539fbb
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20509
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/dts/apn-806-db.dts      |  7 +++++++
+ arch/arm/dts/apn-806.dtsi        | 34 ++++++++++++++++++++++++++++++++++
+ configs/mvebu_armada8k_defconfig |  3 +++
+ 3 files changed, 44 insertions(+)
+
+diff --git a/arch/arm/dts/apn-806-db.dts b/arch/arm/dts/apn-806-db.dts
+index ebfcecb..7fdbcea 100644
+--- a/arch/arm/dts/apn-806-db.dts
++++ b/arch/arm/dts/apn-806-db.dts
+@@ -32,3 +32,10 @@
+ 		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
+ 	};
+ };
++
++&pinctl {
++		  /* 0 1 2 3 4 5 6 7 8 9 */
++	pin-func = < 1 1 1 1 1 1 1 1 1 0
++		     0 0 0 1 0 0>;
++};
++
+diff --git a/arch/arm/dts/apn-806.dtsi b/arch/arm/dts/apn-806.dtsi
+index 39ec48c..cd72f9e 100644
+--- a/arch/arm/dts/apn-806.dtsi
++++ b/arch/arm/dts/apn-806.dtsi
+@@ -52,6 +52,40 @@
+ 				clock = <&tclk>;
+ 				status = "okay";
+ 			};
++
++			pinctl: pinctl@6F008C {
++				compatible = "marvell,mvebu-pinctl";
++				bank-name ="apn-806";
++				reg = <0x6F008c 0x10>;
++				pin-count = <16>;
++				max-func = <1>;
++				reverse-reg;
++			};
++		};
++	};
++	/* This should go only into devel boards */
++	mpp-buses {
++		mpp-bus0 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "spi0";
++			bank-name = "apn-806";
++			pin-count = <5>;
++			pins = <4 1  5 1  6 1  7 1  8 1>;
++		};
++		mpp-bus1 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "i2c";
++			bank-name = "apn-806";
++			pin-count = <2>;
++			pins = <0 1  1 1>;
++		};
++		mpp-bus2 {
++			/* the RX pin is directly connected to uart1 */
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "uart1";
++			bank-name = "apn-806";
++			pin-count = <1>;
++			pins = <13 1>;
+ 		};
+ 	};
+ };
+diff --git a/configs/mvebu_armada8k_defconfig b/configs/mvebu_armada8k_defconfig
+index 21f3a5e..3fa1e53 100644
+--- a/configs/mvebu_armada8k_defconfig
++++ b/configs/mvebu_armada8k_defconfig
+@@ -2,6 +2,7 @@ CONFIG_SPL=y
+ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_ARMADA_8K=y
++CONFIG_MVEBU_MPP_BUS=y
+ +S:CONFIG_MVEBU_MK6_SUPPORT=y
+ +S:CONFIG_DEVEL_BOARD=y
+ CONFIG_APN_806_DB=y
+@@ -13,7 +14,9 @@ CONFIG_CMD_MEMORY=y
+ CONFIG_CMD_TIME=y
+ CONFIG_CMD_MISC=y
+ CONFIG_CMD_TIMER=y
++CONFIG_CMD_MVEBU_MPP=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="apn-806-db"
+ +S:CONFIG_SYS_NS16550=y
++CONFIG_MVEBU_PINCTL=y
+-- 
+1.9.1
+

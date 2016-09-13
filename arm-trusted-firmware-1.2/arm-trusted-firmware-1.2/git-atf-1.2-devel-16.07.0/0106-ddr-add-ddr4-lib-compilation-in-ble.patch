@@ -1,0 +1,33 @@
+From 69969636f7dcc86f3b8e555f0adfa65946f2657a Mon Sep 17 00:00:00 2001
+From: Victor Axelrod <victora@marvell.com>
+Date: Mon, 11 Apr 2016 16:38:34 +0300
+Subject: [PATCH 106/239] ddr: add ddr4 lib compilation in ble
+
+This patch adds ddr4 support to ble make file.
+
+Change-Id: I1908dad1646e28b2c6d855a0f56fe012a5b11086
+Signed-off-by: Victor Axelrod <victora@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28933
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ ble/ble.mk | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/ble/ble.mk b/ble/ble.mk
+index f0d2235..925f0e7 100644
+--- a/ble/ble.mk
++++ b/ble/ble.mk
+@@ -33,6 +33,9 @@ MV_DDR_LIB		= 	$(CURDIR)/$(BUILD_PLAT)/ble/mv_ddr_lib.a
+ BLE_LIBS		= 	$(MV_DDR_LIB)
+ PLAT_MARVELL		=	plat/marvell
+ 
++MV_DDR4_LIB		=	$(CURDIR)/$(BUILD_PLAT)/ble/mv_ddr4_lib.a
++BLE_LIBS		+= 	$(MV_DDR4_LIB)
++
+ BLE_SOURCES		+= 	ble/ble_main.c				\
+ 				drivers/delay_timer/delay_timer.c	\
+ 				$(PLAT_MARVELL)/common/plat_delay_timer.c
+-- 
+1.9.1
+

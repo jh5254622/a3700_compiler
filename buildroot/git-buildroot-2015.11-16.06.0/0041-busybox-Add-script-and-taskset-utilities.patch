@@ -1,0 +1,50 @@
+From ab5a7c14402f53071f169f4bcfa355ba8b8d4585 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 9 Feb 2016 13:08:59 +0200
+Subject: [PATCH 41/66] busybox: Add script and taskset utilities
+
+Change-Id: I62e8b384661402d821a730b0976ee636ebaf9fe2
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27381
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Ofer Heifetz <oferh@marvell.com>
+---
+ package/busybox/busybox.config | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/package/busybox/busybox.config b/package/busybox/busybox.config
+index 7e8ec5b..cb3bcd8 100644
+--- a/package/busybox/busybox.config
++++ b/package/busybox/busybox.config
+@@ -1,7 +1,7 @@
+ #
+ # Automatically generated make config: don't edit
+ # Busybox version: 1.24.1
+-# Tue Feb  2 17:38:14 2016
++# Tue Feb  9 11:21:45 2016
+ #
+ CONFIG_HAVE_DOT_CONFIG=y
+ 
+@@ -620,7 +620,7 @@ CONFIG_RDATE=y
+ # CONFIG_RDEV is not set
+ CONFIG_READPROFILE=y
+ # CONFIG_RTCWAKE is not set
+-# CONFIG_SCRIPT is not set
++CONFIG_SCRIPT=y
+ # CONFIG_SCRIPTREPLAY is not set
+ CONFIG_SETARCH=y
+ CONFIG_SWAPONOFF=y
+@@ -690,8 +690,8 @@ CONFIG_FEATURE_LESS_REGEXP=y
+ # CONFIG_NANDDUMP is not set
+ # CONFIG_RFKILL is not set
+ CONFIG_SETSERIAL=y
+-# CONFIG_TASKSET is not set
+-# CONFIG_FEATURE_TASKSET_FANCY is not set
++CONFIG_TASKSET=y
++CONFIG_FEATURE_TASKSET_FANCY=y
+ # CONFIG_UBIATTACH is not set
+ # CONFIG_UBIDETACH is not set
+ # CONFIG_UBIMKVOL is not set
+-- 
+1.9.1
+

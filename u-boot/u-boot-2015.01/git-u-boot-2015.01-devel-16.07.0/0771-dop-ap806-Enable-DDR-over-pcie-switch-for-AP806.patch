@@ -1,0 +1,29 @@
+From c8b13689c141e0f5f3bc89c759d9570da50f899e Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 2 Feb 2016 13:08:16 +0200
+Subject: [PATCH 0771/1240] dop: ap806: Enable DDR over pcie switch for AP806
+
+Change-Id: I870207201222566fbb284dc39dfeaa206285b7da
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27134
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ configs/mvebu_apn806_dop_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/configs/mvebu_apn806_dop_defconfig b/configs/mvebu_apn806_dop_defconfig
+index 2bc84aa..efcbf64 100644
+--- a/configs/mvebu_apn806_dop_defconfig
++++ b/configs/mvebu_apn806_dop_defconfig
+@@ -4,6 +4,7 @@ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_TARGET_ARMADA_8K=y
+ CONFIG_MVEBU_MPP_BUS=y
+ +S:CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT=y
+++S:CONFIG_MVEBU_SPL_DDR_OVER_PCI_SWITCH=y
+ +S:CONFIG_MVEBU_ROM_SILENCE_FLAG_SUPPORT=y
+ +S:CONFIG_MVEBU_SPL_SAR_DUMP=y
+ +S:CONFIG_DEVEL_BOARD=y
+-- 
+1.9.1
+

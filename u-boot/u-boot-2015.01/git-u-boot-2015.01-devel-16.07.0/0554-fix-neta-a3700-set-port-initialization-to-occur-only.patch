@@ -1,0 +1,48 @@
+From 96f0da84605b5d6a7b5f5dd7f0bdba10b7be8fb4 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Mon, 23 Nov 2015 15:35:16 -0800
+Subject: [PATCH 0554/1240] fix: neta: a3700: set port initialization to occur
+ only once
+
+	set mvneta_port.init to 1 in mvneta_probe, otherwise port will be
+	initialized every time any network action is performed, like PING or bubt,
+	which should be done only the first time.
+	This issue was introduced in patch:
+	Change-Id: I2b123d71c8845b8860deb46c20916cbb7fe72605.
+
+Change-Id: I3d7b1e4ead19f41c9007519c7d892c085b41d535
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25192
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+(cherry picked from commit 6d6d90f4a5df51ede110e3c3163e7ed2c113ca17)
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25398
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ drivers/net/mvneta.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/net/mvneta.c b/drivers/net/mvneta.c
+index ca54e53..008afb5 100644
+--- a/drivers/net/mvneta.c
++++ b/drivers/net/mvneta.c
+@@ -1538,6 +1538,14 @@ static int mvneta_init_u_boot(struct eth_device *dev, bd_t *bis)
+ 		}
+ 		/* Full init on first call */
+ 		mvneta_probe(dev);
++		/* mark this port being fully inited,
++		 * otherwise it will be inited again
++		 * during next networking transaction,
++		 * including memory allocatation for
++		 * TX/RX queue, PHY connect/configuration
++		 * and address decode configuration.
++		 */
++		pp->init = 1;
+ #endif
+ 	} else {
+ 		/* Upon all following calls, this is enough */
+-- 
+1.9.1
+

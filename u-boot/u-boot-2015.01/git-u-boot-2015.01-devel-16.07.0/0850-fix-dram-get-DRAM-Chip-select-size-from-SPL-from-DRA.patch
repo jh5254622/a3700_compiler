@@ -1,0 +1,64 @@
+From a1bec855ee7f5b832a09feb9872495466279da46 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 14 Feb 2016 17:02:04 +0200
+Subject: [PATCH 0850/1240] fix: dram: get DRAM Chip select size from SPL from
+ DRAM driver
+
+- Do not need to read DRAM registers in U-Boot, the U-Boot get the DRAM
+  information from SPL, by system information feature
+- SYSTEMSW-2258
+
+Change-Id: I61437e4eb1e45c40e9b509e723b4e1ea1854d720
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27478
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/soc.c | 24 ++++++++++--------------
+ 1 file changed, 10 insertions(+), 14 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/soc.c b/arch/arm/cpu/armv8/armada8k/soc.c
+index 840ead8..75e8edd 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc.c
++++ b/arch/arm/cpu/armv8/armada8k/soc.c
+@@ -28,9 +28,6 @@
+ #include <asm/arch-mvebu/fdt.h>
+ #include <linux/sizes.h>
+ 
+-#define MVEBU_MCKINLEY_REGS_BASE	(MVEBU_REGS_BASE + 0x20000)
+-#define MVEBU_MC_MEM_ADDR_MAP_REG	(MVEBU_MCKINLEY_REGS_BASE + 0x200)
+-
+ #define RFU_GLOBAL_SW_RST		(MVEBU_RFU_BASE + 0x84)
+ #define RFU_SW_RESET_OFFSET		0
+ 
+@@ -136,17 +133,16 @@ int dram_init(void)
+ #elif defined(CONFIG_PALLADIUM)
+ 	gd->ram_size = 0x20000000;
+ #else
+-	u32 dram_length, ram_size;
+-
+-	dram_length = (readl(MVEBU_MC_MEM_ADDR_MAP_REG) >> 16) & 0x1F;
+-	if (dram_length > 0x3) {
+-		dram_length -= 0x7;
+-		ram_size = 8 * SZ_1M;
+-	} else {
+-		ram_size = 384 * SZ_1M;
+-	}
+-
+-	gd->ram_size = (u64)((u64)ram_size << dram_length);
++	u32 cs;
++	gd->ram_size = 0;
++	for (cs = 0; cs < 4; cs++)
++		if (get_info(DRAM_CS0 + cs) == 1)
++			gd->ram_size += get_info(DRAM_CS0_SIZE + cs);
++
++	gd->ram_size *= SZ_1M;
++	/* if DRAM size == 0, print error message */
++	if (gd->ram_size == 0)
++		error("DRAM size equal 0, check DRAM configuration\n");
+ #endif
+ 
+ 	return 0;
+-- 
+1.9.1
+

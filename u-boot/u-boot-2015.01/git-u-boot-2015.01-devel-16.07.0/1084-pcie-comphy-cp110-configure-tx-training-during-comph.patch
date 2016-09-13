@@ -1,0 +1,240 @@
+From 16bcf041f930c2f3255d36035f99e5e9ddd66eec Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Wed, 4 May 2016 14:56:14 +0300
+Subject: [PATCH 1084/1240] pcie: comphy: cp110: configure tx training during
+ comphy power up
+
+these configurations enable the hw tx training
+
+Change-Id: Iafeac8d04309370635b6ebd880b029d14a881040
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29496
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/include/asm/arch-mvebu/comphy_hpipe.h | 72 ++++++++++++++++++---
+ drivers/phy/comphy_cp110.c                     | 89 +++++++++++++++++++++++++-
+ 2 files changed, 149 insertions(+), 12 deletions(-)
+
+diff --git a/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h b/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h
+index 523d251..45476fb 100644
+--- a/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h
++++ b/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h
+@@ -95,7 +95,15 @@
+ #define HPIPE_G1_SET_1_G1_RX_DFE_EN_OFFSET	10
+ #define HPIPE_G1_SET_1_G1_RX_DFE_EN_MASK	(0x1 << HPIPE_G1_SET_1_G1_RX_DFE_EN_OFFSET)
+ 
+-#define HPIPE_G2_SETTINGS_1_REG                 0x040
++#define HPIPE_G2_SETTINGS_1_REG			0x040
++
++#define HPIPE_G3_SETTINGS_1_REG			0x048
++#define HPIPE_G3_RX_SELMUPI_OFFSET		0
++#define HPIPE_G3_RX_SELMUPI_MASK		(0x7 << HPIPE_G3_RX_SELMUPI_OFFSET)
++#define HPIPE_G3_RX_SELMUPF_OFFSET		3
++#define HPIPE_G3_RX_SELMUPF_MASK		(0x7 << HPIPE_G3_RX_SELMUPF_OFFSET)
++#define HPIPE_G3_SETTING_BIT_OFFSET		13
++#define HPIPE_G3_SETTING_BIT_MASK		(0x1 << HPIPE_G3_SETTING_BIT_OFFSET)
+ 
+ #define HPIPE_LOOPBACK_REG			0x08c
+ #define HPIPE_LOOPBACK_SEL_OFFSET		1
+@@ -149,13 +157,21 @@
+ #define HPIPE_PWR_CTR_SFT_RST_OFFSET		10
+ #define HPIPE_PWR_CTR_SFT_RST_MASK		(0x1 << HPIPE_PWR_CTR_SFT_RST_OFFSET)
+ 
+-#define HPIPE_PLLINTP_REG1                      0x150
++#define HPIPE_PLLINTP_REG1			0x150
++
++#define HPIPE_SAMPLER_N_PROC_CALIB_CTRL_REG	0x16C
++#define HPIPE_SMAPLER_OFFSET			12
++#define HPIPE_SMAPLER_MASK			(0x1 << HPIPE_SMAPLER_OFFSET)
+ 
+ #define HPIPE_PWR_CTR_DTL_REG			0x184
+-#define HPIPE_PWR_CTR_DTL_FLOOP_EN_OFFSET	0x2
++#define HPIPE_PWR_CTR_DTL_FLOOP_EN_OFFSET	2
+ #define HPIPE_PWR_CTR_DTL_FLOOP_EN_MASK		(0x1 << HPIPE_PWR_CTR_DTL_FLOOP_EN_OFFSET)
+ 
+-#define HPIPE_RX_REG3                           0x188
++#define HPIPE_RX_REG3				0x188
++
++#define HPIPE_TX_TRAIN_CTRL_0_REG		0x268
++#define HPIPE_TX_TRAIN_P2P_HOLD_OFFSET		15
++#define HPIPE_TX_TRAIN_P2P_HOLD_MASK		(0x1 << HPIPE_TX_TRAIN_P2P_HOLD_OFFSET)
+ 
+ #define HPIPE_TX_TRAIN_CTRL_REG			0x26C
+ #define HPIPE_TX_TRAIN_CTRL_G1_OFFSET		0
+@@ -165,8 +181,22 @@
+ #define HPIPE_TX_TRAIN_CTRL_G0_OFFSET		2
+ #define HPIPE_TX_TRAIN_CTRL_G0_MASK		(0x1 << HPIPE_TX_TRAIN_CTRL_G0_OFFSET)
+ 
+-#define HPIPE_PCIE_REG1                         0x288
+-#define HPIPE_PCIE_REG3                         0x290
++#define HPIPE_TX_TRAIN_CTRL_4_REG		0x278
++#define HPIPE_TRX_TRAIN_TIMER_OFFSET		0
++#define HPIPE_TRX_TRAIN_TIMER_MASK		(0x3FF << HPIPE_TRX_TRAIN_TIMER_OFFSET)
++
++#define HPIPE_PCIE_REG1				0x288
++#define HPIPE_PCIE_REG3				0x290
++
++#define HPIPE_TX_TRAIN_CTRL_5_REG		0x2A4
++#define HPIPE_TX_TRAIN_START_SQ_EN_OFFSET	11
++#define HPIPE_TX_TRAIN_START_SQ_EN_MASK		(0x1 << HPIPE_TX_TRAIN_START_SQ_EN_OFFSET)
++#define HPIPE_TX_TRAIN_START_FRM_DET_EN_OFFSET	12
++#define HPIPE_TX_TRAIN_START_FRM_DET_EN_MASK	(0x1 << HPIPE_TX_TRAIN_START_FRM_DET_EN_OFFSET)
++#define HPIPE_TX_TRAIN_START_FRM_LOCK_EN_OFFSET	13
++#define HPIPE_TX_TRAIN_START_FRM_LOCK_EN_MASK	(0x1 << HPIPE_TX_TRAIN_START_FRM_LOCK_EN_OFFSET)
++#define HPIPE_TX_TRAIN_WAIT_TIME_EN_OFFSET	14
++#define HPIPE_TX_TRAIN_WAIT_TIME_EN_MASK	(0x1 << HPIPE_TX_TRAIN_WAIT_TIME_EN_OFFSET)
+ 
+ #define HPIPE_TX_TRAIN_REG			0x31C
+ #define HPIPE_TX_TRAIN_CHK_INIT_OFFSET		4
+@@ -174,14 +204,32 @@
+ #define HPIPE_TX_TRAIN_COE_FM_PIN_PCIE3_OFFSET	7
+ #define HPIPE_TX_TRAIN_COE_FM_PIN_PCIE3_MASK	(0x1 << HPIPE_TX_TRAIN_COE_FM_PIN_PCIE3_OFFSET)
+ 
+-#define HPIPE_G1_SETTINGS_3_REG                 0x440
++#define HPIPE_TX_TRAIN_CTRL_11_REG		0x438
++#define HPIPE_TX_STATUS_CHECK_MODE_OFFSET	6
++#define HPIPE_TX_TX_STATUS_CHECK_MODE_MASK	(0x1 << HPIPE_TX_STATUS_CHECK_MODE_OFFSET)
++#define HPIPE_TX_NUM_OF_PRESET_OFFSET		10
++#define HPIPE_TX_NUM_OF_PRESET_MASK		(0x7 << HPIPE_TX_NUM_OF_PRESET_OFFSET)
++#define HPIPE_TX_SWEEP_PRESET_EN_OFFSET		15
++#define HPIPE_TX_SWEEP_PRESET_EN_MASK		(0x1 << HPIPE_TX_SWEEP_PRESET_EN_OFFSET)
+ 
+-#define HPIPE_G1_SETTINGS_4_REG                 0x444
++#define HPIPE_G1_SETTINGS_3_REG			0x440
++
++#define HPIPE_G1_SETTINGS_4_REG			0x444
+ #define HPIPE_G1_SETTINGS_4_G1_DFE_RES_OFFSET	8
+ #define HPIPE_G1_SETTINGS_4_G1_DFE_RES_MASK	(0x3 << HPIPE_G1_SETTINGS_4_G1_DFE_RES_OFFSET)
+ 
+-#define HPIPE_G2_SETTINGS_3_REG                 0x448
+-#define HPIPE_G2_SETTINGS_4_REG                 0x44C
++#define HPIPE_G2_SETTINGS_3_REG			0x448
++#define HPIPE_G2_SETTINGS_4_REG			0x44C
++
++#define HPIPE_G3_SETTING_3_REG			0x450
++#define HPIPE_G3_FFE_DEG_RES_LEVEL_OFFSET	12
++#define HPIPE_G3_FFE_DEG_RES_LEVEL_MASK		(0x3 << HPIPE_G3_FFE_DEG_RES_LEVEL_OFFSET)
++#define HPIPE_G3_FFE_LOAD_RES_LEVEL_OFFSET	14
++#define HPIPE_G3_FFE_LOAD_RES_LEVEL_MASK	(0x3 << HPIPE_G3_FFE_LOAD_RES_LEVEL_OFFSET)
++
++#define HPIPE_G3_SETTING_4_REG			0x454
++#define HPIPE_G3_DFE_RES_OFFSET			8
++#define HPIPE_G3_DFE_RES_MASK			(0x3 << HPIPE_G3_DFE_RES_OFFSET)
+ 
+ #define HPIPE_DFE_CTRL_28_REG			0x49C
+ #define HPIPE_DFE_CTRL_28_PIPE4_OFFSET		7
+@@ -205,6 +253,10 @@
+ #define HPIPE_LANE_CFG4_SSC_CTRL_OFFSET		7
+ #define HPIPE_LANE_CFG4_SSC_CTRL_MASK		(0x1 << HPIPE_LANE_CFG4_SSC_CTRL_OFFSET)
+ 
++#define HPIPE_LANE_EQU_CONFIG_0_REG		0x69C
++#define HPIPE_CFG_PHY_RC_EP_OFFSET		12
++#define HPIPE_CFG_PHY_RC_EP_MASK		(0x1 << HPIPE_CFG_PHY_RC_EP_OFFSET)
++
+ #define HPIPE_LANE_EQ_CFG1_REG			0x6a0
+ #define HPIPE_CFG_UPDATE_POLARITY_OFFSET	12
+ #define HPIPE_CFG_UPDATE_POLARITY_MASK		(0x1 << HPIPE_CFG_UPDATE_POLARITY_OFFSET)
+diff --git a/drivers/phy/comphy_cp110.c b/drivers/phy/comphy_cp110.c
+index 12e001f..42ae70d 100644
+--- a/drivers/phy/comphy_cp110.c
++++ b/drivers/phy/comphy_cp110.c
+@@ -270,8 +270,93 @@ static int comphy_pcie_power_up(u32 lane, u32 pcie_width, bool clk_src, void __i
+ 	data |= 0x1 << HPIPE_TX_TRAIN_COE_FM_PIN_PCIE3_OFFSET;
+ 	reg_set(hpipe_addr + HPIPE_TX_TRAIN_REG, data, mask);
+ 
+-	/* TODO: Set analog paramters from ETP(HW) - for now use the default datas */
+-	debug("stage: Analog paramters from ETP(HW)\n");
++	debug("stage: TRx training parameters\n");
++	/* Set Preset sweep configurations */
++	mask = HPIPE_TX_TX_STATUS_CHECK_MODE_MASK;
++	data = 0x1 << HPIPE_TX_STATUS_CHECK_MODE_OFFSET;
++
++	mask |= HPIPE_TX_NUM_OF_PRESET_MASK;
++	data |= 0x7 << HPIPE_TX_NUM_OF_PRESET_OFFSET;
++
++	mask |= HPIPE_TX_SWEEP_PRESET_EN_MASK;
++	data |= 0x1 << HPIPE_TX_SWEEP_PRESET_EN_OFFSET;
++	reg_set(hpipe_addr + HPIPE_TX_TRAIN_CTRL_11_REG, data, mask);
++
++	/* Tx train start configuration */
++	mask = HPIPE_TX_TRAIN_START_SQ_EN_MASK;
++	data = 0x1 << HPIPE_TX_TRAIN_START_SQ_EN_OFFSET;
++
++	mask |= HPIPE_TX_TRAIN_START_FRM_DET_EN_MASK;
++	data |= 0x0 << HPIPE_TX_TRAIN_START_FRM_DET_EN_OFFSET;
++
++	mask |= HPIPE_TX_TRAIN_START_FRM_LOCK_EN_MASK;
++	data |= 0x0 << HPIPE_TX_TRAIN_START_FRM_LOCK_EN_OFFSET;
++
++	mask |= HPIPE_TX_TRAIN_WAIT_TIME_EN_MASK;
++	data |= 0x1 << HPIPE_TX_TRAIN_WAIT_TIME_EN_OFFSET;
++	reg_set(hpipe_addr + HPIPE_TX_TRAIN_CTRL_5_REG, data, mask);
++
++	/* Enable Tx train P2P */
++	mask = HPIPE_TX_TRAIN_P2P_HOLD_MASK;
++	data = 0x1 << HPIPE_TX_TRAIN_P2P_HOLD_OFFSET;
++	reg_set(hpipe_addr + HPIPE_TX_TRAIN_CTRL_0_REG, data, mask);
++
++	/* Configure Tx train timeout */
++	mask = HPIPE_TRX_TRAIN_TIMER_MASK;
++	data = 0x17 << HPIPE_TRX_TRAIN_TIMER_OFFSET;
++	reg_set(hpipe_addr + HPIPE_TX_TRAIN_CTRL_4_REG, data, mask);
++
++	/* Disable G0/G1/GN1 adaptation */
++	mask = HPIPE_TX_TRAIN_CTRL_G1_MASK | HPIPE_TX_TRAIN_CTRL_GN1_MASK
++		| HPIPE_TX_TRAIN_CTRL_G0_OFFSET;
++	data = 0;
++	reg_set(hpipe_addr + HPIPE_TX_TRAIN_CTRL_REG, data, mask);
++
++	/* Disable DTL frequency loop */
++	mask = HPIPE_PWR_CTR_DTL_FLOOP_EN_MASK;
++	data = 0x0 << HPIPE_PWR_CTR_DTL_FLOOP_EN_OFFSET;
++	reg_set(hpipe_addr + HPIPE_PWR_CTR_DTL_REG, data, mask);
++
++	/* Configure G3 DFE */
++	mask = HPIPE_G3_DFE_RES_MASK;
++	data = 0x3 << HPIPE_G3_DFE_RES_OFFSET;
++	reg_set(hpipe_addr + HPIPE_G3_SETTING_4_REG, data, mask);
++
++	/* Force DFE resolution (use GEN table value) */
++	mask = HPIPE_DFE_RES_FORCE_MASK;
++	data = 0x1 << HPIPE_DFE_RES_FORCE_OFFSET;
++	reg_set(hpipe_addr + HPIPE_DFE_REG0,  data, mask);
++
++	/* Configure initial and final coefficient value for receiver */
++	mask = HPIPE_G3_RX_SELMUPI_MASK;
++	data = 0x1 << HPIPE_G3_RX_SELMUPI_OFFSET;
++
++	mask |= HPIPE_G3_RX_SELMUPF_MASK;
++	data |= 0x1 << HPIPE_G3_RX_SELMUPF_OFFSET;
++
++	mask |= HPIPE_G3_SETTING_BIT_MASK;
++	data |= 0x0 << HPIPE_G3_SETTING_BIT_OFFSET;
++	reg_set(hpipe_addr + HPIPE_G3_SETTINGS_1_REG,  data, mask);
++
++	/* Trigger sampler enable pulse */
++	mask = HPIPE_SMAPLER_MASK;
++	data = 0x1 << HPIPE_SMAPLER_OFFSET;
++	reg_set(hpipe_addr + HPIPE_SAMPLER_N_PROC_CALIB_CTRL_REG, data, mask);
++	udelay(5);
++	reg_set(hpipe_addr + HPIPE_SAMPLER_N_PROC_CALIB_CTRL_REG, 0, mask);
++
++	/* FFE resistor tuning for different bandwidth  */
++	mask = HPIPE_G3_FFE_DEG_RES_LEVEL_MASK;
++	data = 0x1 << HPIPE_G3_FFE_DEG_RES_LEVEL_OFFSET;
++
++	mask |= HPIPE_G3_FFE_LOAD_RES_LEVEL_MASK;
++	data |= 0x1 << HPIPE_G3_FFE_LOAD_RES_LEVEL_OFFSET;
++	reg_set(hpipe_addr + HPIPE_G3_SETTING_3_REG, data, mask);
++
++	/* Set phy in root complex mode */
++	mask = HPIPE_CFG_PHY_RC_EP_MASK;
++	data = 0x1 << HPIPE_CFG_PHY_RC_EP_OFFSET;
++	reg_set(hpipe_addr + HPIPE_LANE_EQU_CONFIG_0_REG, data, mask);
+ 
+ 	debug("stage: Comphy power up\n");
+ 
+-- 
+1.9.1
+

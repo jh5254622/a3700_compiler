@@ -1,0 +1,101 @@
+From 6a177a7a340f26e7827397f5960b8d869c592ffe Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Sun, 13 Mar 2016 12:56:24 +0200
+Subject: [PATCH 055/239] fix: a8k: psci: fix smp boot according to latest code
+ from u-boot
+
+The new code adds support for AP806-A0 cpu_on functionality.
+The old code was only suitable for AP806-Z1
+In AP806-A0 we have 2 CPUs in each cluster, this was not taken into
+account in current psci cpu wakeup routine.
+Need to take into account the CPU ID in addition to the cluster ID
+when accessing the CPU reset control registers.
+
+Change-Id: Iab60e0deb1972ffc5b960020652df5dea55a7b4c
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28190
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ plat/marvell/a8k/a7040_rz/aarch64/plat_psci.S | 31 +++++++++++++++++++++------
+ 1 file changed, 24 insertions(+), 7 deletions(-)
+
+diff --git a/plat/marvell/a8k/a7040_rz/aarch64/plat_psci.S b/plat/marvell/a8k/a7040_rz/aarch64/plat_psci.S
+index a9a04e9..0bc7335 100644
+--- a/plat/marvell/a8k/a7040_rz/aarch64/plat_psci.S
++++ b/plat/marvell/a8k/a7040_rz/aarch64/plat_psci.S
+@@ -62,6 +62,8 @@
+ #define MVEBU_RFU_GLOBL_SW_RST	0x84
+ #define ARM_PSCI_RET_SUCCESS	0
+ 
++#define MVEBU_CCU_RVBAR(i)	(0x640 + (i * 4))
++
+ .pushsection ._secure.text, "ax"
+ 
+ /*******************************************************************************
+@@ -136,9 +138,13 @@ _armada8k_cpu_entry:
+ 	bl	armv8_switch_to_el1
+ #endif
+ 
+-	/* set linux start address - WA reset adderrs - use reserved register */
++	/* Get linux start address - we use RVBARR for CPU's 2-3 as a WA. */
++	mrs 	x2, MPIDR_EL1   	/* get current CPU - Use affinity level 1 */
++	and	x5, x2, #0x3
++
+ 	mov	x0, #(MVEBU_REGS_BASE)
+-	mov     x2, #0x644
++	mov	x2, #(MVEBU_CCU_RVBAR(2))
++	add	x2, x2, x5, lsl #2
+ 	orr     x2, x2, x0
+ 	ldr     w0, [x2]
+ 
+@@ -235,7 +241,10 @@ psci_0_2_cpu_on_64:
+ 	adr	x2, _vectors
+ 	str	x3, [x2]		/* Store vectors table address for slaves */
+ 
+-	/* get cpu number - use affinity level 2 */
++	/* get cpu number - use CPU ID */
++	and 	x5, x1, #0x3
++
++	/* get cluster number - use affinity level 1 */
+ 	asr 	x1, x1, #8
+ 	and 	x1, x1, #0xff
+ 
+@@ -246,7 +255,9 @@ psci_0_2_cpu_on_64:
+ 	str 	w2, [x3]
+ 
+ 	/* set the cpu start address */
+-	add	x3, x0, #0x640
++	mov	x2, #(MVEBU_CCU_RVBAR(0))
++	add	x2, x2, x5, lsl #2
++	add	x3, x0, x2
+ 
+ 	/* CPU reset vector address - must be aligned to 0x10000
+ 	   first instruction - jump to _armada8k_cpu_entry */
+@@ -254,14 +265,20 @@ psci_0_2_cpu_on_64:
+ 	lsr	x2, x2, #16	/* align to 0x10000 */
+ 	str 	w2, [x3]
+ 
+-	/* save the Linux out of reset address to unused register */
++	/* Save the Linux out of reset address to unused register.
++	** We used the RVBAR for CPU's 2-3 to store the Linux return address
++	** for CPUs 0 & 1. */
+ 	adr	x1, _target_pc
+ 	ldr	x1, [x1]
+-	add	x3, x0, #0x644 /* WA reset adderrs - use reserved register */
++	mov	x2, #(MVEBU_CCU_RVBAR(2))
++	add	x2, x2, x5, lsl #2
++	add	x3, x0, x2
+ 	str     w1, [x3]
+ 
+ 	/* get the cpu out of reset */
+-	add	x3, x0, #0x650
++	mov	x2, #0x650
++	add	x2, x2, x5, lsl #2
++	add	x3, x0, x2
+ 	movz 	x2, #0x1, LSL #16
+ 	add	x2, x2, #0x1
+ 	str 	w2, [x3]
+-- 
+1.9.1
+

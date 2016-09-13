@@ -1,0 +1,430 @@
+From 22961f93c913efefdd37264192d0a4fa2a6dca0a Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Thu, 10 Dec 2015 14:43:19 +0200
+Subject: [PATCH 0587/1240] a3700: Remove "a3700" from function names
+
+- Remove "a3700" from function names in functions
+  Affected modules: clock, gpio, io_addr_dec, spl, comphy
+
+Change-Id: I357c4e31687c3cf5ae41a23b4611f13e11e0de3d
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25787
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armadalp/mvebu_clock.c       | 58 ++++++++++++-------------
+ arch/arm/cpu/armv8/armadalp/mvebu_gpio.c        |  7 ++-
+ arch/arm/cpu/armv8/armadalp/mvebu_io_addr_dec.c |  2 +-
+ arch/arm/cpu/armv8/armadalp/spl.c               |  8 ++--
+ arch/arm/include/asm/arch-armadalp/clock.h      | 10 ++---
+ arch/arm/include/asm/arch-armadalp/gpio.h       |  4 +-
+ arch/arm/include/asm/arch-mvebu/clock.h         |  2 -
+ arch/arm/include/asm/arch-mvebu/io_addr_dec.h   |  3 +-
+ drivers/pci/pci_advk.c                          |  2 +-
+ drivers/phy/comphy_a3700.c                      | 10 ++---
+ 10 files changed, 51 insertions(+), 55 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armadalp/mvebu_clock.c b/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
+index 592d63f..12f8751 100644
+--- a/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
++++ b/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
+@@ -192,11 +192,11 @@ static u32 init_ddr_clock(u32 ddr_clock_mhz)
+ }
+ 
+ /***************************************************************************************************
+-  * get_a3700_ref_clk
++  * get_ref_clk
+   *
+   * return: reference clock in MHz (25 or 40)
+  ***************************************************************************************************/
+-u32 get_a3700_ref_clk(void)
++u32 get_ref_clk(void)
+ {
+ 	u32 regval;
+ 
+@@ -209,7 +209,7 @@ u32 get_a3700_ref_clk(void)
+ }
+ 
+ /******************************************************************************
+-* Name: get_a3700_tbg_vco_sel
++* Name: get_tbg_vco_sel
+ *
+ * Description:	calculate the vco parameters for TBG based on the target clock.
+ *
+@@ -220,9 +220,9 @@ u32 get_a3700_ref_clk(void)
+ *
+ * Return: 0 - OK
+ ******************************************************************************/
+-static int get_a3700_tbg_vco_sel(u32 kvco_mhz,
+-				 u32 *vco_intpi,
+-				 u32 *vco_range)
++static int get_tbg_vco_sel(u32 kvco_mhz,
++			   u32 *vco_intpi,
++			   u32 *vco_range)
+ {
+ 	u8  index;
+ 	u16 vco_top_ranges_mhz[8] = {1350, 1500, 1750, 2000, 2200, 2400, 2600, 3000};
+@@ -262,7 +262,7 @@ static int get_a3700_tbg_vco_sel(u32 kvco_mhz,
+ }
+ 
+ /******************************************************************************
+-* Name: set_a3700_tbg_clock
++* Name: set_tbg_clock
+ *
+ * Description:	Change the TBG(A/B) clock
+ *		All affected North/South bridge clock sources should be
+@@ -275,7 +275,7 @@ static int get_a3700_tbg_vco_sel(u32 kvco_mhz,
+ * Output:	None
+ * Return:	0 if OK
+ ******************************************************************************/
+-static u32 set_a3700_tbg_clock(u32 kvco_mhz,
++static u32 set_tbg_clock(u32 kvco_mhz,
+ 			       u32 se_vco_div,
+ 			       u32 diff_vco_div,
+ 			       enum a3700_clock_src tbg_typ)
+@@ -289,7 +289,7 @@ static u32 set_a3700_tbg_clock(u32 kvco_mhz,
+ 	debug_enter();
+ 
+ 	/* Try to keep Fref/M as close as possible to 10 MHz */
+-	if (get_a3700_ref_clk() == 40) {
++	if (get_ref_clk() == 40) {
+ 		/* 40MHz */
+ 		debug("REF clock is 40MHz\n");
+ 		tbg_M = 4;	/* 10MHz */
+@@ -301,7 +301,7 @@ static u32 set_a3700_tbg_clock(u32 kvco_mhz,
+ 		icp = 6;	/* 9 */
+ 	}
+ 
+-	ret = get_a3700_tbg_vco_sel(kvco_mhz, &vco_intpi, &vco_range);
++	ret = get_tbg_vco_sel(kvco_mhz, &vco_intpi, &vco_range);
+ 	if (ret != 0) {
+ 		error("Failed to obtain VCO divider selection\n");
+ 		return ret;
+@@ -317,7 +317,7 @@ static u32 set_a3700_tbg_clock(u32 kvco_mhz,
+ 	   se_vco_div - TBG_A_VCODIV_SEL_SE or TBG_B_VCODIV_SEL_SE
+ 	   Fref - reference clock 25MHz or 40 MHz
+ 	  */
+-	tbg_N = (kvco_mhz * tbg_M / get_a3700_ref_clk()) >> 2;
++	tbg_N = (kvco_mhz * tbg_M / get_ref_clk()) >> 2;
+ 	debug("TBG-%s: SE vco_div %#x, DIFF vco_div %#x,vco_range %#x tbg_N %#x KVCO = %d MHz\n",
+ 	      tbg_typ == TBG_A ? "A" : "B", se_vco_div, diff_vco_div, vco_range, tbg_N, kvco_mhz);
+ 
+@@ -425,7 +425,7 @@ static u32 set_a3700_tbg_clock(u32 kvco_mhz,
+ 
+ #ifdef MVEBU_A3700_ENABLE_SSC
+ /******************************************************************************
+-* Name: set_a3700_ssc
++* Name: set_ssc_mode
+ *
+ * Description: Setup Spread Spectrum Clcok for TBG-A/B
+ *
+@@ -433,7 +433,7 @@ static u32 set_a3700_tbg_clock(u32 kvco_mhz,
+ * Output:	None
+ * Return:	Non-zero on error
+ ******************************************************************************/
+-static u32 set_a3700_ssc(void)
++static u32 set_ssc_mode(void)
+ {
+ 	debug_enter();
+ 	return 0;
+@@ -442,7 +442,7 @@ static u32 set_a3700_ssc(void)
+ #endif /* MVEBU_A3700_ENABLE_SSC */
+ 
+ /******************************************************************************
+-* Name: set_a3700_clocks
++* Name: set_clocks
+ *
+ * Description: Configure entire clock tree according to CPU and DDR frequency
+ *
+@@ -453,7 +453,7 @@ static u32 set_a3700_ssc(void)
+ * Output:	None
+ * Return:	Non-zero if the requested settings are not supported
+ ******************************************************************************/
+-u32 set_a3700_clocks(u32 cpu_clk_mhz, u32 ddr_clk_mhz, u32 tbg_a_kvco_mhz, u32 tbg_b_kvco_mhz)
++u32 set_clocks(u32 cpu_clk_mhz, u32 ddr_clk_mhz, u32 tbg_a_kvco_mhz, u32 tbg_b_kvco_mhz)
+ {
+ 	u32 clock_cfgs_cnt = sizeof(a3700_clock_configs)/sizeof(a3700_clock_configs[0]);
+ 	u32 cfg;
+@@ -486,19 +486,19 @@ u32 set_a3700_clocks(u32 cpu_clk_mhz, u32 ddr_clk_mhz, u32 tbg_a_kvco_mhz, u32 t
+ 	writel(0x00000000, MVEBU_NORTH_CLOCK_SELECT_REG);
+ 	writel(0x00000000, MVEBU_SOUTH_CLOCK_SELECT_REG);
+ 
+-	rval = set_a3700_tbg_clock(clk_cfg->tbg_a.kvco_mhz,
+-				   clk_cfg->tbg_a.se_vcodiv,
+-				   clk_cfg->tbg_a.diff_vcodiv,
+-				   TBG_A);
++	rval = set_tbg_clock(clk_cfg->tbg_a.kvco_mhz,
++			     clk_cfg->tbg_a.se_vcodiv,
++			     clk_cfg->tbg_a.diff_vcodiv,
++			     TBG_A);
+ 	if (rval) {
+ 		error("Failed to set TBG-A clock to %dMHz\n", clk_cfg->tbg_a.kvco_mhz);
+ 		return rval;
+ 	}
+ 
+-	rval = set_a3700_tbg_clock(clk_cfg->tbg_b.kvco_mhz,
+-				   clk_cfg->tbg_b.se_vcodiv,
+-				   clk_cfg->tbg_b.diff_vcodiv,
+-				   TBG_B);
++	rval = set_tbg_clock(clk_cfg->tbg_b.kvco_mhz,
++			     clk_cfg->tbg_b.se_vcodiv,
++			     clk_cfg->tbg_b.diff_vcodiv,
++			     TBG_B);
+ 	if (rval) {
+ 		error("Failed to set TBG-B clock to %dMHz\n", clk_cfg->tbg_b.kvco_mhz);
+ 		return rval;
+@@ -616,7 +616,7 @@ u32 set_a3700_clocks(u32 cpu_clk_mhz, u32 ddr_clk_mhz, u32 tbg_a_kvco_mhz, u32 t
+ 
+ 
+ #ifdef MVEBU_A3700_ENABLE_SSC
+-	set_a3700_ssc();
++	set_ssc_mode();
+ #else
+ 	/* Disable SSC for TBG-A (bit[10]) and TBG-B (bit[26]) */
+ 	reg_val = readl(MVEBU_NORTH_BRG_TBG_CTRL3);
+@@ -635,7 +635,7 @@ u32 set_a3700_clocks(u32 cpu_clk_mhz, u32 ddr_clk_mhz, u32 tbg_a_kvco_mhz, u32 t
+ 	return rval;
+ }
+ 
+-int init_a3700_clock(void)
++int init_clock(void)
+ {
+ 	int node, count, idx, ret;
+ 	const void *blob = gd->fdt_blob;
+@@ -658,10 +658,10 @@ int init_a3700_clock(void)
+ 	printf("Setting clocks to CPU=%dMHz and DDR=%dMHz\n",
+ 		a3700_clock_configs[idx].cpu_freq_mhz, a3700_clock_configs[idx].ddr_freq_mhz);
+ 
+-	ret =  set_a3700_clocks(a3700_clock_configs[idx].cpu_freq_mhz,
+-				a3700_clock_configs[idx].ddr_freq_mhz,
+-				a3700_clock_configs[idx].tbg_a.kvco_mhz,
+-				a3700_clock_configs[idx].tbg_b.kvco_mhz);
++	ret =  set_clocks(a3700_clock_configs[idx].cpu_freq_mhz,
++			  a3700_clock_configs[idx].ddr_freq_mhz,
++			  a3700_clock_configs[idx].tbg_a.kvco_mhz,
++			  a3700_clock_configs[idx].tbg_b.kvco_mhz);
+ 	if (ret)
+ 		error("Failed to configure system clocks\n");
+ 
+diff --git a/arch/arm/cpu/armv8/armadalp/mvebu_gpio.c b/arch/arm/cpu/armv8/armadalp/mvebu_gpio.c
+index fbc7ef8..706d372 100644
+--- a/arch/arm/cpu/armv8/armadalp/mvebu_gpio.c
++++ b/arch/arm/cpu/armv8/armadalp/mvebu_gpio.c
+@@ -23,7 +23,7 @@
+ /*
+  * reset PCIe device
+  */
+-void mvebu_a3700_reset_pcie_dev(void)
++void mvebu_reset_pcie_dev(void)
+ {
+ 	u32 reg_val;
+ 
+@@ -52,7 +52,7 @@ void mvebu_a3700_reset_pcie_dev(void)
+ }
+ 
+ /*
+- * mvebu_a3700_gpio
++ * mvebu_init_gpio
+  *
+  * This function sets GPIO configuration for Armada3700
+  * by hardcoded value.
+@@ -60,7 +60,7 @@ void mvebu_a3700_reset_pcie_dev(void)
+  * and implemented by MPP/PIN-CTRL driver later.
+  *
+  */
+-void mvebu_a3700_gpio(void)
++void mvebu_init_gpio(void)
+ {
+ 	u32 reg_val;
+ 
+@@ -102,4 +102,3 @@ void mvebu_a3700_gpio(void)
+ 
+ 	return;
+ }
+-
+diff --git a/arch/arm/cpu/armv8/armadalp/mvebu_io_addr_dec.c b/arch/arm/cpu/armv8/armadalp/mvebu_io_addr_dec.c
+index b1a0c5b..ce2b38e 100644
+--- a/arch/arm/cpu/armv8/armadalp/mvebu_io_addr_dec.c
++++ b/arch/arm/cpu/armv8/armadalp/mvebu_io_addr_dec.c
+@@ -102,7 +102,7 @@ int set_io_addr_dec(struct mbus_win_map *win_map, struct dec_win_config *dec_win
+ 	return 0;
+ }
+ 
+-int init_a3700_io_addr_dec(void)
++int init_io_addr_dec(void)
+ {
+ 	int ret = 0;
+ 	u32 node;
+diff --git a/arch/arm/cpu/armv8/armadalp/spl.c b/arch/arm/cpu/armv8/armadalp/spl.c
+index 6d8ba2f..7fe12bd 100644
+--- a/arch/arm/cpu/armv8/armadalp/spl.c
++++ b/arch/arm/cpu/armv8/armadalp/spl.c
+@@ -20,7 +20,7 @@
+ #include <asm/arch-mvebu/spl.h>
+ #include <asm/arch-mvebu/comphy.h>
+ #include <asm/arch-mvebu/io_addr_dec.h>
+-#include <asm/arch-mvebu/clock.h>
++#include <asm/arch-armadalp/clock.h>
+ #include <asm/arch-mvebu/mbus.h>
+ #include <asm/arch-armadalp/gpio.h>
+ #include <asm/arch-mvebu/mvebu_misc.h>
+@@ -30,12 +30,12 @@ void (*ptr_uboot_start)(void);
+ void early_spl_init(void)
+ {
+ #ifdef CONFIG_MVEBU_SPL_A3700_GPIO
+-	mvebu_a3700_gpio();
++	mvebu_init_gpio();
+ #endif
+ 
+ 	/* Clock should be enabeld before initialize the I/O units */
+ #ifdef CONFIG_MVEBU_A3700_CLOCK
+-	init_a3700_clock();
++	init_clock();
+ #endif
+ 
+ #ifdef CONFIG_MVEBU_A3700_MISC_INIT
+@@ -58,7 +58,7 @@ void late_spl_init(void)
+ #endif
+ 
+ #ifdef CONFIG_MVEBU_A3700_IO_ADDR_DEC
+-	init_a3700_io_addr_dec();
++	init_io_addr_dec();
+ #endif
+ }
+ 
+diff --git a/arch/arm/include/asm/arch-armadalp/clock.h b/arch/arm/include/asm/arch-armadalp/clock.h
+index 4d13628..cf073f5 100644
+--- a/arch/arm/include/asm/arch-armadalp/clock.h
++++ b/arch/arm/include/asm/arch-armadalp/clock.h
+@@ -469,14 +469,14 @@ TBG-B-P	500	2	5	gbe_50_pclk_sel		50	SB					DIV2[11:9]	DIV2[8:6]
+ }
+ 
+ /*****************************************************************************
+-* get_a3700_ref_clk
++* get_ref_clk
+ *
+ * return: reference clock in MHz (25 or 40)
+ ******************************************************************************/
+-u32 get_a3700_ref_clk(void);
++u32 get_ref_clk(void);
+ 
+ /******************************************************************************
+-* Name: set_a3700_clocks
++* Name: set_clocks
+ *
+ * Description: Configure entire clock tree according to CPU and DDR frequency
+ *
+@@ -487,8 +487,8 @@ u32 get_a3700_ref_clk(void);
+ * Output:	None
+ * Return:	Non-zero if the requested settings are not supported
+ ******************************************************************************/
+-u32 set_a3700_clocks(u32 cpu_clk_mhz, u32 ddr_clk_mhz, u32 tbg_a_kvco_mhz, u32 tbg_b_kvco_mhz);
++u32 set_clocks(u32 cpu_clk_mhz, u32 ddr_clk_mhz, u32 tbg_a_kvco_mhz, u32 tbg_b_kvco_mhz);
+ 
+-int init_a3700_clock(void);
++int init_clock(void);
+ 
+ #endif /* _MVEBU_CLOCK_H_ */
+diff --git a/arch/arm/include/asm/arch-armadalp/gpio.h b/arch/arm/include/asm/arch-armadalp/gpio.h
+index dbf448f..4edb611 100644
+--- a/arch/arm/include/asm/arch-armadalp/gpio.h
++++ b/arch/arm/include/asm/arch-armadalp/gpio.h
+@@ -35,7 +35,7 @@
+ #define MVEBU_GPIO_PCIE_EN_OFF			(4)
+ 
+ 
+-void mvebu_a3700_reset_pcie_dev(void);
+-void mvebu_a3700_gpio(void);
++void mvebu_reset_pcie_dev(void);
++void mvebu_init_gpio(void);
+ 
+ #endif /* _MVEBU_GPIO_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/clock.h b/arch/arm/include/asm/arch-mvebu/clock.h
+index 972d7b0..7a79f10 100644
+--- a/arch/arm/include/asm/arch-mvebu/clock.h
++++ b/arch/arm/include/asm/arch-mvebu/clock.h
+@@ -33,6 +33,4 @@ u32 soc_clock_get(const void *blob, int node);
+ u32 get_fdt_tclk(const void *blob, int node);
+ void soc_print_clock_info(void);
+ 
+-int init_a3700_clock(void);
+-
+ #endif /* _MVEBU_CLOCK_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/io_addr_dec.h b/arch/arm/include/asm/arch-mvebu/io_addr_dec.h
+index 61850ea..fde7743 100644
+--- a/arch/arm/include/asm/arch-mvebu/io_addr_dec.h
++++ b/arch/arm/include/asm/arch-mvebu/io_addr_dec.h
+@@ -19,7 +19,6 @@
+ #ifndef _IO_ADDR_DEC_H_
+ #define _IO_ADDR_DEC_H_
+ 
+-int init_a3700_io_addr_dec(void);
++int init_io_addr_dec(void);
+ 
+ #endif /* _IO_ADDR_DEC_H_ */
+-
+diff --git a/drivers/pci/pci_advk.c b/drivers/pci/pci_advk.c
+index f1a5275..3197cc8 100644
+--- a/drivers/pci/pci_advk.c
++++ b/drivers/pci/pci_advk.c
+@@ -405,7 +405,7 @@ static int advk_pcie_init(int host_id, void __iomem *reg_base, struct pcie_win *
+ 	memset(hose, 0, sizeof(hose));
+ 
+ 	/* reset PCIe device in RC mode */
+-	mvebu_a3700_reset_pcie_dev();
++	mvebu_reset_pcie_dev();
+ 
+ 	/* start link training */
+ 	ret = advk_pcie_link_init(reg_base);
+diff --git a/drivers/phy/comphy_a3700.c b/drivers/phy/comphy_a3700.c
+index bc78d1f..8dcc24b 100644
+--- a/drivers/phy/comphy_a3700.c
++++ b/drivers/phy/comphy_a3700.c
+@@ -189,7 +189,7 @@ static int comphy_pcie_power_up(enum phy_speed speed)
+ 	/*
+ 	 * 8. Check crystal jumper setting and program the Power and PLL Control accordingly
+ 	 */
+-	if (get_a3700_ref_clk() == 40)
++	if (get_ref_clk() == 40)
+ 		reg_set16((void __iomem *)PWR_PLL_CTRL_ADDR(PCIE), 0xFC63, 0xFFFF); /* 40 MHz */
+ 	else
+ 		reg_set16((void __iomem *)PWR_PLL_CTRL_ADDR(PCIE), 0xFC62, 0xFFFF); /* 25 MHz */
+@@ -251,7 +251,7 @@ static int comphy_sata_power_up(void)
+ 	 * 2. Select reference clock and PHY mode (SATA)
+ 	 */
+ 	reg_set((void __iomem *)rh_vsreg_addr, vphy_power_reg0, 0xFFFFFFFF);
+-	if (get_a3700_ref_clk() == 40)
++	if (get_ref_clk() == 40)
+ 		reg_set((void __iomem *)rh_vsreg_data, 0x3, 0x00FF); /* 40 MHz */
+ 	else
+ 		reg_set((void __iomem *)rh_vsreg_data, 0x1, 0x00FF); /* 25 MHz */
+@@ -317,7 +317,7 @@ static int comphy_usb3_power_up(enum phy_speed speed)
+ 	/*
+ 	 * 3. Check crystal jumper setting and program the Power and PLL Control accordingly
+ 	 */
+-	if (get_a3700_ref_clk() == 40)
++	if (get_ref_clk() == 40)
+ 		reg_set16((void __iomem *)PWR_PLL_CTRL_ADDR(USB3), 0xFCA3, 0xFFFF); /* 40 MHz */
+ 	else
+ 		reg_set16((void __iomem *)PWR_PLL_CTRL_ADDR(USB3), 0xFCA2, 0xFFFF); /* 25 MHz */
+@@ -578,7 +578,7 @@ static int comphy_sgmii_power_up(u32 lane, enum phy_speed speed)
+ 	phy_write16(lane, PHY_MISC_REG0_ADDR, 0, rb_ref_clk_sel);
+ 
+ 	/* 11. Set correct reference clock frequency in COMPHY register REF_FREF_SEL. */
+-	if (get_a3700_ref_clk() == 40)
++	if (get_ref_clk() == 40)
+ 		phy_write16(lane, PHY_PWR_PLL_CTRL_ADDR, (0x4 << rf_ref_freq_sel_shift), rf_ref_freq_sel_mask);
+ 	else /* 25MHz */
+ 		phy_write16(lane, PHY_PWR_PLL_CTRL_ADDR, (0x1 << rf_ref_freq_sel_shift), rf_ref_freq_sel_mask);
+@@ -608,7 +608,7 @@ static int comphy_sgmii_power_up(u32 lane, enum phy_speed speed)
+ 	   For REF clock 25 MHz the default values stored in PHY registers are OK.
+ 	*/
+ 	debug("Running C-DPI phy init %s mode\n", speed == __3_125gbps ? "2G5" : "1G");
+-	if (get_a3700_ref_clk() == 40)
++	if (get_ref_clk() == 40)
+ 		comphy_sgmii_phy_init(lane, speed);
+ 
+ 	/* 16. [Simulation Only] should not be used for real chip.
+-- 
+1.9.1
+

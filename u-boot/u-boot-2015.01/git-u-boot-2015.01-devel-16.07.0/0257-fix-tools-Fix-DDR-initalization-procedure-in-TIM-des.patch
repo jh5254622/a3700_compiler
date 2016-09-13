@@ -1,0 +1,34 @@
+From 4ad1108c0f0dd755b9aba1bb0faa437776494426 Mon Sep 17 00:00:00 2001
+From: kostap <kostap@marvell.com>
+Date: Wed, 22 Jul 2015 11:23:05 +0300
+Subject: [PATCH 0257/1240] fix: tools: Fix DDR initalization procedure in TIM
+ descriptor
+
+	- Fix DDR initialization flow causing crash on
+	  Palladium simulation platform.
+
+Change-Id: I7ed7b88572b8db2ca8b134ae0456792c7904d316
+Signed-off-by: kostap <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22061
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ tools/wtp/u-boot-ntim.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/wtp/u-boot-ntim.txt b/tools/wtp/u-boot-ntim.txt
+index 99017c0..c84ad87 100644
+--- a/tools/wtp/u-boot-ntim.txt
++++ b/tools/wtp/u-boot-ntim.txt
+@@ -98,7 +98,7 @@ WRITE: 0xC0001028 0x0
+ WRITE: 0xC0001030 0x3800000
+ WRITE: 0xC0001034 0x0
+ WRITE: 0xC0001040 0x400
+-WRITE: 0xC00010c0 0x80000000
++WRITE: 0xC00010c0 0x80000001
+ WRITE: 0xC00010d0 0x0
+ WRITE: 0xC00010e0 0x11ff0
+ WRITE: 0xC0001090 0x0
+-- 
+1.9.1
+

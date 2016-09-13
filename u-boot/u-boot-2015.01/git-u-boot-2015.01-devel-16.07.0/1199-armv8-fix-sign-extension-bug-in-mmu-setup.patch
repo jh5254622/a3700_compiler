@@ -1,0 +1,48 @@
+From b837dc03f757b00f7318cc32ff1c3ad9fa4bcb7f Mon Sep 17 00:00:00 2001
+From: Anton <antone@marvell.com>
+Date: Fri, 27 May 2016 21:21:53 -0700
+Subject: [PATCH 1199/1240] armv8: fix sign extension bug in mmu setup
+
+With "int i, j" in mmu_setup()
+(i << SECTION_SHIFT) is converted to a
+u64 parameter of set_pgtable_section()
+and sign-extends, so the resulting descriptors are wrong:
+index	section
+0	00000000_00000000
+1	00000000_20000000
+2	00000000_40000000
+3	00000000_60000000
+4	FFFFFFFF_80000000 << bug
+5       FFFFFFFF_a0000000 << bug
+6       FFFFFFFF_c0000000 << bug
+7       FFFFFFFF_e0000000 << bug
+Result: upper 2GB of the 4GB space is not accessible.
+
+Change-Id: If83ed1df6ddd9d3cae123f6f34f5f8de758003a5
+Signed-off-by: Anton <antone@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30080
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv8/cache_v8.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/armv8/cache_v8.c b/arch/arm/cpu/armv8/cache_v8.c
+index 9dbcdf2..f95d361 100644
+--- a/arch/arm/cpu/armv8/cache_v8.c
++++ b/arch/arm/cpu/armv8/cache_v8.c
+@@ -25,7 +25,8 @@ void set_pgtable_section(u64 *page_table, u64 index, u64 section,
+ /* to activate the MMU we need to set up virtual memory */
+ static void mmu_setup(void)
+ {
+-	int i, j, el;
++	u64 i, j;
++	int el;
+ 	bd_t *bd = gd->bd;
+ 	u64 *page_table = (u64 *)gd->arch.tlb_addr;
+ 
+-- 
+1.9.1
+

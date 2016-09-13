@@ -1,0 +1,49 @@
+From acab09b2ebf1a433d6528d6a33681a3dc4d6558a Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 13 Aug 2015 16:22:24 +0300
+Subject: [PATCH 0318/1240] fix: thermal: update thermal v2 driver calculation
+ formula
+
+- The TSEN output format is signed as a 2s complement number
+  ranging from-512 to +511. when MSB is set, need to
+  calculate the complement number
+
+Change-Id: I1fbf4de3ccd8e1982e3b61aa82b1d9b0b8c66aae
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22816
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ drivers/thermal/mvebu_thermal_28nm_v2.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/drivers/thermal/mvebu_thermal_28nm_v2.c b/drivers/thermal/mvebu_thermal_28nm_v2.c
+index c381bdb..815dfc0 100644
+--- a/drivers/thermal/mvebu_thermal_28nm_v2.c
++++ b/drivers/thermal/mvebu_thermal_28nm_v2.c
+@@ -51,6 +51,9 @@ struct tsen_info __attribute__((section(".data")))*tsen = &tsen_config;
+ #define THERMAL_SEN_CTRL_STATS_TEMP_OUT_OFFSET		0
+ #define THERMAL_SEN_CTRL_STATS_TEMP_OUT_MASK		(0x3FF << THERMAL_SEN_CTRL_STATS_TEMP_OUT_OFFSET)
+ 
++#define THERMAL_SEN_OUTPUT_MSB				512
++#define THERMAL_SEN_OUTPUT_COMP				1024
++
+ u32 mvebu_thermal_sensor_read(void)
+ {
+ 	u32 reg;
+@@ -61,6 +64,12 @@ u32 mvebu_thermal_sensor_read(void)
+ 	reg = readl(tsen->regs_base + THERMAL_SEN_CTRL_STATS);
+ 	reg = ((reg & THERMAL_SEN_CTRL_STATS_TEMP_OUT_MASK) >> THERMAL_SEN_CTRL_STATS_TEMP_OUT_OFFSET);
+ 
++	/* TSEN output format is signed as a 2s complement number
++	   ranging from-512 to +511. when MSB is set, need to
++	   calculate the complement number */
++	if (reg >= THERMAL_SEN_OUTPUT_MSB)
++		reg -= THERMAL_SEN_OUTPUT_COMP;
++
+ 	return ((tsen->tsen_gain * reg) + tsen->tsen_offset) / 1000;
+ }
+ 
+-- 
+1.9.1
+

@@ -1,0 +1,41 @@
+From 06e85659787cf77e0d465729da637d2dcc7900c5 Mon Sep 17 00:00:00 2001
+From: Ken Ma <make@marvell.com>
+Date: Fri, 20 May 2016 02:05:59 +0800
+Subject: [PATCH 154/239] fix: a3700: move dram size sys-info to bl31 last step
+
+Because uart recovery work needs to be done as early as could,
+mpp initialization and timer initialization are both for uart
+recovery work, so dram size sys-info needs to be moved after them.
+
+Change-Id: Ia31ea78c85839903a81c059a653bb85b07b188bd
+Signed-off-by: Ken Ma <make@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29818
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ plat/marvell/a3700/a3700_z/plat_bl31_setup.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/plat/marvell/a3700/a3700_z/plat_bl31_setup.c b/plat/marvell/a3700/a3700_z/plat_bl31_setup.c
+index 71b8311..4a4595e 100644
+--- a/plat/marvell/a3700/a3700_z/plat_bl31_setup.c
++++ b/plat/marvell/a3700/a3700_z/plat_bl31_setup.c
+@@ -63,12 +63,12 @@ void bl31_plat_arch_setup(void)
+ {
+ 	marvell_bl31_plat_arch_setup();
+ 
+-	/* Pass DRAM size value so that u-boot could get it later */
+-	pass_dram_sys_info();
+-
+ 	/* MPP init */
+ 	marvell_bl31_mpp_init();
+ 
+ 	/* initiliaze the timer for delay functionality */
+ 	plat_delay_timer_init();
++
++	/* Pass DRAM size value so that u-boot could get it later */
++	pass_dram_sys_info();
+ }
+-- 
+1.9.1
+

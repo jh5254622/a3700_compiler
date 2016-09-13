@@ -1,0 +1,88 @@
+From 22f64d7023796a080cf3b9d367c2e4f8f2db246b Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Sun, 29 May 2016 15:10:05 +0300
+Subject: [PATCH 1174/1240] efuse: Add raw dump command to efuse API
+
+Add placeholders for efuse raw dump command.
+The eFuse raw dump will be supported by A8K driver
+and not supported by A3700 one.
+
+Change-Id: Iefefd96de6189686b4b2f9e2093d1f8e928d39d8
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30104
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/include/asm/arch-mvebu/efuse.h | 1 +
+ common/mvebu/cmd_efuse.c                | 4 ++++
+ drivers/efuse/a3700_efuse.c             | 9 +++++++++
+ drivers/efuse/a8k_efuse.c               | 5 +++++
+ 4 files changed, 19 insertions(+)
+
+diff --git a/arch/arm/include/asm/arch-mvebu/efuse.h b/arch/arm/include/asm/arch-mvebu/efuse.h
+index 15ebec6..4a260e9 100644
+--- a/arch/arm/include/asm/arch-mvebu/efuse.h
++++ b/arch/arm/include/asm/arch-mvebu/efuse.h
+@@ -94,5 +94,6 @@ struct efuse_info {
+ int efuse_id_valid(enum efuse_id fid);
+ int efuse_write(enum efuse_id fid, const char *value);
+ int efuse_read(enum efuse_id fid, char *value);
++void efuse_raw_dump(void);
+ 
+ #endif /* _MVEBU_EFUSE_H_ */
+diff --git a/common/mvebu/cmd_efuse.c b/common/mvebu/cmd_efuse.c
+index b7989b8..10e9174 100644
+--- a/common/mvebu/cmd_efuse.c
++++ b/common/mvebu/cmd_efuse.c
+@@ -122,6 +122,9 @@ int do_efuse_cmd(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+ 			status = CMD_RET_FAILURE;
+ 		}
+ 
++	} else if (strcmp(cmd, "raw") == 0) {
++		/* RAW DUMP */
++		efuse_raw_dump();
+ 	} else {
+ 
+ 		/* ERROR */
+@@ -140,6 +143,7 @@ U_BOOT_CMD(
+ 	"Access to SoC eFuse entry values\n"
+ 	"\tlist         - Display all supported eFuse entry ids\n"
+ 	"\tdump         - Dump all supported eFuse entries\n"
++	"\traw          - Dump all eFuses in raw format\n"
+ 	"\tread id      - Read eFuse entry \"id\"\n"
+ 	"\twrite id val - Write \"val\" to eFuse entry \"id\"\n"
+ );
+diff --git a/drivers/efuse/a3700_efuse.c b/drivers/efuse/a3700_efuse.c
+index ae9caa8..495d955 100644
+--- a/drivers/efuse/a3700_efuse.c
++++ b/drivers/efuse/a3700_efuse.c
+@@ -369,3 +369,12 @@ int efuse_read(enum efuse_id fid, char *value)
+ 
+ 	return 0;
+ }
++
++/******************************************************************************
++ *	efuse_raw_dump
++ ******************************************************************************/
++void efuse_raw_dump(void)
++{
++	printf("Raw eFuse dump is not supported on this platfrorm\n");
++	return;
++}
+diff --git a/drivers/efuse/a8k_efuse.c b/drivers/efuse/a8k_efuse.c
+index 059de8d..8c6fb07 100644
+--- a/drivers/efuse/a8k_efuse.c
++++ b/drivers/efuse/a8k_efuse.c
+@@ -35,3 +35,8 @@ int efuse_read(enum efuse_id fid, char *value)
+ {
+ 	return 0;
+ }
++
++void efuse_raw_dump(void)
++{
++	return;
++}
+-- 
+1.9.1
+

@@ -1,0 +1,93 @@
+From e09370b5c2c92dce2ddfba17b0e4ab058b4b5e21 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Mon, 22 Feb 2016 17:37:45 +0200
+Subject: [PATCH 0892/1240] sar: mvebu: Add support for chip-sar dump during
+ spl boot
+
+Change-Id: Ib2744b5ad67399fed7f1881a8b0776bb7df760e3
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27754
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/spl.c       |  9 ++++-----
+ arch/arm/cpu/mvebu-common/tools/Kconfig | 12 ------------
+ arch/arm/include/asm/arch-mvebu/sar.h   |  1 +
+ drivers/misc/Kconfig                    | 10 ++++++++++
+ 4 files changed, 15 insertions(+), 17 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/spl.c b/arch/arm/cpu/armv8/armada8k/spl.c
+index bf7feef..6011219 100644
+--- a/arch/arm/cpu/armv8/armada8k/spl.c
++++ b/arch/arm/cpu/armv8/armada8k/spl.c
+@@ -71,12 +71,11 @@ void board_init_f(ulong silent)
+ #ifdef CONFIG_MVEBU_CHIP_SAR
+ 	/* Sample at reset register init */
+ 	mvebu_sar_init(gd->fdt_blob);
+-#endif
+-
+-#ifdef CONFIG_MVEBU_SPL_SAR_DUMP
++#ifdef CONFIG_MVEBU_SPL_CHIP_SAR_DUMP
+ 	/* Sample at reset dump register */
+-	mvebu_sar_dump_reg();
+-#endif
++	mvebu_sar_dump();
++#endif /* CONFIG_MVEBU_SPL_SAR_DUMP */
++#endif /* CONFIG_MVEBU_CHIP_SAR */
+ 
+ 	/* Init all relevant drivers (e.g. DDR, comphy...) */
+ #ifndef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+diff --git a/arch/arm/cpu/mvebu-common/tools/Kconfig b/arch/arm/cpu/mvebu-common/tools/Kconfig
+index 5bcea73..1b0e88b 100644
+--- a/arch/arm/cpu/mvebu-common/tools/Kconfig
++++ b/arch/arm/cpu/mvebu-common/tools/Kconfig
+@@ -39,16 +39,4 @@ config MVEBU_MEM_TEST_END_ADDR
+ 	help
+ 	  This option set the end address
+ 	  of the DRAM test in SPL code
+-
+-config MVEBU_SPL_SAR_DUMP
+-	bool "Sample at reset dump"
+-	depends on SPL
+-	default n
+-	help
+-	  To add this option you need to edit the
+-	  defconfig and add the following line:
+-	  +S:CONFIG_MVEBU_SPL_SAR_DUMP=y
+-	  Choose this option to dump sample at
+-	  reset register
+-
+ endmenu
+diff --git a/arch/arm/include/asm/arch-mvebu/sar.h b/arch/arm/include/asm/arch-mvebu/sar.h
+index d42e3ff..ea7cda5 100644
+--- a/arch/arm/include/asm/arch-mvebu/sar.h
++++ b/arch/arm/include/asm/arch-mvebu/sar.h
+@@ -48,5 +48,6 @@ enum mvebu_bootsrc_type {
+ 
+ int mvebu_sar_init(const void *blob);
+ int mvebu_sar_value_get(enum mvebu_sar_opts opt, u32 *val);
++void mvebu_sar_dump(void);
+ 
+ #endif	/* _SAR_H_ */
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index 4b7a939..8bbd7c6 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -59,4 +59,14 @@ config MVEBU_CHIP_SAR
+ 	  and subsystem to discover the SoC sample at reset
+ 	  configuration.
+ 
++config MVEBU_SPL_CHIP_SAR_DUMP
++	bool "Sample at reset dump (in SPL)"
++	depends on SPL && MVEBU_CHIP_SAR
++	default n
++	help
++	  To add this option you need to add it to the spl config
++	  Choose this option to dump sample at
++	  reset registers
++
++
+ endmenu
+-- 
+1.9.1
+

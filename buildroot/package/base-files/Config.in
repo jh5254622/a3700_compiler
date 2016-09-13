@@ -1,0 +1,4 @@
+config BR2_PACKAGE_BASE_FILES
+	bool "base-files"
+	help
+	  The basics files and scripts for both airdisk system

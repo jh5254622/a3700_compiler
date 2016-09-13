@@ -1,0 +1,182 @@
+From c8d06ffec1b274ace0456ecdb0ef3a33dadf54c4 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Tue, 27 Jan 2015 16:45:39 +0200
+Subject: [PATCH 0111/1240] ARMv8: PSCI: Fixup the device tree for PSCI v0.2
+
+Set the enable-method in the cpu node to psci, create the psci
+device tree node and also add a reserved-memory for the psci code
+that lives in in normal RAM, so that the kernel leaves does not map it
+
+Change-Id: I755135ad8ee0b1abdd547ac8359e6c56227e0a00
+Signed-off-by: Arnab Basu <arnab_basu@rocketmail.com>
+Cc: Bhupesh Sharma <bhupesh.sharma@freescale.com>
+Cc: Marc Zyngier <marc.zyngier@arm.com>
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/16360
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv8/cpu-dt.c   | 114 ++++++++++++++++++++++++++++++++++++++++--
+ arch/arm/include/asm/system.h |   5 ++
+ 2 files changed, 116 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/cpu-dt.c b/arch/arm/cpu/armv8/cpu-dt.c
+index 8833e6a..91712c2 100644
+--- a/arch/arm/cpu/armv8/cpu-dt.c
++++ b/arch/arm/cpu/armv8/cpu-dt.c
+@@ -8,17 +8,123 @@
+ #include <libfdt.h>
+ #include <fdt_support.h>
+ 
+-#ifdef CONFIG_MP
++#ifdef CONFIG_ARMV8_PSCI
+ 
+-__weak u64 arch_get_release_addr(u64 cpu_id)
++static void psci_reserve_mem(void *fdt)
+ {
++#ifndef CONFIG_ARMV8_SECURE_BASE
++	int nodeoff;
++	int na, ns;
++	int root;
++
++	root = fdt_path_offset(fdt, "/");
++	if (root < 0)
++		return;
++
++	na = fdt_address_cells(fdt, root);
++	ns = fdt_size_cells(fdt, root);
++
++	nodeoff = fdt_path_offset(fdt, "/reserved-memory");
++	if (nodeoff < 0) {
++		nodeoff = fdt_add_subnode(fdt, root, "reserved-memory");
++		if (nodeoff < 0)
++			return;
++	}
++	fdt_setprop_u32(fdt, nodeoff, "#address-cells", na);
++	fdt_setprop_u32(fdt, nodeoff, "#size-cells", ns);
++	fdt_setprop(fdt, nodeoff, "ranges", 0, 0);
++	nodeoff = fdt_add_subnode(fdt, nodeoff, "psci-area");
++	if (nodeoff < 0)
++		return;
++	fdt_setprop_u64(fdt, nodeoff, "reg", (unsigned long)__secure_start);
++	fdt_appendprop_u64(fdt, nodeoff, "reg",
++			   (unsigned long)__secure_end
++			   - (unsigned long)__secure_start);
++	fdt_setprop(fdt, nodeoff, "no-map", 0, 0);
++#endif
++}
++
++static int cpu_update_dt_psci(void *fdt)
++{
++	int nodeoff;
++	int tmp;
++
++	psci_reserve_mem(fdt);
++
++	nodeoff = fdt_path_offset(fdt, "/cpus");
++	if (nodeoff < 0) {
++		printf("couldn't find /cpus\n");
++		return nodeoff;
++	}
++
++	/* add 'enable-method = "psci"' to each cpu node */
++	for (tmp = fdt_first_subnode(fdt, nodeoff);
++	     tmp >= 0;
++	     tmp = fdt_next_subnode(fdt, tmp)) {
++		const struct fdt_property *prop;
++		int len;
++
++		prop = fdt_get_property(fdt, tmp, "device_type", &len);
++		if (!prop)
++			continue;
++		if (len < 4)
++			continue;
++		if (strcmp(prop->data, "cpu"))
++			continue;
++
++		/* Not checking rv here, our approach is to skip over errors in
++		 * individual cpu nodes, hopefully some of the nodes are
++		 * processed correctly and those will boot
++		 */
++		fdt_setprop_string(fdt, tmp, "enable-method", "psci");
++	}
++
++	/* The PSCI node might be called "/psci" or might be called something
++	 * else but contain either of the compatible strings
++	 * "arm,psci"/"arm,psci-0.2"
++	 */
++	nodeoff = fdt_path_offset(fdt, "/psci");
++	if (nodeoff >= 0)
++		goto init_psci_node;
++
++	nodeoff = fdt_node_offset_by_compatible(fdt, -1, "arm,psci");
++	if (nodeoff >= 0)
++		goto init_psci_node;
++
++	nodeoff = fdt_node_offset_by_compatible(fdt, -1, "arm,psci-0.2");
++	if (nodeoff >= 0)
++		goto init_psci2_node;
++
++	nodeoff = fdt_path_offset(fdt, "/");
++	if (nodeoff < 0)
++		return nodeoff;
++
++	nodeoff = fdt_add_subnode(fdt, nodeoff, "psci");
++	if (nodeoff < 0)
++		return nodeoff;
++
++init_psci_node:
++	tmp = fdt_setprop_string(fdt, nodeoff, "compatible", "arm,psci-0.2");
++	if (tmp)
++		return tmp;
++init_psci2_node:
++	tmp = fdt_setprop_string(fdt, nodeoff, "method", "smc");
++	if (tmp)
++		return tmp;
++
+ 	return 0;
+ }
++#else
+ 
+ __weak void arch_spin_table_reserve_mem(void *fdt)
+ {
+ }
+ 
++__weak u64 arch_get_release_addr(u64 cpu_id)
++{
++	return 0;
++}
++
+ static void cpu_update_dt_spin_table(void *blob)
+ {
+ 	int off;
+@@ -57,7 +163,9 @@ static void cpu_update_dt_spin_table(void *blob)
+ 
+ int cpu_update_dt(void *fdt)
+ {
+-#ifdef CONFIG_MP
++#ifdef CONFIG_ARMV8_PSCI
++	cpu_update_dt_psci(fdt);
++#else
+ 	cpu_update_dt_spin_table(fdt);
+ #endif
+ 	return 0;
+diff --git a/arch/arm/include/asm/system.h b/arch/arm/include/asm/system.h
+index 89f2294..f63c6a5 100644
+--- a/arch/arm/include/asm/system.h
++++ b/arch/arm/include/asm/system.h
+@@ -78,6 +78,11 @@ void gic_send_sgi(unsigned long sgino);
+ void wait_for_wakeup(void);
+ void smp_kick_all_cpus(void);
+ 
++#ifdef CONFIG_ARMV8_PSCI
++extern char __secure_start[];
++extern char __secure_end[];
++#endif
++
+ void flush_l3_cache(void);
+ 
+ #endif	/* __ASSEMBLY__ */
+-- 
+1.9.1
+

@@ -1,0 +1,54 @@
+From 4a2c2580f3be5131042f25406e631e3a86c33eee Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 23 Mar 2015 09:09:26 +0200
+Subject: [PATCH 0162/1240] make: added a hex file of the u-boot file without
+ SPL
+
+Also removed the PHEX_WIDTH config which is no longer needed
+
+Change-Id: I89c147387019db16c601968ff71769433ce56d13
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17749
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ Makefile                          |  3 ++-
+ arch/arm/cpu/mvebu-common/Kconfig | 11 -----------
+ 2 files changed, 2 insertions(+), 12 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index e198c6f..2345b02 100644
+--- a/Makefile
++++ b/Makefile
+@@ -848,7 +848,8 @@ doimage: $(obj)/u-boot.bin $(DOIMAGE) $(SPLIMAGE)
+ 		$(DOIMAGE) $(DOIMAGE_FLAGS) u-boot.bin u-boot-$(CONFIG_SYS_SOC).bin
+ 
+ bin2phex: doimage
+-		$(BIN2PHEX) -w $(CONFIG_PHEX_WIDTH) -i u-boot-$(CONFIG_SYS_SOC).bin -o u-boot-$(CONFIG_SYS_SOC).hex -b 0x0
++		$(BIN2PHEX) -w 1  -i u-boot-$(CONFIG_SYS_SOC).bin -o u-boot-$(CONFIG_SYS_SOC).hex -b 0x0
++		$(BIN2PHEX) -w 16 -i u-boot.bin -o u-boot.hex -b 0x0
+ 
+ else # CONFIG_TARGET_ARMADA_38X
+ DOIMAGE		:= $(srctree)/tools/marvell/doimage
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index 3396ccc..181ebff 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -113,14 +113,3 @@ config MVEBU_NOR_BOOT
+ 
+ endchoice
+ 
+-config PHEX_WIDTH
+-	int "PHEX width for bin2phek script"
+-	depends on PALLADIUM
+-	default 16
+-	help
+-	  This config is Byte width of output
+-	  file of script that convert binary
+-	  file to Palladium HEX format.
+-	  The value must be power of 2 (1,2,4,8...).
+-	  Default value = 16 - used for memory load
+-	  Value = 1 - used for SPI load
+-- 
+1.9.1
+

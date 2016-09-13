@@ -1,0 +1,38 @@
+From 6e89f9c787905a7fe79d7ae753afc5b74dc30b5e Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 18 May 2016 14:14:49 +0300
+Subject: [PATCH 1149/1240] doc: usb: add GPIO-VBUS property for USB
+ documentation
+
+Change-Id: I0107b21971a4f84f7bbbb5e1f3fae8dd7da38db0
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29797
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ doc/device-tree-bindings/usb/mvebu-usb3.txt | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/doc/device-tree-bindings/usb/mvebu-usb3.txt b/doc/device-tree-bindings/usb/mvebu-usb3.txt
+index 7673525..1844761 100644
+--- a/doc/device-tree-bindings/usb/mvebu-usb3.txt
++++ b/doc/device-tree-bindings/usb/mvebu-usb3.txt
+@@ -9,12 +9,15 @@ SoC specific:
+ 	- compatible: Should be "marvell,mvebu-usb3".
+ 	- reg: Base address and size of the xHCI unit.
+ Board specific:
++	- gpio-vbus: Should specify the GPIO for VBUS change
++		for more information check: check doc/device-tree-bindings/gpio/mvebu-gpio.txt
+ 	- status
+ 		The USB3 port status can be "okay" or "disabled".
+ 
+ Example for USB 3.0 node:
+ 	usb3: usb3@58000 {
+ 		compatible = "marvell,mvebu-usb3";
++		gpio-vbus = <&gpio1 CP0_GPIO(12) GPIO_ACTIVE_LOW>;
+ 		reg = <0x58000 0x450>;
+ 		status = "disabled";
+ 	};
+-- 
+1.9.1
+

@@ -1,0 +1,36 @@
+From 95364fa2338b7125f428656991d290411e3e371c Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Tue, 2 Feb 2016 14:26:57 +0200
+Subject: [PATCH 001/239] atf: check for pwrlvl value to avoid compilation
+ error
+
+this solves compilation error in 'set local power state' function
+(which is used only in DEBUG mode)
+
+Change-Id: I738f94cbf28726390256743efa64f9e0b5846c00
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27131
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ services/std_svc/psci/psci_common.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/services/std_svc/psci/psci_common.c b/services/std_svc/psci/psci_common.c
+index 7332695..9570169 100644
+--- a/services/std_svc/psci/psci_common.c
++++ b/services/std_svc/psci/psci_common.c
+@@ -217,7 +217,9 @@ static void psci_set_req_local_pwr_state(unsigned int pwrlvl,
+ 					 plat_local_state_t req_pwr_state)
+ {
+ 	assert(pwrlvl > PSCI_CPU_PWR_LVL);
+-	psci_req_local_pwr_states[pwrlvl - 1][cpu_idx] = req_pwr_state;
++	if(pwrlvl > 0) {
++		psci_req_local_pwr_states[pwrlvl - 1][cpu_idx] = req_pwr_state;
++	}
+ }
+ 
+ /******************************************************************************
+-- 
+1.9.1
+

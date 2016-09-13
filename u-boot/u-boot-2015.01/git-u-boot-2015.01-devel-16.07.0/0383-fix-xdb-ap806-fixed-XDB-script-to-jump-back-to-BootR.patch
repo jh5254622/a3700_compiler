@@ -1,0 +1,42 @@
+From 38fd879ae351745680c72dcae78673ad6f6b5b2a Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 30 Aug 2015 01:36:01 +0300
+Subject: [PATCH 0383/1240] fix: xdb: ap806: fixed XDB script to jump back to
+ BootRom
+
+- Fixed XDB script to jump back to BootRom to disable MMU
+  and clean caches, and added Break Point before load U-Boot
+
+Change-Id: I9eb52a7cd24bd379e539f7cbfa10d2711237fe5b
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23304
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ tools/marvell/debugger_scripts/XDB/spl_init.xdb | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/tools/marvell/debugger_scripts/XDB/spl_init.xdb b/tools/marvell/debugger_scripts/XDB/spl_init.xdb
+index 70f380e..d1d8454 100644
+--- a/tools/marvell/debugger_scripts/XDB/spl_init.xdb
++++ b/tools/marvell/debugger_scripts/XDB/spl_init.xdb
+@@ -23,9 +23,15 @@ IF (@strcmp(@SOC, "ARMv7") == 0) THEN
+ 	SET SYSREGISTER /"COPROCESSOR_1" ARM_CONTROL=0xC53078
+ ELSE
+ 	IF (@strcmp(@SOC, "ARMv8") == 0) THEN
+-		SET REG SCTLR_EL3=0xC50838
++		! Jump to BootRom to disable MMU and clean caches
++		SET REGISTER X1=0x0
++		SET REGISTER PC=0xffff0668
++		! Before run the BootRom, set breakpoint to the start of the U-Boot
++		SET BREAKPOINT AT (0x0) HARD
++		RUN
+ 	END
+ END
++PRINT "Load specific U-Boot now"
+ 
+ ! For loading and execution of u-boot, uncomment the following lines:
+ !PRINT /DBVAR=cmd "LOAD /SEGMENT /DEBUG /GLOBAL /INIT=\"\" OF \"./u-boot\""
+-- 
+1.9.1
+

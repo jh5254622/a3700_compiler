@@ -1,0 +1,500 @@
+From 898357deaecbf79664fb6d003d3d95ff92aac95a Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 12 Apr 2016 16:30:49 +0300
+Subject: [PATCH 112/239] amb: adec: 70x0: add support for AXI-MBUS address
+ decoding windows
+
+- Add support for AXI-MBUS address decoding windows
+- Use empty array for 70x0-DB compilation, enable window for device bus for
+  customer configuration.
+- Update relevant documentation
+
+Change-Id: Iac2ea6ff9961b9dfca548d0b03363630034ba1ea
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28974
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ docs/marvell/misc/mvebu-amb.txt                    |  45 ++++++++
+ docs/marvell/porting.txt                           |   6 +-
+ drivers/marvell/amb_adec.c                         | 128 +++++++++++++++++++++
+ include/drivers/marvell/amb_adec.h                 |  67 +++++++++++
+ include/plat/marvell/a8k/a70x0/board/plat_config.h |   3 +
+ .../a8k/a7040_rz/board/marvell_plat_config.c       |  20 ++++
+ plat/marvell/a8k/a7040_rz/platform.mk              |   3 +-
+ plat/marvell/a8k/a70x0/board/marvell_plat_config.c |  20 ++++
+ plat/marvell/a8k/a70x0/cp110_setup.c               |   4 +
+ plat/marvell/a8k/a70x0/plat_def.h                  |   1 +
+ plat/marvell/a8k/a70x0/platform.mk                 |   3 +-
+ .../a8k/a70x0_cust/board/marvell_plat_config.c     |  23 ++++
+ 12 files changed, 318 insertions(+), 5 deletions(-)
+ create mode 100644 docs/marvell/misc/mvebu-amb.txt
+ create mode 100644 drivers/marvell/amb_adec.c
+ create mode 100644 include/drivers/marvell/amb_adec.h
+
+diff --git a/docs/marvell/misc/mvebu-amb.txt b/docs/marvell/misc/mvebu-amb.txt
+new file mode 100644
+index 0000000..40a7467
+--- /dev/null
++++ b/docs/marvell/misc/mvebu-amb.txt
+@@ -0,0 +1,45 @@
++AMB - AXI MBUS address decoding
++-------------------------------
++
++- The Runit offers a second level of address windows lookup. It is used to map transaction towards
++the CD BootROM, SPI0, SPI1 and Device bus (NOR).
++- The Runit contains eight configurable windows. Each window defines a contiguous,
++address space and the properties associated with that address space.
++
++Unit		Bank		ATTR
++Device-Bus	DEV_BOOT_CS 	0x2F
++		DEV_CS0     	0x3E
++		DEV_CS1     	0x3D
++		DEV_CS2     	0x3B
++		DEV_CS3     	0x37
++SPI-0		SPI_A_CS0 	0x1E
++		SPI_A_CS1 	0x5E
++		SPI_A_CS2 	0x9E
++		SPI_A_CS3 	0xDE
++		SPI_A_CS4 	0x1F
++		SPI_A_CS5 	0x5F
++		SPI_A_CS6 	0x9F
++		SPI_A_CS7 	0xDF
++SPI1		SPI_B_CS0 	0x1A
++		SPI_B_CS1 	0x5A
++		SPI_B_CS2	0x9A
++		SPI_B_CS3	0xDA
++BOOT_ROM	BOOT_ROM	0x1D
++UART		UART		0x01
++
++Mandatory functions:
++	- marvell_get_amb_reg_offs
++		returns the base address of the AXI-MBUS(AMB) unit
++	- marvell_get_amb_memory_map
++		returns the AMB windows configuration and the number of windows
++
++Mandatory structures:
++	amb_memory_map - Array that include the configuration of the windows
++	  every window/entry is a struct which has 2 parameters:
++	  - base address of the window
++	  - Attribute of the window
++
++Examples:
++	struct amb_win amb_memory_map[] = {
++		{0xf900,	AMB_DEV_CS0_ID},
++	};
+diff --git a/docs/marvell/porting.txt b/docs/marvell/porting.txt
+index b38b41d..fff0d57 100644
+--- a/docs/marvell/porting.txt
++++ b/docs/marvell/porting.txt
+@@ -26,13 +26,13 @@ Common to all SoC's
+ 
+ A7K/A8K specific
+   o SoC Physical Address Map (soc_phys_map_config.c):
+-	- This file describes the SoC physical memory mapping to be used for the CCU, RFU and IOB
++	- This file describes the SoC physical memory mapping to be used for the CCU, RFU, AXI-MBUS and IOB
+ 	  address decode units (Refer to the functional spec for more details).
+ 	- In most cases, using the default address decode windows should work OK.
+ 	- In cases where a special physical address map is needed (e.g. Special size for PCIe MEM windows,
+ 	  large memory mapped SPI flash...), then porting of the SoC memory map is required.
+-	  Note: For a detailed information on how CCU, RFU & IOB work, please refer to the SoC functional spec,
+-	  and under doc/marvell/misc/mvebu-[ccu/iob/rfu].txt files.
++	  Note: For a detailed information on how CCU, RFU, AXI-MBUS & IOB work, please refer to the SoC functional spec,
++	  and under doc/marvell/misc/mvebu-[ccu/iob/amb/rfu].txt files.
+ 
+ Build Instructions:
+ ------------------
+diff --git a/drivers/marvell/amb_adec.c b/drivers/marvell/amb_adec.c
+new file mode 100644
+index 0000000..dd36b0f
+--- /dev/null
++++ b/drivers/marvell/amb_adec.c
+@@ -0,0 +1,128 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2016 Marvell International Ltd.
++* ***************************************************************************
++*
++* Redistribution and use in source and binary forms, with or without
++* modification, are permitted provided that the following conditions are met:
++*
++* Redistributions of source code must retain the above copyright notice, this
++* list of conditions and the following disclaimer.
++*
++* Redistributions in binary form must reproduce the above copyright notice,
++* this list of conditions and the following disclaimer in the documentation
++* and/or other materials provided with the distribution.
++*
++* Neither the name of Marvell nor the names of its contributors may be used
++* to endorse or promote products derived from this software without specific
++* prior written permission.
++*
++* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
++* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++* POSSIBILITY OF SUCH DAMAGE.
++*
++***************************************************************************
++*/
++
++#include <plat_def.h>
++#include <debug.h>
++#include <mmio.h>
++#include <mvebu.h>
++#include <plat_config.h>
++
++#if LOG_LEVEL >= LOG_LEVEL_INFO
++#define DEBUG_ADDR_MAP
++#endif
++
++/* common defines */
++#define WIN_ENABLE_BIT			(0x1)
++
++#define AMB_WIN_CR_OFFSET(win)		(amb_base + 0x0 + (0x8 * win))
++#define AMB_ATTR_OFFSET			8
++#define AMB_ATTR_MASK			0xFF
++
++#define AMB_WIN_BASE_OFFSET(win)	(amb_base + 0x4 + (0x8 * win))
++#define AMB_BASE_OFFSET			16
++
++uintptr_t amb_base;
++
++static void amb_enable_win(struct amb_win *win, uint32_t win_num)
++{
++	uint32_t ctrl, base;
++
++	ctrl = (win->attribute << AMB_ATTR_OFFSET) | WIN_ENABLE_BIT;
++	base = win->base_addr << AMB_BASE_OFFSET;
++
++	mmio_write_32(AMB_WIN_BASE_OFFSET(win_num), base);
++	mmio_write_32(AMB_WIN_CR_OFFSET(win_num), ctrl);
++}
++
++#ifdef DEBUG_ADDR_MAP
++static void dump_amb_adec(void)
++{
++	uint32_t ctrl, base, win_id, attr;
++
++	/* Dump all AMB windows */
++	printf("bank  attribute     base\n");
++	printf("------------------------------\n");
++	for (win_id = 0; win_id < AMB_MAX_WIN_ID; win_id++) {
++		ctrl = mmio_read_32(AMB_WIN_CR_OFFSET(win_id));
++		if (ctrl & WIN_ENABLE_BIT) {
++			base = mmio_read_32(AMB_WIN_BASE_OFFSET(win_id));
++			attr = (ctrl >> AMB_ATTR_OFFSET) & AMB_ATTR_MASK;
++			printf("amb   0x%04x        0x%08x\n", attr, base);
++		}
++	}
++
++	return;
++}
++#endif
++
++int init_amb_adec(void)
++{
++	struct amb_win *win;
++	uint32_t win_id, win_reg;
++	uint32_t win_count;
++
++	INFO("Initializing AXI to MBus Bridge Address decoding\n");
++
++	/* Get the base address of the AMB address decoding */
++	amb_base = marvell_get_amb_reg_offs();
++
++	/* Get the array of the windows and its size */
++	marvell_get_amb_memory_map(&win, &win_count);
++	if (win_count <= 0)
++		INFO("no windows configurations found\n");
++
++	if (win_count > AMB_MAX_WIN_ID) {
++		INFO("number of windows is bigger than %d\n", AMB_MAX_WIN_ID);
++		return 0;
++	}
++
++	/* disable all AMB windows */
++	for (win_id = 0; win_id < AMB_MAX_WIN_ID; win_id++) {
++		win_reg = mmio_read_32(AMB_WIN_CR_OFFSET(win_id));
++		win_reg &= ~WIN_ENABLE_BIT;
++		mmio_write_32(AMB_WIN_CR_OFFSET(win_id), win_reg);
++	}
++
++	/* enable relevant windows */
++	for (win_id = 0; win_id < win_count; win_id++, win++)
++		amb_enable_win(win, win_id);
++
++#ifdef DEBUG_ADDR_MAP
++	dump_amb_adec();
++#endif
++
++	INFO("Done AXI to MBus Bridge Address decoding Initializing\n");
++
++	return 0;
++}
+diff --git a/include/drivers/marvell/amb_adec.h b/include/drivers/marvell/amb_adec.h
+new file mode 100644
+index 0000000..b6709c4
+--- /dev/null
++++ b/include/drivers/marvell/amb_adec.h
+@@ -0,0 +1,67 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2016 Marvell International Ltd.
++* ***************************************************************************
++*
++* Redistribution and use in source and binary forms, with or without
++* modification, are permitted provided that the following conditions are met:
++*
++* Redistributions of source code must retain the above copyright notice, this
++* list of conditions and the following disclaimer.
++*
++* Redistributions in binary form must reproduce the above copyright notice,
++* this list of conditions and the following disclaimer in the documentation
++* and/or other materials provided with the distribution.
++*
++* Neither the name of Marvell nor the names of its contributors may be used
++* to endorse or promote products derived from this software without specific
++* prior written permission.
++*
++* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
++* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++* POSSIBILITY OF SUCH DAMAGE.
++*
++***************************************************************************
++*/
++
++#ifndef _AMB_ADEC_H_
++#define _AMB_ADEC_H_
++
++#include <stdint.h>
++
++struct amb_win {
++	uint32_t base_addr;
++	uint32_t attribute;
++};
++
++enum amb_attribute_ids {
++	AMB_SPI0_CS0_ID = 0x1E,
++	AMB_SPI0_CS1_ID = 0x5E,
++	AMB_SPI0_CS2_ID = 0x9E,
++	AMB_SPI0_CS3_ID = 0xDE,
++	AMB_SPI1_CS0_ID = 0x1A,
++	AMB_SPI1_CS1_ID = 0x5A,
++	AMB_SPI1_CS2_ID = 0x9A,
++	AMB_SPI1_CS3_ID = 0xDA,
++	AMB_DEV_CS0_ID = 0x3E,
++	AMB_DEV_CS1_ID = 0x3D,
++	AMB_DEV_CS2_ID = 0x3B,
++	AMB_DEV_CS3_ID = 0x37,
++	AMB_BOOT_CS_ID = 0x2f,
++	AMB_BOOT_ROM_ID = 0x1D,
++};
++
++#define AMB_MAX_WIN_ID		7
++
++int init_amb_adec(void);
++
++#endif /* _AMB_ADEC_H_ */
++
+diff --git a/include/plat/marvell/a8k/a70x0/board/plat_config.h b/include/plat/marvell/a8k/a70x0/board/plat_config.h
+index f64de55..1895db1 100644
+--- a/include/plat/marvell/a8k/a70x0/board/plat_config.h
++++ b/include/plat/marvell/a8k/a70x0/board/plat_config.h
+@@ -34,11 +34,13 @@
+ #ifndef __BOARD_CONFIG_H__
+ #define __BOARD_CONFIG_H__
+ 
++#include <amb_adec.h>
+ #include <rfu.h>
+ #include <iob.h>
+ #include <ccu.h>
+ 
+ 
++uintptr_t marvell_get_amb_reg_offs(void);
+ uintptr_t marvell_get_rfu_reg_offs(void);
+ uintptr_t marvell_get_iob_reg_offs(void);
+ int marvell_get_iob_max_win(void);
+@@ -48,6 +50,7 @@ int marvell_get_ccu_max_win(void);
+ 
+ /* The functions below are defined as Weak and may be overridden in specific Marvell
+    standard platform */
++int marvell_get_amb_memory_map(struct amb_win **win, uint32_t *size);
+ int marvell_get_rfu_memory_map(struct rfu_win **win, uint32_t *size);
+ int marvell_get_iob_memory_map(struct iob_win **win, uint32_t *size);
+ int marvell_get_ccu_memory_map(struct ccu_win **win, uint32_t *size);
+diff --git a/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c b/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c
+index 34bab5c..5a80c59 100644
+--- a/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c
+@@ -35,6 +35,26 @@
+ #include <plat_config.h>
+ #include <plat_def.h>
+ 
++/*******************************************************************************
++ * AMB Configuration
++ ******************************************************************************/
++struct amb_win *amb_memory_map = NULL;
++
++uintptr_t marvell_get_amb_reg_offs(void)
++{
++	return MVEBU_AMB_ADEC_BASE;
++}
++
++int marvell_get_amb_memory_map(struct amb_win **win, uint32_t *size)
++{
++	*win = amb_memory_map;
++	if (*win == NULL)
++		*size = 0;
++	else
++		*size = sizeof(amb_memory_map)/sizeof(struct amb_win);
++
++	return 0;
++}
+ 
+ /*******************************************************************************
+  * RFU Configuration
+diff --git a/plat/marvell/a8k/a7040_rz/platform.mk b/plat/marvell/a8k/a7040_rz/platform.mk
+index 4743637..ca43e8a 100644
+--- a/plat/marvell/a8k/a7040_rz/platform.mk
++++ b/plat/marvell/a8k/a7040_rz/platform.mk
+@@ -78,7 +78,8 @@ BL1_SOURCES		+=	$(PLAT_SRC_BASE)/aarch64/plat_helpers.S	\
+ 
+ MARVELL_DRV		:= 	$(MARVELL_DRV_BASE)/rfu_z.c	\
+ 				$(MARVELL_DRV_BASE)/iob.c	\
+-				$(MARVELL_DRV_BASE)/ccu.c
++				$(MARVELL_DRV_BASE)/ccu.c	\
++				$(MARVELL_DRV_BASE)/amb_adec.c
+ 
+ BL31_SOURCES		+=	lib/cpus/aarch64/cortex_a72.S				\
+ 				$(PLAT_SRC_BASE)/aarch64/plat_helpers.S			\
+diff --git a/plat/marvell/a8k/a70x0/board/marvell_plat_config.c b/plat/marvell/a8k/a70x0/board/marvell_plat_config.c
+index 4cae330..d266af2 100644
+--- a/plat/marvell/a8k/a70x0/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a70x0/board/marvell_plat_config.c
+@@ -35,6 +35,26 @@
+ #include <plat_config.h>
+ #include <plat_def.h>
+ 
++/*******************************************************************************
++ * AMB Configuration
++ ******************************************************************************/
++struct amb_win *amb_memory_map = NULL;
++
++uintptr_t marvell_get_amb_reg_offs(void)
++{
++	return MVEBU_AMB_ADEC_BASE;
++}
++
++int marvell_get_amb_memory_map(struct amb_win **win, uint32_t *size)
++{
++	*win = amb_memory_map;
++	if (*win == NULL)
++		*size = 0;
++	else
++		*size = sizeof(amb_memory_map)/sizeof(struct amb_win);
++
++	return 0;
++}
+ 
+ /*******************************************************************************
+  * RFU Configuration
+diff --git a/plat/marvell/a8k/a70x0/cp110_setup.c b/plat/marvell/a8k/a70x0/cp110_setup.c
+index 23747db..9485dd6 100644
+--- a/plat/marvell/a8k/a70x0/cp110_setup.c
++++ b/plat/marvell/a8k/a70x0/cp110_setup.c
+@@ -33,6 +33,7 @@
+ */
+ 
+ #include <plat_def.h>
++#include <amb_adec.h>
+ #include <iob.h>
+ #include <mmio.h>
+ 
+@@ -135,6 +136,9 @@ void amb_bridge_init(void)
+ 
+ void cp110_init(void)
+ {
++	/* configure AXI-MBUS windows */
++	init_amb_adec();
++
+ 	/* configure IOB windows */
+ 	init_iob();
+ 
+diff --git a/plat/marvell/a8k/a70x0/plat_def.h b/plat/marvell/a8k/a70x0/plat_def.h
+index 1b88b01..cbea0e4 100644
+--- a/plat/marvell/a8k/a70x0/plat_def.h
++++ b/plat/marvell/a8k/a70x0/plat_def.h
+@@ -54,6 +54,7 @@
+ #define MVEBU_DRAM_MAC_BASE		(MVEBU_REGS_BASE + 0x20000)
+ #define MVEBU_DRAM_PHY_BASE		(MVEBU_REGS_BASE + 0x20000)
+ #define MVEBU_AMB_IP_BASE		(MVEBU_CP0_REGS_BASE + 0x13ff00)
++#define MVEBU_AMB_ADEC_BASE		(MVEBU_CP0_REGS_BASE + 0x70ff00)
+ #define MVEBU_SMMU_BASE			(MVEBU_REGS_BASE + 0x100000)
+ 
+ /*******************************************************************************
+diff --git a/plat/marvell/a8k/a70x0/platform.mk b/plat/marvell/a8k/a70x0/platform.mk
+index 9841765..3150262 100644
+--- a/plat/marvell/a8k/a70x0/platform.mk
++++ b/plat/marvell/a8k/a70x0/platform.mk
+@@ -81,7 +81,8 @@ endif
+ 
+ MARVELL_DRV		:= 	$(MARVELL_DRV_BASE)/rfu.c	\
+ 				$(MARVELL_DRV_BASE)/iob.c	\
+-				$(MARVELL_DRV_BASE)/ccu.c
++				$(MARVELL_DRV_BASE)/ccu.c	\
++				$(MARVELL_DRV_BASE)/amb_adec.c
+ 
+ BL31_PORTING_SOURCES	:=	$(PLAT_FAMILY_BASE)/$(PLAT)/board/marvell_plat_config.c
+ 
+diff --git a/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c b/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c
+index 34bab5c..0deb526 100644
+--- a/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c
+@@ -35,6 +35,29 @@
+ #include <plat_config.h>
+ #include <plat_def.h>
+ 
++/*******************************************************************************
++ * AMB Configuration
++ ******************************************************************************/
++struct amb_win amb_memory_map[] = {
++	{0xf900,	AMB_DEV_CS0_ID},
++};
++
++uintptr_t marvell_get_amb_reg_offs(void)
++{
++	return MVEBU_AMB_ADEC_BASE;
++}
++
++int marvell_get_amb_memory_map(struct amb_win **win, uint32_t *size)
++{
++	*win = amb_memory_map;
++
++	if (*win == NULL)
++		*size = 0;
++	else
++		*size = sizeof(amb_memory_map)/sizeof(struct amb_win);
++
++	return 0;
++}
+ 
+ /*******************************************************************************
+  * RFU Configuration
+-- 
+1.9.1
+

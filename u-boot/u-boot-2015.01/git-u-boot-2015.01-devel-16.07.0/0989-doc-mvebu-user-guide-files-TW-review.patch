@@ -1,0 +1,584 @@
+From 9ba3fb9efe110a5af9e4f774f60bf7d480ac6a3e Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Wed, 17 Feb 2016 16:23:55 +0200
+Subject: [PATCH 0989/1240] doc: mvebu: user guide files - TW review
+
+Change-Id: I500a6804191557f9a9dd1b98fe227bcafb2f16d9
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27598
+Reviewed-by: Gina Tadmore <gina@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ doc/mvebu/build.txt               | 57 ++++++++++++-----------
+ doc/mvebu/commands/bubt.txt       | 10 ++--
+ doc/mvebu/commands/fdt_config.txt | 98 ++++++++++++++++++++-------------------
+ doc/mvebu/commands/hw_info.txt    | 38 +++++++--------
+ doc/mvebu/commands/ir.txt         | 17 +++----
+ doc/mvebu/commands/sar.txt        | 10 ++--
+ doc/mvebu/linux_boot.txt          |  1 +
+ doc/mvebu/uart_boot.txt           | 49 ++++++++++----------
+ 8 files changed, 147 insertions(+), 133 deletions(-)
+
+diff --git a/doc/mvebu/build.txt b/doc/mvebu/build.txt
+index 5669e1c..8ec34cc 100644
+--- a/doc/mvebu/build.txt
++++ b/doc/mvebu/build.txt
+@@ -1,27 +1,30 @@
+ Build instructions:
+ -------------------
+ 
+-This document describe how to compile the U-Boot and how to change U-Boot configuration
++This document describes how to compile the U-Boot and how to change U-Boot configuration
++
++Note: <DVUBR> - U-Boot vanila version.
++      <MVUBR> - Marvell release.
+ 
+ Build Instruction:
+ ------------------
+ 
+ 1. Download the U-Boot release <DVUBR> from ftp://ftp.denx.de/pub/u-boot/u-boot-2015.01.tar.bz2
+-2. Extract U-Boot vanilla tree with Marvell source:
+-	2.1. Extract U-Boot source code:
++2. Extract the U-boot vanilla tree with the Marvell source:
++	2.1. Extract the U-Boot source code:
+ 		# tar -xjf u-boot-<DVUBR>.tar.bz2
+ 		# mv u-boot-<DVUBR> u-boot-<DVUBR>-<MVUBR>
+-	2.2. add Marvell code:
++	2.2. Add Marvell code:
+ 	- Option 1: Extracting the release zip file over the vanilla tree:
+-		 Extract the u-boot-<DVUBR>-<MVUBR>.zip release file.
+-		# unzip u-boot-<DVUBR>-<MVUBR>.zip
+-		For example: unzip u-boot-2015.01-2015_T3.0.eng_drop_v6.zip.
++		 Extract the U-boot-<DVUBR>-<MVUBR>.zip release file.
++		# Unzip u-boot-<DVUBR>-<MVUBR>.zip
++		For example: Unzip u-boot-2015.01-2015_T3.0.eng_drop_v6.zip.
+ 		This overrides part of the U-Boot source files and adds the relevant Marvell files.
+ 		 When asked whether to replace a certain file, choose 'A' for all files that have such a conflict.
+ 	- Option 2: Patch update:
+ 		 Extract the git-<DVUBR>-<MVUBR>.zip to the destination folder u-boot-<DVUBR>-<MVUBR>.
+ 		 Run the following git command in the u-boot-<DVUBR>-<MVUBR> folder:
+-		  git apply git-<version>-<release>/*.patch
++		 git apply git-<DVUBR>-<MVUBR>/*.patch
+ 3. Change directory 'cd' to the U-Boot directory.
+ 4. Set the cross compiler:
+ 	# export CROSS_COMPILE=/path/to/toolchain/aarch64-marvell-linux-gnu-
+@@ -29,28 +32,28 @@ Build Instruction:
+ 	# make mrproper
+ 6. Configure the U-Boot:
+ 	# make <defconfig_file>
+-	For AP806 stand alone board use "make mvebu_apn806_defconfig"
+-	For Armada 70x0 board use "make mvebu_armada70x0_defconfig"
+-	For Armada-3700 board use "make mvebu_armada3700_defconfig"
+-7. Build the U-Boot (Armada-3700 builds require WTP tools installation -
+-   refer to the section "Tools installation for Armada-3700 builds"):
++	For AP806 stand-alone board use "make mvebu_apn806_defconfig"
++	For the Armada-70x0 board use "make mvebu_armada70x0_defconfig"
++	For the Armada-3700 board use "make mvebu_armada3700_defconfig"
++7. Build the U-Boot (Armada-3700 builds required WTP tools installation -
++   Refer to the section "Tools installation for Armada-3700 builds"):
+ 	# make
+ 	The U-Boot compilation generate:
+ 	u-boot.bin - U-Boot image
+ 
+ Please Note:
+ ------------
+-	The u-boot.bin should not be used as a stand alone image.
+-	The ARM Trusted Firmware (ATF) build process use this image to generates the
++	The u-boot.bin should not be used as a stand-alone image.
++	The ARM Trusted Firmware (ATF) build process uses this image to generate the
+ 	flash image.
+ 
+ Configuration update:
+ ---------------------
+ 	To update the U-Boot configuration, please refer to doc/README.kconfig
+ 
+-Boot device selection note:
+----------------------------
+-	The Armada-3700 supports eMMC as the boot device on target.
++Boot device selection note for Armada-3700 builds:
++--------------------------------------------------
++	The Armada-3700 supports eMMC as the boot device on the target.
+ 	The default boot device on this platform is SPI NOR flash.
+ 	In order to change the boot device to eMMC, set the following parameter
+ 	the default configuration:
+@@ -62,31 +65,31 @@ Boot device selection note:
+ 	The eMMC has 2 boot partitions (BOOT0 and BOOT1) and a user data partition (DATA).
+ 	The boot partitions are numbered as partition 1 and 2 in MMC driver.
+ 	Number 0 is used for user data partition and should not be utilized for storing
+-	boot images and u-boot environment in RAW mode since it will break file system
++	boot images and U-Boot environment in RAW mode since it will break file system
+ 	structures usually located here.
+ 	The default boot partition is BOOT0. It is selected by the following parameter:
+ 	CONFIG_SYS_MMC_ENV_PART=1
+ 	Valid values for this parameter are 1 for BOOT0 and 2 for BOOT1.
+ 	Please never use partition number 0 here!
+-	It can be changed in "menuconfig" location:
++	It can be changed in the "menuconfig" location:
+ 	-> ARM architecture
+ 	  -> eMMC Boot Partition
+ 	Please note that this configuration is only available when "Flash for image"
+ 	selects "eMMC flash boot" device as described above.
+-	The selected partition will be used by u-boot "bubt" and "savenv" commands
+-	for flashing the boot image and saving u-boot configuration.
++	The selected partition will be used by U-Boot "bubt" and "savenv" commands
++	for flashing the boot image and saving U-Boot configuration.
+ 	The boot partition can be written from Linux command line using the following
+ 	commands:
+ 	# sudo echo 0 > /sys/block/mmcblk0boot0/force_ro
+ 	# sudo dd if=u-boot-spl.img of=/dev/mmcblk0boot0
+-	The first commands removes the write protection flag from the boot partition 0.
++	The first commands remove the write protection flag from the boot partition 0.
+ 	The same operation can be done for BOOT1 partition by replacing the partition
+-	id in the above commands from mmcblk0boot0 to mmcblk0boot1.
++	ID in the above commands from mmcblk0boot0 to mmcblk0boot1.
+ 
+ 
+ Tools installation for Armada-3700 builds:
+ ------------------------------------------
+-1. Extract the tools/wtp/WTPTP_TOOLS_x_x_xx.zip in a temporary directory
++1. Extract the tools/wtp/WTPTP_TOOLS_x_x_xx.zip into a temporary directory
+ 
+    # cd tools/wtp
+    # 7z x WTPTP_TOOLS_x_x_xx.zip
+@@ -97,10 +100,10 @@ Tools installation for Armada-3700 builds:
+    # sudo chmod a+x WTPTP_TOOLS_x_x_xx/Linux_Tools/*.exe
+ 
+ 3. Copy executable files from WTPTP_TOOLS_x_x_xx/Linux_Tools
+-   to location pointed by $PATH environment variable.
++   to location pointed to $PATH environment variable.
+    For instance:
+ 
+    # sudo cp WTPTP_TOOLS_x_x_xx/Linux_Tools/*.exe /usr/local/bin
+ 
+ 4. Make sure the "ntbb_linux.exe" can be executed from any
+-   location and the u-boot "make" passes without error.
++   location and the U-Boot "make" passes without error.
+diff --git a/doc/mvebu/commands/bubt.txt b/doc/mvebu/commands/bubt.txt
+index 7dcad7e..c7b9d20 100644
+--- a/doc/mvebu/commands/bubt.txt
++++ b/doc/mvebu/commands/bubt.txt
+@@ -1,12 +1,12 @@
+ BUBT (Burn ATF) command
+ --------------------------
+-Bubt command is used to burn new ATF image to flash device.
++Bubt command is used to burn a new ATF image to flash device.
+ 
+-Bubt command get the ATF file name, destination device, source device as parametr
++The bubt command gets the following parameters: ATF file name, destination device and source device.
+ bubt [file-name] [destination [source]]
+-	- file-name		The image file name to burn.			default = flash-image.bin
++	- file-name		Image file name to burn.			default = flash-image.bin
+ 	- destination		Flash to burn to [spi, nor, nand].		defualt = active flash
+-	- source		The source to load image from [tftp, usb].	default = tftp
++	- source		Source to load image from [tftp, usb].		default = tftp
+ 
+ Examples:
+ 	bubt					-	Burn flash-image.bin from tftp to active flash
+@@ -14,7 +14,7 @@ Examples:
+ 	bubt backup-nor.bin nor usb		-	Burn backup-nor.bin from usb to NOR flash
+ 
+ Notes:
+-- for TFTP interface need to set serverip and ipaddr.
++- For the TFTP interface set serverip and ipaddr.
+ 
+ Bubt command details (burn image step by-step)
+ ----------------------------------------------
+diff --git a/doc/mvebu/commands/fdt_config.txt b/doc/mvebu/commands/fdt_config.txt
+index 2815bdb..8f93dde 100644
+--- a/doc/mvebu/commands/fdt_config.txt
++++ b/doc/mvebu/commands/fdt_config.txt
+@@ -1,94 +1,98 @@
++Notes:
++------
++- fdt_config commands are only relevant for Marvell boards that used the EEPROM device.
++
+ fdt_config command:
+ ====================
+-Dynamic board configurations handled by using a set of pre-defined SoC/Board configurations.
++Dynamic board configurations are handled by using a set of pre-defined SoC/board configurations.
+ This command allows the user to select which configurations to boot with.
+-In addition, this command gives us the ability to edit the FDT using FDT generic command of U-Boot,
++In addition, this command gives us the ability to edit the FDT using the FDT generic command of U-Boot,
+ and save it to EEPROM.
+ 
+-notes:
++Notes:
+ ------
+-1. To enable/disable the option to read FDT from EEPROM set fdt_config to on/off accordingly.
+-2. In order to use "fdt_config read" or "fdt_config select" run the "fdt_config list" command before,
+-   the <option_id> available are received from this list.
+-3. All changes will be relevant only after running the save command ("fdt_config save") and reset the board.
++1. To enable/disable the option to read FDT from the EEPROM set fdt_config to on/off accordingly.
++2. In order to use "fdt_config read" or "fdt_config select" first run the "fdt_config list" command.
++   The available <option_ids> are received from this list.
++3. All changes will be relevant only after running the save command ("fdt_config save") and resetting the board.
+ 4. The list of all the available configurations is located under "doc/mvebu/a8k/board_options"
+-5. This feature reads configuration from eeprom, so before running it for the first time,
+-   please erase eeprom to avoid any garbage data with command "i2c mw.l 0x57 0.2 0 0x200".
+-   Please be noted:
+-   a) In I2C erase command, 0x57 is the eeprom address for A3700 DB, for other boards it would be different,
+-      please check the board Spec.
+-   b) Erase eeprom is a temporary work around, when this feature is mature enough to handle the garbage data
+-      in eeprom, it would not be necessary.
++5. This feature reads the configuration from EEPROM, so before running it for the first time,
++   please erase EEPROM with command "i2c mw.l 0x57 0.2 0 0x200" to delete garbage data..
++   Please note:
++   a) In the I2C erase command, 0x57 is the EEPROM address for A3700 DB; for other boards it would be different.
++      Check the board spec for details.
++   b) Erasing EEPROM is a temporary workaround. When this feature is more mature, it will handle the the garbage data
++      in the EEPROM and so erasing will not be necessary.
+ 
+-"fdt_config on" -   enable the option to read Device Tree from eeprom at boot time.
++"fdt_config on" -   Enable the option to read the device tree from EEPROM at boot time.
+ 
+-"fdt_config off" -  disable the option to read Device Tree from eeprom at boot time.
++"fdt_config off" -  Disable the option to read the device tree from EEPROM at boot time.
+ 
+-"fdt_config list" - show all Device Tree that are suitable to the board.
+-                    print the list of <option_id> and fdt name for all the suitable FDT.
++"fdt_config list" - Show the part of the device tree suitable for this board.
++                    print the list of <option_id> and fdt name for all the suitable FDTs.
+ 
+ "fdt_config read flash <option_id>"
+-		  - read the <option_id> from user, and save the relevant Device Tree to DRAM using address 'fdt_addr' environment variable
++		  - Read the <option_id> from user, and save the relevant device tree to DRAM using address 'fdt_addr' environment variable
+ 		    as default.
+-		  example:
++		  Example:
+ 			$ fdt_config read flash 3
+-			**read the FDT with from flash (u-boot image) with id=3 and save it to DRAM.
+-			**note: in order to read fdt from flash, run the "fdt_config list" command before.
++			**Read the FDT with from flash (U-Boot image) with id=3 and save it to DRAM.
++			**Note: In order to read fdt from flash, run the "fdt_config list" command before.
+ 			        the <option_id> available are received from this list.
+ "fdt_config read eeprom"
+-		  - read Device Tree from EEPROM and save it to DRAM using address 'fdt_addr' environment variable
++		  - Read the device tree from the EEPROM and save it to DRAM using address 'fdt_addr' environment variable
+ 		    as default.
+-		  example:
++		  Example:
+ 			$ fdt_config read eeprom
+ 
+ "fdt_config select <option_id>"
+-		  - select Device Tree from flash to loading in bootloader at the next time.
+-		    If the user want to use this option its necessary to disable read FDT from EEPROM (by runnig "fdt_config off").
+-		    **note: to select fdt from flash needed to run "fdt_config list" command before.
+-			    because the option_id received from this list.
++		  - Select the device tree from the flash for loading in the bootloader the next time.
++		    If the user wants to use this option its necessary to disable read FDT from EEPROM (by runnig "fdt_config off").
++		    **Note: To select fdt from flash first run "fdt_config list" command.
++			    Because the option_id is received from this list.
+ 
+-"fdt_config save" - write Device Tree changes from RAM to EEPROM.
++"fdt_config save" - Write Device Tree changes from RAM to EEPROM.
+ 
+-example:
++Example:
+ ------
+-   i) Choose one of dtb files in u-boot image to boot with.
+-      a) List all the dtb files in u-boot image.
++   i) Select one of dtb files in the U-Boot image to boot with next time.
++      a) List all the dtb files in the U-Boot image.
+ 	 Marvell>> fdt_config list
+ 	 FDT config list:
+ 	 1 - DB-88F3720-DDR3-Modular
+ 	 2 - DB-88F3720-DDR3-Modular-SGMII1
+-      b) Choose one dtb to boot with for next time.
++      b) Select one of the dtb files to boot with next time.
+ 	 Marvell>> fdt_config select 2
+-	 To save the changes, please run the command fdt_config save.
++	 To save the changes, run the command fdt_config save.
+       c) Save the configuration.
+ 	 Marvell>> fdt_config save
+-      d) Reset, then u-boot would start with the dtb file selected.
++      d) Reset and U-Boot starts with the selected dtb file.
+ 	 Marvell>> reset
+-   ii) Load certain dtb file from u-boot image into dram, modify it,
+-       then burn it into eeprom and boot with it.
+-      a) Turn on boot with dtb in eeprom feature.
++   ii) Load certain dtb files from U-Boot image into DRAM and modify it.
++       Burn it into EEPROM and boot with it.
++      a) Enable boot with dtb in EEPROM feature.
+ 	 Marvell>> fdt_config on
+ 	 Do you want to read FDT from EEPROM? <y/N> y
+ 	 Load fdt from EEprom
+-	 To save the changes, please run the command fdt_config save.
+-      b) List all the dtb files in u-boot image.
++	 To save the changes, run the command fdt_config save.
++      b) List all the dtb files in the U-Boot image.
+ 	 Marvell>> fdt_config list
+ 	 FDT config list:
+ 	 1 - DB-88F3720-DDR3-Modular
+ 	 2 - DB-88F3720-DDR3-Modular-SGMII1
+-      c) Load dtb file into dram.
++      c) Load the dtb file into DRAM.
+ 	 Marvell>> fdt_config read flash 2
+-	 To save the changes, please run the command fdt_config save.
+-      d) Run "fdt print" command to see the entire dtb file in dram.
+-      e) Edit any property, for example, preset value in A3700 dts file.
+-         Following is all the valid values for property "preset":
++	 To save the changes, run the command fdt_config save.
++      d) Run "fdt print" command to see the entire dtb file in DRAM.
++      e) Edit any property, for example, the preset value in the A3700 dts file.
++         Following are all the valid values for the property "preset":
+ 	 PRESET_CPU_600_DDR_600:  0
+ 	 PRESET_CPU_400_DDR_600:  1
+ 	 PRESET_CPU_1000_DDR_800: 2
+ 	 PRESET_CPU_800_DDR_800:  3
+ 
+ 	 Marvell>> fdt set /soc/freq preset "<1>"
+-      f) Save the dtb file into eeprom.
++      f) Save the dtb file into EEPROM.
+ 	 Marvell>> fdt_config save
+-      g) Reset, then u-boot would start with the dtb file in eeprom.
++      g) Reset and U-Boot starts with the dtb file in the EEPROM.
+ 	 Marvell>> reset
+diff --git a/doc/mvebu/commands/hw_info.txt b/doc/mvebu/commands/hw_info.txt
+index dbf9e2f..934e139 100644
+--- a/doc/mvebu/commands/hw_info.txt
++++ b/doc/mvebu/commands/hw_info.txt
+@@ -1,26 +1,26 @@
++Notes:
++------
++- hw_info commands are only relevant for Marvell boards that used the EEPROM device
++to save HW manufacturing information.
++
+ hw_info command
+ --------------------------------
+-hw_info commands are used:
+-- store HW manufacturing information to EEPROM during the board manufacture in order to
+-keep these parameter regardless the boot-loader upgrading.
+-- load HW manufacturing information from EEPROM to the relevant u-boot env variable in
++hw_info commands are used for the following:
++- Store HW manufacturing information to EEPROM during the board manufacture in order to
++keep these parameters, regardless of the boot-loader upgrading.
++- Load HW manufacturing information from the EEPROM to the relevant U-Boot env variable in
+ order to take effect.
+ 
+-Notes:
+-------
+-- hw_info commands are only relevant for Marvell boards with the EEPROM device
+-used to save HW manufacturing information.
+-
+ Lists the hw_info commands:
+ ---------------------------
+-- "hw_info dump <name>" - Dump all or specific HW parameters from EEPROM.
+-- "hw_info load <name>  - Load all or specific HW parameters from EEPROM to env variables.
+-                          The hw_info load will be performed automatically with
+-                          resetenv operation, however it requires user to saveenv manually
+-                          later.
+-- "hw_info store <name> - Store all or specific HW parameters from env variables to EEPROM.
++- "hw_info dump <name>" - Dump all or specific HW parameters from the EEPROM.
++- "hw_info load <name>  - Load all or specific HW parameters from the EEPROM to env variables.
++                          The hw_info load will be performed automatically with the
++                          resetenv operation, however it requires that the user saveenv manually,
++                          later on.
++- "hw_info store <name> - Store all or specific HW parameters from env variables to the EEPROM.
+                           Before the store operation, the expected env varibles
+-                          should be already saved to env by using the command setenv or editenv.
++                          should already be saved to env by using the command setenv or editenv.
+ 
+ Supported HW information parameters:
+ ------------------------------------
+@@ -36,7 +36,7 @@ Supported HW information parameters:
+ 
+ Examples:
+ ---------
+-1. initialize or change HW manufacturing information for the Armada-3700
++1. Initialize or change HW manufacturing information for the Armada-3700
+ > setenv board_id 0020
+ > setenv pcb_slm 1443
+ > setenv pcb_rev 10
+@@ -49,9 +49,9 @@ Examples:
+ > saveenv
+ > hw_info store
+ 
+-2. restore HW manufacturing information env variables after the resetenv command
++2. Restore HW manufacturing information env variables after the resetenv command
+ > hw_info load
+ > saveenv (optional since hw_info load will ask user whether to saveenv)
+ 
+-3. dump HW parameters from EEPROM
++3. Dump HW parameters from EEPROM
+ > hw_info dump
+diff --git a/doc/mvebu/commands/ir.txt b/doc/mvebu/commands/ir.txt
+index 926e014..164c97e 100644
+--- a/doc/mvebu/commands/ir.txt
++++ b/doc/mvebu/commands/ir.txt
+@@ -3,14 +3,15 @@ ir command:
+ Reading and changing internal register values.
+ 
+ Displays the contents of the internal register in 2 forms, hex and binary.
+-Its possible to change the value by writing a hex value beginning with 0x
++It is possible to change the value by writing a hex value beginning with 0x
+ or by writing 0 or 1 in the required place.
+ Pressing enter without any value keeps the value unchanged.
+-the IR command use the default base address of the SoC:
++The IR command uses the default base address of the SoC:
+ Armada3700	-	0xd0000000
+ AP806		-	0xf0000000
++CP110		-	0xf2000000
+ 
+-example:
++Example:
+ Marvell>> ir 50000
+ Internal register 0x50000 value : 0x6501140
+ 
+@@ -20,13 +21,13 @@ OLD: 0000-0110-0101-0000-0001-0001-0100-0000
+ NEW:
+ Marvell>>
+ 
+-base command:
++Base command:
+ -------------
+-Base command provides the ability to change the base address of memory command (ir, md, mm, etc..)
+-to show the current base address use "base"
+-to change the base address use "base 0xf2000000"
++Base command provides the ability to change the base address of a memory command (ir, md, mm, etc..)
++To show the current base address use "base"
++To change the base address use "base 0xf2000000"
+ 
+-example:
++Example:
+ Marvell>> base
+ Base Address: 0x00000000
+ Marvell>> base 0xf2000000
+diff --git a/doc/mvebu/commands/sar.txt b/doc/mvebu/commands/sar.txt
+index be143b6..d68c7c9 100644
+--- a/doc/mvebu/commands/sar.txt
++++ b/doc/mvebu/commands/sar.txt
+@@ -1,4 +1,8 @@
+-SatR (Sample at Reset) Commands:
++Notes:
++------
++- SatR commands are only relevant for Marvell boards that used the EEPROM device.
++
++SatR (Sample at Reset) commands:
+ --------------------------------
+ SatR commands are used to toggle the available Sample at Reset modes.
+ 
+@@ -7,7 +11,7 @@ Notes:
+ - Sample at Reset commands are only relevant for Marvell boards.
+ - After a SatR write command, a reset is required for the changes to take effect.
+ 
+-Lists the Sample at Reset commands:
++The following are the Sample at Reset commands:
+ -----------------------------------
+ - "SatR list <field>" - Get the list of possible values for a specific field.
+ - "SatR read <field>" - Get the current value of a specific SatR field.
+@@ -17,5 +21,5 @@ Lists the Sample at Reset commands:
+ 	take effect.
+ - "SatR write default" - Reset all writable SatR fields back to their default values.
+ 
+-The list of the Sample At Reset possible fields and values defined at the device tree.
++The list of the Sample At Reset possible fields and values is defined in the device tree.
+ For more information, please refer to doc/device-tree-bindings/misc/mvebu-sar.txt.
+diff --git a/doc/mvebu/linux_boot.txt b/doc/mvebu/linux_boot.txt
+index e614129..7ff68ed 100644
+--- a/doc/mvebu/linux_boot.txt
++++ b/doc/mvebu/linux_boot.txt
+@@ -29,3 +29,4 @@ Run the following commands from the U-Boot prompt:
+ 
+ To boot Linux Kerenl, run from U-Boot prompt:
+ 	- boot
++
+diff --git a/doc/mvebu/uart_boot.txt b/doc/mvebu/uart_boot.txt
+index fee3397..e0f7d5a 100644
+--- a/doc/mvebu/uart_boot.txt
++++ b/doc/mvebu/uart_boot.txt
+@@ -1,8 +1,8 @@
+ UART boot
+ ---------
+-For Armada-3700 please see the section "UART boot for Armada-3700 platform"
+-UART boot is used to load ATF image using XMODEM interface when the board boots for
+-the first time or the board fails to boot.
++For Armada-3700 see the section "UART boot for Armada-3700 platform" section.
++UART boot is used to load the ATF image using the Xmodem interface when the board boots for
++the first time or when the board fails to boot.
+ 
+ 1. Set the board to receiving mode using either of the following methods:
+ 	- Start a terminal application (e.g. minicom), and send the Xmodem_boot_pattern.bin file
+@@ -12,19 +12,19 @@ the first time or the board fails to boot.
+ 	  Set the boot source to UART, using boot source DIP-switch pins, and then reset the board.
+ 2. After booting from UART, or sending the pattern file, characters are displayed on the
+    screen every second. These are the Xmodem NACKs that indicate readiness to send the
+-   new ATF with Xmodem protocol.
+-3. Start the TTY ATF transfer using Xmodem protocol
++   new ATF with the Xmodem protocol.
++3. Start the TTY ATF transfer using the Xmodem protocol
+    (for minicom do: Ctrl/A, then S, and select the Xmodem protocol).
+-4. Select the ATF image file, and start transfer.
+-5. When transfer is done, U-Boot will start and you should hit <return> to get U-Boot prompt.
+-6. When ATF & U-Boot loads refer to doc/mvebu/commands/bubt.txt to burn ATF image.
++4. Select the ATF image file, and start the transfer.
++5. When the transfer is done, U-Boot will start and you should hit <return> to get the U-Boot prompt.
++6. When ATF & U-Boot loads refer to doc/mvebu/commands/bubt.txt to burn the ATF image.
+ 
+ UART boot for Armada-3700 platform
+ ---------------------------------
+ 1. The normal build procedure for A3700 target creates an archive
+    with all the images required for UART boot. If these images are used,
+-   extract the uart-images.tgz archive into temporary folder and
+-   continue with below procedure starting paragraph 4.
++   extract the uart-images.tgz archive into a temporary folder and
++   continue with the following procedure starting with paragraph 4.
+ 
+ 2. Change the TIM/NTIM file descriptor to use the UART image type
+    (for NTIM - tools/wtp/u-boot-ntim.txt).
+@@ -36,20 +36,20 @@ UART boot for Armada-3700 platform
+ 
+    Boot Flash Signature:          0x55415223              ; Select UAR'23
+ 
+-3. Build the u-boot image as usual. Files with "_h." in their names
++3. Build the U-Boot image as usual. Files with "_h." in their names
+    are created for usage by the image downloader SW.
+ 
+ 4. Make sure the target board is in UART mode and ">" prompt is
+-   presented on connected terminal. Pressing "Enter" in this mode
++   presented on the connected terminal. Pressing "Enter" in this mode
+    will show "E" and then ">" again.
+ 
+-5. Stop the terminal emulator program on UART port attached to the
++5. Stop the terminal emulator program on the UART port attached to the
+    target board (minicom) for releasing the serial port and allowing
+-   application to use it for image download.
++   an application to use it for image download.
+ 
+-6. Start the image download application in the root u-boot folder
++6. Start the image download application in the root U-Boot folder
+    using the following parameters (replace UART port name with the one
+-   connected to actual target board).
++   connected to the actual target board).
+ 
+    Linux downloader usage example:
+ 
+@@ -65,16 +65,17 @@ UART boot for Armada-3700 platform
+    WtpDownload.exe -P UART -C 7 -R 115200 -B TIM_UBOOT_NON_TRUSTED.bin
+    -I u-boot-spl_h.bin -I u-boot_h.bin  -I wtmi_h.dummy -E
+ 
+-   It is possible to add "-V" parameter to the command line for
++   It is possible to add the "-V" parameter to the command line for
+    enabling verbose output.
+ 
+    Note that "-E" parameter can be dropped from the above commands.
+-   In such case after checking that the BootROM UART download mode is
++   If you do this, check that the BootROM UART download mode is
+    selected in paragraph 4, type in terminal "wtp" without quotes and
+-   press Enter. Then follow the procedure in paragraph 5.
+-   This command will switch BootROM to WTP download mode. The same is
+-   archived by "-E" parameter in latest downloader SW.
++   press Enter. Then follow the procedure described in paragraph 5.
++   This command will switch the BootROM to WTP download mode. The same is
++   archieved by "-E" parameter in latest downloader SW.
++
++7. After the process is finished, start the terminal emulator
++   program (minicom) on that the UART port attached to the target
++   board and ensure the U-Boot prompt is reached.
+ 
+-7. Once the process is finished, start the terminal emulator
+-   program (minicom) on the UART port attached to the target
+-   board and ensure the u-boot prompt is reached.
+-- 
+1.9.1
+

@@ -1,0 +1,37 @@
+From f6c1021a2896d3d26c8313b4ee76fb74e971b463 Mon Sep 17 00:00:00 2001
+From: Anton <antone@marvell.com>
+Date: Tue, 31 May 2016 16:06:09 -0700
+Subject: [PATCH 1191/1240] fix: thermal: increase ready timeout to 12ms
+
+Waiting time is (10us + loop overhead)*N.
+N=1000 was marginal: rare failures we sighted.
+With caches enabled in u-boot N=1000 are always
+not sufficient (loop overhead is much lower with caches on).
+Increase to 1200.
+
+Change-Id: Ie23c971073857aa83568776bcf082d8a1a455626
+Signed-off-by: Anton <antone@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30242
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/thermal/mvebu_thermal_28nm_v2.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/thermal/mvebu_thermal_28nm_v2.c b/drivers/thermal/mvebu_thermal_28nm_v2.c
+index 90b56ca..46ae8ee 100644
+--- a/drivers/thermal/mvebu_thermal_28nm_v2.c
++++ b/drivers/thermal/mvebu_thermal_28nm_v2.c
+@@ -36,7 +36,7 @@ struct tsen_info {
+ struct tsen_info __attribute__((section(".data")))tsen_config;
+ struct tsen_info __attribute__((section(".data")))*tsen = &tsen_config;
+ 
+-#define THERMAL_TIMEOUT		1000
++#define THERMAL_TIMEOUT		1200
+ 
+ #define THERMAL_SEN_CTRL_LSB				0x0
+ #define THERMAL_SEN_CTRL_LSB_STRT_OFFSET		0
+-- 
+1.9.1
+

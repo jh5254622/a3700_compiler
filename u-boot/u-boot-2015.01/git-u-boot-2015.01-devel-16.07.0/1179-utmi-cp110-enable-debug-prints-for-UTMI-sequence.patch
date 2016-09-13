@@ -1,0 +1,69 @@
+From 07838aca489d46fa4c96bb28b7e9748cb19f0540 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Wed, 1 Jun 2016 17:24:12 +0300
+Subject: [PATCH 1179/1240] utmi: cp110: enable debug prints for UTMI sequence
+
+Change-Id: I4ab28543519ec45bc418d66a1972cc6160d2e272
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30261
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/phy/comphy_cp110.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/phy/comphy_cp110.c b/drivers/phy/comphy_cp110.c
+index eb2eadb..83cea45 100644
+--- a/drivers/phy/comphy_cp110.c
++++ b/drivers/phy/comphy_cp110.c
+@@ -1174,6 +1174,7 @@ static void comphy_utmi_power_down(u32 utmi_index, void __iomem *utmi_base_addr,
+ {
+ 	u32 mask, data;
+ 
++	debug_enter();
+ 	debug("stage:  UTMI %d - Power down transceiver (power down Phy), Power down PLL, and SuspendDM\n", utmi_index);
+ 	/* Power down UTMI PHY */
+ 	reg_set(utmi_cfg_addr, 0x0 << UTMI_PHY_CFG_PU_OFFSET, UTMI_PHY_CFG_PU_MASK);
+@@ -1200,6 +1201,7 @@ static void comphy_utmi_power_down(u32 utmi_index, void __iomem *utmi_base_addr,
+ 	/* Wait for UTMI power down */
+ 	mdelay(1);
+ 
++	debug_exit();
+ 	return;
+ }
+ 
+@@ -1208,6 +1210,7 @@ static void comphy_utmi_phy_config(u32 utmi_index, void __iomem *utmi_base_addr,
+ {
+ 	u32 mask, data;
+ 
++	debug_exit();
+ 	debug("stage: Configure UTMI PHY %d registers\n", utmi_index);
+ 	/* Reference Clock Divider Select */
+ 	mask = UTMI_PLL_CTRL_REFDIV_MASK;
+@@ -1256,6 +1259,7 @@ static void comphy_utmi_phy_config(u32 utmi_index, void __iomem *utmi_base_addr,
+ 	data |= 0x1 << UTMI_CHGDTC_CTRL_VSRC_OFFSET;
+ 	reg_set(utmi_base_addr + UTMI_CHGDTC_CTRL_REG, data, mask);
+ 
++	debug_exit();
+ 	return;
+ }
+ 
+@@ -1265,6 +1269,7 @@ static int comphy_utmi_power_up(u32 utmi_index, void __iomem *utmi_base_addr,
+ 	u32 data, mask, ret = 1;
+ 	void __iomem *addr;
+ 
++	debug_enter();
+ 	debug("stage: UTMI %d - Power up transceiver(Power up Phy), and exit SuspendDM\n", utmi_index);
+ 	/* Power UP UTMI PHY */
+ 	reg_set(utmi_cfg_addr, 0x1 << UTMI_PHY_CFG_PU_OFFSET, UTMI_PHY_CFG_PU_MASK);
+@@ -1306,6 +1311,7 @@ static int comphy_utmi_power_up(u32 utmi_index, void __iomem *utmi_base_addr,
+ 	else
+ 		debug("\n");
+ 
++	debug_exit();
+ 	return ret;
+ }
+ 
+-- 
+1.9.1
+

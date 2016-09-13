@@ -1,0 +1,50 @@
+From 33f1386a4bc118ed9a479be819ecbe28abe0a8d7 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Wed, 30 Mar 2016 17:01:56 +0300
+Subject: [PATCH 095/239] mv_ddr: Fix ODPG_ENABLE_REG polling hang problem
+
+This patch fixes ODPG_ENABLE_REG polling hang problem.
+The fix is to shift the mask value per the appropriate
+bit's offset.
+
+Change-Id: Ibd1ad917b3e9b80f65734f6356e9c1a74c7490ea
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28677
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28851
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/marvell/mv_ddr/ddr3_training_leveling.c | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/marvell/mv_ddr/ddr3_training_leveling.c b/drivers/marvell/mv_ddr/ddr3_training_leveling.c
+index 523e99f..62dbbf0 100644
+--- a/drivers/marvell/mv_ddr/ddr3_training_leveling.c
++++ b/drivers/marvell/mv_ddr/ddr3_training_leveling.c
+@@ -315,18 +315,21 @@ int ddr3_tip_dynamic_read_leveling(u32 dev_num, u32 freq)
+ 				}
+ 			}
+ 
+-			/*disable ODPG - Back to functional mode */
++			/* disable ODPG - Back to functional mode */
+ 			CHECK_STATUS(ddr3_tip_if_write
+ 				     (dev_num, ACCESS_TYPE_MULTICAST, PARAM_NOT_CARE,
+ 				      ODPG_ENABLE_REG, 0x1 << ODPG_DISABLE_OFFS,
+ 				      (0x1 << ODPG_DISABLE_OFFS)));
++
+ 			if (ddr3_tip_if_polling
+-			    (dev_num, ACCESS_TYPE_MULTICAST, PARAM_NOT_CARE, 0x0, 0x1,
+-			     ODPG_ENABLE_REG, MAX_POLLING_ITERATIONS) != MV_OK) {
++			    (dev_num, ACCESS_TYPE_MULTICAST, PARAM_NOT_CARE, 0x0,
++			     0x1 << ODPG_ENABLE_OFFS, ODPG_ENABLE_REG,
++			     MAX_POLLING_ITERATIONS) != MV_OK) {
+ 				DEBUG_LEVELING(DEBUG_LEVEL_ERROR,
+ 					       ("ODPG disable failed "));
+ 				return MV_FAIL;
+ 			}
++
+ 			CHECK_STATUS(ddr3_tip_if_write
+ 				     (dev_num, ACCESS_TYPE_MULTICAST, PARAM_NOT_CARE,
+ 				      ODPG_DATA_CONTROL_REG, 0, MASK_ALL_BITS));
+-- 
+1.9.1
+

@@ -1,0 +1,107 @@
+From d9103f5774b20e481abd3b063c81b99ed779af6c Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 25 Nov 2015 10:26:56 +0200
+Subject: [PATCH 0530/1240] pinctl: move call to pinctl to early stages
+
+- we must fix the pin functions so we have a functional console
+  and a valid I2C connection.
+- the pinctl driver cannot use malloc at pre relocation stage
+
+Change-Id: Id9a82eeacfbecf41094ce85defba07ff372fd618
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25255
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/soc.c | 4 ++++
+ board/mvebu/common/init.c         | 3 ---
+ drivers/gpio/mvebu_pinctl.c       | 8 +++++---
+ 3 files changed, 9 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/soc.c b/arch/arm/cpu/armv8/armada8k/soc.c
+index f555c9c..1791bc5 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc.c
++++ b/arch/arm/cpu/armv8/armada8k/soc.c
+@@ -24,6 +24,7 @@
+ #include <asm/arch-mvebu/system_info.h>
+ #include <asm/arch-armada8k/armada8k.h>
+ #include <asm/arch/regs-base.h>
++#include <asm/arch-mvebu/pinctl.h>
+ #include <linux/sizes.h>
+ 
+ #define MVEBU_MCKINLEY_REGS_BASE	(MVEBU_REGS_BASE + 0x20000)
+@@ -34,6 +35,9 @@
+ 
+ int soc_early_init_f(void)
+ {
++#ifdef CONFIG_MVEBU_PINCTL
++	mvebu_pinctl_probe();
++#endif
+ 	return 0;
+ }
+ 
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index 69a9bc9..a432c07 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -133,9 +133,6 @@ int mvebu_board_init(void)
+ 
+ 	debug("Initializing board\n");
+ 
+-#ifdef CONFIG_MVEBU_PINCTL
+-	mvebu_pinctl_probe();
+-#endif
+ 	brd = mvebu_fdt_get_board();
+ 	mvebu_fdt_board_info_update(brd);
+ 
+diff --git a/drivers/gpio/mvebu_pinctl.c b/drivers/gpio/mvebu_pinctl.c
+index 08fad2b..828466d 100644
+--- a/drivers/gpio/mvebu_pinctl.c
++++ b/drivers/gpio/mvebu_pinctl.c
+@@ -21,12 +21,11 @@
+ #include <asm/system.h>
+ #include <asm/io.h>
+ #include <fdtdec.h>
+-#include <malloc.h>
+ #include <errno.h>
+ #include <asm/arch-mvebu/fdt.h>
+ 
+ #define CONFIG_MAX_PINCTL_BANKS		4
+-#define CONFIG_MAX_PINS_PER_BANK	70
++#define CONFIG_MAX_PINS_PER_BANK	100
+ #define CONFIG_MAX_FUNC			0xF
+ 
+ #define BITS_PER_PIN		4
+@@ -44,6 +43,7 @@ struct pinctl_data {
+ 	const char    *bank_name;
+ };
+ struct pinctl_data __attribute__((section(".data"))) bank_data[CONFIG_MAX_PINCTL_BANKS];
++u32 __attribute__((section(".data"))) pin_func_buf[CONFIG_MAX_PINS_PER_BANK];
+ 
+ int pinctl_set_pin_func(int bank, int pin_id, int func)
+ {
+@@ -136,6 +136,7 @@ int mvebu_pinctl_probe(void)
+ 	int count, i, err, pin;
+ 	u32 *pin_func;
+ 
++
+ 	count = fdtdec_find_aliases_for_id(gd->fdt_blob, "pinctl",
+ 			COMPAT_MVEBU_PINCTL, node_list, CONFIG_MAX_PINCTL_BANKS);
+ 
+@@ -163,11 +164,12 @@ int mvebu_pinctl_probe(void)
+ 		if (fdtdec_get_bool(blob, node, "reverse-reg"))
+ 			pinctl->reg_direction = -1;
+ 
+-		pin_func = malloc(pinctl->pin_cnt * sizeof(u32));
++		pin_func = &pin_func_buf[0];
+ 		if (pin_func == NULL) {
+ 			error("pinctl: no memory for pin_func array\n");
+ 			continue;
+ 		}
++
+ 		err = fdtdec_get_int_array(blob, node, "pin-func", pin_func, pinctl->pin_cnt);
+ 		if (err) {
+ 			error("Failed reading pin functions for bank %s\n", pinctl->bank_name);
+-- 
+1.9.1
+

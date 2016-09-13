@@ -1,0 +1,575 @@
+From 17875543a77b6aeadde7ddfa3d70d9dd1e24433f Mon Sep 17 00:00:00 2001
+From: Joe Zhou <shjzhou@marvell.com>
+Date: Thu, 30 Jul 2015 10:14:15 +0800
+Subject: [PATCH 0331/1240] arlp: initial support for CA53
+
+	only pass compilation with 64-bit gcc compiler.
+	Should be merged together with 64-bit compiler patch.
+
+Change-Id: I8ce09e37fde82672ec0a718df36dd604bb47e285
+Signed-off-by: Joe Zhou <shjzhou@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22326
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv7/Makefile                     |  1 -
+ arch/arm/cpu/armv7/armadalp/Kconfig             | 26 --------
+ arch/arm/cpu/armv7/armadalp/clock.c             | 45 -------------
+ arch/arm/cpu/armv8/Makefile                     |  1 +
+ arch/arm/cpu/armv8/armadalp/Kconfig             | 31 +++++++++
+ arch/arm/cpu/armv8/armadalp/Makefile            | 22 ++++++
+ arch/arm/cpu/armv8/armadalp/clock.c             | 45 +++++++++++++
+ arch/arm/cpu/armv8/armadalp/soc-init.c          | 89 +++++++++++++++++++++++++
+ arch/arm/cpu/mvebu-common/Kconfig               |  2 +-
+ arch/arm/include/asm/arch-armadalp/memory-map.h | 24 ++++---
+ arch/arm/include/asm/arch-armadalp/regs-base.h  | 11 +--
+ configs/mvebu_armadalp_defconfig                |  1 +
+ configs/mvebu_armadalp_palladium_defconfig      |  1 +
+ drivers/serial/serial_mvebu.c                   | 12 ++--
+ include/configs/armada8k.h                      |  2 +
+ include/configs/armadalp.h                      | 32 ++++++---
+ include/configs/mvebu-common.h                  |  2 +-
+ 17 files changed, 244 insertions(+), 103 deletions(-)
+ delete mode 100644 arch/arm/cpu/armv7/armadalp/Kconfig
+ delete mode 100644 arch/arm/cpu/armv7/armadalp/clock.c
+ create mode 100644 arch/arm/cpu/armv8/armadalp/Kconfig
+ create mode 100644 arch/arm/cpu/armv8/armadalp/Makefile
+ create mode 100644 arch/arm/cpu/armv8/armadalp/clock.c
+ create mode 100644 arch/arm/cpu/armv8/armadalp/soc-init.c
+
+diff --git a/arch/arm/cpu/armv7/Makefile b/arch/arm/cpu/armv7/Makefile
+index b904828..1a9793a 100644
+--- a/arch/arm/cpu/armv7/Makefile
++++ b/arch/arm/cpu/armv7/Makefile
+@@ -41,7 +41,6 @@ endif
+ obj-$(if $(filter am33xx,$(SOC)),y) += am33xx/
+ obj-$(if $(filter armada-xp,$(SOC)),y) += armada-xp/
+ obj-$(if $(filter armada38x,$(SOC)),y) += armada38x/
+-obj-$(if $(filter armadalp,$(SOC)),y) += armadalp/
+ obj-$(CONFIG_AT91FAMILY) += at91/
+ obj-$(if $(filter bcm281xx,$(SOC)),y) += bcm281xx/
+ obj-$(if $(filter bcmcygnus,$(SOC)),y) += bcmcygnus/
+diff --git a/arch/arm/cpu/armv7/armadalp/Kconfig b/arch/arm/cpu/armv7/armadalp/Kconfig
+deleted file mode 100644
+index 7fbd296..0000000
+--- a/arch/arm/cpu/armv7/armadalp/Kconfig
++++ /dev/null
+@@ -1,26 +0,0 @@
+-if TARGET_ARMADA_LP
+-
+-config SYS_CPU
+-	string
+-	default "armv7"
+-
+-config SYS_BOARD
+-	string
+-	default "armadalp"
+-
+-config SYS_VENDOR
+-	string
+-	default "mvebu"
+-
+-config SYS_SOC
+-	string
+-	default "armadalp"
+-
+-config SYS_CONFIG_NAME
+-	string
+-	default "armadalp"
+-
+-config PALLADIUM
+-	bool "Support palladium emulation"
+-	default y
+-endif
+diff --git a/arch/arm/cpu/armv7/armadalp/clock.c b/arch/arm/cpu/armv7/armadalp/clock.c
+deleted file mode 100644
+index 7d66f49..0000000
+--- a/arch/arm/cpu/armv7/armadalp/clock.c
++++ /dev/null
+@@ -1,45 +0,0 @@
+-/*
+-* ***************************************************************************
+-* Copyright (C) 2015 Marvell International Ltd.
+-* ***************************************************************************
+-* This program is free software: you can redistribute it and/or modify it
+-* under the terms of the GNU General Public License as published by the Free
+-* Software Foundation, either version 2 of the License, or any later version.
+-*
+-* This program is distributed in the hope that it will be useful,
+-* but WITHOUT ANY WARRANTY; without even the implied warranty of
+-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-* GNU General Public License for more details.
+-*
+-* You should have received a copy of the GNU General Public License
+-* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-* ***************************************************************************
+-*/
+-
+-#include <common.h>
+-#include <asm/arch-mvebu/clock.h>
+-
+-u32 soc_tclk_get(void)
+-{
+-	return 200000000;
+-}
+-
+-u32 soc_cpu_clk_get(void)
+-{
+-	return 200000000;
+-}
+-
+-u32 soc_ddr_clk_get(void)
+-{
+-	return 200000000;
+-}
+-
+-u32 soc_l2_clk_get(void)
+-{
+-	return 800000000;
+-}
+-
+-u32 soc_timer_clk_get(void)
+-{
+-	return 800000000;
+-}
+diff --git a/arch/arm/cpu/armv8/Makefile b/arch/arm/cpu/armv8/Makefile
+index 806cf94..e356a8d 100644
+--- a/arch/arm/cpu/armv8/Makefile
++++ b/arch/arm/cpu/armv8/Makefile
+@@ -19,3 +19,4 @@ obj-y	+= cpu-dt.o
+ obj-$(CONFIG_ARMV8_PSCI)	+= psci.o
+ obj-$(CONFIG_FSL_LSCH3) += fsl-lsch3/
+ obj-$(if $(filter armada8k,$(SOC)),y) += armada8k/
++obj-$(if $(filter armadalp,$(SOC)),y) += armadalp/
+diff --git a/arch/arm/cpu/armv8/armadalp/Kconfig b/arch/arm/cpu/armv8/armadalp/Kconfig
+new file mode 100644
+index 0000000..e493d22
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armadalp/Kconfig
+@@ -0,0 +1,31 @@
++if TARGET_ARMADA_LP
++
++config SYS_CPU
++	string
++	default "armv8"
++
++config SYS_BOARD
++	string
++	default "armadalp"
++
++config SYS_VENDOR
++	string
++	default "mvebu"
++
++config SYS_SOC
++	string
++	default "armadalp"
++
++config SYS_CONFIG_NAME
++	string
++	default "armadalp"
++
++config ARMV8_PSCI
++	bool
++	default n
++
++config PALLADIUM
++	bool "Support palladium emulation"
++	default y
++endif
++
+diff --git a/arch/arm/cpu/armv8/armadalp/Makefile b/arch/arm/cpu/armv8/armadalp/Makefile
+new file mode 100644
+index 0000000..7dac847
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armadalp/Makefile
+@@ -0,0 +1,22 @@
++#
++# ***************************************************************************
++# Copyright (C) 2015 Marvell International Ltd.
++# ***************************************************************************
++# This program is free software: you can redistribute it and/or modify it
++# under the terms of the GNU General Public License as published by the Free
++# Software Foundation, either version 2 of the License, or any later version.
++#
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program.  If not, see <http://www.gnu.org/licenses/>.
++# ***************************************************************************
++#
++
++obj-y += soc-init.o
++obj-y += clock.o
++obj-$(CONFIG_ARMV8_PSCI)	+= psci.o
++
+diff --git a/arch/arm/cpu/armv8/armadalp/clock.c b/arch/arm/cpu/armv8/armadalp/clock.c
+new file mode 100644
+index 0000000..7d66f49
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armadalp/clock.c
+@@ -0,0 +1,45 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2015 Marvell International Ltd.
++* ***************************************************************************
++* This program is free software: you can redistribute it and/or modify it
++* under the terms of the GNU General Public License as published by the Free
++* Software Foundation, either version 2 of the License, or any later version.
++*
++* This program is distributed in the hope that it will be useful,
++* but WITHOUT ANY WARRANTY; without even the implied warranty of
++* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++* GNU General Public License for more details.
++*
++* You should have received a copy of the GNU General Public License
++* along with this program.  If not, see <http://www.gnu.org/licenses/>.
++* ***************************************************************************
++*/
++
++#include <common.h>
++#include <asm/arch-mvebu/clock.h>
++
++u32 soc_tclk_get(void)
++{
++	return 200000000;
++}
++
++u32 soc_cpu_clk_get(void)
++{
++	return 200000000;
++}
++
++u32 soc_ddr_clk_get(void)
++{
++	return 200000000;
++}
++
++u32 soc_l2_clk_get(void)
++{
++	return 800000000;
++}
++
++u32 soc_timer_clk_get(void)
++{
++	return 800000000;
++}
+diff --git a/arch/arm/cpu/armv8/armadalp/soc-init.c b/arch/arm/cpu/armv8/armadalp/soc-init.c
+new file mode 100644
+index 0000000..f155c71
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armadalp/soc-init.c
+@@ -0,0 +1,89 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2015 Marvell International Ltd.
++* ***************************************************************************
++* This program is free software: you can redistribute it and/or modify it
++* under the terms of the GNU General Public License as published by the Free
++* Software Foundation, either version 2 of the License, or any later version.
++*
++* This program is distributed in the hope that it will be useful,
++* but WITHOUT ANY WARRANTY; without even the implied warranty of
++* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++* GNU General Public License for more details.
++*
++* You should have received a copy of the GNU General Public License
++* along with this program.  If not, see <http://www.gnu.org/licenses/>.
++* ***************************************************************************
++*/
++
++#define DEBUG
++
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch-mvebu/soc.h>
++#include <asm/arch-armadalp/armadalp.h>
++
++int soc_early_init_f(void)
++{
++	return 0;
++}
++
++int soc_get_rev(void)
++{
++	/* This should read the soc rev from some register*/
++	return 0;
++}
++
++int soc_get_id(void)
++{
++	/* TO-DO, get soc ID from PCIe register */
++	/* in ArmadaLP, there is no device ID register, like A38x,
++	    it needs to be got from PCIe register, like A370 and AXP */
++	u32 id = 0x9991;
++	return id;
++}
++
++void soc_init(void)
++{
++	/* Do early SOC specific init here */
++
++	return;
++}
++
++int dram_init(void)
++{
++#ifdef CONFIG_PALLADIUM
++	/* NO DRAM init sequence in Pallaidum, so set static DRAM size of 256MB */
++	gd->ram_size = 0x20000000;
++#else
++	int cs;
++	u32 ctrl, size, base;
++
++	gd->ram_size = 0;
++	/*
++	* We assume the DDR training code has configured
++	* The SDRAM adec windows so we pull our info from there
++	*/
++
++	for (cs = 0; cs < CONFIG_NR_DRAM_BANKS; cs++) {
++		ctrl = readl(MBUS_SDRAM_CTRL_REG(cs));
++		if (ctrl & MBUS_SDRAM_WIN_ENABLE) {
++			base = readl(MBUS_SDRAM_BASE_REG(cs));
++			size = (ctrl & MBUS_SDRAM_SIZE_MASK) + MBUS_SDRAM_SIZE_ALIGN;
++			gd->bd->bi_dram[cs].start = base;
++			gd->bd->bi_dram[cs].size = size;
++
++			gd->ram_size += size;
++
++			debug("DRAM bank %d base 0x%08x size 0x%x ", cs, base, size);
++		}
++	}
++
++	if (gd->ram_size == 0) {
++		error("No DRAM banks detected");
++		return 1;
++	}
++#endif
++
++	return 0;
++}
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index a0d51c8..3135dce 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -1,7 +1,7 @@
+ 
+ source "arch/arm/cpu/armv8/armada8k/Kconfig"
+ source "arch/arm/cpu/armv7/armada38x/Kconfig"
+-source "arch/arm/cpu/armv7/armadalp/Kconfig"
++source "arch/arm/cpu/armv8/armadalp/Kconfig"
+ 
+ config MVEBU
+ 	bool "Support MVEBU devices"
+diff --git a/arch/arm/include/asm/arch-armadalp/memory-map.h b/arch/arm/include/asm/arch-armadalp/memory-map.h
+index 7da88f7..6e249cf 100644
+--- a/arch/arm/include/asm/arch-armadalp/memory-map.h
++++ b/arch/arm/include/asm/arch-armadalp/memory-map.h
+@@ -17,16 +17,20 @@
+ */
+ 
+ /* Memory Map */
+-/* 0x00000000 - 0xE0000000 - DRAM */
+-/* 0xE0000000 - 0xE2000000 - PCI-0 */
+-/* 0xE2000000 - 0xE4000000 - PCI-1 */
+-/* 0xE4000000 - 0xE6000000 - PCI-2 */
+-/* 0xE6000000 - 0xE8000000 - PCI-3 */
+-/* 0xF1000000 - 0xF1100000 - INTERNAL_REG */
++/* 0x00000000 - 0x7FFFFFFF - DRAM */
++/* 0x80000000 - 0x8FFFFFFF - IHB-PCIe */
++/* 0xD0000000 - 0xD0300000 - Internal Reg */
++/* 0xD0700000 - 0xD070FFFF - CCI */
++/* 0xE0000000 - 0xE7FFFFFF - IHB */
++/* 0xE8000000 - 0xEFFFFFFF - PCIe */
++/* 0xF0000000 - 0xF001FFFF - rWTM */
++/* 0xFFF00000 - 0xFFFFFFFF - Boot Room */
+ 
+-#define MVEBU_REGS_BASE			(0xF1000000)
+-#define MVEBU_REGS_SIZE			(0x100000)
++#ifdef __ASSEMBLY__
++#define MVEBU_REGS_BASE		(0xD0000000)
++#else
++#define MVEBU_REGS_BASE		(0xD0000000UL)
++#endif
++#define MVEBU_REGS_SIZE		(0x300000)
+ 
+-#define MVEBU_PCIE_MEM_BASE(id)		(0xE0000000 + (id * 0x2000000))
+-#define MVEBU_PCIE_MEM_SIZE(id)		(0x2000000)
+ 
+diff --git a/arch/arm/include/asm/arch-armadalp/regs-base.h b/arch/arm/include/asm/arch-armadalp/regs-base.h
+index fdf34c1..785bd89 100644
+--- a/arch/arm/include/asm/arch-armadalp/regs-base.h
++++ b/arch/arm/include/asm/arch-armadalp/regs-base.h
+@@ -22,11 +22,9 @@
+ #include <asm/arch/memory-map.h>
+ 
+ #define MPP_REGS_BASE		(MVEBU_REGS_BASE + 0x18000)
+-#define MVEBU_ADEC_BASE		(MVEBU_REGS_BASE + 0x20000)
++#define MVEBU_ADEC_BASE		(MVEBU_REGS_BASE + 0xCF00)
++#define MVEBU_PCIE_BASE(x)	(MVEBU_REGS_BASE + 0x70000)
+ 
+-#define MVEBU_GLOBAL_TIMER_BASE	(MVEBU_REGS_BASE + 0x20300)
+-#define MVEBU_PCIE_BASE(x)	((x == 0) ? (MVEBU_REGS_BASE + 0x80000) : \
+-				(MVEBU_REGS_BASE + 0x40000 + (0x4000 * (x - 1))))
+ 
+ #define MVEBU_MISC_REGS_BASE	(MVEBU_REGS_BASE + 0x18200)
+ #define MVEBU_DEVICE_ID_REG	(MVEBU_MISC_REGS_BASE + 0x38)
+@@ -34,4 +32,9 @@
+ #define MVEBU_RESET_MASK_REG	(MVEBU_MISC_REGS_BASE + 0x60)
+ #define MVEBU_SOFT_RESET_REG	(MVEBU_MISC_REGS_BASE + 0x64)
+ 
++#define MVEBU_GIC_BASE (MVEBU_REGS_BASE + 0x1d00000)
++#define MVEBU_GICD_BASE		(MVEBU_GIC_BASE)
++#define MVEBU_GICR_BASE		(MVEBU_GIC_BASE + 0x40000)
++#define MVEBU_GICC_BASE		(MVEBU_GIC_BASE + 0x80000)
++
+ #endif	/* _REGS_BASE_H_ */
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index f49d210..094dc0d 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -1,4 +1,5 @@
+ CONFIG_SPL=y
++CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_ARMADA_LP=y
+ +S:CONFIG_DEVEL_BOARD=y
+diff --git a/configs/mvebu_armadalp_palladium_defconfig b/configs/mvebu_armadalp_palladium_defconfig
+index 4d53393..a8944dd 100644
+--- a/configs/mvebu_armadalp_palladium_defconfig
++++ b/configs/mvebu_armadalp_palladium_defconfig
+@@ -1,4 +1,5 @@
+ CONFIG_SPL=y
++CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_ARMADA_LP=y
+ +S:CONFIG_DEVEL_BOARD=y
+diff --git a/drivers/serial/serial_mvebu.c b/drivers/serial/serial_mvebu.c
+index 704f921..9d4234c 100644
+--- a/drivers/serial/serial_mvebu.c
++++ b/drivers/serial/serial_mvebu.c
+@@ -26,9 +26,9 @@
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+ /* to use global variables before u-boot relocation, initialize it to something !=0 */
+-unsigned int mvebu_uart_reg_base = 100;
+-unsigned int mvebu_uart_clock_frequency = 100;
+-unsigned int mvebu_uart_baudrate = 100;
++unsigned long mvebu_uart_reg_base = 100;
++unsigned long mvebu_uart_clock_frequency = 100;
++unsigned long mvebu_uart_baudrate = 100;
+ 
+ #define MVEBU_UART_BASE(x)	mvebu_uart_reg_base
+ 
+@@ -123,9 +123,9 @@ static int mvebu_serial_init(void)
+ 		if (node <= 0)
+ 			continue;
+ 
+-		mvebu_uart_reg_base = (unsigned int)fdt_get_regs_offs(gd->fdt_blob, node, "reg");
+-		mvebu_uart_clock_frequency = (unsigned int)fdtdec_get_int(gd->fdt_blob, node, "clock_frequency", 0);
+-		mvebu_uart_baudrate = (unsigned int)fdtdec_get_int(gd->fdt_blob, node, "baudrate", 0);
++		mvebu_uart_reg_base = (unsigned long)fdt_get_regs_offs(gd->fdt_blob, node, "reg");
++		mvebu_uart_clock_frequency = (unsigned long)fdtdec_get_int(gd->fdt_blob, node, "clock_frequency", 0);
++		mvebu_uart_baudrate = (unsigned long)fdtdec_get_int(gd->fdt_blob, node, "baudrate", 0);
+ 	}
+ 
+ 	/* 115200KBps fixed Baud rate  */
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index 3593edf..eb0ba12 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -40,6 +40,8 @@
+ #define MV_INCLUDE_RTC
+ #define MV_INCLUDE_PEX
+ */
++#undef CONFIG_GICV3
++#define CONFIG_GICV2
+ 
+ #define CONFIG_GENERIC_TIMER
+ #define CONFIG_REMAKE_ELF
+diff --git a/include/configs/armadalp.h b/include/configs/armadalp.h
+index 7e1ea15..eded38c 100644
+--- a/include/configs/armadalp.h
++++ b/include/configs/armadalp.h
+@@ -21,11 +21,12 @@
+ 
+ /* Version */
+ #define CONFIG_IDENT_STRING		" Marvell version: 2015_T2.0"
+-#define CONFIG_BOOTP_VCI_STRING		" U-boot.armv7.armadalp"
++#define CONFIG_BOOTP_VCI_STRING		" U-boot.armv8.armadalp"
+ 
+ /* Platform */
+-#define CONFIG_MVEBU_CA9
+-#define CONFIG_MVEBU_TIMER
++/* Support GICv3 */
++#undef CONFIG_GICV2
++#define CONFIG_GICV3
+ 
+ /*
+ #define MV_INCLUDE_SDIO
+@@ -48,17 +49,28 @@
+ /* Plaform */
+ #define CONFIG_MARVELL
+ 
+-/* Clock */
+-#ifndef __ASSEMBLY__
+-	#define CONFIG_SYS_HZ                   1000
+-	#define CONFIG_SYS_TCLK                 soc_tclk_get()
+-	#define CONFIG_SYS_BUS_CLK              soc_sys_clk_get()
+-#endif /* __ASSEMBLY__ */
++#define COUNTER_FREQUENCY	(6000)
++
+ 
+ /* DRAM detection stuff */
+ #define MV_DRAM_AUTO_SIZE
+ #define CONFIG_SYS_DRAM_BANKS           1
+ 
++#ifdef CONFIG_SPL_BUILD
++/* SPL */
++/* Defines for SPL */
++#define CONFIG_SPL_TEXT_BASE	 0xFFE1C048
++#define CONFIG_SPL_MAX_SIZE		(0x1ffc0)
++
++#ifndef __ASSEMBLY__
++extern char __end_of_spl[];
++#endif /* __ASSEMBLY__ */
++#define CONFIG_SYS_SPL_MALLOC_START	((ulong)__end_of_spl)
++#define CONFIG_SYS_SPL_MALLOC_SIZE	(0x4000)
++#endif /* CONFIG_SPL_BUILD */
++#define CONFIG_SPL_LDSCRIPT		"arch/arm/cpu/mvebu-common/u-boot-armv8-spl.lds"
++
++
+ /* SPI flash for Palladium */
+ #ifdef CONFIG_MVEBU_SPI
+ 
+@@ -76,6 +88,8 @@
+  */
+ #include "mvebu-common.h"
+ 
++
++
+ /*
+  * SOC specific overrides
+  * Add here all config values that differ
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 220fd4e..64bcce8 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -192,9 +192,9 @@
+ 
+ 
+ /* Generic Interrupt Controller Definitions */
+-#define CONFIG_GICV2
+ #define GICD_BASE                       MVEBU_GICD_BASE
+ #define GICC_BASE                       MVEBU_GICC_BASE
++#define GICR_BASE                       MVEBU_GICR_BASE
+ 
+ /* Flat Device Tree Definitions */
+ #define CONFIG_OF_LIBFDT
+-- 
+1.9.1
+

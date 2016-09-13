@@ -1,0 +1,66 @@
+From 9df0c4cd9362a70f35b19f71d2339250233b833a Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Tue, 12 Apr 2016 14:36:52 +0300
+Subject: [PATCH 1032/1240] fix: fdt_config: fix unzip and zip issue
+
+- the global array was used twice in the same function,
+  actually it try to zip the array to itself.
+- add another global array to used only for unzip and zip functions.
+
+Change-Id: Ief5886bee5549773bf8cb81f0849a179d3f424ee
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28968
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ board/mvebu/common/cfg_eeprom.c | 12 +++++++++---
+ 1 file changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/board/mvebu/common/cfg_eeprom.c b/board/mvebu/common/cfg_eeprom.c
+index 90d265e..04c6e93 100644
+--- a/board/mvebu/common/cfg_eeprom.c
++++ b/board/mvebu/common/cfg_eeprom.c
+@@ -26,9 +26,15 @@ u8 mapping_default_fdt[] = DEFAULT_FDT_PER_BOARD;
+ struct eeprom_struct board_config_val = CFG_DEFAULT_VALUE;
+ struct board_config_struct *board_cfg = &(board_config_val.board_config);
+ struct config_types_info config_types_info[] = MV_EEPROM_CONFIG_INFO;
++/* this array is used as temporary fdt, in order to enable to make changes
++ on the fdt_blob without changing the fdt in the local struct */
+ uint8_t fdt_blob_temp[MVEBU_FDT_SIZE];
+ int eeprom_initialized = -1;
+ int g_board_id = -1;
++#ifdef CONFIG_TARGET_ARMADA_8K
++/* this array is used a buffer to zip and unzip the fdt blob */
++uint8_t fdt_zip_buffer[MVEBU_FDT_SIZE];
++#endif
+ 
+ static char hw_info_param_list[][HW_INFO_MAX_NAME_LEN] = {
+ 	"board_id",
+@@ -88,13 +94,13 @@ int cfg_eeprom_zip_and_unzip(unsigned long size, void *source_fdt, bool zip_flag
+ 
+ 	if (zip_flag) {
+ 		/* compress fdt */
+-		if (gzip((void *)fdt_blob_temp, &new_size, source_fdt, size) != 0) {
++		if (gzip((void *)fdt_zip_buffer, &new_size, source_fdt, size) != 0) {
+ 			error("Could not compress device tree file\n");
+ 			return -1;
+ 		}
+ 	} else {
+ 		/* decompress fdt */
+-		if (gunzip((void *)fdt_blob_temp, size, source_fdt, &new_size) != 0) {
++		if (gunzip((void *)fdt_zip_buffer, size, source_fdt, &new_size) != 0) {
+ 			error("Could not decompress device tree file\n");
+ 			return -1;
+ 		}
+@@ -105,7 +111,7 @@ int cfg_eeprom_zip_and_unzip(unsigned long size, void *source_fdt, bool zip_flag
+ 	}
+ 	debug("The new size of the fdt = %lu\n", new_size);
+ 	/* copy the compressed/decompressed file back to the source fdt */
+-	memcpy(source_fdt, (void *)fdt_blob_temp, new_size);
++	memcpy(source_fdt, (void *)fdt_zip_buffer, new_size);
+ 
+ 	return new_size;
+ }
+-- 
+1.9.1
+

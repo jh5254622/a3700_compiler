@@ -1,0 +1,254 @@
+From 388ca9441c31e32fbe20b3cd7f824939fc26d215 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Thu, 4 Feb 2016 09:22:13 +0200
+Subject: [PATCH 0828/1240] mpp: 7040rz: Enable spi or nand MPPs depending on
+ boot interface
+
+- Moved all devel-board init code into SoC specific directory
+  in order to enable easier control over DB board initializations.
+
+Change-Id: Ic0c787b6b87ad9e3baa165dc7269115106569fec
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27209
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ board/mvebu/armada38x/Makefile      |  1 +
+ board/mvebu/armada38x/devel-board.c | 34 +++++++++++++++++++++++++++
+ board/mvebu/armada8k/Makefile       |  1 +
+ board/mvebu/armada8k/armada8k.c     |  2 ++
+ board/mvebu/armada8k/devel-board.c  | 46 +++++++++++++++++++++++++++++++++++++
+ board/mvebu/armadalp/Makefile       |  1 +
+ board/mvebu/armadalp/devel-board.c  | 34 +++++++++++++++++++++++++++
+ board/mvebu/common/Makefile         |  1 -
+ board/mvebu/common/devel-board.c    | 35 ----------------------------
+ 9 files changed, 119 insertions(+), 36 deletions(-)
+ create mode 100644 board/mvebu/armada38x/devel-board.c
+ create mode 100644 board/mvebu/armada8k/devel-board.c
+ create mode 100644 board/mvebu/armadalp/devel-board.c
+ delete mode 100644 board/mvebu/common/devel-board.c
+
+diff --git a/board/mvebu/armada38x/Makefile b/board/mvebu/armada38x/Makefile
+index 17bb4eb..9a36b06 100644
+--- a/board/mvebu/armada38x/Makefile
++++ b/board/mvebu/armada38x/Makefile
+@@ -17,3 +17,4 @@
+ #
+ 
+ obj-y	+= armada38x.o
++obj-$(CONFIG_DEVEL_BOARD)	+= devel-board.o
+diff --git a/board/mvebu/armada38x/devel-board.c b/board/mvebu/armada38x/devel-board.c
+new file mode 100644
+index 0000000..acb1c68
+--- /dev/null
++++ b/board/mvebu/armada38x/devel-board.c
+@@ -0,0 +1,34 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG */
++
++#include <common.h>
++#include <asm/arch-mvebu/soc.h>
++#include "../common/devel-board.h"
++#include "../common/sar.h"
++
++int mvebu_devel_board_init(void)
++{
++#ifdef CONFIG_MVEBU_SAR
++	sar_init();
++#endif
++
++	return 0;
++}
++
+diff --git a/board/mvebu/armada8k/Makefile b/board/mvebu/armada8k/Makefile
+index da982d1..da2f597 100644
+--- a/board/mvebu/armada8k/Makefile
++++ b/board/mvebu/armada8k/Makefile
+@@ -17,3 +17,4 @@
+ #
+ 
+ obj-y	+= armada8k.o
++obj-$(CONFIG_DEVEL_BOARD)	+= devel-board.o
+diff --git a/board/mvebu/armada8k/armada8k.c b/board/mvebu/armada8k/armada8k.c
+index 6f42ab5..8ac9e2a 100644
+--- a/board/mvebu/armada8k/armada8k.c
++++ b/board/mvebu/armada8k/armada8k.c
+@@ -26,3 +26,5 @@ int mvebu_board_id_get(void)
+ 	/* stub function for future use */
+ 	return 0;
+ }
++
++
+diff --git a/board/mvebu/armada8k/devel-board.c b/board/mvebu/armada8k/devel-board.c
+new file mode 100644
+index 0000000..e5b3267
+--- /dev/null
++++ b/board/mvebu/armada8k/devel-board.c
+@@ -0,0 +1,46 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG */
++
++#include <common.h>
++#include <errno.h>
++#include <asm/arch-mvebu/soc.h>
++#include <asm/arch-mvebu/mpp.h>
++#include "../common/devel-board.h"
++#include "../common/sar.h"
++
++int mvebu_devel_board_init(void)
++{
++#ifdef CONFIG_MVEBU_SAR
++	sar_init();
++#endif
++
++
++#ifdef CONFIG_MVEBU_MPP_BUS
++#ifdef CONFIG_MVEBU_NAND_BOOT
++	mpp_enable_bus("nand");
++#endif
++#ifdef CONFIG_MVEBU_SPI_BOOT
++	mpp_enable_bus("spi1");
++#endif
++#endif /* CONFIG_MVEBU_MPP_BUS */
++
++	return 0;
++}
++
+diff --git a/board/mvebu/armadalp/Makefile b/board/mvebu/armadalp/Makefile
+index 9ed65cf..2140a5e 100644
+--- a/board/mvebu/armadalp/Makefile
++++ b/board/mvebu/armadalp/Makefile
+@@ -17,3 +17,4 @@
+ #
+ 
+ obj-y	+= armadalp.o
++obj-$(CONFIG_DEVEL_BOARD)	+= devel-board.o
+diff --git a/board/mvebu/armadalp/devel-board.c b/board/mvebu/armadalp/devel-board.c
+new file mode 100644
+index 0000000..acb1c68
+--- /dev/null
++++ b/board/mvebu/armadalp/devel-board.c
+@@ -0,0 +1,34 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG */
++
++#include <common.h>
++#include <asm/arch-mvebu/soc.h>
++#include "../common/devel-board.h"
++#include "../common/sar.h"
++
++int mvebu_devel_board_init(void)
++{
++#ifdef CONFIG_MVEBU_SAR
++	sar_init();
++#endif
++
++	return 0;
++}
++
+diff --git a/board/mvebu/common/Makefile b/board/mvebu/common/Makefile
+index 5b2e08a..a208d67 100644
+--- a/board/mvebu/common/Makefile
++++ b/board/mvebu/common/Makefile
+@@ -20,6 +20,5 @@ obj-y	+= board-common.o
+ obj-y	+= init.o
+ obj-$(CONFIG_CMD_NET)		+= eth_init.o
+ obj-$(CONFIG_MVEBU_SAR)		+= sar.o
+-obj-$(CONFIG_DEVEL_BOARD)	+= devel-board.o
+ obj-$(CONFIG_BOARD_CONFIG_EEPROM)	+= cfg_eeprom.o
+ obj-$(CONFIG_MULTI_DT_FILE)	+= fdt_config.o
+diff --git a/board/mvebu/common/devel-board.c b/board/mvebu/common/devel-board.c
+deleted file mode 100644
+index a57080a..0000000
+--- a/board/mvebu/common/devel-board.c
++++ /dev/null
+@@ -1,35 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-/* #define DEBUG */
+-
+-#include <common.h>
+-#include <errno.h>
+-#include <asm/arch-mvebu/soc.h>
+-#include "devel-board.h"
+-
+-#include "sar.h"
+-
+-int mvebu_devel_board_init(void)
+-{
+-#ifdef CONFIG_MVEBU_SAR
+-	sar_init();
+-#endif
+-	return 0;
+-}
+-
+-- 
+1.9.1
+

@@ -1,0 +1,34 @@
+From 76c89eaaebcde1f0722d88a2cffd280916c28956 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 21 Oct 2015 13:13:59 +0300
+Subject: [PATCH 0442/1240] pci: mvebu: fix initialization of pci_hose struct
+
+the memset call only cleared 64 bytes (pointer size) instead
+of the entire structure size. this caused a an unused hook
+to be initialized to a bad value causing a crash
+
+Change-Id: Ia8e0876afb6c4c2231a5567a445d5840766308d7
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24190
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/pci/pci_mvebu.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/pci/pci_mvebu.c b/drivers/pci/pci_mvebu.c
+index 97e1279..ca464de 100644
+--- a/drivers/pci/pci_mvebu.c
++++ b/drivers/pci/pci_mvebu.c
+@@ -284,7 +284,7 @@ static int mvebu_pcie_init(int host_id, void __iomem *reg_base, struct pcie_win
+ 	struct pci_controller *hose = &pci_hose[host_id];
+ 	u32 link, speed, width;
+ 
+-	memset(hose, 0, sizeof(hose));
++	memset(hose, 0, sizeof(struct pci_controller));
+ 
+ 	/* Setup the HW */
+ 	mvebu_pcie_hw_init(reg_base, first_busno);
+-- 
+1.9.1
+

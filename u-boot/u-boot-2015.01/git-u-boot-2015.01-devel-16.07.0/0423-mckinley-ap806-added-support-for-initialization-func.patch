@@ -1,0 +1,57 @@
+From 49c971d4c7f45936ef74d84cdb322fb725cc5248 Mon Sep 17 00:00:00 2001
+From: Ofir Fedida <ofedida@marvell.com>
+Date: Wed, 16 Sep 2015 16:13:20 +0300
+Subject: [PATCH 0423/1240] mckinley: ap806: added support for initialization
+ function in McKinley code
+
+- added the ability to call initialization code in case of running
+  a training in dynamic support mode
+- included training.h file in case of dynamic support
+- included changes in /ddr/ Makefile including U-Boot path for McKinley
+
+Change-Id: I74bedf3c033e73a60ebb7a5d903f9043d12ba491
+Signed-off-by: Ofir Fedida <ofedida@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23568
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/ddr/Makefile    | 10 ++++++++--
+ drivers/ddr/mvebu_ddr.c |  4 ++++
+ 2 files changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/ddr/Makefile b/drivers/ddr/Makefile
+index 86b84c0..80b8da8 100644
+--- a/drivers/ddr/Makefile
++++ b/drivers/ddr/Makefile
+@@ -2,5 +2,11 @@ obj-y += mvebu_ddr.o
+ obj-$(CONFIG_MVEBU_DUNIT_SUPPORT) += ddr_dunit.o
+ ifdef CONFIG_MVEBU_MK6_SUPPORT
+ obj-$(CONFIG_MVEBU_STATIC_SUPPORT) += ddr_mckinley6.o
+-obj-$(CONFIG_MVEBU_DYNAMIC_SUPPORT) += mckinley_ddr/
+-endif
++
++# in case of dynamic supprt include the below
++ifdef CONFIG_MVEBU_DYNAMIC_SUPPORT
++UBOOTINCLUDE += -I$(srctree)/drivers/ddr/mckinley_ddr/h
++obj-y += mckinley_ddr/
++endif# end of  CONFIG_MVEBU_DYNAMIC_SUPPORT
++
++endif# end od CONFIG_MVEBU_MK6_SUPPORT
+diff --git a/drivers/ddr/mvebu_ddr.c b/drivers/ddr/mvebu_ddr.c
+index 9a248ec..2369c17 100644
+--- a/drivers/ddr/mvebu_ddr.c
++++ b/drivers/ddr/mvebu_ddr.c
+@@ -23,6 +23,10 @@
+ #include <asm/arch-mvebu/mvebu.h>
+ #include <asm/arch-mvebu/fdt.h>
+ 
++#ifdef CONFIG_MVEBU_DYNAMIC_SUPPORT
++#include <mvHwsDdrMckTraining.h>
++#endif
++
+ #ifdef CONFIG_MVEBU_STATIC_SUPPORT
+ static void static_dram_init(struct mvebu_dram_config *config)
+ {
+-- 
+1.9.1
+

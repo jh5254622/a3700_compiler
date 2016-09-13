@@ -1,0 +1,218 @@
+From fe4a86935e109a1f19f0dc2681b0092e4581f5c4 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 20 Apr 2016 13:35:51 +0300
+Subject: [PATCH 1065/1240] mmc: env: add support for MMC in runtime
+ environment selection
+
+- Add support for MMC in dynamic environment location selection
+- The environment will be selected by sample at reset value
+
+Change-Id: I75ced1b8b9b20a73935ca7ea3eed3f342adb0b7c
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29238
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ common/env_mmc.c                      | 39 +++++++++++++++++++++++++++++++++++
+ common/mvebu/env_bootdev.c            | 28 +++++++++++++++++++++----
+ configs/mvebu_armada70x0_rz_defconfig |  1 +
+ include/configs/mvebu-common.h        |  2 ++
+ include/env_bootdev.h                 |  1 +
+ 5 files changed, 67 insertions(+), 4 deletions(-)
+
+diff --git a/common/env_mmc.c b/common/env_mmc.c
+index 14648e3..0d92a37 100644
+--- a/common/env_mmc.c
++++ b/common/env_mmc.c
+@@ -21,13 +21,23 @@
+ #error CONFIG_ENV_SIZE_REDUND should be the same as CONFIG_ENV_SIZE
+ #endif
+ 
++#ifndef CONFIG_ENV_IS_IN_BOOTDEV
+ char *env_name_spec = "MMC";
++#endif
+ 
++#ifdef CONFIG_ENV_IS_IN_BOOTDEV
++#ifdef ENV_IS_EMBEDDED
++env_t *mmc_env_ptr = &environment;
++#else /* ! ENV_IS_EMBEDDED */
++env_t *mmc_env_ptr;
++#endif /* ENV_IS_EMBEDDED */
++#else /* ! CONFIG_ENV_IS_IN_BOOTDEV */
+ #ifdef ENV_IS_EMBEDDED
+ env_t *env_ptr = &environment;
+ #else /* ! ENV_IS_EMBEDDED */
+ env_t *env_ptr;
+ #endif /* ENV_IS_EMBEDDED */
++#endif /* CONFIG_ENV_IS_IN_BOOTDEV */
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+@@ -53,7 +63,11 @@ __weak int mmc_get_env_addr(struct mmc *mmc, int copy, u32 *env_addr)
+ 	return 0;
+ }
+ 
++#ifdef CONFIG_ENV_IS_IN_BOOTDEV
++static int mmc_env_init(void)
++#else
+ int env_init(void)
++#endif
+ {
+ 	/* use default */
+ 	gd->env_addr	= (ulong)&default_environment[0];
+@@ -137,7 +151,11 @@ static inline int write_env(struct mmc *mmc, unsigned long size,
+ static unsigned char env_flags;
+ #endif
+ 
++#ifdef CONFIG_ENV_IS_IN_BOOTDEV
++static int mmc_saveenv(void)
++#else
+ int saveenv(void)
++#endif
+ {
+ 	ALLOC_CACHE_ALIGN_BUFFER(env_t, env_new, 1);
+ 	struct mmc *mmc = find_mmc_device(CONFIG_SYS_MMC_ENV_DEV);
+@@ -203,7 +221,11 @@ static inline int read_env(struct mmc *mmc, unsigned long size,
+ }
+ 
+ #ifdef CONFIG_ENV_OFFSET_REDUND
++#ifdef CONFIG_ENV_IS_IN_BOOTDEV
++static void mmc_env_relocate_spec(void)
++#else
+ void env_relocate_spec(void)
++#endif
+ {
+ #if !defined(ENV_IS_EMBEDDED)
+ 	struct mmc *mmc;
+@@ -269,7 +291,11 @@ void env_relocate_spec(void)
+ 			gd->env_valid = 1;
+ 	}
+ 
++#ifdef CONFIG_ENV_IS_IN_BOOTDEV
++	free(mmc_env_ptr);
++#else
+ 	free(env_ptr);
++#endif
+ 
+ 	if (gd->env_valid == 1)
+ 		ep = tmp_env1;
+@@ -289,7 +315,11 @@ err:
+ #endif
+ }
+ #else /* ! CONFIG_ENV_OFFSET_REDUND */
++#ifdef CONFIG_ENV_IS_IN_BOOTDEV
++static void mmc_env_relocate_spec(void)
++#else
+ void env_relocate_spec(void)
++#endif
+ {
+ #if !defined(ENV_IS_EMBEDDED)
+ 	ALLOC_CACHE_ALIGN_BUFFER(char, buf, CONFIG_ENV_SIZE);
+@@ -330,3 +360,12 @@ err:
+ #endif
+ }
+ #endif /* CONFIG_ENV_OFFSET_REDUND */
++
++#ifdef CONFIG_ENV_IS_IN_BOOTDEV
++void mmc_boot_env_init(void)
++{
++	gd->arch.env_func.save_env = mmc_saveenv;
++	gd->arch.env_func.init_env = mmc_env_init;
++	gd->arch.env_func.reloc_env = mmc_env_relocate_spec;
++}
++#endif
+diff --git a/common/mvebu/env_bootdev.c b/common/mvebu/env_bootdev.c
+index 39a5039..9a41ef7 100644
+--- a/common/mvebu/env_bootdev.c
++++ b/common/mvebu/env_bootdev.c
+@@ -39,10 +39,20 @@ int env_init(void)
+ 	mvebu_sar_value_get(SAR_BOOT_SRC, &sar);
+ 	/* Use ifdef as a temporary solution till we add sample-at-reset
+ 	** logic. */
+-	if (sar.bootsrc.type == BOOTSRC_NAND)
++	switch (sar.bootsrc.type) {
++	case BOOTSRC_NAND:
+ 		nand_env_init();
+-	else if (sar.bootsrc.type == BOOTSRC_SPI)
++		break;
++	case BOOTSRC_SPI:
+ 		sf_env_init();
++		break;
++	case BOOTSRC_AP_SD_EMMC:
++	case BOOTSRC_SD_EMMC:
++		mmc_boot_env_init();
++		break;
++	default:
++		error("Sample at reset boot source type %x is not supported\n", sar.bootsrc.type);
++	}
+ 
+ 	return gd->arch.env_func.init_env();
+ }
+@@ -57,12 +67,22 @@ void env_relocate_spec(void)
+ 	 */
+ 	/* Use ifdef as a temporary solution till we add sample-at-reset
+ 	** logic. */
+-	if (sar.bootsrc.type == BOOTSRC_NAND) {
++	switch (sar.bootsrc.type) {
++	case BOOTSRC_NAND:
+ 		nand_env_init();
+ 		env_name_spec = "NAND Flash";
+-	} else if (sar.bootsrc.type == BOOTSRC_SPI) {
++		break;
++	case BOOTSRC_SPI:
+ 		sf_env_init();
+ 		env_name_spec = "SPI Flash";
++		break;
++	case BOOTSRC_AP_SD_EMMC:
++	case BOOTSRC_SD_EMMC:
++		mmc_boot_env_init();
++		env_name_spec = "SD/MMC Flash";
++		break;
++	default:
++		error("Sample at reset boot source type %x is not supported\n", sar.bootsrc.type);
+ 	}
+ 
+ 	gd->arch.env_func.reloc_env();
+diff --git a/configs/mvebu_armada70x0_rz_defconfig b/configs/mvebu_armada70x0_rz_defconfig
+index f79fe28..51718b3 100644
+--- a/configs/mvebu_armada70x0_rz_defconfig
++++ b/configs/mvebu_armada70x0_rz_defconfig
+@@ -43,6 +43,7 @@ CONFIG_MVEBU_PINCTL=y
+ CONFIG_MVEBU_MPP_BUS=y
+ CONFIG_USB=y
+ CONFIG_USB_XHCI_HCD=y
++CONFIG_XENON_MMC=y
+ CONFIG_MVEBU_COMPHY_SUPPORT=y
+ CONFIG_MVEBU_THERMAL_SENSOR=y
+ CONFIG_MVEBU_THERMAL_SENSOR_28NM_V2=y
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 845a38a..6b74021 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -188,9 +188,11 @@
+ #if defined(CONFIG_ENV_IS_IN_BOOTDEV)
+ 	#define CONFIG_ENV_IS_IN_SPI_FLASH
+ 	#define CONFIG_ENV_IS_IN_NAND
++	#define CONFIG_ENV_IS_IN_MMC
+ 	#define DEFAULT_BUBT_DST "spi"
+ 	#define CONFIG_DOIMAGE_TYPE     "flash"
+ 	#define CONFIG_DOIMAGE_SUFFIX   "dynamic"
++	#define CONFIG_SYS_MMC_ENV_DEV	0
+ #endif  /* CONIFG_ENV_IS_IN_BOOTDEV */
+ 
+ 
+diff --git a/include/env_bootdev.h b/include/env_bootdev.h
+index 7c51778..dd84c58 100644
+--- a/include/env_bootdev.h
++++ b/include/env_bootdev.h
+@@ -32,5 +32,6 @@ struct env_func_ptr {
+ 
+ void sf_env_init(void);
+ void nand_env_init(void);
++void mmc_boot_env_init(void);
+ 
+ #endif /* _ENV_BOOTDEV_H_ */
+-- 
+1.9.1
+

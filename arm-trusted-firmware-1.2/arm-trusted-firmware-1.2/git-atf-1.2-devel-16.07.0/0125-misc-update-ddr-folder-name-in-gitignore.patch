@@ -1,0 +1,29 @@
+From fd52b298a3ed9a819de308fa025205f14af0cfc5 Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Mon, 18 Apr 2016 15:56:25 +0300
+Subject: [PATCH 125/239] misc: update ddr folder name in gitignore
+
+dram --> mv_ddr
+
+Change-Id: I29848659f4eace8b91184ad66c574758063fb9a1
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29156
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Nitzan Zorea <nzorea@marvell.com>
+---
+ .gitignore | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/.gitignore b/.gitignore
+index 41348d8..defbd52 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -20,4 +20,4 @@ tools/cert_create/cert_create
+ tools/doimage/doimage
+ 
+ # Ignore sub projects
+-drivers/marvell/dram
++drivers/marvell/mv_ddr*
+-- 
+1.9.1
+

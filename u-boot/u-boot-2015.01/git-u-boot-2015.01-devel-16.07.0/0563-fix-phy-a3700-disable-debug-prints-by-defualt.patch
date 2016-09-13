@@ -1,0 +1,30 @@
+From 3745678df056df4114eb43f2ef8498b154ebd318 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Wed, 2 Dec 2015 19:13:13 +0200
+Subject: [PATCH 0563/1240] fix: phy: a3700: disable debug prints by defualt
+
+Change-Id: I61b23bc708b3d2882e5a0df7507a7182a47128ae
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25559
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/phy/comphy_a3700.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/phy/comphy_a3700.c b/drivers/phy/comphy_a3700.c
+index 37198da..11bf3f2 100644
+--- a/drivers/phy/comphy_a3700.c
++++ b/drivers/phy/comphy_a3700.c
+@@ -16,7 +16,7 @@
+ * ***************************************************************************
+ */
+ 
+-#define DEBUG
++/* #define DEBUG */
+ #include <common.h>
+ #include <fdtdec.h>
+ #include <asm/io.h>
+-- 
+1.9.1
+

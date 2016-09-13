@@ -1,0 +1,52 @@
+From 8ee6e22eeaa2824ac3ca09ef4b7c80d5a6bcfb46 Mon Sep 17 00:00:00 2001
+From: Gustavo Zacarias <gustavo.zacarias@free-electrons.com>
+Date: Mon, 21 Mar 2016 08:56:04 -0300
+Subject: [PATCH 55/66] dt: add patch to fix failures on newer toolchains
+
+On newer toolchains (glibc >= 2.20) _BSD_SOURCE behaviour was deprecated
+in favour if the _DEFAULT_SOURCE macro. See man 7 feature_test_macros.
+Add patch from Fedora to also consider _DEFAULT_SOURCE. Fixes:
+http://autobuild.buildroot.net/results/9e2/9e2126b0e68d0d59d37616a268adb810efd8281a/
+
+Change-Id: Iaa33edcab9f3ba4f079fd53a8a4933e7dcf4b592
+Signed-off-by: Gustavo Zacarias <gustavo.zacarias@free-electrons.com>
+Reviewed-by: Vicente Olivert Riera <Vincent.Riera@imgtec.com>
+Tested-by: Vicente Olivert Riera <Vincent.Riera@imgtec.com>
+Signed-off-by: Thomas Petazzoni <thomas.petazzoni@free-electrons.com>
+Signed-off-by: Ofer Heifetz <oferh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29062
+Tested-by: Star_Automation <star@marvell.com>
+---
+ package/dt/0002-dt-default-source-define.patch | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+ create mode 100644 package/dt/0002-dt-default-source-define.patch
+
+diff --git a/package/dt/0002-dt-default-source-define.patch b/package/dt/0002-dt-default-source-define.patch
+new file mode 100644
+index 0000000..c94db5b
+--- /dev/null
++++ b/package/dt/0002-dt-default-source-define.patch
+@@ -0,0 +1,20 @@
++Patch taken from Fedora:
++http://pkgs.fedoraproject.org/cgit/rpms/dt.git/commit/dt-default-source-define.patch?id=a3107b34a3efc6af66a5f892514f233bb66eb6b5
++
++_BSD_SOURCE was deprecated, hence switch to use _DEFAULT_SOURCE as well
++to avoid the build from breaking on newer toolchains.
++
++Signed-off-by: Gustavo Zacarias <gustavo.zacarias@free-electrons.com>
++
++diff -rupN dt.v18.32.old/common.h dt.v18.32/common.h
++--- a/dt.v18.32.orig/common.h	2013-03-01 23:52:30.000000000 +0100
+++++ b/dt.v18.32/common.h	2014-09-24 17:41:40.777604710 +0200
++@@ -127,7 +127,7 @@ typedef volatile slarge_t	v_slarge;
++ 
++ #endif /* defined(_WIN64) */
++ 
++-#elif defined(__GNUC__) && defined(_BSD_SOURCE) || defined(SCO) || defined(__QNXNTO__) || defined(SOLARIS) || defined(HP_UX) || defined(AIX) || defined(_NT_SOURCE) 
+++#elif defined(__GNUC__) && defined(_BSD_SOURCE) || defined (_DEFAULT_SOURCE) ||  defined(SCO) || defined(__QNXNTO__) || defined(SOLARIS) || defined(HP_UX) || defined(AIX) || defined(_NT_SOURCE) 
++ 
++ #define QuadIsLongLong
++ typedef unsigned long long int	large_t;
+-- 
+1.9.1
+

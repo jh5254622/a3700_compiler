@@ -1,0 +1,31 @@
+From b3511d2be2d8437dfb973066997385f3e401fbf4 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 6 Apr 2016 10:58:53 +0300
+Subject: [PATCH 1003/1240] fix: dts: update address of PINCTRL node in
+ Armada-70x0-DB device tree for AP
+
+Change-Id: Ib59af7a9434ac2fa21c6c6ae829b08559b2ed5da
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28818
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/armada-70x0-db_router.dts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/armada-70x0-db_router.dts b/arch/arm/dts/armada-70x0-db_router.dts
+index ff2616f..6a268ee 100644
+--- a/arch/arm/dts/armada-70x0-db_router.dts
++++ b/arch/arm/dts/armada-70x0-db_router.dts
+@@ -42,7 +42,7 @@
+ 					size = <0x00000001 0x00000000>;
+ 				};
+ 			};
+-			pinctl@6F008C {
++			pinctl: pinctl@6F4000 {
+ 					/* MPP Bus:
+ 						SPI0 [0-3]
+ 						I2C0 [4-5]
+-- 
+1.9.1
+

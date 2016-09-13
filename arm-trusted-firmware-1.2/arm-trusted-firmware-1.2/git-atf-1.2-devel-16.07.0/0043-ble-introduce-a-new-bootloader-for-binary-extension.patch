@@ -1,0 +1,230 @@
+From ef5a307c01ceba89b70e1339537e541b19f8233b Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 9 Mar 2016 14:38:31 +0200
+Subject: [PATCH 043/239] ble: introduce a new bootloader for binary extension
+
+- added a new "ble" folder with basic sources, linker and makefile
+- modified main Makefile to compile ble
+
+Change-Id: Ic0a3e5cd5e146b0fdf80de42d3abd8a81344be5c
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28144
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ Makefile       |  9 +++++++
+ ble/ble.ld.S   | 80 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ ble/ble.mk     | 32 +++++++++++++++++++++++
+ ble/ble_main.c | 47 ++++++++++++++++++++++++++++++++++
+ 4 files changed, 168 insertions(+)
+ create mode 100644 ble/ble.ld.S
+ create mode 100644 ble/ble.mk
+ create mode 100644 ble/ble_main.c
+
+diff --git a/Makefile b/Makefile
+index 38bf1a1..aaec5f1 100644
+--- a/Makefile
++++ b/Makefile
+@@ -468,6 +468,11 @@ $(eval $(call add_define,PALLADIUM))
+ # Include BL specific makefiles
+ ################################################################################
+ 
++ifdef BLE_SOURCES
++NEED_BLE := yes
++include ble/ble.mk
++endif
++
+ ifdef BL1_SOURCES
+ NEED_BL1 := yes
+ include bl1/bl1.mk
+@@ -511,6 +516,10 @@ ifeq (${ERROR_DEPRECATED},0)
+ endif
+ 
+ # Expand build macros for the different images
++ifeq (${NEED_BLE},yes)
++$(if ${BLE}, ,$(eval $(call MAKE_BL,e)))
++endif
++
+ ifeq (${NEED_BL1},yes)
+ $(eval $(call MAKE_BL,1))
+ endif
+diff --git a/ble/ble.ld.S b/ble/ble.ld.S
+new file mode 100644
+index 0000000..f2368d7
+--- /dev/null
++++ b/ble/ble.ld.S
+@@ -0,0 +1,80 @@
++/*
++ * Copyright (c) 2015, ARM Limited and Contributors. All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ *
++ * Redistributions of source code must retain the above copyright notice, this
++ * list of conditions and the following disclaimer.
++ *
++ * Redistributions in binary form must reproduce the above copyright notice,
++ * this list of conditions and the following disclaimer in the documentation
++ * and/or other materials provided with the distribution.
++ *
++ * Neither the name of ARM nor the names of its contributors may be used
++ * to endorse or promote products derived from this software without specific
++ * prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
++ */
++
++#include <platform_def.h>
++
++OUTPUT_FORMAT(PLATFORM_LINKER_FORMAT)
++OUTPUT_ARCH(PLATFORM_LINKER_ARCH)
++ENTRY(ble_main)
++
++MEMORY {
++    RAM (rwx): ORIGIN = BLE_BASE, LENGTH = BLE_LIMIT - BLE_BASE
++}
++
++SECTIONS
++{
++    . = BLE_BASE;
++
++    ro . : {
++        __RO_START__ = .;
++        *ble_main.o(.entry*)
++        *(.text*)
++        *(.rodata*)
++        __RO_END_UNALIGNED__ = .;
++        __RO_END__ = .;
++    } >RAM
++
++    /*
++     * Define a linker symbol to mark start of the RW memory area for this
++     * image.
++     */
++    __RW_START__ = . ;
++
++    .data . : {
++        __DATA_START__ = .;
++        *(.data*)
++        __DATA_END__ = .;
++    } >RAM
++
++    .bss : {
++        __BSS_START__ = .;
++        *(.bss*)
++        __BSS_END__ = .;
++    } >RAM
++
++    /*
++     * Define a linker symbol to mark end of the RW memory area for this
++     * image.
++     */
++    __RW_END__ = .;
++    __BLE_END__ = .;
++
++    __BSS_SIZE__ = SIZEOF(.bss);
++}
+diff --git a/ble/ble.mk b/ble/ble.mk
+new file mode 100644
+index 0000000..ee6e604
+--- /dev/null
++++ b/ble/ble.mk
+@@ -0,0 +1,32 @@
++#
++# Copyright (c) 2015, ARM Limited and Contributors. All rights reserved.
++#
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions are met:
++#
++# Redistributions of source code must retain the above copyright notice, this
++# list of conditions and the following disclaimer.
++#
++# Redistributions in binary form must reproduce the above copyright notice,
++# this list of conditions and the following disclaimer in the documentation
++# and/or other materials provided with the distribution.
++#
++# Neither the name of ARM nor the names of its contributors may be used
++# to endorse or promote products derived from this software without specific
++# prior written permission.
++#
++# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++# POSSIBILITY OF SUCH DAMAGE.
++#
++
++BLE_SOURCES		+= 	ble/ble_main.c
++BLE_LINKERFILE		:=	ble/ble.ld.S
+diff --git a/ble/ble_main.c b/ble/ble_main.c
+new file mode 100644
+index 0000000..ad1edff
+--- /dev/null
++++ b/ble/ble_main.c
+@@ -0,0 +1,47 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2016 Marvell International Ltd.
++* ***************************************************************************
++*
++* Redistribution and use in source and binary forms, with or without
++* modification, are permitted provided that the following conditions are met:
++*
++* Redistributions of source code must retain the above copyright notice, this
++* list of conditions and the following disclaimer.
++*
++* Redistributions in binary form must reproduce the above copyright notice,
++* this list of conditions and the following disclaimer in the documentation
++* and/or other materials provided with the distribution.
++*
++* Neither the name of Marvell nor the names of its contributors may be used
++* to endorse or promote products derived from this software without specific
++* prior written permission.
++*
++* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
++* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++* POSSIBILITY OF SUCH DAMAGE.
++*
++***************************************************************************
++*/
++
++#include <debug.h>
++#include <console.h>
++#include <platform_def.h>
++
++int  __attribute__ ((section(".entry"))) ble_main(int bootrom_flags)
++{
++	console_init(PLAT_MARVELL_BOOT_UART_BASE, PLAT_MARVELL_BOOT_UART_CLK_IN_HZ, MARVELL_CONSOLE_BAUDRATE);
++
++	NOTICE("Starting binary extension\n");
++
++	return 0;
++}
++
+-- 
+1.9.1
+

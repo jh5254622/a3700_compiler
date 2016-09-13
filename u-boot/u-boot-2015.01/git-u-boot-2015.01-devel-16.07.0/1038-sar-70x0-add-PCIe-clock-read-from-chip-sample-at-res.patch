@@ -1,0 +1,127 @@
+From 324405fb7cd7549c4ca42d4d3e7fc3189f95cc7b Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 12 Apr 2016 19:00:37 +0300
+Subject: [PATCH 1038/1240] sar: 70x0: add PCIe clock read from chip sample at
+ reset
+
+- Add PCIe clock read from chip sample at reset
+- PCIe will be used in SerDes init
+
+Change-Id: Ia1a7435e2e8fe0ba4c937a3af19d65f446d2c49c
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28977
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/misc/mvebu_sar/cp110_sar.c | 41 ++++++++++++++++++++++++++++++++------
+ include/mvebu_chip_sar.h           |  3 +++
+ 2 files changed, 38 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/misc/mvebu_sar/cp110_sar.c b/drivers/misc/mvebu_sar/cp110_sar.c
+index c538a42..311653f 100644
+--- a/drivers/misc/mvebu_sar/cp110_sar.c
++++ b/drivers/misc/mvebu_sar/cp110_sar.c
+@@ -28,6 +28,11 @@
+ #include "chip_sar.h"
+ 
+ /* SAR CP110 registers */
++#define SAR1_RST_PCIE0_CLOCK_CONFIG_CP0_OFFSET	(2)
++#define SAR1_RST_PCIE0_CLOCK_CONFIG_CP0_MASK	(0x1 << SAR1_RST_PCIE0_CLOCK_CONFIG_CP0_OFFSET)
++#define SAR1_RST_PCIE1_CLOCK_CONFIG_CP0_OFFSET	(3)
++#define SAR1_RST_PCIE1_CLOCK_CONFIG_CP0_MASK	(0x1 << SAR1_RST_PCIE0_CLOCK_CONFIG_CP0_OFFSET)
++
+ #define SAR1_RST_BOOT_MODE_AP_CP0_OFFSET	(4)
+ #define SAR1_RST_BOOT_MODE_AP_CP0_MASK		(0x3f << SAR1_RST_BOOT_MODE_AP_CP0_OFFSET)
+ 
+@@ -40,6 +45,8 @@ struct sar_info {
+ };
+ 
+ struct sar_info cp110_sar_0[] = {
++	{"PCIE0 clock config   ", SAR1_RST_PCIE0_CLOCK_CONFIG_CP0_OFFSET, SAR1_RST_PCIE0_CLOCK_CONFIG_CP0_MASK},
++	{"PCIE1 clock config   ", SAR1_RST_PCIE1_CLOCK_CONFIG_CP0_OFFSET, SAR1_RST_PCIE1_CLOCK_CONFIG_CP0_MASK},
+ 	{"Reset Boot Mode     ", SAR1_RST_BOOT_MODE_AP_CP0_OFFSET, SAR1_RST_BOOT_MODE_AP_CP0_MASK },
+ 	{"",			-1,			-1},
+ };
+@@ -64,16 +71,11 @@ static struct bootsrc_idx_info bootsrc_list[] = {
+ 	{-1,	-1,	-1}
+ };
+ 
+-int cp110_sar_value_get(enum mvebu_sar_opts sar_opt, struct sar_val *val)
++int cp110_sar_bootsrc_get(enum mvebu_sar_opts sar_opt, struct sar_val *val)
+ {
+ 	u32 reg, mode;
+ 	int i;
+ 
+-	if (sar_opt != SAR_BOOT_SRC) {
+-		error("AP806-SAR: Unsupported SAR option %d.\n", sar_opt);
+-		return -EINVAL;
+-	}
+-
+ 	reg = readl(sar_base);
+ 	mode = (reg & SAR1_RST_BOOT_MODE_AP_CP0_MASK) >> SAR1_RST_BOOT_MODE_AP_CP0_OFFSET;
+ 
+@@ -97,6 +99,31 @@ int cp110_sar_value_get(enum mvebu_sar_opts sar_opt, struct sar_val *val)
+ 	return 0;
+ }
+ 
++int cp110_sar_value_get(enum mvebu_sar_opts sar_opt, struct sar_val *val)
++{
++	u32 reg, mode;
++
++	reg = readl(sar_base);
++
++	switch (sar_opt) {
++	case SAR_BOOT_SRC:
++		return cp110_sar_bootsrc_get(sar_opt, val);
++	case SAR_CP_PCIE0_CLK:
++		mode = (reg & SAR1_RST_PCIE0_CLOCK_CONFIG_CP0_MASK) >> SAR1_RST_PCIE0_CLOCK_CONFIG_CP0_OFFSET;
++		val->raw_sar_val = mode;
++		val->clk_direction = mode;
++		break;
++	case SAR_CP_PCIE1_CLK:
++		mode = (reg & SAR1_RST_PCIE1_CLOCK_CONFIG_CP0_MASK) >> SAR1_RST_PCIE1_CLOCK_CONFIG_CP0_OFFSET;
++		val->raw_sar_val = mode;
++		val->clk_direction = mode;
++		break;
++	default:
++		error("AP806-SAR: Unsupported SAR option %d.\n", sar_opt);
++		return -EINVAL;
++	}
++	return 0;
++}
+ 
+ static int cp110_sar_dump(void)
+ {
+@@ -122,6 +149,8 @@ int cp110_sar_init(const void *blob, int node)
+ 	struct sar_chip_info info;
+ 
+ 	u32 sar_list[] = {
++		SAR_CP_PCIE0_CLK,
++		SAR_CP_PCIE1_CLK,
+ 		SAR_BOOT_SRC
+ 	};
+ 
+diff --git a/include/mvebu_chip_sar.h b/include/mvebu_chip_sar.h
+index 9995829..0576e3a 100644
+--- a/include/mvebu_chip_sar.h
++++ b/include/mvebu_chip_sar.h
+@@ -34,6 +34,8 @@ enum mvebu_sar_opts {
+ 	SAR_DDR_FREQ,
+ 	SAR_AP_FABRIC_FREQ,
+ 	SAR_CP_FABRIC_FREQ,
++	SAR_CP_PCIE0_CLK,
++	SAR_CP_PCIE1_CLK,
+ 	SAR_BOOT_SRC,
+ 	SAR_MAX_IDX
+ };
+@@ -69,6 +71,7 @@ struct sar_val {
+ 			int index;
+ 		} bootsrc;
+ 		u32 freq;
++		u32 clk_direction; /* input = 0 */
+ 	};
+ };
+ 
+-- 
+1.9.1
+

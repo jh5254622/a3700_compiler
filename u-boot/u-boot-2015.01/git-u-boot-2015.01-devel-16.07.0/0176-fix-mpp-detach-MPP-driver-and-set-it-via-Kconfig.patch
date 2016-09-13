@@ -1,0 +1,116 @@
+From 84b7a4a26e2ecb0a3c0dc137fd4d546ea574d64b Mon Sep 17 00:00:00 2001
+From: Jing Hua <jinghua@marvell.com>
+Date: Sun, 12 Apr 2015 21:40:36 +0800
+Subject: [PATCH 0176/1240] fix: mpp: detach MPP driver and set it via Kconfig
+
+	MPP driver was compiled and used generically for all Marvell SoCs.
+	Armada LP will not use this driver. This patch is detaching it from
+	generic compilation, and wrap it with a new Kconfig for it.
+
+	1. add CONFIG_MVEBU_MPP in Kconfig, to control the MPP driver compilation.
+	2. add CONFIG_MVEBU_MPP to A8K/Armada38x defconfig.
+	3. add empty MPP routines implementations.
+
+Change-Id: I101601ab4bb8a5fcc2775482135564031c8591ab
+Signed-off-by: Jing Hua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/18244
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Kconfig     |  8 ++++++++
+ arch/arm/cpu/mvebu-common/Makefile    |  2 +-
+ arch/arm/include/asm/arch-mvebu/mpp.h | 14 ++++++++++++++
+ configs/mvebu_armada38x_defconfig     |  1 +
+ configs/mvebu_armada8k_defconfig      |  1 +
+ 5 files changed, 25 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index 181ebff..ba9e4e4 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -42,6 +42,14 @@ config MVEBU_PCI
+ 	  driver.
+ 	  base address is configured under MVEBU_PCI_BASE
+ 
++config MVEBU_MPP
++	bool "MPP support"
++	default n
++	help
++	  Choose this option to add support
++	  for MPP driver. Some Soc has got no
++	  MPP driver, for example, ArmadaLP.
++	  base address is configured under MVEBU_MPP_BASE
+ 
+ config MVEBU_UART
+ 	bool "UART support"
+diff --git a/arch/arm/cpu/mvebu-common/Makefile b/arch/arm/cpu/mvebu-common/Makefile
+index b742b06..3a977f6 100644
+--- a/arch/arm/cpu/mvebu-common/Makefile
++++ b/arch/arm/cpu/mvebu-common/Makefile
+@@ -20,7 +20,7 @@
+ obj-y += unit-info.o
+ obj-y += soc-init.o
+ obj-y += misc.o
+-obj-y += mpp.o
++obj-$(CONFIG_MVEBU_MPP) += mpp.o
+ obj-y += fdt.o
+ obj-y += clock.o
+ obj-$(CONFIG_MVEBU_TIMER) += timer_mvebu.o
+diff --git a/arch/arm/include/asm/arch-mvebu/mpp.h b/arch/arm/include/asm/arch-mvebu/mpp.h
+index e5fcfca..89b9644 100644
+--- a/arch/arm/include/asm/arch-mvebu/mpp.h
++++ b/arch/arm/include/asm/arch-mvebu/mpp.h
+@@ -56,6 +56,18 @@ struct mpp_bus {
+ 	struct mpp_pin pin_data[MAX_BUS_OPTS][MAX_PINS_PER_BUS];
+ };
+ 
++#ifndef CONFIG_MVEBU_MPP
++
++#define mpp_set_pin(mpp_id)
++#define mpp_get_pin(mpp_id)
++#define mpp_set_and_update(mpp_reg)
++#define mpp_is_bus_enabled(bus)
++#define mpp_is_bus_valid(bus)
++#define mpp_enable_bus(mpp_reg, bus_id, bus_alt)
++
++
++#else
++
+ u8   mpp_get_pin(int mpp_id);
+ void mpp_set_pin(int mpp_id, int value);
+ int  mpp_enable_bus(u32 *mpp_reg, int bus_id, int bus_alt);
+@@ -64,4 +76,6 @@ int  mpp_is_bus_enabled(struct mpp_bus *bus);
+ void mpp_set_and_update(u32 *mpp_reg);
+ struct mpp_bus *soc_get_mpp_bus(int bus_id);
+ 
++#endif /* CONFIG_MVEBU_MPP */
++
+ #endif /* _MPP_H_ */
+diff --git a/configs/mvebu_armada38x_defconfig b/configs/mvebu_armada38x_defconfig
+index 7491123..641466a 100644
+--- a/configs/mvebu_armada38x_defconfig
++++ b/configs/mvebu_armada38x_defconfig
+@@ -4,6 +4,7 @@ CONFIG_SPL=y
+ CONFIG_MVEBU_NAND=y
+ CONFIG_MVEBU_SPI=y
+ CONFIG_MVEBU_PCI=y
++CONFIG_MVEBU_MPP=y
+ +S:CONFIG_MVEBU_UART=y
+ +S:CONFIG_MVEBU_I2C=y
+ CONFIG_CMD_BDI=y
+diff --git a/configs/mvebu_armada8k_defconfig b/configs/mvebu_armada8k_defconfig
+index 277da06..2be4205 100644
+--- a/configs/mvebu_armada8k_defconfig
++++ b/configs/mvebu_armada8k_defconfig
+@@ -3,6 +3,7 @@ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_ARMADA_8K=y
+ +S:CONFIG_MVEBU_UART=y
++CONFIG_MVEBU_MPP=y
+ +S:CONFIG_MVEBU_MK6_SUPPORT=y
+ CONFIG_CMD_BOOTD=y
+ CONFIG_CMD_RUN=y
+-- 
+1.9.1
+

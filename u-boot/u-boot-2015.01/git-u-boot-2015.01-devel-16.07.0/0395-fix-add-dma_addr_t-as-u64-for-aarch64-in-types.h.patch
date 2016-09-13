@@ -1,0 +1,47 @@
+From a35c4528220ab692a05d8b03f4bd9156f66a422f Mon Sep 17 00:00:00 2001
+From: Jing Hua <jinghua@marvell.com>
+Date: Tue, 25 Aug 2015 17:26:51 +0800
+Subject: [PATCH 0395/1240] fix: add dma_addr_t as u64 for aarch64 in types.h
+
+	dma_addr_t is widely used in different drivers, it is 32-bits
+	in aarch32. But in aarch64, it need to be 64-bits. The reason
+	to change it now is that in neta driver we used	a lot dma_addr_t,
+	and there will be error to compile ArmadaLP which is aarch64.
+	A8K does not use neta driver so far.
+
+Change-Id: I71ddcca454b0f93fa43f9fea876032e3ae24bbee
+Signed-off-by: Jing Hua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23109
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/include/asm/types.h | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/include/asm/types.h b/arch/arm/include/asm/types.h
+index 2326420..81832cb 100644
+--- a/arch/arm/include/asm/types.h
++++ b/arch/arm/include/asm/types.h
+@@ -45,10 +45,18 @@ typedef unsigned long long u64;
+ #define BITS_PER_LONG 32
+ #endif	/* CONFIG_ARM64 */
+ 
+-/* Dma addresses are 32-bits wide.  */
++/* Dma addresses are 32-bits or 64-bits wide.  */
++#if (defined(CONFIG_HIGHMEM) && defined(CONFIG_64BIT_PHYS_ADDR)) || \
++	defined(CONFIG_64BIT)
++typedef u64 dma_addr_t;
++
++#else
+ 
+ typedef u32 dma_addr_t;
+ 
++#endif
++typedef u64 dma64_addr_t;
++
+ typedef unsigned long phys_addr_t;
+ typedef unsigned long phys_size_t;
+ 
+-- 
+1.9.1
+

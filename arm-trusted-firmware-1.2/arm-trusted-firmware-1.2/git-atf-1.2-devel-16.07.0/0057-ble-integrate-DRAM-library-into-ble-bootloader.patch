@@ -1,0 +1,309 @@
+From c63a8919de22b36f334c1dc5b9f6a739c8cd8e13 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 13 Mar 2016 11:39:15 +0200
+Subject: [PATCH 057/239] ble: integrate DRAM library into ble bootloader
+
+- update Makefile to build DRAM library
+- call dram_init with proper parameters from dram_setup
+- update DRAM information using sys_info for bootloader usage
+
+Change-Id: I74c26e0b12526336e38a5a56156d5cc5af30eb21
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28187
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ ble/ble.mk                                     |  9 ++++
+ include/plat/marvell/a8k/common/plat_marvell.h |  1 +
+ plat/marvell/a8k/a7040_rz/dram_port.c          | 75 ++++++++++++++++++++++++++
+ plat/marvell/a8k/a7040_rz/dram_setup.c         | 42 ---------------
+ plat/marvell/a8k/a7040_rz/plat_def.h           |  2 +
+ plat/marvell/a8k/a7040_rz/platform.mk          |  5 +-
+ plat/marvell/a8k/apn806/platform.mk            |  5 +-
+ plat/marvell/common/dram_setup.c               | 67 +++++++++++++++++++++++
+ 8 files changed, 160 insertions(+), 46 deletions(-)
+ create mode 100644 plat/marvell/a8k/a7040_rz/dram_port.c
+ delete mode 100644 plat/marvell/a8k/a7040_rz/dram_setup.c
+ create mode 100644 plat/marvell/common/dram_setup.c
+
+diff --git a/ble/ble.mk b/ble/ble.mk
+index ee6e604..7fa75cb 100644
+--- a/ble/ble.mk
++++ b/ble/ble.mk
+@@ -28,5 +28,14 @@
+ # POSSIBILITY OF SUCH DAMAGE.
+ #
+ 
++DRAM_ROOT		=	drivers/marvell/dram
++DRAM_LIB		= 	$(DRAM_ROOT)/dramlib.a
++BLE_LIBS		= 	$(DRAM_LIB)
++
+ BLE_SOURCES		+= 	ble/ble_main.c
++PLAT_INCLUDES		+= 	-I$(DRAM_ROOT)
++
+ BLE_LINKERFILE		:=	ble/ble.ld.S
++
++$(DRAM_LIB):
++	make -C $(DRAM_ROOT) PLATFORM=$(PLAT)
+diff --git a/include/plat/marvell/a8k/common/plat_marvell.h b/include/plat/marvell/a8k/common/plat_marvell.h
+index 62c59de..5db9908 100644
+--- a/include/plat/marvell/a8k/common/plat_marvell.h
++++ b/include/plat/marvell/a8k/common/plat_marvell.h
+@@ -84,6 +84,7 @@ int marvell_check_mpidr(u_register_t mpidr);
+ 
+ /* BLE utility functions */
+ int ble_plat_dram_setup(void);
++void *plat_get_dram_data(void);
+ 
+ /* BL1 utility functions */
+ void marvell_bl1_early_platform_setup(void);
+diff --git a/plat/marvell/a8k/a7040_rz/dram_port.c b/plat/marvell/a8k/a7040_rz/dram_port.c
+new file mode 100644
+index 0000000..c9b8346
+--- /dev/null
++++ b/plat/marvell/a8k/a7040_rz/dram_port.c
+@@ -0,0 +1,75 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2016 Marvell International Ltd.
++* ***************************************************************************
++*
++* Redistribution and use in source and binary forms, with or without
++* modification, are permitted provided that the following conditions are met:
++*
++* Redistributions of source code must retain the above copyright notice, this
++* list of conditions and the following disclaimer.
++*
++* Redistributions in binary form must reproduce the above copyright notice,
++* this list of conditions and the following disclaimer in the documentation
++* and/or other materials provided with the distribution.
++*
++* Neither the name of Marvell nor the names of its contributors may be used
++* to endorse or promote products derived from this software without specific
++* prior written permission.
++*
++* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
++* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++* POSSIBILITY OF SUCH DAMAGE.
++*
++***************************************************************************
++*/
++
++#include <arch_helpers.h>
++#include <plat_marvell.h>
++#include <debug.h>
++#include <dram_if.h>
++
++struct dram_config dram_cfg = {
++	.iface_mask	= 0x1,
++	.printf		= printf,
++
++	/* Interface configuration */
++	.iface[0] = {
++		.mac_base = (void *)MVEBU_DRAM_MAC_BASE,
++		.phy_base = (void *)MVEBU_DRAM_PHY_BASE,
++		.ecc_enabled	= 0,
++		.cs_count	= 1,
++		.freq_mhz	= 650,
++
++		/* Bus configuration */
++		.bus[0] = {
++			.bus_width = 32,
++			.size_mb   = 0x1000,
++		},
++	},
++};
++
++/* This function may modify the default DRAM parameters
++ * based on information recieved from SPD or bootloader
++ * configuration located on non volatile storage */
++int update_dram_info(struct dram_config *cfg)
++{
++	NOTICE("Gathering DRAM information\n");
++	return 0;
++}
++
++void *plat_get_dram_data(void)
++{
++	/* Update DRAM for dynamic platforms */
++	update_dram_info(&dram_cfg);
++
++	return &dram_cfg;
++}
+diff --git a/plat/marvell/a8k/a7040_rz/dram_setup.c b/plat/marvell/a8k/a7040_rz/dram_setup.c
+deleted file mode 100644
+index 481c7dd..0000000
+--- a/plat/marvell/a8k/a7040_rz/dram_setup.c
++++ /dev/null
+@@ -1,42 +0,0 @@
+-/*
+-* ***************************************************************************
+-* Copyright (C) 2016 Marvell International Ltd.
+-* ***************************************************************************
+-*
+-* Redistribution and use in source and binary forms, with or without
+-* modification, are permitted provided that the following conditions are met:
+-*
+-* Redistributions of source code must retain the above copyright notice, this
+-* list of conditions and the following disclaimer.
+-*
+-* Redistributions in binary form must reproduce the above copyright notice,
+-* this list of conditions and the following disclaimer in the documentation
+-* and/or other materials provided with the distribution.
+-*
+-* Neither the name of Marvell nor the names of its contributors may be used
+-* to endorse or promote products derived from this software without specific
+-* prior written permission.
+-*
+-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+-* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+-* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+-* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+-* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+-* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+-* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+-* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+-* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+-* POSSIBILITY OF SUCH DAMAGE.
+-*
+-***************************************************************************
+-*/
+-
+-#include <arch_helpers.h>
+-#include <plat_marvell.h>
+-#include <debug.h>
+-
+-int ble_plat_dram_setup(void)
+-{
+-	return 0;
+-}
+diff --git a/plat/marvell/a8k/a7040_rz/plat_def.h b/plat/marvell/a8k/a7040_rz/plat_def.h
+index af76cea..ae41cb1 100644
+--- a/plat/marvell/a8k/a7040_rz/plat_def.h
++++ b/plat/marvell/a8k/a7040_rz/plat_def.h
+@@ -47,6 +47,8 @@
+ #define MVEBU_RFU_BASE			(MVEBU_REGS_BASE + 0x6F0000)
+ #define MVEBU_CCU_BASE			(MVEBU_REGS_BASE + 0x4000)
+ #define MVEBU_IOB_BASE			(MVEBU_CP0_REGS_BASE + 0x190000)
++#define MVEBU_DRAM_MAC_BASE		(MVEBU_REGS_BASE + 0x20000)
++#define MVEBU_DRAM_PHY_BASE		(MVEBU_REGS_BASE + 0x20000)
+ #define MVEBU_AMB_IP_BASE		(MVEBU_CP0_REGS_BASE + 0x13ff00)
+ 
+ /*******************************************************************************
+diff --git a/plat/marvell/a8k/a7040_rz/platform.mk b/plat/marvell/a8k/a7040_rz/platform.mk
+index 5ed2790..d439d55 100644
+--- a/plat/marvell/a8k/a7040_rz/platform.mk
++++ b/plat/marvell/a8k/a7040_rz/platform.mk
+@@ -65,8 +65,9 @@ PLAT_BL_COMMON_SOURCES	:=	$(PLAT_SRC_BASE)/aarch64/a7040_rz_common.c	\
+ 				drivers/console/console.S							\
+ 				drivers/ti/uart/16550_console.S
+ 
+-BLE_SOURCES		:=	$(PLAT_SRC_BASE)/dram_setup.c			\
+-				plat/marvell/common/sys_info.c
++BLE_SOURCES		:=	$(PLAT_SRC_BASE)/dram_port.c			\
++				plat/marvell/common/sys_info.c			\
++				plat/marvell/common/dram_setup.c
+ 
+ BL1_SOURCES		+=	$(PLAT_SRC_BASE)/aarch64/plat_helpers.S	\
+ 				lib/cpus/aarch64/cortex_a72.S
+diff --git a/plat/marvell/a8k/apn806/platform.mk b/plat/marvell/a8k/apn806/platform.mk
+index 687df30..e815bd2 100644
+--- a/plat/marvell/a8k/apn806/platform.mk
++++ b/plat/marvell/a8k/apn806/platform.mk
+@@ -68,8 +68,9 @@ PLAT_BL_COMMON_SOURCES	:=	$(PLAT_SRC_BASE)/aarch64/a7040_rz_common.c	\
+ 				drivers/console/console.S							\
+ 				drivers/ti/uart/16550_console.S
+ 
+-BLE_SOURCES		:=	$(PLAT_SRC_BASE)/dram_setup.c			\
+-				plat/marvell/common/sys_info.c
++BLE_SOURCES		:=	$(PLAT_SRC_BASE)/dram_port.c			\
++				plat/marvell/common/sys_info.c			\
++				plat/marvell/common/dram_setup.c
+ 
+ BL1_SOURCES		+=	$(PLAT_SRC_BASE)/aarch64/plat_helpers.S	\
+ 				lib/cpus/aarch64/cortex_a72.S
+diff --git a/plat/marvell/common/dram_setup.c b/plat/marvell/common/dram_setup.c
+new file mode 100644
+index 0000000..cb599ee
+--- /dev/null
++++ b/plat/marvell/common/dram_setup.c
+@@ -0,0 +1,67 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2016 Marvell International Ltd.
++* ***************************************************************************
++*
++* Redistribution and use in source and binary forms, with or without
++* modification, are permitted provided that the following conditions are met:
++*
++* Redistributions of source code must retain the above copyright notice, this
++* list of conditions and the following disclaimer.
++*
++* Redistributions in binary form must reproduce the above copyright notice,
++* this list of conditions and the following disclaimer in the documentation
++* and/or other materials provided with the distribution.
++*
++* Neither the name of Marvell nor the names of its contributors may be used
++* to endorse or promote products derived from this software without specific
++* prior written permission.
++*
++* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
++* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++* POSSIBILITY OF SUCH DAMAGE.
++*
++***************************************************************************
++*/
++
++#include <arch_helpers.h>
++#include <plat_marvell.h>
++#include <debug.h>
++#include <sys_info.h>
++#include <dram_if.h>
++
++/* Notify bootloader on DRAM setup */
++void pass_dram_sys_info(struct dram_config *cfg)
++{
++	set_info(DRAM_BUS_WIDTH, cfg->iface[0].bus[0].bus_width);
++	set_info(DRAM_CS0_SIZE, cfg->iface[0].bus[0].size_mb);
++	set_info(DRAM_CS0, 1);
++	set_info(DRAM_CS1, 0);
++	set_info(DRAM_CS2, 0);
++	set_info(DRAM_CS3, 0);
++}
++
++int ble_plat_dram_setup(void)
++{
++	int ret;
++	struct dram_config *cfg;
++
++	/* Get dram data from platform */
++	cfg = (struct dram_config *)plat_get_dram_data();
++
++	/* Kick it in */
++	ret = dram_init(cfg);
++
++	/* Pass DRAM information to bootloader */
++	pass_dram_sys_info(cfg);
++
++	return ret;
++}
+-- 
+1.9.1
+

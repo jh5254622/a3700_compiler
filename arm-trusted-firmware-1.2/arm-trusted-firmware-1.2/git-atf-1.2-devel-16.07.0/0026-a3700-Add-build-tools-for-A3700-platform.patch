@@ -1,0 +1,999 @@
+From d62271a05e693ff2b2526cc4626308cff82502c9 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Thu, 18 Feb 2016 11:34:13 +0200
+Subject: [PATCH 026/239] a3700: Add build tools for A3700 platform
+
+- Add build tools required for image creation for A3700
+  platform in untrusted boot mode
+
+Change-Id: Ic7ad7b4d5a51f2f9fbe93baa4635c0adc757ad2b
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27632
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ Makefile                      |  32 +++++
+ tools/wtp/Makefile            |   4 +
+ tools/wtp/buildtim.sh         | 324 ++++++++++++++++++++++++++++++++++++++++++
+ tools/wtp/ddr-600.txt         |  97 +++++++++++++
+ tools/wtp/ddr-800.txt         | 149 +++++++++++++++++++
+ tools/wtp/tim2img.pl          | 168 ++++++++++++++++++++++
+ tools/wtp/untrusted/img-1.txt |   8 ++
+ tools/wtp/untrusted/img-2.txt |   8 ++
+ tools/wtp/untrusted/img-3.txt |   8 ++
+ tools/wtp/untrusted/rsrvd.txt |  11 ++
+ tools/wtp/untrusted/tim.txt   |   8 ++
+ tools/wtp/wtmi/Makefile       |  10 ++
+ tools/wtp/wtmi/wtmi.S         |   4 +
+ tools/wtp/wtmi/wtmi.ld        |  15 ++
+ 14 files changed, 846 insertions(+)
+ create mode 100644 tools/wtp/Makefile
+ create mode 100755 tools/wtp/buildtim.sh
+ create mode 100644 tools/wtp/ddr-600.txt
+ create mode 100644 tools/wtp/ddr-800.txt
+ create mode 100755 tools/wtp/tim2img.pl
+ create mode 100644 tools/wtp/untrusted/img-1.txt
+ create mode 100644 tools/wtp/untrusted/img-2.txt
+ create mode 100644 tools/wtp/untrusted/img-3.txt
+ create mode 100644 tools/wtp/untrusted/rsrvd.txt
+ create mode 100644 tools/wtp/untrusted/tim.txt
+ create mode 100644 tools/wtp/wtmi/Makefile
+ create mode 100644 tools/wtp/wtmi/wtmi.S
+ create mode 100644 tools/wtp/wtmi/wtmi.ld
+
+diff --git a/Makefile b/Makefile
+index 19bf052..9a407c3 100644
+--- a/Makefile
++++ b/Makefile
+@@ -356,8 +356,27 @@ CRTTOOL			?=	${CRTTOOLPATH}/cert_create
+ FIPTOOLPATH		?=	tools/fip_create
+ FIPTOOL			?=	${FIPTOOLPATH}/fip_create
+ 
++ifeq (${PLAT},a3700_z)
++DOIMAGEPATH		?=	tools/wtp
++DOIMAGETOOL		?=	$(shell which ntbb_linux.exe)
++
++DDRCFG			:= $(DOIMAGEPATH)/ddr-600.txt
++TIMBUILD		:= $(DOIMAGEPATH)/buildtim.sh
++TIM2IMG			:= $(DOIMAGEPATH)/tim2img.pl
++DOIMAGE_CFG		:= $(DOIMAGEPATH)/atf-ntim.txt
++IMAGESPATH		:= $(DOIMAGEPATH)/untrusted
++WTMI_IMG		:= $(DOIMAGEPATH)/wtmi/wtmi.bin
++SECURE			:= 0
++TIM2IMGARGS		:= -i $(DOIMAGE_CFG)
++BOOTDEV			:= SPINOR
++
++TIM_IMAGE		:= $(shell grep "Image Filename:" -m 1 $(DOIMAGE_CFG) | cut -c 17-)
++TIMBLDARGS		:= $(SECURE) $(BOOTDEV) $(IMAGESPATH) $(DDRCFG) $(DOIMAGE_CFG) $(TIMNCFG) $(TIMNSIG)
++DOIMAGE_FLAGS		:= -r $(DOIMAGE_CFG)
++else
+ DOIMAGEPATH		?=	tools/doimage
+ DOIMAGETOOL		?=	${DOIMAGEPATH}/doimage
++endif
+ ################################################################################
+ # Build options checks
+ ################################################################################
+@@ -571,14 +590,27 @@ ${BUILD_PLAT}/${FWU_FIP_NAME}: ${FWU_FIP_DEPS} ${FIPTOOL}
+ fiptool: ${FIPTOOL}
+ ifeq (${CALL_DOIMAGE}, y)
+ ifneq (${SPL_IMAGE},)
++ifeq (${PLAT},a3700_z)
++fip: ${BUILD_PLAT}/${FIP_NAME} ${DOIMAGETOOL}
++	$(shell truncate -s %128K ${BUILD_PLAT}/bl1.bin)
++	$(shell cat ${BUILD_PLAT}/bl1.bin ${BUILD_PLAT}/${FIP_NAME} > ${BUILD_PLAT}/${BOOT_IMAGE})
++	$(TIMBUILD) $(TIMBLDARGS)
++	sed -i 's|SPL_IMAGE|$(SPL_IMAGE)|1' $(DOIMAGE_CFG)
++	sed -i 's|WTMI_IMG|$(WTMI_IMG)|1' $(DOIMAGE_CFG)
++	sed -i 's|BOOT_IMAGE|$(BUILD_PLAT)/$(BOOT_IMAGE)|1' $(DOIMAGE_CFG)
++	$(DOIMAGETOOL) $(DOIMAGE_FLAGS)
++	$(TIM2IMG) $(TIM2IMGARGS) -o $(BUILD_PLAT)/$(FLASH_IMAGE)
++else
+ fip: ${BUILD_PLAT}/${FIP_NAME} ${DOIMAGETOOL}
+ 	$(shell truncate -s %128K ${BUILD_PLAT}/bl1.bin)
+ 	$(shell cat ${BUILD_PLAT}/bl1.bin ${BUILD_PLAT}/${FIP_NAME} > ${BUILD_PLAT}/${BOOT_IMAGE})
+ 	${DOIMAGETOOL} -b ${SPL_IMAGE} ${NAND_DOIMAGE_FLAGS} ${DOIMAGE_FLAGS} ${BUILD_PLAT}/${BOOT_IMAGE} ${BUILD_PLAT}/${FLASH_IMAGE}
++endif
+ else
+ fip:
+ 	$(error "Platform '${PLAT}' requires SPL_IMAGE. Please set SPL_IMAGE to point to the right file")
+ endif
++
+ else
+ fip: ${BUILD_PLAT}/${FIP_NAME}
+ endif
+diff --git a/tools/wtp/Makefile b/tools/wtp/Makefile
+new file mode 100644
+index 0000000..26c7e9a
+--- /dev/null
++++ b/tools/wtp/Makefile
+@@ -0,0 +1,4 @@
++
++
++clean:
++	${MAKE} -C wtmi
+diff --git a/tools/wtp/buildtim.sh b/tools/wtp/buildtim.sh
+new file mode 100755
+index 0000000..75e93ab
+--- /dev/null
++++ b/tools/wtp/buildtim.sh
+@@ -0,0 +1,324 @@
++#!/bin/bash
++#
++# Create TIM/NTIM descriptor
++#
++# $1 - trusted/non trusted (1/0)
++# $2 - Boot device (SPINOR/SPINAND/EMMCNORM/EMMCALT/SATA/UART)
++# $3 - Path to image text files
++# $4 - DDR init data text file
++# $5 - Output TIM/NTIM file name
++# $6 - Output TIMN file name (valid for trusted mode only)
++# $7 - TIMN CSK sign key file name (valid for trusted mode only)
++#
++
++DATE=`date +%d%m%Y`
++IMGPATH=$3
++DDRFILE=$4
++OUTFILE=$5
++
++EMMCPART=0x00000001
++
++# All file names extention
++FILEEXT="txt"
++# Image definition files name prefix
++IMGPREF="img"
++# Number of images excepting TIM
++IMGSNUM=`ls -l $IMGPATH/$IMGPREF*.$FILEEXT | wc -l`
++# Reserved area definition for TIM/NTIM - file name prefix
++RSRVDPREF="rsrvd"
++RSRVDLEN=`wc -l < $IMGPATH/$RSRVDPREF.$FILEEXT`
++# DLL tuning - same for all DDR frequencies
++# Located in the same folder as DDR init file
++DLLTUNFILE=$(dirname "$DDRFILE")/"dll_tune."$FILEEXT
++
++# TIM/NTIM image definition file name prefix
++TIMPREF="tim"
++# CSK keys file name prefix
++CSKPREF="csk"
++# KAK key file name prefix (TIM signature)
++KAKPREF="kak"
++
++# Below values used only by TIMN
++TIMNOUTFILE=$6
++SIGNFILE=$7
++# TIMN image definition file name prefix
++TIMNPREF="timn"
++# Reserved area definition for TIMN - file name prefix
++RSRVD2PREF="rsrvdtimn"
++
++usage () {
++	echo ""
++	echo "$0 - script for creating TIM/NTIM/TIMN image descriptors"
++	echo ""
++	echo "$0 <trusted> <boot_device> <files_path> <DDR> <output> [timN_out] [timN_key]"
++	echo " <trusted>     - trusted/non trusted (supported values 0 and 1)"
++	echo " <boot_device> - Boot device (Supported values SPINOR/SPINAND/EMMCNORM/EMMCALT/SATA/UART)"
++	echo " <files_path>  - Path to image and keys descriptors text files"
++	echo " <DDR>         - DDR initialization sequence text file"
++	echo " <output>      - Output TIM/NTIM file name"
++	echo " [timN_out]    - Output TIMN file name (required for trusted boot only)"
++	echo " [timN_key]    - TIMN CSK sign key file name (required for trusted boot only)"
++	echo ""
++	exit 1
++}
++
++# Parameters check
++case "$1" in
++[0-1])
++	TRUSTED="0x0000000"$1
++	if [ "$TRUSTED" = "0x00000001" ]; then
++		if [ "$TIMNOUTFILE" = "" ]; then
++			echo "Empty TIMN output file name!"
++			usage
++		fi
++
++		# Values required for trusted boot mode
++		KEYSNUM=`ls -l $IMGPATH/$CSKPREF*.$FILEEXT | wc -l`
++		RSRVD2LEN=`wc -l < $IMGPATH/$RSRVD2PREF.$FILEEXT`
++	fi
++	;;
++*)
++	echo "Only 0/1 is supported as first parameter (trusted/untrusted)!"
++	usage
++esac
++
++case "$2" in
++SPINOR)
++	FLASH="0x5350490A		; Select SPI'0A"
++	;;
++SPINAND)
++	FLASH="0x5350491A		; Select SPI'1A"
++	;;
++EMMCNORM)
++	FLASH="0x454D4D08		; Select MMC'08"
++	;;
++EMMCALT)
++	FLASH="0x454D4D0B		; Select MMC'0B"
++	;;
++SATA)
++	FLASH="0x53415432		; Select SAT'32"
++	;;
++UART)
++	FLASH="0x55415223		; Select UAR'23"
++	;;
++*)
++	echo "Unsupported boot device $2!"
++	usage
++esac
++
++if [ ! -e "$DDRFILE" ]; then
++	echo "Cannot find DDR init file!"
++	usage
++fi
++
++if [ "$OUTFILE" = "" ]; then
++	echo "Empty TIM/NTIM output file name!"
++	usage
++fi
++
++# Build TIM/NTIM descriptor header
++
++# Add TIM/NTIM to the images number, we count it too
++let IMGSNUM=IMGSNUM+1
++# Reserved section is in rows (one row per word), we need it in bytes
++let RSRVDLEN=RSRVDLEN*4
++
++echo "Version:                        0x00030600" > $OUTFILE
++echo "Trusted:                        $TRUSTED" >> $OUTFILE
++echo "Issue Date:                     0x$DATE		; today's date" >> $OUTFILE
++echo "OEM UniqueID:                   0x4D52564C		; MRVL" >> $OUTFILE
++echo "Stepping:                       0x00000000" >> $OUTFILE
++echo "Processor Type:                 <undefined>		; ARMADALP" >> $OUTFILE
++echo "Boot Flash Signature:           $FLASH" >> $OUTFILE
++if [ "$TRUSTED" = "0x00000000" ]; then
++	echo "Number of Images:               $IMGSNUM" >> $OUTFILE
++else
++	# Trusted TIM has only TIMH image
++	echo "Number of Images:                1" >> $OUTFILE
++	echo "Number of Keys:                  $KEYSNUM		; DSIG KAK key is not counted" >> $OUTFILE
++fi
++echo "Size of Reserved in bytes:      $RSRVDLEN" >> $OUTFILE
++echo ""  >> $OUTFILE
++
++# First image is always TIMH
++
++TIMHFILE="$IMGPATH/$TIMPREF.$FILEEXT"
++if [ ! -e "$TIMHFILE" ]; then
++	echo "Cannot find $TIMHFILE file!"
++	exit 1
++else
++	cat $TIMHFILE >> $OUTFILE
++	echo "" >> $OUTFILE
++fi
++
++# Images or CSK keys block
++
++if [ "$TRUSTED" = "0x00000000" ]; then
++	# Untrusted (NTIM) lists images before reserved area
++	i=1
++	while [ "$i" -lt "$IMGSNUM" ]; do
++		IMAGE="$IMGPATH/$IMGPREF-$i.$FILEEXT"
++		if [ ! -e "$IMAGE" ]; then
++			echo "Cannot find $IMAGE file!"
++			exit 1
++		fi
++		cat $IMAGE >> $OUTFILE
++		echo "" >> $OUTFILE
++		let i=i+1
++	done
++else
++	# Trusted (TIM) has keys block before reserved area
++	i=1
++	while [ "$i" -le "$KEYSNUM" ]; do
++		IMAGE="$IMGPATH/$CSKPREF-$i.$FILEEXT"
++		if [ ! -e "$IMAGE" ]; then
++			echo "Cannot find $IMAGE file!"
++			exit 1
++		fi
++		cat $IMAGE >> $OUTFILE
++		echo "" >> $OUTFILE
++		let i=i+1
++	done
++fi
++
++# Reserved area
++
++RSRVDFILE="$IMGPATH/$RSRVDPREF.$FILEEXT"
++if [ ! -e "$RSRVDFILE" ]; then
++	echo "Cannot find $RSRVDFILE file!"
++	exit 1
++else
++	echo "Reserved Data:" >> $OUTFILE
++	cat $RSRVDFILE >> $OUTFILE
++	echo "" >> $OUTFILE
++fi
++
++# DDR init
++if [ ! -e "$DDRFILE" ]; then
++	echo "Cannot find $DDRFILE file!"
++	exit 1
++else
++	echo "Extended Reserved Data:" >> $OUTFILE
++	echo "Consumer ID:" >> $OUTFILE
++	echo "CID: TBRI" >> $OUTFILE
++	echo "PID: DDR3" >> $OUTFILE
++	echo "End Consumer ID:" >> $OUTFILE
++	echo "DDR Initialization:" >> $OUTFILE
++	echo "DDR_PID: DDR3" >> $OUTFILE
++	echo "Operations:" >> $OUTFILE
++	echo "DDR_INIT_ENABLE: 0x00000001" >> $OUTFILE
++	echo "End Operations:" >> $OUTFILE
++	echo "Instructions:" >> $OUTFILE
++	cat $DDRFILE >> $OUTFILE
++	echo "End Instructions:" >> $OUTFILE
++	echo "End DDR Initialization:" >> $OUTFILE
++	echo "End Extended Reserved Data:" >> $OUTFILE
++	echo "" >> $OUTFILE
++fi
++
++# Replace partition number in the output for EMMC
++if [[ "$2" = "EMMCNORM" || "$2" = "EMMCALT" ]]; then
++	mv $OUTFILE $OUTFILE.temp
++	while IFS='' read -r line; do
++		if [[ "$line" == *"Partition Number:"* ]]; then
++			echo "Partition Number:               $EMMCPART" >> $OUTFILE
++		else
++			echo "$line" >> $OUTFILE
++		fi
++	done < $OUTFILE.temp
++	rm $OUTFILE.temp
++fi
++
++# Untrusted NTIM does not require more operations, continue with trusted stuff
++if [ "$TRUSTED" = "0x00000001" ]; then
++	# Trusted TIM needs a KAK key for header signature
++	KAKFILE="$IMGPATH/$KAKPREF.$FILEEXT"
++	if [ ! -e "$KAKFILE" ]; then
++		echo "Cannot find $KAKFILE file!"
++		exit 1
++	else
++		cat $KAKFILE >> $OUTFILE
++		echo "" >> $OUTFILE
++	fi
++	# No more operations for TIM file
++
++	# Now the TIMN file has to be created
++	# Reserved section is in rows (one row per word), we need it in bytes
++	let RSRVD2LEN=RSRVD2LEN*4
++
++	echo "Version:                        0x00030600" > $TIMNOUTFILE
++	echo "Trusted:                        $TRUSTED" >> $TIMNOUTFILE
++	echo "Issue Date:                     0x$DATE		; today's date" >> $TIMNOUTFILE
++	echo "OEM UniqueID:                   0x4D52564C		; MRVL" >> $TIMNOUTFILE
++	echo "Stepping:                       0x00000000" >> $TIMNOUTFILE
++	echo "Processor Type:                 <undefined>		; ARMADALP" >> $TIMNOUTFILE
++	echo "Boot Flash Signature:           $FLASH" >> $TIMNOUTFILE
++	echo "Number of Images:               $IMGSNUM" >> $TIMNOUTFILE
++	echo "Number of Keys:                 0			; DSIG key is not counted" >> $TIMNOUTFILE
++	echo "Size of Reserved in bytes:      $RSRVD2LEN" >> $TIMNOUTFILE
++	echo ""
++
++	# TIMN header
++
++	TIMNHFILE="$IMGPATH/$TIMNPREF.$FILEEXT"
++	if [ ! -e "$TIMNHFILE" ]; then
++		echo "Cannot find $TIMNFILE file!"
++		exit 1
++	else
++		cat $TIMNHFILE >> $TIMNOUTFILE
++		echo "" >> $TIMNOUTFILE
++	fi
++
++	# TIMN images
++
++	i=1
++	while [ "$i" -lt "$IMGSNUM" ]; do
++		IMAGE="$IMGPATH/$IMGPREF-$i.$FILEEXT"
++		if [ ! -e "$IMAGE" ]; then
++			echo "Cannot find $IMAGE file!"
++			exit 1
++		fi
++		cat $IMAGE >> $TIMNOUTFILE
++		echo "" >> $TIMNOUTFILE
++		let i=i+1
++	done
++
++	# Second reserved area
++
++	RSRVD2FILE="$IMGPATH/$RSRVD2PREF.$FILEEXT"
++	if [ ! -e "$RSRVD2FILE" ]; then
++		echo "Cannot find $RSRVD2FILE file!"
++		exit 1
++	else
++		echo "Reserved Data:" >> $TIMNOUTFILE
++		cat $RSRVD2FILE >> $TIMNOUTFILE
++		echo "" >> $TIMNOUTFILE
++	fi
++
++	# Last TIMN component is the CSK key fir signature creation
++
++	if [ ! -e "$SIGNFILE" ]; then
++		echo "Cannot find $SIGNFILE file!"
++		exit 1
++	else
++		cat $SIGNFILE >> $TIMNOUTFILE
++		echo "" >> $TIMNOUTFILE
++		exit 0
++	fi
++fi
++
++# Replace partition number in the output for EMMC
++if [[ "$2" = "EMMCNORM" || "$2" = "EMMCALT" ]]; then
++	mv $TIMNOUTFILE $TIMNOUTFILE.temp
++	while IFS='' read -r line; do
++		if [[ "$line" == *"Partition Number:"* ]]; then
++			echo "Partition Number:               $EMMCPART" >> $TIMNOUTFILE
++		else
++			echo "$line" >> $TIMNOUTFILE
++		fi
++	done < $TIMNOUTFILE.temp
++	#rm $TIMNOUTFILE.temp
++fi
++
++
++exit 0
+diff --git a/tools/wtp/ddr-600.txt b/tools/wtp/ddr-600.txt
+new file mode 100644
+index 0000000..041a960
+--- /dev/null
++++ b/tools/wtp/ddr-600.txt
+@@ -0,0 +1,97 @@
++; Set DDR to 600MHz
++; Pre-init
++WRITE: 0xC0014008 0x00404500
++WRITE: 0xC0002000 0x00010000
++WRITE: 0xC0002004 0x00000000
++; DDR MAC init
++WRITE: 0xC0000340 0x0F0F0FEF
++WRITE: 0xC0000344 0x100000AA
++WRITE: 0xC0000310 0x00200000
++WRITE: 0xC0000304 0x00000000
++WRITE: 0xC0000308 0x00000000
++WRITE: 0xC0000200 0x000E0001
++WRITE: 0xC0000204 0x00000000
++WRITE: 0xC0000220 0x13020532
++WRITE: 0xC0000044 0x00030200
++WRITE: 0xC00002c0 0x00006000
++WRITE: 0xC00002c4 0x00100020
++WRITE: 0xC0000058 0x0000143F
++WRITE: 0xC0000048 0x00000001
++WRITE: 0xC0000180 0x00010200
++WRITE: 0xC0000050 0x000001FF
++WRITE: 0xC000004c 0x00000000
++WRITE: 0xC0000054 0x00000480
++WRITE: 0xC0000300 0x00000708
++WRITE: 0xC0000380 0x000001F5
++WRITE: 0xC0000384 0x000003E9
++WRITE: 0xC0000388 0x09600043
++WRITE: 0xC000038c 0x00000200
++WRITE: 0xC0000390 0x00400100
++WRITE: 0xC0000394 0x006B03CF
++WRITE: 0xC0000398 0x00720200
++WRITE: 0xC000039c 0x00120707
++WRITE: 0xC00003a0 0x00040511
++WRITE: 0xC00003a4 0x00000001
++WRITE: 0xC00003a8 0x00000C04
++WRITE: 0xC00003ac 0x15210919
++WRITE: 0xC00003b0 0x090b0609
++WRITE: 0xC00003b4 0x04000600
++WRITE: 0xC00003b8 0x00000600
++WRITE: 0xC00003bc 0x02020404
++WRITE: 0xC00003c0 0x00000000
++WRITE: 0xC00003c4 0x00000000
++WRITE: 0xC00003dc 0x00081239
++WRITE: 0xC00002c8 0x00000000
++WRITE: 0xC0000064 0x00000006
++; DDR PHY init
++WRITE: 0xC0001004 0x10077779
++WRITE: 0xC0001008 0x1FF00770
++WRITE: 0xC000100c 0x3F03FC77
++WRITE: 0xC0001010 0x00100118
++WRITE: 0xC0001028 0x00000000
++WRITE: 0xC0001030 0x03800000
++WRITE: 0xC0001034 0x00000000
++WRITE: 0xC0001040 0x00000400
++WRITE: 0xC00010c0 0x80000001
++WRITE: 0xC00010d0 0x00000000
++WRITE: 0xC00010e0 0x00011FF0
++WRITE: 0xC0001090 0x00000000
++WRITE: 0xC0001094 0x00000000
++WRITE: 0xC0001098 0x00000000
++WRITE: 0xC000109c 0x00000000
++WRITE: 0xC00010a0 0x00000000
++WRITE: 0xC00010a4 0x00000000
++WRITE: 0xC00010a8 0x00000000
++WRITE: 0xC00010ac 0x00000000
++WRITE: 0xC00010b0 0x00000000
++WRITE: 0xC0001000 0x00044041
++WRITE: 0xC0001014 0x00080200
++WRITE: 0xC0001038 0x00000002
++WRITE: 0xC000103c 0x00000010
++WRITE: 0xC0001180 0x0000020A
++WRITE: 0xC0001184 0x0000020A
++WRITE: 0xC0001188 0x0000020A
++WRITE: 0xC000118c 0x0000020A
++WRITE: 0xC0001190 0x0000020A
++WRITE: 0xC0001194 0x0000020A
++WRITE: 0xC0001198 0x0000020A
++WRITE: 0xC000119c 0x0000020A
++WRITE: 0xC00011a0 0x0000020A
++WRITE: 0xC0001050 0x08080000
++WRITE: 0xC0001054 0x08080000
++WRITE: 0xC0001058 0x08080000
++WRITE: 0xC000105c 0x08080000
++WRITE: 0xC0001060 0x08080000
++WRITE: 0xC0001064 0x08080000
++WRITE: 0xC0001068 0x08080000
++WRITE: 0xC000106c 0x08080000
++WRITE: 0xC0001070 0x08080000
++WRITE: 0xC0001020 0x20000000
++WRITE: 0xC0001020 0x40000000
++WRITE: 0xC0001020 0x80000000
++WRITE: 0xC0000020 0x11000001
++WAIT_FOR_BIT_SET: 0xC0000008 0x00000001 0x00001000
++; AVS enable
++WRITE: 0xC0011500 0x98A2FFFF	;# Set VDD to 1150mV and soft reset AVS
++WRITE: 0xC0011500 0x18A2FFFF	;# release AVS reset
++WRITE: 0xC0011500 0x58A2FFFF	;# Enable AVS
+diff --git a/tools/wtp/ddr-800.txt b/tools/wtp/ddr-800.txt
+new file mode 100644
+index 0000000..210b2c8
+--- /dev/null
++++ b/tools/wtp/ddr-800.txt
+@@ -0,0 +1,149 @@
++; Switch all clocks to REFCLOCK
++WRITE: 0XC0013010 0x00000000
++WRITE: 0XC0018010 0x00000000
++; TBG-A: SE vco_div 0x0,
++; DIFF vco_div 0x1, vco_range 0xa
++; tbg_N 0x30 KVCO = 1600 MHz
++WRITE: 0xC0013204 0x00C00091
++WRITE: 0xC0013204 0x00C000C1
++WRITE: 0xC0013220 0x08030803
++WRITE: 0xC0013208 0x94011400
++WRITE: 0xC0013230 0x00020002
++WRITE: 0xC0013208 0x94011400
++WRITE: 0xC001320C 0x53E556E6
++WRITE: 0xC0013210 0x014A014A
++WRITE: 0xC001320C 0x53E556E5
++WRITE: 0xC0013204 0x00C000C0
++WRITE: 0xC0013208 0x94011400
++WAIT_FOR_BIT_SET: 0xC0013208 0x80008000 0x00100000
++DELAY: 0x00000100
++; TBG-B: SE vco_div 0x1,
++; DIFF vco_div 0x2, vco_range 0xb
++; tbg_N 0x3c KVCO = 2000 MHz
++WRITE: 0xC0013204 0x00C100C0
++WRITE: 0xC0013204 0x00F100C0
++WRITE: 0xC0013220 0x08030803
++WRITE: 0xC0013208 0x14019400
++WRITE: 0xC0013230 0x00040002
++WRITE: 0xC0013208 0x14019400
++WRITE: 0xC001320C 0x56E556E5
++WRITE: 0xC0013210 0x014B014A
++WRITE: 0xC001320C 0x56E656E5
++WRITE: 0xC0013204 0x00F000C0
++WRITE: 0xC0013208 0x14019400
++WAIT_FOR_BIT_SET: 0xC0013208 0x80008000 0x00100000
++DELAY: 0x00000100
++; Set clocks to 800/800 preset
++WRITE: 0xC0013014 0x00000000
++WRITE: 0xC0013004 0x1296202C
++WRITE: 0xC0013008 0x21061AA9
++WRITE: 0xC001300C 0x20543082
++WRITE: 0xC0013000 0x0003C0F2
++WRITE: 0xC0018014 0x00180000
++WRITE: 0xC0018004 0x02515508
++WRITE: 0xC0018008 0x00307880
++WRITE: 0xC001800C 0x00000540
++WRITE: 0xC0018000 0x003F8F40
++WRITE: 0xC0013210 0x0014B014A
++; Switch all clocks to back dividers
++WRITE: 0xC0013010 0x00009FFF
++WRITE: 0xC0018010 0x000007AA
++; Set DDR to 800MHz
++; Pre-init
++WRITE: 0xC0014008 0x00404500
++WRITE: 0xC0002000 0x00010000
++WRITE: 0xC0002004 0x00000000
++; DDR MAC init
++WRITE: 0xC0000340 0x0F0F0FEF
++WRITE: 0xC0000344 0x100000AA
++WRITE: 0xC0000310 0x00200000
++WRITE: 0xC0000304 0x00000000
++WRITE: 0xC0000308 0x00000000
++WRITE: 0xC0000200 0x000e0001
++WRITE: 0xC0000204 0x00000000
++WRITE: 0xC0000220 0x13020532
++WRITE: 0xC0000044 0x00030200
++WRITE: 0xC00002c0 0x00006000
++WRITE: 0xC00002c4 0x00100020
++WRITE: 0xC0000058 0x0000143F
++WRITE: 0xC0000048 0x00000001
++WRITE: 0xC0000180 0x00010200
++WRITE: 0xC0000050 0x000001FF
++WRITE: 0xC000004c 0x00000000
++WRITE: 0xC0000054 0x00000480
++WRITE: 0xC0000300 0x0000080B
++WRITE: 0xC0000380 0x0007A120
++WRITE: 0xC0000384 0x00030D40
++WRITE: 0xC0000388 0x0960006B
++WRITE: 0xC000038c 0x00000200
++WRITE: 0xC0000390 0x00400100
++WRITE: 0xC0000394 0x00F003CF
++WRITE: 0xC0000398 0x00F80200
++WRITE: 0xC000039c 0x00000808
++WRITE: 0xC00003a0 0x00040614
++WRITE: 0xC00003a4 0x00000001
++WRITE: 0xC00003a8 0x00000C04
++WRITE: 0xC00003ac 0x202A0C1F
++WRITE: 0xC00003b0 0x0C0C060C
++WRITE: 0xC00003b4 0x04000600
++WRITE: 0xC00003b8 0x00000800
++WRITE: 0xC00003bc 0x02020404
++WRITE: 0xC00003c0 0x00000000
++WRITE: 0xC00003c4 0x00000000
++WRITE: 0xC00003dc 0x00081239
++WRITE: 0xC00002c8 0x00000000
++WRITE: 0xC0000064 0x00000006
++; DDR PHY init
++WRITE: 0xC0001004 0x10077779
++WRITE: 0xC0001008 0x1FF00770
++WRITE: 0xC000100c 0x3F03FC77
++WRITE: 0xC0001010 0x00100118
++WRITE: 0xC0001028 0x00000000
++WRITE: 0xC0001030 0x03800000
++WRITE: 0xC0001034 0x00000000
++WRITE: 0xC0001040 0x00000400
++WRITE: 0xC00010c0 0x80000001
++WRITE: 0xC00010d0 0x00000000
++WRITE: 0xC00010e0 0x00011FF0
++WRITE: 0xC0001090 0x00000000
++WRITE: 0xC0001094 0x00000000
++WRITE: 0xC0001098 0x00000000
++WRITE: 0xC000109c 0x00000000
++WRITE: 0xC00010a0 0x00000000
++WRITE: 0xC00010a4 0x00000000
++WRITE: 0xC00010a8 0x00000000
++WRITE: 0xC00010ac 0x00000000
++WRITE: 0xC00010b0 0x00000000
++WRITE: 0xC0001000 0x00044041
++WRITE: 0xC0001014 0x00080200
++WRITE: 0xC0001038 0x00000002
++WRITE: 0xC000103c 0x00000010
++WRITE: 0xC0001180 0x0000020A
++WRITE: 0xC0001184 0x0000020A
++WRITE: 0xC0001188 0x0000020A
++WRITE: 0xC000118c 0x0000020A
++WRITE: 0xC0001190 0x0000020A
++WRITE: 0xC0001194 0x0000020A
++WRITE: 0xC0001198 0x0000020A
++WRITE: 0xC000119c 0x0000020A
++WRITE: 0xC00011a0 0x0000020A
++WRITE: 0xC0001050 0x20200000
++WRITE: 0xC0001054 0x20200000
++WRITE: 0xC0001074 0x20200000
++WRITE: 0xC0001058 0x08080000
++WRITE: 0xC000105c 0x08080000
++WRITE: 0xC0001060 0x08080000
++WRITE: 0xC0001064 0x08080000
++WRITE: 0xC0001068 0x08080000
++WRITE: 0xC000106c 0x08080000
++WRITE: 0xC0001070 0x08080000
++WRITE: 0xC0001020 0x20000000
++WRITE: 0xC0001020 0x40000000
++WRITE: 0xC0001020 0x80000000
++; Trigger DDR init for channel 0
++WRITE: 0xC0000020 0x11000001
++WAIT_FOR_BIT_SET: 0xC0000008 0x00000001 0x00001000
++; AVS enable
++WRITE: 0xC0011500 0x98A2FFFF	;# Set VDD to 1150mV and soft reset AVS
++WRITE: 0xC0011500 0x18A2FFFF	;# release AVS reset
++WRITE: 0xC0011500 0x58A2FFFF	;# Enable AVS
+diff --git a/tools/wtp/tim2img.pl b/tools/wtp/tim2img.pl
+new file mode 100755
+index 0000000..2320cd1
+--- /dev/null
++++ b/tools/wtp/tim2img.pl
+@@ -0,0 +1,168 @@
++#!/usr/bin/perl
++
++sub tim2img
++{
++	my ($in_file, $out_file, $in2_file) = @_;
++	my $row;
++	my $index;
++	my $configs;
++	my $img_num = 0;
++	my @img_names = ();
++	my @img_offset = ();
++	my @cfg = ();
++	my $cfg_idx;
++
++	unless(open ($cfg[0], "<$in_file")) {
++		print ("Failed to open input file $in_file\n");
++		goto ERROR;
++	}
++	$configs = 1;
++
++	unless(open ($cfg[1], "<$in2_file")) {
++		print ("No input file for TIMN is supplied\n");
++	} else {
++		$configs++;
++	}
++
++	unless(open $dst, ">$out_file") {
++		print ("Failed to open output file $out_file\n");
++		goto ERROR;
++	}
++
++	unless(open $zero, "< /dev/zero") {
++		print ("Failed to open output file /dev/zero\n");
++		goto ERROR;
++	}
++
++	# Parse configuration file(s)
++	# Find a number of boot images and their names
++	$index = 0;
++	for ($cfg_idx = 0; $cfg_idx < $configs; $cfg_idx++) {
++
++		while (defined($row = readline($cfg[$cfg_idx]))) {
++			chomp $row;
++			($name, $value) = split(":", $row);
++			# trim spaces from both ends
++			$name =~ s/^\s+|\s+$//g;
++			$value =~ s/^\s+|\s+$//g;
++
++			if ($name eq "Number of Images") {
++					$img_num = $value;
++					print ("Total number of images to process in file[$cfg_idx] - $img_num\n");
++			} elsif ($name eq "Image Filename") {
++					$img_names[$index] = $value;
++					print ("is $img_names[$index]\n");
++					$index++;
++			} elsif ($name eq "Flash Entry Address") {
++					$img_offset[$index] = hex($value);
++					$offs_str = sprintf("%08x", $img_offset[$index]);
++					print ("$index Image at offset $offs_str ");
++			}
++		}
++
++		close($cfg[$cfg_idx]);
++	}
++
++	if ($img_num < 1) {
++		print ("The \"Number of Images\" field was not found in input files\n");
++		goto ERROR;
++	}
++
++	#--------------------------------------------------------------------------
++	# Create output from collected images data
++	#--------------------------------------------------------------------------
++
++	for ($index = 0; $index < $img_num; $index++) {
++
++		unless(open ($src, "<$img_names[$index]")) {
++			print ("Failed to open input file $img_names[$index]\n");
++			goto ERROR;
++		}
++		binmode($src);
++
++		my $addr = $img_offset[$index];
++		my $byte;
++		my $next_addr = 0;
++
++		# offset of the next image if any
++		if ($index < ($img_num - 1)) {
++			$next_addr = $img_offset[$index + 1];
++		}
++
++		# Copy source image data
++		while (read($src, $byte, 1)) {
++
++			print $dst $byte;
++			$addr++;
++		}
++
++		close($src);
++
++		# Pad the destination image
++		while ($addr < $next_addr) {
++
++			read($zero, $byte, 1);
++			print $dst $byte;
++			$addr++;
++		}
++	}
++
++	close($dst);
++	close($zero);
++
++	return 0;
++ERROR:
++	return 1;
++}
++
++sub usage
++{
++	print "\nConvert TIM/NTIM and TIMN binary files to flash IMG format\n";
++	print "\nAccording to TIM/NTIM configuration file\n";
++	print "\nExample  : tim2img.pl -i tim.txt -n timn.txt -o Image.img\n";
++	print "\n";
++	print "Options:\n";
++	print "\t-i\tInput TIM/NTIM configuration file in text format\n";
++	print "\t-n\tInput TIMN configuration file in text format\n";
++	print "\t-o\tOutput file in flash IMG format\n";
++	print "\n";
++}
++
++# Main
++use strict;
++use warnings;
++use Getopt::Std;
++
++use vars qw($opt_o $opt_h $opt_i $opt_s $opt_n);
++
++getopt('o:i:s:h:n');
++
++if ($opt_h)
++{
++	usage();
++	exit 0;
++}
++
++unless ($opt_i) {
++	printf "\nError: Please specify input file\n\n";
++	usage();
++	exit 1;
++}
++unless (-e $opt_i) {
++	printf "\nError: Input file $opt_i doesn't exist\n\n";
++	exit 1;
++}
++
++unless ($opt_o) {
++	printf "\nError: Please specify output file\n\n";
++	usage();
++	exit 1;
++}
++
++
++if(tim2img($opt_i, $opt_o, $opt_n)) {
++	printf "\nError: Failed converting image\n\n";
++	exit 1;
++}
++
++exit 0;
+diff --git a/tools/wtp/untrusted/img-1.txt b/tools/wtp/untrusted/img-1.txt
+new file mode 100644
+index 0000000..c2ce910
+--- /dev/null
++++ b/tools/wtp/untrusted/img-1.txt
+@@ -0,0 +1,8 @@
++Image ID:                       0x4F424d49		; OBMI - 64K code + 16K data
++Next Image ID:                  0x57544d49		; WTMI next
++Flash Entry Address:            0x00004000		; OBMI flash addr
++Load Address:                   0x1FFF0000		; OBMI RAM addr
++Image Size To CRC in bytes:     0x00000000
++Hash Algorithm ID:              32			; SHA-256
++Partition Number:               0x00000000
++Image Filename: SPL_IMAGE
+diff --git a/tools/wtp/untrusted/img-2.txt b/tools/wtp/untrusted/img-2.txt
+new file mode 100644
+index 0000000..0d3a9ec
+--- /dev/null
++++ b/tools/wtp/untrusted/img-2.txt
+@@ -0,0 +1,8 @@
++Image ID:                       0x57544d49		; WTMI
++Next Image ID:                  0x4F534C4F		; OSLO next
++Flash Entry Address:            0x00024000		; WTMI flash addr
++Load Address:                   0x200040F0		; WTMI RAM addr
++Image Size To CRC in bytes:     0x00000000
++Hash Algorithm ID:              32			; SHA-256
++Partition Number:               0x00000000
++Image Filename: WTMI_IMG
+diff --git a/tools/wtp/untrusted/img-3.txt b/tools/wtp/untrusted/img-3.txt
+new file mode 100644
+index 0000000..31dc1b5
+--- /dev/null
++++ b/tools/wtp/untrusted/img-3.txt
+@@ -0,0 +1,8 @@
++Image ID:                       0x4F534C4F		; OSLO
++Next Image ID:                  0xFFFFFFFF		; NONE
++Flash Entry Address:            0x00026000		; OSLO flash addr
++Load Address:                   0x64100000		; OSLO RAM addr
++Image Size To CRC in bytes:     0x00000000
++Hash Algorithm ID:              32			; SHA-256
++Partition Number:               0x00000000
++Image Filename: BOOT_IMAGE
+diff --git a/tools/wtp/untrusted/rsrvd.txt b/tools/wtp/untrusted/rsrvd.txt
+new file mode 100644
+index 0000000..c33e6ce
+--- /dev/null
++++ b/tools/wtp/untrusted/rsrvd.txt
+@@ -0,0 +1,11 @@
++0x4F505448	;OPTH
++0x00000002	; Number of Reserved Packages
++0x43525632	;CRV2
++0x0000001C	; Size of CRV2 package in bytes
++0x00000002	; Number of cores to release
++0x00000000	; Core_ID: 0 - AP0, 1 - AP1, 2 - CM3
++0xF0000000	; PC address for Core_ID above
++0x00000002	; Core_ID: 0 - AP0, 1 - AP1, 2 - CM3
++0x200040F0	; PC address for Core_ID above
++0x5465726D	;Term
++0x00000008	; Size of this package in bytes
+diff --git a/tools/wtp/untrusted/tim.txt b/tools/wtp/untrusted/tim.txt
+new file mode 100644
+index 0000000..cee7b60
+--- /dev/null
++++ b/tools/wtp/untrusted/tim.txt
+@@ -0,0 +1,8 @@
++Image ID:                       0x54494D48		; TIMH
++Next Image ID:                  0x4F424d49		; OBMI next
++Flash Entry Address:            0x00000000		; TIM flash addr
++Load Address:                   0x20006000		; TIM ISRAM addr
++Image Size To CRC in bytes:     0x00000000
++Hash Algorithm ID:              32			; SHA-256
++Partition Number:               0x00000000
++Image Filename: TIM_ATF.bin
+diff --git a/tools/wtp/wtmi/Makefile b/tools/wtp/wtmi/Makefile
+new file mode 100644
+index 0000000..55c6e3a
+--- /dev/null
++++ b/tools/wtp/wtmi/Makefile
+@@ -0,0 +1,10 @@
++CROSS=arm-linux-gnueabi-
++
++all:
++	$(CROSS)as -mcpu=cortex-m3  -o wtmi.o wtmi.S
++	$(CROSS)gcc -nostdlib -T wtmi.ld -Xlinker "--build-id=none" wtmi.o -o wtmi.elf
++	$(CROSS)objcopy -S -O binary wtmi.elf wtmi.bin
++	$(CROSS)objdump -D -S wtmi.elf > wtmi.dis
++
++clean:
++	@rm *.elf *.bin *dis 2>/dev/null
+diff --git a/tools/wtp/wtmi/wtmi.S b/tools/wtp/wtmi/wtmi.S
+new file mode 100644
+index 0000000..1f6177e
+--- /dev/null
++++ b/tools/wtp/wtmi/wtmi.S
+@@ -0,0 +1,4 @@
++.global _Reset
++_Reset:
++    NOP
++    B _Reset
+diff --git a/tools/wtp/wtmi/wtmi.ld b/tools/wtp/wtmi/wtmi.ld
+new file mode 100644
+index 0000000..d2ad6d3
+--- /dev/null
++++ b/tools/wtp/wtmi/wtmi.ld
+@@ -0,0 +1,15 @@
++SECTIONS
++{
++  . = 0x200040F0;
++  .ro : {
++    wtmi.o (.text)
++    *(.text)
++    *(.rodata)
++  }
++  .rw : {
++    *(.data)
++    *(.bss)
++    *(COMMON)
++  }
++ . = ALIGN(8);
++}
+-- 
+1.9.1
+

@@ -1,0 +1,63 @@
+From 71a8281032aa4fdaca794cf940fa189c916760fc Mon Sep 17 00:00:00 2001
+From: David Feng <fenghua@phytium.com.cn>
+Date: Sat, 31 Jan 2015 11:55:28 +0800
+Subject: [PATCH 1059/1240] ARMv8: enable pre-allocation malloc
+
+Allocate memory space for pre-allocation malloc and zero global data.
+This code is partly from crt0.S.
+
+Change-Id: I2f6d63e198e4b7738399f14734df0064fd6185d2
+Signed-off-by: David Feng <fenghua@phytium.com.cn>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29134
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/include/asm/config.h |  4 ----
+ arch/arm/lib/crt0_64.S        | 13 +++++++++++--
+ 2 files changed, 11 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/include/asm/config.h b/arch/arm/include/asm/config.h
+index be80434..7a34a01 100644
+--- a/arch/arm/include/asm/config.h
++++ b/arch/arm/include/asm/config.h
+@@ -7,10 +7,6 @@
+ #ifndef _ASM_CONFIG_H_
+ #define _ASM_CONFIG_H_
+ 
+-#ifdef __aarch64__
+-#define CONFIG_SYS_GENERIC_GLOBAL_DATA
+-#endif
+-
+ #define CONFIG_LMB
+ #define CONFIG_SYS_BOOT_RAMDISK_HIGH
+ 
+diff --git a/arch/arm/lib/crt0_64.S b/arch/arm/lib/crt0_64.S
+index 6009869..308db0b 100644
+--- a/arch/arm/lib/crt0_64.S
++++ b/arch/arm/lib/crt0_64.S
+@@ -62,9 +62,18 @@ ENTRY(_main)
+  * Set up initial C runtime environment and call board_init_f(0).
+  */
+ 	ldr	x0, =(CONFIG_SYS_INIT_SP_ADDR)
+-	sub	x0, x0, #GD_SIZE	/* allocate one GD above SP */
++	sub	x18, x0, #GD_SIZE	/* allocate one GD above SP */
++	bic	x18, x18, #0x7		/* 8-byte alignment for GD */
++zero_gd:
++	sub	x0, x0, #0x8
++	str	xzr, [x0]
++	cmp	x0, x18
++	b.gt	zero_gd
++#if defined(CONFIG_SYS_MALLOC_F_LEN)
++	sub	x0, x18, #CONFIG_SYS_MALLOC_F_LEN
++	str	x0, [x18, #GD_MALLOC_BASE]
++#endif
+ 	bic	sp, x0, #0xf	/* 16-byte alignment for ABI compliance */
+-	mov	x18, sp			/* GD is above SP */
+ 	mov	x0, #0
+ 	bl	board_init_f
+ 
+-- 
+1.9.1
+

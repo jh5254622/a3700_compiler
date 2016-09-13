@@ -1,0 +1,489 @@
+From 8b889b40a27c5fc0c5048978d77d1109a19f398a Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Sun, 29 May 2016 14:54:55 +0300
+Subject: [PATCH 193/239] fix: rename all MCI definitions
+
+MCI definitions were all renamed properly.
+
+Change-Id: I215bdec19b74548ed96658c07c97db12799c5deb
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30115
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ docs/marvell/misc/mvebu-iob.txt                    |   4 +-
+ docs/marvell/misc/mvebu-rfu.txt                    |   4 +-
+ drivers/marvell/iob.c                              |   4 +-
+ drivers/marvell/rfu.c                              |   2 +-
+ drivers/marvell/rfu_z.c                            |   2 +-
+ include/drivers/marvell/iob.h                      |   4 +-
+ include/drivers/marvell/rfu.h                      |   8 +-
+ .../plat/marvell/a8k/a70x0/board/apn806_setup.h    |   2 +-
+ .../a8k/a7040_rz/board/marvell_plat_config.c       |   2 +-
+ plat/marvell/a8k/a70x0/apn806_setup.c              | 136 +++++++++++----------
+ plat/marvell/a8k/a70x0/board/marvell_plat_config.c |   5 +-
+ plat/marvell/a8k/a70x0/plat_bl31_setup.c           |   4 +-
+ plat/marvell/a8k/a70x0/plat_def.h                  |   2 +-
+ .../a8k/a70x0_cust/board/marvell_plat_config.c     |   2 +-
+ plat/marvell/a8k/a80x0/board/marvell_plat_config.c |   6 +-
+ plat/marvell/a8k/a80x0/plat_def.h                  |   2 +-
+ .../marvell/a8k/apn806/board/marvell_plat_config.c |   2 +-
+ 17 files changed, 96 insertions(+), 95 deletions(-)
+
+diff --git a/docs/marvell/misc/mvebu-iob.txt b/docs/marvell/misc/mvebu-iob.txt
+index 4e68f07..5bd81c6 100644
+--- a/docs/marvell/misc/mvebu-iob.txt
++++ b/docs/marvell/misc/mvebu-iob.txt
+@@ -27,13 +27,13 @@ Mandatory structures:
+ 
+ Target ID options:
+ 	- 0x0 = Internal configuration space
+-	- 0x1 = IHB0
++	- 0x1 = MCI0
+ 	- 0x2 = PEX1_X1
+ 	- 0x3 = PEX2_X1
+ 	- 0x4 = PEX0_X4
+ 	- 0x5 = NAND flash
+ 	- 0x6 = RUNIT (NOR/SPI/BootRoom)
+-	- 0x7 = IHB1
++	- 0x7 = MCI1
+ 
+ Note: if the base address is more than 32 bits, it divided into high and low.
+ 	The same goes for the Size field, if it more that 32 bits, it divided into
+diff --git a/docs/marvell/misc/mvebu-rfu.txt b/docs/marvell/misc/mvebu-rfu.txt
+index 3395043..e525c96 100644
+--- a/docs/marvell/misc/mvebu-rfu.txt
++++ b/docs/marvell/misc/mvebu-rfu.txt
+@@ -10,7 +10,7 @@ following targets:
+ 	0x1 = STM (Serial Trace Macro-cell, a programmer's port into trace stream)
+ 	0x2 = SPI direct access
+ 	0x3 = PCIe registers
+-	0x4 = IHB Port
++	0x4 = MCI Port
+ 	0x5 = PCIe port
+ 
+ Mandatory functions:
+@@ -44,5 +44,5 @@ Example:
+ 	struct rfu_win rfu_memory_map[] = {
+ 		{0x0,	0xfe000000,	0x0,	0x1f00000,	PCIE_PORT_TID}, /* PCIe window 31Mb for PCIe port*/
+ 		{0x0,	0xffe00000,	0x0,	0x100000,	PCIE_REGS_TID}, /* PCI-REG window 64Kb for PCIe-reg*/
+-		{0x0,	0xf6000000,	0x0,	0x100000,	IHBPHY_TID},	/* IHB window  1Mb for PHY-reg*/
++		{0x0,	0xf6000000,	0x0,	0x100000,	MCIPHY_TID},	/* MCI window  1Mb for PHY-reg*/
+ 	};
+diff --git a/drivers/marvell/iob.c b/drivers/marvell/iob.c
+index 49b37f9..4eaa939 100644
+--- a/drivers/marvell/iob.c
++++ b/drivers/marvell/iob.c
+@@ -124,8 +124,8 @@ static void dump_iob(void)
+ 	uint32_t win_id, win_cr, alr, ahr;
+ 	uint8_t target_id;
+ 	uint64_t start, end;
+-	char *iob_target_name[IOB_MAX_TID] = {"CONFIG", "IHB0 ", "PEX1 ", "PEX2 ",
+-					      "PEX0 ", "NAND ", "RUNIT", "IHB1 "};
++	char *iob_target_name[IOB_MAX_TID] = {"CONFIG", "MCI0 ", "PEX1 ", "PEX2 ",
++					      "PEX0 ", "NAND ", "RUNIT", "MCI1 "};
+ 
+ 	/* Dump all IOB windows */
+ 	printf("bank  id target  start              end\n");
+diff --git a/drivers/marvell/rfu.c b/drivers/marvell/rfu.c
+index 30cdfc5..39b3739 100644
+--- a/drivers/marvell/rfu.c
++++ b/drivers/marvell/rfu.c
+@@ -120,7 +120,7 @@ static void dump_rfu(void)
+ 	uint32_t trgt_id, win_id;
+ 	uint32_t alr, ahr;
+ 	uint64_t start, end;
+-	char *rfu_target_name[RFU_MAX_TID] = {"IHB-0    ", "IHB-1    ", "IHB-2    ", "PIDI     ",
++	char *rfu_target_name[RFU_MAX_TID] = {"MCI-0    ", "MCI-1    ", "MCI-2    ", "PIDI     ",
+ 						"SPI      ", "STM      ", "BootRoom "};
+ 
+ 	/* Dump all RFU windows */
+diff --git a/drivers/marvell/rfu_z.c b/drivers/marvell/rfu_z.c
+index 77011a5..abeeee5 100644
+--- a/drivers/marvell/rfu_z.c
++++ b/drivers/marvell/rfu_z.c
+@@ -135,7 +135,7 @@ static void dump_rfu(void)
+ 	uint32_t alr, ahr;
+ 	uint64_t start, end;
+ 	char *rfu_target_name[RFU_MAX_TID] = {"BootRoom ", "STM      ", "SPI      ",
+-					"PCIe-reg ", "IHB-Port ", "PCIe-Port"};
++					"PCIe-reg ", "MCI-Port ", "PCIe-Port"};
+ 
+ 	/* Dump all RFU windows */
+ 	printf("bank  target     start              end\n");
+diff --git a/include/drivers/marvell/iob.h b/include/drivers/marvell/iob.h
+index c8ac9b5..4fb328d 100644
+--- a/include/drivers/marvell/iob.h
++++ b/include/drivers/marvell/iob.h
+@@ -45,13 +45,13 @@ struct iob_win {
+ 
+ enum target_ids_iob {
+ 	INTERNAL_TID	= 0x0,
+-	IHB0_TID	= 0x1,
++	MCI0_TID	= 0x1,
+ 	PEX1_TID	= 0x2,
+ 	PEX2_TID	= 0x3,
+ 	PEX0_TID	= 0x4,
+ 	NAND_TID	= 0x5,
+ 	RUNIT_TID	= 0x6,
+-	IHB1_TID	= 0x7,
++	MCI1_TID	= 0x7,
+ 	IOB_MAX_TID
+ };
+ 
+diff --git a/include/drivers/marvell/rfu.h b/include/drivers/marvell/rfu.h
+index 9b52f8f..616a1a9 100644
+--- a/include/drivers/marvell/rfu.h
++++ b/include/drivers/marvell/rfu.h
+@@ -51,15 +51,15 @@ enum rfu_target_ids {
+ 	STM_TID          = 0x1,
+ 	SPI_TID          = 0x2,
+ 	PCIE_REGS_TID    = 0x3,
+-	IHBPHY_TID       = 0x4,
++	MCIPHY_TID       = 0x4,
+ 	PCIE_PORT_TID    = 0x5,
+ 	RFU_MAX_TID
+ };
+ #else
+ enum rfu_target_ids {
+-	IHB_0_TID	 = 0x0,
+-	IHB_1_TID	 = 0x1,
+-	IHB_2_TID	 = 0x2,
++	MCI_0_TID	 = 0x0,
++	MCI_1_TID	 = 0x1,
++	MCI_2_TID	 = 0x2,
+ 	PIDI_TID	 = 0x3,
+ 	SPI_TID		 = 0x4,
+ 	STM_TID		 = 0x5,
+diff --git a/include/plat/marvell/a8k/a70x0/board/apn806_setup.h b/include/plat/marvell/a8k/a70x0/board/apn806_setup.h
+index f1f3be8..d270acc 100644
+--- a/include/plat/marvell/a8k/a70x0/board/apn806_setup.h
++++ b/include/plat/marvell/a8k/a70x0/board/apn806_setup.h
+@@ -35,6 +35,6 @@
+ #define __APN806_SETUP_H__
+ 
+ void apn806_init(void);
+-int ihb_test_link(int ihb_index);
++int mci_test_link(int mci_index);
+ 
+ #endif /* __APN806_SETUP_H__ */
+diff --git a/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c b/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c
+index d43b017..c098844 100644
+--- a/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c
+@@ -62,7 +62,7 @@ int marvell_get_amb_memory_map(struct amb_win **win, uint32_t *size)
+ struct rfu_win rfu_memory_map[] = {
+ 	{0x0,	0xfe000000,	0x0,	0x1f00000,	PCIE_PORT_TID}, /* PCIe window 31Mb for PCIe port*/
+ 	{0x0,	0xffe00000,	0x0,	0x100000,	PCIE_REGS_TID}, /* PCI-REG window 64Kb for PCIe-reg*/
+-	{0x0,	0xf9100000,	0x0,	0x100000,	IHBPHY_TID},	/* IHB window  1Mb for PHY-reg*/
++	{0x0,	0xf9100000,	0x0,	0x100000,	MCIPHY_TID},	/* MCI window  1Mb for PHY-reg*/
+ };
+ 
+ uintptr_t marvell_get_rfu_reg_offs(void)
+diff --git a/plat/marvell/a8k/a70x0/apn806_setup.c b/plat/marvell/a8k/a70x0/apn806_setup.c
+index 7955715..5be808b 100644
+--- a/plat/marvell/a8k/a70x0/apn806_setup.c
++++ b/plat/marvell/a8k/a70x0/apn806_setup.c
+@@ -49,25 +49,26 @@
+ #define CCU_HTC_CR				(MVEBU_CCU_BASE + 0x200)
+ #define CCU_SET_POC_OFFSET			5
+ 
+-#define IHB_MAX_UNIT_ID				2
+-#define IHBX4_REG_START_ADDRESS_REG(unit_id)	(MVEBU_REGS_BASE + 0x6F4218 + (unit_id * 0x20))
+-#define IHB_REMAP_OFF_SHIFT			8
+-
+-/* IHB indirect access definitions */
+-#define IHB_WRITE_READ_DATA_REG(ihb_index)	MVEBU_IHB_REG_BASE_REMAP(ihb_index)
+-#define IHB_ACCESS_CMD_REG(ihb_index)		(MVEBU_IHB_REG_BASE_REMAP(ihb_index) + 0x4)
+-
+-#define IHB_CTRL_STATUS_REG_NUM			5
+-#define IHB_CTRL_STATUS_REG_PHY_READY		(1 << 12)
+-#define IHB_CTRL_STATUS_REG_PHY_READY_RESERVERD	(1 << 15)
+-#define IHB_CTRL_STATUS_REG_PHY_CID_VIO_OFFSET	24
+-#define IHB_CTRL_STATUS_REG_PHY_CID_VIO_MASK	(0xF << IHB_CTRL_STATUS_REG_PHY_CID_VIO_OFFSET)
++/* MCI indirect access definitions */
++#define MCI_MAX_UNIT_ID				2
++#define MCIX4_REG_START_ADDRESS_REG(unit_id)	(MVEBU_REGS_BASE + 0x6F4218 + (unit_id * 0x20))
++#define MCI_REMAP_OFF_SHIFT			8
++
++/* MCI indirect access definitions */
++#define MCI_WRITE_READ_DATA_REG(mci_index)	MVEBU_MCI_REG_BASE_REMAP(mci_index)
++#define MCI_ACCESS_CMD_REG(mci_index)		(MVEBU_MCI_REG_BASE_REMAP(mci_index) + 0x4)
++
++#define MCI_CTRL_STATUS_REG_NUM			5
++#define MCI_CTRL_STATUS_REG_PHY_READY		(1 << 12)
++#define MCI_CTRL_STATUS_REG_PHY_READY_RESERVERD	(1 << 15)
++#define MCI_CTRL_STATUS_REG_PHY_CID_VIO_OFFSET	24
++#define MCI_CTRL_STATUS_REG_PHY_CID_VIO_MASK	(0xF << MCI_CTRL_STATUS_REG_PHY_CID_VIO_OFFSET)
+ /* Expected successful Link result, including reserved bit */
+-#define IHB_CTRL_PHY_READY			(IHB_CTRL_STATUS_REG_PHY_READY | \
+-						 IHB_CTRL_STATUS_REG_PHY_READY_RESERVERD | \
+-						 IHB_CTRL_STATUS_REG_PHY_CID_VIO_MASK)
++#define MCI_CTRL_PHY_READY			(MCI_CTRL_STATUS_REG_PHY_READY | \
++						 MCI_CTRL_STATUS_REG_PHY_READY_RESERVERD | \
++						 MCI_CTRL_STATUS_REG_PHY_CID_VIO_MASK)
+ 
+-#define IHB_PHY_PWM3_REG_NUM			7
++#define MCI_PHY_PWM3_REG_NUM			7
+ #define PWM3_LINK_ERROR_OFFSET			8	/* [11:8] : LINK_ERROR */
+ #define PWM3_LINK_ERROR_MASK			(0xF << PWM3_LINK_ERROR_OFFSET)
+ #define PWM4_NUM_OF_LANES_OFFSET		20	/* [20:22] : AUTO_NUMBER_OF_LANES */
+@@ -75,91 +76,92 @@
+ #define PWM4_LINK_SPEED_MASK			0x7	/* [3:0] AUTO_SPEED */
+ 
+ 
+-#define IHB_INDIRECT_CTRL_READ_EN		0x1 /* BIT0 */
+-#define IHB_INDIRECT_CTRL_LOCAL_PKT		(1 << 5) /* BIT5: Local destination packet */
+-#define IHB_INDIRECT_CTRL_REG_CHIPID_OFST	16
+-#define IHB_INDIRECT_REG_CTRL_ADDR(reg_num)	((reg_num << IHB_INDIRECT_CTRL_REG_CHIPID_OFST) | \
+-						  IHB_INDIRECT_CTRL_LOCAL_PKT | IHB_INDIRECT_CTRL_READ_EN)
++#define MCI_INDIRECT_CTRL_READ_EN		0x1 /* BIT1 */
++#define MCI_INDIRECT_CTRL_LOCAL_PKT		(1 << 5) /* BIT5: Local destination packet */
++#define MCI_INDIRECT_CTRL_REG_CHIPID_OFST	16
++#define MCI_INDIRECT_REG_CTRL_ADDR(reg_num)	((reg_num << MCI_INDIRECT_CTRL_REG_CHIPID_OFST) | \
++						  MCI_INDIRECT_CTRL_LOCAL_PKT | MCI_INDIRECT_CTRL_READ_EN)
+ 
+-#define IHB_INDIRECT_CTRL_PHY_ACCESS_EN		(0xC0  << IHB_INDIRECT_CTRL_REG_CHIPID_OFST) /* PHY access domain */
++#define MCI_INDIRECT_CTRL_PHY_ACCESS_EN		(0xC0  << MCI_INDIRECT_CTRL_REG_CHIPID_OFST) /* PHY access domain */
+ 
+-#define IHB_PHY_CTRL_ADDR			((IHB_PHY_PWM3_REG_NUM << IHB_INDIRECT_CTRL_REG_CHIPID_OFST) \
+-						  | IHB_INDIRECT_CTRL_LOCAL_PKT)
++#define MCI_PHY_CTRL_ADDR			((MCI_PHY_PWM3_REG_NUM << MCI_INDIRECT_CTRL_REG_CHIPID_OFST) \
++						  | MCI_INDIRECT_CTRL_LOCAL_PKT)
+ 
+-#define IHB_PHY_CTRL_IHB_MINOR			0x6 /* BITS [3:0] */
+-#define IHB_PHY_CTRL_IHB_MAJOR_OFFSET		4
+-#define IHB_PHY_CTRL_IHB_MAJOR			(1 << IHB_PHY_CTRL_IHB_MAJOR_OFFSET)
+-#define IHB_PHY_CTRL_IHB_PHY_MODE_OFFSET	24
+-#define IHB_PHY_CTRL_IHB_PHY_MODE_HOST		(1 << IHB_PHY_CTRL_IHB_PHY_MODE_OFFSET)
+-#define IHB_PHY_CTRL_IHB_PHY_REG_IF_MODE_OFFSET	25
+-#define IHB_PHY_CTRL_IHB_PHY_REG_IF_MODE	(1 << IHB_PHY_CTRL_IHB_PHY_REG_IF_MODE_OFFSET)
+-#define IHB_PHY_CTRL_ENABLE_PHY_ACCESS		(IHB_PHY_CTRL_IHB_PHY_MODE_HOST | \
+-						IHB_PHY_CTRL_IHB_PHY_REG_IF_MODE | \
+-						IHB_PHY_CTRL_IHB_MAJOR | IHB_PHY_CTRL_IHB_MINOR)
++#define MCI_PHY_CTRL_MCI_MINOR			0x6 /* BITS [3:0] */
++#define MCI_PHY_CTRL_MCI_MAJOR_OFFSET		4
++#define MCI_PHY_CTRL_MCI_MAJOR			(1 << MCI_PHY_CTRL_MCI_MAJOR_OFFSET)
++#define MCI_PHY_CTRL_MCI_PHY_MODE_OFFSET	24
++#define MCI_PHY_CTRL_MCI_PHY_MODE_HOST		(1 << MCI_PHY_CTRL_MCI_PHY_MODE_OFFSET)
++#define MCI_PHY_CTRL_MCI_PHY_REG_IF_MODE_OFFSET	25
++#define MCI_PHY_CTRL_MCI_PHY_REG_IF_MODE	(1 << MCI_PHY_CTRL_MCI_PHY_REG_IF_MODE_OFFSET)
++#define MCI_PHY_CTRL_ENABLE_PHY_ACCESS		(MCI_PHY_CTRL_MCI_PHY_MODE_HOST | \
++						MCI_PHY_CTRL_MCI_PHY_REG_IF_MODE | \
++						MCI_PHY_CTRL_MCI_MAJOR | MCI_PHY_CTRL_MCI_MINOR)
+ 
+-enum ihb_register_type {
+-	IHB_REG_TYPE_PHY = 0,
+-	IHB_REG_TYPE_CTRL,
++enum mci_register_type {
++	MCI_REG_TYPE_PHY = 0,
++	MCI_REG_TYPE_CTRL,
+ };
+ 
+-/* IHBx indirect access register are based by default at 0xf4000000/0xf6000000
+- * to avoid conflict of internal registers of units connected via IHBx, which
++
++/* MCIx indirect access register are based by default at 0xf4000000/0xf6000000
++ * to avoid conflict of internal registers of units connected via MCIx, which
+  * can be based on the same address (i.e CP1 base is also 0xf4000000),
+- * the following routines remaps the IHBx indirect bases to another domain */
+-void ihb_remap_indirect_access_base(void)
++ * the following routines remaps the MCIx indirect bases to another domain */
++void mci_remap_indirect_access_base(void)
+ {
+ 	uint32_t i;
+ 
+-	for (i = 0; i < IHB_MAX_UNIT_ID; ++i)
+-		mmio_write_32(IHBX4_REG_START_ADDRESS_REG(i), MVEBU_IHB_REG_BASE_REMAP(i) >> IHB_REMAP_OFF_SHIFT);
++	for (i = 0; i < MCI_MAX_UNIT_ID; ++i)
++		mmio_write_32(MCIX4_REG_START_ADDRESS_REG(i), MVEBU_MCI_REG_BASE_REMAP(i) >> MCI_REMAP_OFF_SHIFT);
+ }
+ 
+-/* Routine to enable access to PHY registers over IHB0 indirect read/write*/
+-void ihb_enable_phy_regs_access(int ihb_index)
++/* Routine to enable access to PHY registers over MCI0 indirect read/write*/
++void mci_enable_phy_regs_access(int mci_index)
+ {
+ 	/* Enable PHY local access (reg 7 bit 25) */
+-	mmio_write_32(IHB_WRITE_READ_DATA_REG(ihb_index), IHB_PHY_CTRL_ENABLE_PHY_ACCESS);
+-	mmio_write_32(IHB_ACCESS_CMD_REG(ihb_index), IHB_PHY_CTRL_ADDR);
++	mmio_write_32(MCI_WRITE_READ_DATA_REG(mci_index), MCI_PHY_CTRL_ENABLE_PHY_ACCESS);
++	mmio_write_32(MCI_ACCESS_CMD_REG(mci_index), MCI_PHY_CTRL_ADDR);
+ }
+ 
+-/* read ihb0 PHY/CTRL registers via indirect access */
+-uint32_t ihb_indirect_read(int reg_num, enum ihb_register_type reg_type, int ihb_index)
++/* read mci0 PHY/CTRL registers via indirect access */
++uint32_t mci_indirect_read(int reg_num, enum mci_register_type reg_type, int mci_index)
+ {
+ 	uint32_t indirect_reg_address = 0;
+ 
+ 	/* Access to PHY registers requires special configuration */
+-	if (reg_type == IHB_REG_TYPE_PHY)
+-		indirect_reg_address |= IHB_INDIRECT_CTRL_PHY_ACCESS_EN;
++	if (reg_type == MCI_REG_TYPE_PHY)
++		indirect_reg_address |= MCI_INDIRECT_CTRL_PHY_ACCESS_EN;
+ 
+-	indirect_reg_address |= IHB_INDIRECT_REG_CTRL_ADDR(reg_num);
++	indirect_reg_address |= MCI_INDIRECT_REG_CTRL_ADDR(reg_num);
+ 
+-	mmio_write_32(IHB_ACCESS_CMD_REG(ihb_index), indirect_reg_address);
+-	return mmio_read_32(IHB_WRITE_READ_DATA_REG(ihb_index));
++	mmio_write_32(MCI_ACCESS_CMD_REG(mci_index), indirect_reg_address);
++	return mmio_read_32(MCI_WRITE_READ_DATA_REG(mci_index));
+ }
+ 
+-int ihb_test_link(int ihb_index)
++int mci_test_link(int mci_index)
+ {
+ 	uint32_t ctrl_status, phy_status, link_error, lane_count;
+ 	uint32_t link_result[5] = {1, 2, 4, 8, 16}; /* link speed and lane count */
+ 
+-	NOTICE("IHB0 link status.. ");
+-	ihb_enable_phy_regs_access(ihb_index);	/* enable PHY domain read/write access */
++	NOTICE("MCI0 link status.. ");
++	mci_enable_phy_regs_access(mci_index);	/* enable PHY domain read/write access */
+ 
+-	/* IHB Controller link status*/
+-	ctrl_status = ihb_indirect_read(IHB_CTRL_STATUS_REG_NUM, IHB_REG_TYPE_CTRL, ihb_index);
++	/* MCI Controller link status*/
++	ctrl_status = mci_indirect_read(MCI_CTRL_STATUS_REG_NUM, MCI_REG_TYPE_CTRL, mci_index);
+ 
+-	/* IHB PHY link status: PWM Control #3*/
+-	phy_status = ihb_indirect_read(IHB_PHY_PWM3_REG_NUM, IHB_REG_TYPE_PHY, ihb_index);
++	/* MCI PHY link status: PWM Control #3*/
++	phy_status = mci_indirect_read(MCI_PHY_PWM3_REG_NUM, MCI_REG_TYPE_PHY, mci_index);
+ 
+-	if (ctrl_status != IHB_CTRL_PHY_READY) {
+-		printf(" link failed (IHB status: 0x%x, PWM_CTRL #3 = 0x%x)\n", ctrl_status, phy_status);
++	if (ctrl_status != MCI_CTRL_PHY_READY) {
++		printf(" link failed (MCI status: 0x%x, PWM_CTRL #3 = 0x%x)\n", ctrl_status, phy_status);
+ 		return 0;
+ 	}
+ 
+ 	printf("Link UP:");
+ 	link_error = (phy_status & PWM3_LINK_ERROR_MASK) >> PWM3_LINK_ERROR_OFFSET;
+ 	if (link_error)
+-		ERROR("\n\tlink Error #%d: (IHB status: 0%x):", link_error, ctrl_status);
++		ERROR("\n\tlink Error #%d: (MCI status: 0%x):", link_error, ctrl_status);
+ 
+ 	lane_count = (phy_status & PWM4_NUM_OF_LANES_MASK) >> PWM4_NUM_OF_LANES_OFFSET;
+ 	printf(" %d lanes ", link_result[lane_count]);
+@@ -211,8 +213,8 @@ void apn806_init(void)
+ 	/* Setup Aurora2. */
+ 	init_aurora2();
+ 
+-	/* configure IHB mapping */
+-	ihb_remap_indirect_access_base();
++	/* configure MCI mapping */
++	mci_remap_indirect_access_base();
+ 
+ 	/* configure RFU windows */
+ 	init_rfu();
+diff --git a/plat/marvell/a8k/a70x0/board/marvell_plat_config.c b/plat/marvell/a8k/a70x0/board/marvell_plat_config.c
+index 5e34265..b6a355d 100644
+--- a/plat/marvell/a8k/a70x0/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a70x0/board/marvell_plat_config.c
+@@ -60,10 +60,9 @@ int marvell_get_amb_memory_map(struct amb_win **win, uint32_t *size)
+  * RFU Configuration
+  ******************************************************************************/
+ 
+-
+ struct rfu_win rfu_memory_map[] = {
+-	{0x0,	MVEBU_IHB_REG_BASE_REMAP(0),	0x0,	0x2000000,	IHB_0_TID}, /* IHB 0 indirect window */
+-	{0x0,	MVEBU_IHB_REG_BASE_REMAP(1),	0x0,	0x2000000,	IHB_1_TID}, /* IHB 1 indirect window */
++	{0x0,	MVEBU_MCI_REG_BASE_REMAP(0),	0x0,	0x2000000,	MCI_0_TID}, /* MCI 0 indirect window */
++	{0x0,	MVEBU_MCI_REG_BASE_REMAP(1),	0x0,	0x2000000,	MCI_1_TID}, /* MCI 1 indirect window */
+ };
+ 
+ 
+diff --git a/plat/marvell/a8k/a70x0/plat_bl31_setup.c b/plat/marvell/a8k/a70x0/plat_bl31_setup.c
+index 2d8205e..88e344d 100644
+--- a/plat/marvell/a8k/a70x0/plat_bl31_setup.c
++++ b/plat/marvell/a8k/a70x0/plat_bl31_setup.c
+@@ -57,11 +57,11 @@ void bl31_plat_arch_setup(void)
+ 	/* configure apn806 */
+ 	apn806_init();
+ 
+-	/* test IHB0 (CP1) status and disable indirect access.
++	/* test MCI0 (CP1) status and disable indirect access.
+ 	 * when all CP1 interfaces will be supported, they will be
+ 	 * initialized by calling cp110_init again for 2nd CP */
+ 	if (CP_COUNT > 1)
+-		ihb_test_link(0); /* test IHB0 link */
++		mci_test_link(0); /* test MCI0 link */
+ 
+ 	/* configure cp110 */
+ 	cp110_init();
+diff --git a/plat/marvell/a8k/a70x0/plat_def.h b/plat/marvell/a8k/a70x0/plat_def.h
+index 4c62e53..e50ebd3 100644
+--- a/plat/marvell/a8k/a70x0/plat_def.h
++++ b/plat/marvell/a8k/a70x0/plat_def.h
+@@ -61,7 +61,7 @@
+ #define MVEBU_SMMU_BASE			(MVEBU_REGS_BASE + 0x100000)
+ #define MVEBU_CP_MPP_REGS(cp_index, n)	(MVEBU_CP_REGS_BASE(cp_index) + 0x440000 + ((n) << 2))
+ 
+-#define MVEBU_IHB_REG_BASE_REMAP(index) (0xFB000000 + (index * 0x2000000))
++#define MVEBU_MCI_REG_BASE_REMAP(index) (0xFB000000 + (index * 0x2000000))
+ 
+ /*******************************************************************************
+  * MVEBU memory map related constants
+diff --git a/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c b/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c
+index 93127e7..d9c4644 100644
+--- a/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c
+@@ -63,7 +63,7 @@ int marvell_get_amb_memory_map(struct amb_win **win, uint32_t *size)
+  ******************************************************************************/
+ /*
+ struct rfu_win rfu_memory_map[] = {
+-	{0x0,	0xf9100000,	0x0,	0x1f00000,	IHB_0_TID},
++	{0x0,	0xf9100000,	0x0,	0x1f00000,	MCI_0_TID},
+ };
+ */
+ struct rfu_win *rfu_memory_map = NULL;
+diff --git a/plat/marvell/a8k/a80x0/board/marvell_plat_config.c b/plat/marvell/a8k/a80x0/board/marvell_plat_config.c
+index 91a7913..524a123 100644
+--- a/plat/marvell/a8k/a80x0/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a80x0/board/marvell_plat_config.c
+@@ -61,9 +61,9 @@ int marvell_get_amb_memory_map(struct amb_win **win, uint32_t *size)
+  ******************************************************************************/
+ 
+ struct rfu_win rfu_memory_map[] = {
+-	{0x0,	0xf4000000,			0x0,	0x2000000,	IHB_0_TID}, /* IHB 0 CP1 window */
+-	{0x0,	MVEBU_IHB_REG_BASE_REMAP(0),	0x0,	0x2000000,	IHB_0_TID}, /* IHB 0 indirect window */
+-	{0x0,	MVEBU_IHB_REG_BASE_REMAP(1),	0x0,	0x2000000,	IHB_1_TID}, /* IHB 1 indirect window */
++	{0x0,	0xf4000000,			0x0,	0x2000000,	MCI_0_TID}, /* MCI 0 CP1 window */
++	{0x0,	MVEBU_MCI_REG_BASE_REMAP(0),	0x0,	0x2000000,	MCI_0_TID}, /* MCI 0 indirect window */
++	{0x0,	MVEBU_MCI_REG_BASE_REMAP(1),	0x0,	0x2000000,	MCI_1_TID}, /* MCI 1 indirect window */
+ };
+ 
+ uintptr_t marvell_get_rfu_reg_offs(void)
+diff --git a/plat/marvell/a8k/a80x0/plat_def.h b/plat/marvell/a8k/a80x0/plat_def.h
+index aaadffb..6d5a4a4 100644
+--- a/plat/marvell/a8k/a80x0/plat_def.h
++++ b/plat/marvell/a8k/a80x0/plat_def.h
+@@ -60,7 +60,7 @@
+ #define MVEBU_SMMU_BASE			(MVEBU_REGS_BASE + 0x100000)
+ #define MVEBU_CP_MPP_REGS(cp_index, n)	(MVEBU_CP_REGS_BASE(cp_index) + 0x440000 + ((n) << 2))
+ 
+-#define MVEBU_IHB_REG_BASE_REMAP(index) (0xFB000000 + (index * 0x2000000))
++#define MVEBU_MCI_REG_BASE_REMAP(index) (0xFB000000 + (index * 0x2000000))
+ 
+ /*******************************************************************************
+  * MVEBU memory map related constants
+diff --git a/plat/marvell/a8k/apn806/board/marvell_plat_config.c b/plat/marvell/a8k/apn806/board/marvell_plat_config.c
+index 3b1e8d2..29626ae 100644
+--- a/plat/marvell/a8k/apn806/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/apn806/board/marvell_plat_config.c
+@@ -42,7 +42,7 @@
+ struct rfu_win rfu_memory_map[] = {
+ 	{0x0,	0xfe000000,	0x0,	0x1f00000,	PCIE_PORT_TID}, /* PCIe window 31Mb for PCIe port*/
+ 	{0x0,	0xffe00000,	0x0,	0x100000,	PCIE_REGS_TID}, /* PCI-REG window 64Kb for PCIe-reg*/
+-	{0x0,	0xf9100000,	0x0,	0x100000,	IHBPHY_TID},	/* IHB window  1Mb for PHY-reg*/
++	{0x0,	0xf9100000,	0x0,	0x100000,	MCIPHY_TID},	/* MCI window  1Mb for PHY-reg*/
+ };
+ 
+ uintptr_t marvell_get_rfu_reg_offs(void)
+-- 
+1.9.1
+

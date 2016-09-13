@@ -1,0 +1,86 @@
+From 04531fe8966313703b6505842c95238f3ad9fc30 Mon Sep 17 00:00:00 2001
+From: zachary <zhangzg@marvell.com>
+Date: Tue, 22 Mar 2016 21:41:53 +0800
+Subject: [PATCH 1002/1240] fix: i2c: a3700: rename i2c relevant marco and
+ compatible string
+
+- rename COMPAT_MVEBU_ARLP_I2C to COMPAT_MVEBU_A3700_I2C in i2c driver
+- rename armadalp-i2c to armada-3700-i2c in fdt
+
+Change-Id: I2d9d6302dfeb19f4fc95639e22f12d56196d81fb
+Signed-off-by: zachary <zhangzg@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28428
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/armada-3700.dtsi | 2 +-
+ drivers/i2c/mv_i2c.c          | 4 ++--
+ include/fdtdec.h              | 2 +-
+ lib/fdtdec.c                  | 2 +-
+ 4 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/dts/armada-3700.dtsi b/arch/arm/dts/armada-3700.dtsi
+index c8507dd..44aa1a5 100644
+--- a/arch/arm/dts/armada-3700.dtsi
++++ b/arch/arm/dts/armada-3700.dtsi
+@@ -95,7 +95,7 @@
+ 				status = "disabled";
+ 			};
+ 			i2c: i2c@11000 {
+-				compatible = "marvell,armadalp-i2c";
++				compatible = "marvell,armada-3700-i2c";
+ 				reg = <0x11000 0x100>;
+ 				status = "disabled";
+ 			};
+diff --git a/drivers/i2c/mv_i2c.c b/drivers/i2c/mv_i2c.c
+index 6ea6754..8b4fba3 100644
+--- a/drivers/i2c/mv_i2c.c
++++ b/drivers/i2c/mv_i2c.c
+@@ -292,7 +292,7 @@ void i2c_init(int speed, int slaveaddr)
+ 	/* in dts file, go through all the 'i2c' nodes.
+ 	 */
+ 	count = fdtdec_find_aliases_for_id(gd->fdt_blob, "i2c",
+-			COMPAT_MVEBU_ARLP_I2C, node_list, 2);
++			COMPAT_MVEBU_A3700_I2C, node_list, 2);
+ 	if (count == 0) {
+ 		error("could not find i2c node in FDT, initialization failed!\n");
+ 		return;
+@@ -533,7 +533,7 @@ int i2c_write(uchar chip, uint addr, int alen, uchar *buffer, int len)
+  * has 32 byte page write mode and takes up to 10 msec.
+  *
+  * in mainline code common/cmd_i2c.c, routine mod_i2c_mem, there is a delay
+- * for CONFIG_SYS_EEPROM_PAGE_WRITE_DELAY_MS, and in armadalp.h, this macro
++ * for CONFIG_SYS_EEPROM_PAGE_WRITE_DELAY_MS, and in armada3700.h, this macro
+  * is defined as 10ms. So it was OK without delay in I2C driver.
+  *
+  * But many new features read/write eeprom, such as Multi-fdt, unique
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 490698d..266cb8d 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -128,7 +128,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_PP2,
+ 	COMPAT_MVEBU_TCLOCK,
+ 	COMPAT_MVEBU_I2C,
+-	COMPAT_MVEBU_ARLP_I2C,
++	COMPAT_MVEBU_A3700_I2C,
+ 	COMPAT_MVEBU_SATA,
+ 	COMPAT_MVEBU_USB,
+ 	COMPAT_MVEBU_SDIO,
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 09005c4..135b74c 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -90,7 +90,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_PP2, "marvell,armada-a8k-pp2"),
+ 	COMPAT(MVEBU_TCLOCK, "marvell,tclk"),
+ 	COMPAT(MVEBU_I2C, "marvell,mvebu-i2c"),
+-	COMPAT(MVEBU_ARLP_I2C, "marvell,armadalp-i2c"),
++	COMPAT(MVEBU_A3700_I2C, "marvell,armada-3700-i2c"),
+ 	COMPAT(MVEBU_SATA, "marvell,mvebu-sata"),
+ 	COMPAT(MVEBU_USB, "marvell,mvebu-usb"),
+ 	COMPAT(MVEBU_SDIO, "marvell,mvebu-sdio"),
+-- 
+1.9.1
+

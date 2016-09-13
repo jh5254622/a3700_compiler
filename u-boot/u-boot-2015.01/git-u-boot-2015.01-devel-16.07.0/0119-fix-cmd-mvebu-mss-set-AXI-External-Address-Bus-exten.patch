@@ -1,0 +1,61 @@
+From b38ba3a15fdcd546fa2dcf07dee4fb783127cc7b Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Wed, 4 Feb 2015 10:28:13 +0200
+Subject: [PATCH 0119/1240] fix: cmd: mvebu: mss: set AXI External Address Bus
+ extension
+
+The DMA need to use MSS external address. this required the following changes:
+	- Set the MSS AEBR register with the address extension
+	- Set the external address bit at the DMA source address
+
+Change-Id: I5e0a55d58d4de75ab7634b261e1e50bcb0e07406
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/16453
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ common/mvebu/cmd_mss.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/common/mvebu/cmd_mss.c b/common/mvebu/cmd_mss.c
+index d30e2bd..93cb3a4 100644
+--- a/common/mvebu/cmd_mss.c
++++ b/common/mvebu/cmd_mss.c
+@@ -24,6 +24,7 @@
+ #define MSS_DMA_DSTBR (MVEBU_MSS_BASE + 0xC4)
+ #define MSS_DMA_CTRLR (MVEBU_MSS_BASE + 0xC8)
+ #define MSS_M3_RSTCR  (MVEBU_MSS_BASE + 0xFC)
++#define MSS_AEBR      (MVEBU_MSS_BASE + 0x160)
+ 
+ #define MSS_DMA_CTRLR_SIZE_OFFSET		(0)
+ #define MSS_DMA_CTRLR_SIZE_MASK		    (0xFF)
+@@ -36,8 +37,11 @@
+ #define MSS_M3_RSTCR_RST_OFFSET     (0)
+ #define MSS_M3_RSTCR_RST_ON         (0)
+ #define MSS_M3_RSTCR_RST_OFF        (1)
++#define MSS_AEBR_MASK				0xFFF
+ 
+ #define MSS_DMA_TIMEOUT             1000
++#define MSS_EXTERNAL_SPACE          0x50000000
++#define MSS_EXTERNAL_ACCESS_BIT     28
+ 
+ int mss_boot(u32 size, u32 srcAddr)
+ {
+@@ -48,9 +52,12 @@ int mss_boot(u32 size, u32 srcAddr)
+ 	/* load image to MSS RAM using DMA */
+ 	loop_num = (size / 128) + (((size & 127) == 0) ? 0 : 1);
+ 
++	/* set AXI External Address Bus extension */
++	writel(((srcAddr >> MSS_EXTERNAL_ACCESS_BIT) & MSS_AEBR_MASK), MSS_AEBR);
++
+ 	for (i = 0; i < loop_num; i++) {
+ 		/* write destination and source addresses */
+-		writel((srcAddr + (i * 128)), MSS_DMA_SRCBR);
++		writel(MSS_EXTERNAL_SPACE | (srcAddr + (i * 128)), MSS_DMA_SRCBR);
+ 		writel((i * 128), MSS_DMA_DSTBR);
+ 
+ 		/* set the DMA control register */
+-- 
+1.9.1
+

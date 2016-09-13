@@ -1,0 +1,806 @@
+From eb5e0c2db3e67f663837a3ad46c362e9bf1a81ef Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Mon, 22 Feb 2016 16:01:42 +0200
+Subject: [PATCH 028/239] a3700: Adjust basic platform structures to match
+ A3700_z
+
+- Add GIC3 support and modify A3700 make files to use it
+  instead of GIC2
+- Apply requied changes to platform files to match register
+  offsets and memory size of A3700_z platform
+- Port PSCI code from u-boot sources
+
+Change-Id: I0450e6c09c4b8708766782f6a967fc42fd5af3a0
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27746
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ docs/marvell/build.txt                            |   7 +-
+ include/plat/marvell/a3700/common/arm_def.h       |   2 +-
+ include/plat/marvell/a3700/common/plat_marvell.h  |   2 +-
+ plat/marvell/a3700/a3700_z/aarch64/plat_psci.S    | 161 ++++++++++------------
+ plat/marvell/a3700/a3700_z/include/platform_def.h |   7 +-
+ plat/marvell/a3700/a3700_z/plat_def.h             |  12 +-
+ plat/marvell/a3700/a3700_z/plat_pm.c              |  74 +++++-----
+ plat/marvell/a3700/a3700_z/plat_topology.c        |   4 +-
+ plat/marvell/a3700/a3700_z/platform.mk            |  36 ++---
+ plat/marvell/common/marvell_gicv3.c               | 151 ++++++++++++++++++++
+ 10 files changed, 294 insertions(+), 162 deletions(-)
+ create mode 100644 plat/marvell/common/marvell_gicv3.c
+
+diff --git a/docs/marvell/build.txt b/docs/marvell/build.txt
+index 233fcaf..0ecfc96 100644
+--- a/docs/marvell/build.txt
++++ b/docs/marvell/build.txt
+@@ -39,7 +39,7 @@ Build Instruction:
+ 	# make distclean
+ 8. Build ATF:
+ 	There are several build options:
+-	- DEBUG: default is without debug informaion (=0). in order to enable it use DEBUG=1
++	- DEBUG: default is without debug information (=0). in order to enable it use DEBUG=1
+ 	- LOG_LEVEL: defines the level of logging which will be purged to the default output port.
+ 				LOG_LEVEL_NONE		0
+ 				LOG_LEVEL_NOTICE	10
+@@ -50,12 +50,13 @@ Build Instruction:
+ 	- USE_COHERENT_MEM: This flag determines whether to include the coherent memory region in the
+ 						BL memory map or not. It should be set to 0.
+ 
+-	For eample: in order to build and image in release mode with log level up to warnings run:
++	For example: in order to build and image in release mode with log level up to warnings run:
+ 	# make DEBUG=1 USE_COHERENT_MEM=0 LOG_LEVEL=20 PLAT=<MARVELL_PLATFORM> all fip
+ 
+ 	Supported MARVELL_PLATFORM are:
+ 		apn806
+ 		a7040_rz
++		a3700_z
+ 
+ Build output:
+ -------------
+@@ -73,5 +74,3 @@ Build output:
+ 	flash-image.bin	- Image which contains boot-image.bin and SPL image.
+ 
+ 	flash-image.bin should be burnt/placed on the boot flash/device.
+-
+-
+diff --git a/include/plat/marvell/a3700/common/arm_def.h b/include/plat/marvell/a3700/common/arm_def.h
+index bd96e30..ff454e7 100644
+--- a/include/plat/marvell/a3700/common/arm_def.h
++++ b/include/plat/marvell/a3700/common/arm_def.h
+@@ -119,7 +119,7 @@
+ 					 MARVELL_NS_DRAM1_SIZE - 1)
+ 
+ #define MARVELL_DRAM1_BASE			MAKE_ULL(0x0)
+-#define MARVELL_DRAM1_SIZE			MAKE_ULL(0x80000000)
++#define MARVELL_DRAM1_SIZE			MAKE_ULL(0x20000000)
+ #define MARVELL_DRAM1_END			(MARVELL_DRAM1_BASE +		\
+ 					 MARVELL_DRAM1_SIZE - 1)
+ 
+diff --git a/include/plat/marvell/a3700/common/plat_marvell.h b/include/plat/marvell/a3700/common/plat_marvell.h
+index b343c37..cc53038 100644
+--- a/include/plat/marvell/a3700/common/plat_marvell.h
++++ b/include/plat/marvell/a3700/common/plat_marvell.h
+@@ -125,7 +125,7 @@ int plat_marvell_get_alt_image_source(
+ 	unsigned int image_id,
+ 	uintptr_t *dev_handle,
+ 	uintptr_t *image_spec);
+-unsigned int plat_marvell_calc_core_pos(u_register_t mpidr);
++unsigned int plat_arm_calc_core_pos(u_register_t mpidr);
+ 
+ 
+ #endif /* __PLAT_MARVELL_H__ */
+diff --git a/plat/marvell/a3700/a3700_z/aarch64/plat_psci.S b/plat/marvell/a3700/a3700_z/aarch64/plat_psci.S
+index 88872bb..de45d7d 100644
+--- a/plat/marvell/a3700/a3700_z/aarch64/plat_psci.S
++++ b/plat/marvell/a3700/a3700_z/aarch64/plat_psci.S
+@@ -56,34 +56,28 @@
+ #include <plat_def.h>
+ #include <asm/macro.h>
+ 
+-#define MVEBU_CCU_HTC_ASET_REG	0x4264
+-#define MVEBU_PRIVATE_UID_REG	0x30
+-#define MVEBU_IO_AFFINITY		0xF00
+-#define MVEBU_RFU_GLOBL_SW_RST	0x84
+-#define ARM_PSCI_RET_SUCCESS	0
++#define MVEBU_CPU_1_RESET_VECTOR	0x14044
++#define MVEBU_CPU_1_RESET_REG		0xD00C
++#define MVEBU_CPU_1_RESET_BIT		31
++#define MVEBU_NB_REGS_BASE		0x13000
++#define MVEBU_WARM_RESET_REG		0x840
++#define MVEBU_WARM_RESET_MAGIC		0x1D1E
++#define ARM_PSCI_RET_SUCCESS		0
+ 
+ .pushsection ._secure.text, "ax"
+ 
+ /*******************************************************************************
+- * A8K cpu entry.
+- * This function implements WA of entry point alignment.
+- * A8K jump address (in SMP mode) must be alogned to 65KB. Since Linux jump
+- * address is not aliogned, this function is used and it will set the jump
+- * address which was passed to the CPU on SMC
++ * A3700 cpu entry.
++ * Now there is only very limited support for PSCI feature.
++ * We only support wake up CPU1 from CPU0 to test SMP
++ * feature in Kernel.
++ *
++ * TODO: Add the rest of PSCI feature which includes
++ * will be added, including suspend/on any cpu from other
++ * cpu and get affinity_info routine.
+  ******************************************************************************/
+-.global _armada8k_cpu_entry
+-_armada8k_cpu_entry:
+-	//b		.
+-	/* get current CPU */
+-	mrs 	x2, MPIDR_EL1   	/* get current CPU - Use affinity level 1 */
+-	asr 	x2, x2, #8
+-	and 	x2, x2, #0xff
+-
+-	/* set CPU private UID */
+-	mov	x0, #(MVEBU_REGS_BASE)
+-	add	x3, x0, #(MVEBU_PRIVATE_UID_REG)
+-	add     x1, x2, #0x4
+-	str 	w1, [x3]
++.global _armada3700_cpu_entry
++_armada3700_cpu_entry:
+ 
+ 	bl	enable_affinity
+ 
+@@ -93,9 +87,8 @@ _armada8k_cpu_entry:
+ 	 * Could be EL3/EL2/EL1, Initial State:
+ 	 * Little Endian, MMU Disabled, i/dCache Disabled
+ 	 */
+-	//adr	x0, vectors		TODO - Get vector address from CPU0
+-	//ldr	x0, =0x4029000 //EL3
+-	ldr	x0, =0xFFFFFFC000084800 //EL1
++	adr	x0, _vectors
++	ldr	x0, [x0]
+ 	switch_el x1, 3f, 2f, 1f
+ 3:	msr	vbar_el3, x0
+ 	mrs	x0, scr_el3
+@@ -130,12 +123,8 @@ _armada8k_cpu_entry:
+ 	bl	armv8_switch_to_el1
+ #endif
+ 
+-	/* set linux start address - WA reset adderrs - use reserved register */
+-	mov	x0, #(MVEBU_REGS_BASE)
+-	mov     x2, #0x644
+-	orr     x2, x2, x0
+-	ldr     w0, [x2]
+-
++	adr	x0, _target_pc
++	ldr	x0, [x0]
+ 	br	x0
+ 
+ /*******************************************************************************
+@@ -144,7 +133,7 @@ _armada8k_cpu_entry:
+  * routine. Therefore, the jump address should be saved before.
+  *
+  * Parameters:
+- * 		x0 = entry point
++ * 	x0 = entry point
+  ******************************************************************************/
+ .global psci_save_cpu_entrypoint
+ psci_save_cpu_entrypoint:
+@@ -152,50 +141,34 @@ psci_save_cpu_entrypoint:
+ 	str	x0, [x2]
+ 	ret
+ 
++/******************************************************************************/
+ .global enable_affinity
+ enable_affinity:
+-
+-	/* get current CPU */
+-	mrs 	x2, MPIDR_EL1   	/* get current CPU - Use affinity level 1 */
+-	asr 	x2, x2, #8
+-	and 	x2, x2, #0xff
+-
+-	/* Activate Affinity between current CPU */
+-	mov	x0, #(MVEBU_REGS_BASE)
+-	mov     x3, #(MVEBU_CCU_HTC_ASET_REG)
+-	orr     x0, x3, x0
+-	mov	x3, #0x1
+-	lsl     x1, x3, x2
+-	orr	x1, x1, #(MVEBU_IO_AFFINITY)
+-	str     w1, [x0]
+-
+-	/* Activate Affinity in CA-57 configuration
++	/* Activate Affinity in CA-53 configuration
+ 	 * Enable the SMPEN bit in CPUECTLR_EL1 */
+-	mrs x0, S3_1_c15_c2_1
+-	orr x0, x0, #0x40
+-	msr S3_1_c15_c2_1, x0
++	mrs	x0, S3_1_c15_c2_1
++	orr	x0, x0, #0x40
++	msr	S3_1_c15_c2_1, x0
+ 	ret
+ 
++/******************************************************************************/
+ .globl	psci_arch_init
+ psci_arch_init:
+ 	add	x29, x30, 0 /* keep return address */
+ 	bl	enable_affinity
+ 	bl	psci_build_stack
+-#ifdef CONFIG_MVEBU_LLC_ENABLE
+-	bl	llc_enable
+-#endif
+ 	ret	x29
+ 
++/******************************************************************************/
+ psci_build_stack:
+-
+ 	mrs     x5, SCR_EL3
+ 	bic	x5, x5, #1	/* Secure mode */
+ 	msr	SCR_EL3, x5
+ 	isb
+ 
+-	mrs 	x4, MPIDR_EL1	/* get current CPU - Use affinity level 1 */
+-	asr 	x4, x4, #8
+-	and 	x4, x4, #0xff
++	mrs	x4, MPIDR_EL1	/* get current CPU - Use affinity level 1 */
++	asr	x4, x4, #8
++	and	x4, x4, #0xff
+ 
+ 	mov	x5, #400		/* 1kB of stack per CPU */
+ 	mul	x4, x4, x5
+@@ -208,60 +181,68 @@ psci_build_stack:
+ 
+ 	ret
+ 
++/******************************************************************************/
+ .globl	psci_0_2_system_reset
+ psci_0_2_system_reset:
+-	mov	x0, #(MVEBU_RFU_BASE)
+-	add	x3, x0, #(MVEBU_RFU_GLOBL_SW_RST)
+-	mov	w0, #0
++	mov	x0, #(MVEBU_REGS_BASE)
++	add	x3, x0, #(MVEBU_NB_REGS_BASE)
++	add	x3, x3, #(MVEBU_WARM_RESET_REG)
++	mov	w0, #(MVEBU_WARM_RESET_MAGIC)
+ 	str	w0, [x3]
+ 	ret
+ 
+-/* x0 = target CPU */
++/******************************************************************************
++* Parameters:
++* 	x0 = target CPU
++******************************************************************************/
+ .globl	psci_0_2_cpu_on_64
+ psci_0_2_cpu_on_64:
+-	mov 	x1, x0
+ 
+ 	dsb     sy
+ 
+-	/* get cpu number - use affinity level 2 */
+-	asr 	x1, x1, #8
+-	and 	x1, x1, #0xff
+-
+-	/* set CPU private UID */
+-	mov		x0, #(MVEBU_REGS_BASE)
+-	add		x3, x0, #(MVEBU_PRIVATE_UID_REG)
+-	add     x2, x1, #0x4
+-	str 	w2, [x3]
+-
+-	/* set the cpu start address */
+-	add	x3, x0, #0x640
++	switch_el x1, 3f, 2f, 1f
++	/* this code runs on Master CPU only */
++3:	mrs	x0, vbar_el3		/* Obtain vectors table address from Master */
++	b	0f
++2:	mrs	x0, vbar_el2
++	b	0f
++1:	mrs	x0, vbar_el1
++0:	adr	x1, _vectors
++	str	x0, [x1]		/* Store vectors table address for slaves */
+ 
+-	/* CPU reset vector address - must be aligned to 0x10000
+-	   first instruction - jump to _armada8k_cpu_entry */
+-	adr     x2, _armada8k_cpu_entry
+-	lsr	x2, x2, #16	/* align to 0x10000 */
+-	str 	w2, [x3]
++	mov	x0, #(MVEBU_REGS_BASE)
+ 
+-	/* save the Linux out of reset address to unused register */
+-	adr	x1, _target_pc
+-	ldr	x1, [x1]
+-	add	x3, x0, #0x644 /* WA reset adderrs - use reserved register */
+-	str     w1, [x3]
++	/* set the cpu_1 start address */
++	ldr	x3, =MVEBU_CPU_1_RESET_VECTOR
++	add	x3, x0, x3
++	adr	x2, _armada3700_cpu_entry
++	lsr	x2, x2, #2		/* 0x14044 is bit[33:2] of start address */
++	str	w2, [x3]
+ 
+ 	/* get the cpu out of reset */
+-	add	x3, x0, #0x650
+-	movz 	x2, #0x1, LSL #16
+-	add	x2, x2, #0x1
+-	str 	w2, [x3]
++	ldr	x3, =MVEBU_CPU_1_RESET_REG
++	add	x3, x0, x3
++	mov	w4, #1
++	lsl	w4, w4, #MVEBU_CPU_1_RESET_BIT
++	mvn	w5, w4
++	ldr	w2, [x3]
++	and	w2, w2, w5
++	str	w2, [x3]
++	ldr	w2, [x3]
++	orr	w2, w2, w4
++	str	w2, [x3]
+ 
+ 	/* return success */
+ 	mov	x0, #ARM_PSCI_RET_SUCCESS	/* Return PSCI_RET_SUCCESS */
+ 	ret
+ 
++
+ 	/* 64 bit alignment for elements accessed as data */
+ 	.align 4
+ _target_pc:
+ 	.quad 0x0
++_vectors:
++	.quad 0x0
+ 
+ text_end:
+ 	.popsection
+diff --git a/plat/marvell/a3700/a3700_z/include/platform_def.h b/plat/marvell/a3700/a3700_z/include/platform_def.h
+index 367366a..f6aff2e 100644
+--- a/plat/marvell/a3700/a3700_z/include/platform_def.h
++++ b/plat/marvell/a3700/a3700_z/include/platform_def.h
+@@ -108,8 +108,8 @@ Trusted SRAM section 0x4000000..0x4200000:
+ #define PLAT_MARVELL_FIP_BASE			(PLAT_MARVELL_ATF_LOAD_ADDR + 0x20000)
+ #define PLAT_MARVELL_FIP_MAX_SIZE		0x4000000
+ 
+-#define PLAT_MARVELL_CLUSTER0_CORE_COUNT	4
+-#define PLAT_MARVELL_CLUSTER1_CORE_COUNT	4
++#define PLAT_MARVELL_CLUSTER0_CORE_COUNT	2
++#define PLAT_MARVELL_CLUSTER1_CORE_COUNT	0
+ 
+ #define PLAT_MARVELL_TRUSTED_ROM_BASE		PLAT_MARVELL_ATF_LOAD_ADDR	/* DRAM[2MB..66MB] is used
+ 										   as Trusted ROM */
+@@ -122,6 +122,7 @@ Trusted SRAM section 0x4000000..0x4200000:
+ 
+ /* GIC related definitions */
+ #define PLAT_MARVELL_GICD_BASE			(MVEBU_REGS_BASE + MVEBU_GICD_BASE)
++#define PLAT_MARVELL_GICR_BASE			(MVEBU_REGS_BASE + MVEBU_GICR_BASE)
+ #define PLAT_MARVELL_GICC_BASE			(MVEBU_REGS_BASE + MVEBU_GICC_BASE)
+ 
+ #define PLAT_MARVELL_G0_IRQS			0
+@@ -141,7 +142,7 @@ Trusted SRAM section 0x4000000..0x4200000:
+  * PL011 related constants
+  */
+ #define PLAT_MARVELL_BOOT_UART_BASE		(MVEBU_REGS_BASE + 0x12000)
+-#define PLAT_MARVELL_BOOT_UART_CLK_IN_HZ	200000000
++#define PLAT_MARVELL_BOOT_UART_CLK_IN_HZ	25804800
+ 
+ #define PLAT_MARVELL_CRASH_UART_BASE		PLAT_MARVELL_BOOT_UART_BASE
+ #define PLAT_MARVELL_CRASH_UART_CLK_IN_HZ	PLAT_MARVELL_BOOT_UART_CLK_IN_HZ
+diff --git a/plat/marvell/a3700/a3700_z/plat_def.h b/plat/marvell/a3700/a3700_z/plat_def.h
+index 8919ac3..cec773d 100644
+--- a/plat/marvell/a3700/a3700_z/plat_def.h
++++ b/plat/marvell/a3700/a3700_z/plat_def.h
+@@ -38,14 +38,13 @@
+ #include <arm_def.h>
+ 
+ 
+-#define MVEBU_MAX_CPUS_PER_CLUSTER	4
++#define MVEBU_MAX_CPUS_PER_CLUSTER	2
+ 
+ #define MVEBU_PRIMARY_CPU		0x0
+ 
+ #define COUNTER_FREQUENCY		25000000
+ 
+-#define MVEBU_REGS_BASE			0xF0000000
+-#define MVEBU_RFU_BASE			(MVEBU_REGS_BASE + 0x6F0000)
++#define MVEBU_REGS_BASE			0xD0000000
+ 
+ /*******************************************************************************
+  * MVEBU memory map related constants
+@@ -56,10 +55,11 @@
+ #define DEVICE0_SIZE			0x10000000
+ 
+ /*******************************************************************************
+- * GIC-400 & interrupt handling related constants
++ * GIC-500 & interrupt handling related constants
+  ******************************************************************************/
+ /* Base MVEBU compatible GIC memory map */
+-#define MVEBU_GICD_BASE			0x210000
+-#define MVEBU_GICC_BASE			0x220000
++#define MVEBU_GICD_BASE			0x1D00000
++#define MVEBU_GICR_BASE			0x1D40000
++#define MVEBU_GICC_BASE			0x1D80000
+ 
+ #endif /* __MVEBU_DEF_H__ */
+diff --git a/plat/marvell/a3700/a3700_z/plat_pm.c b/plat/marvell/a3700/a3700_z/plat_pm.c
+index b8ab990..30a4ef7 100644
+--- a/plat/marvell/a3700/a3700_z/plat_pm.c
++++ b/plat/marvell/a3700/a3700_z/plat_pm.c
+@@ -39,40 +39,40 @@
+ 
+ 
+ /*******************************************************************************
+- * A8K handler called to check the validity of the power state
++ * A3700 handler called to check the validity of the power state
+  * parameter.
+  ******************************************************************************/
+-int a8k_validate_power_state(unsigned int power_state,
++int a3700_validate_power_state(unsigned int power_state,
+ 			     psci_power_state_t *req_state)
+ {
+-	ERROR("a8k_validate_power_state needs to be implemented\n");
++	ERROR("a3700_validate_power_state needs to be implemented\n");
+ 	panic();
+ }
+ 
+ /*******************************************************************************
+- * A8K handler called when a CPU is about to enter standby.
++ * A3700 handler called when a CPU is about to enter standby.
+  ******************************************************************************/
+-void a8k_cpu_standby(plat_local_state_t cpu_state)
++void a3700_cpu_standby(plat_local_state_t cpu_state)
+ {
+-	ERROR("a8k_cpu_standby needs to be implemented\n");
++	ERROR("a3700_cpu_standby needs to be implemented\n");
+ 	panic();
+ }
+ 
+ /*******************************************************************************
+- * A8K handler called when a power domain is about to be turned on. The
++ * A3700 handler called when a power domain is about to be turned on. The
+  * mpidr determines the CPU to be turned on.
+  ******************************************************************************/
+-int a8k_pwr_domain_on(u_register_t mpidr)
++int a3700_pwr_domain_on(u_register_t mpidr)
+ {
+ 	psci_0_2_cpu_on_64(mpidr);
+ 	return 0;
+ }
+ 
+ /*******************************************************************************
+- * A8K handler called to save the entry point which will be later on used
++ * A3700 handler called to save the entry point which will be later on used
+  * when performing CPU on process.
+  ******************************************************************************/
+-int a8k_validate_ns_entrypoint(uintptr_t entrypoint)
++int a3700_validate_ns_entrypoint(uintptr_t entrypoint)
+ {
+ 	psci_save_cpu_entrypoint(entrypoint);
+ 	return PSCI_E_SUCCESS;
+@@ -80,62 +80,62 @@ int a8k_validate_ns_entrypoint(uintptr_t entrypoint)
+ 
+ 
+ /*******************************************************************************
+- * A8K handler called when a power domain is about to be turned off. The
++ * A3700 handler called when a power domain is about to be turned off. The
+  * target_state encodes the power state that each level should transition to.
+  ******************************************************************************/
+-void a8k_pwr_domain_off(const psci_power_state_t *target_state)
++void a3700_pwr_domain_off(const psci_power_state_t *target_state)
+ {
+-	ERROR("a8k_pwr_domain_off needs to be implemented\n");
++	ERROR("a3700_pwr_domain_off needs to be implemented\n");
+ 	panic();
+ }
+ 
+ /*******************************************************************************
+- * A8K handler called when a power domain is about to be suspended. The
++ * A3700 handler called when a power domain is about to be suspended. The
+  * target_state encodes the power state that each level should transition to.
+  ******************************************************************************/
+-void a8k_pwr_domain_suspend(const psci_power_state_t *target_state)
++void a3700_pwr_domain_suspend(const psci_power_state_t *target_state)
+ {
+-	ERROR("a8k_pwr_domain_suspend needs to be implemented\n");
++	ERROR("a3700_pwr_domain_suspend needs to be implemented\n");
+ 	panic();
+ }
+ 
+ /*******************************************************************************
+- * A8K handler called when a power domain has just been powered on after
++ * A3700 handler called when a power domain has just been powered on after
+  * being turned off earlier. The target_state encodes the low power state that
+  * each level has woken up from.
+  ******************************************************************************/
+-void a8k_pwr_domain_on_finish(const psci_power_state_t *target_state)
++void a3700_pwr_domain_on_finish(const psci_power_state_t *target_state)
+ {
+-	ERROR("a8k_pwr_domain_on_finish needs to be implemented\n");
++	ERROR("a3700_pwr_domain_on_finish needs to be implemented\n");
+ 	panic();
+ }
+ 
+ /*******************************************************************************
+- * A8K handler called when a power domain has just been powered on after
++ * A3700 handler called when a power domain has just been powered on after
+  * having been suspended earlier. The target_state encodes the low power state
+  * that each level has woken up from.
+  * TODO: At the moment we reuse the on finisher and reinitialize the secure
+  * context. Need to implement a separate suspend finisher.
+  ******************************************************************************/
+-void a8k_pwr_domain_suspend_finish(const psci_power_state_t *target_state)
++void a3700_pwr_domain_suspend_finish(const psci_power_state_t *target_state)
+ {
+-	ERROR("a8k_pwr_domain_suspend_finish needs to be implemented\n");
++	ERROR("a3700_pwr_domain_suspend_finish needs to be implemented\n");
+ 	panic();
+ }
+ 
+ /*******************************************************************************
+- * A8K handlers to shutdown/reboot the system
++ * A3700 handlers to shutdown/reboot the system
+  ******************************************************************************/
+-static void __dead2 a8k_system_off(void)
++static void __dead2 a3700_system_off(void)
+ {
+-	ERROR("a8k_system_off needs to be implemented\n");
++	ERROR("a3700_system_off needs to be implemented\n");
+ 	panic();
+ 	wfi();
+-	ERROR("A8K System Off: operation not handled.\n");
++	ERROR("A3700 System Off: operation not handled.\n");
+ 	panic();
+ }
+ 
+-static void __dead2 a8k_system_reset(void)
++static void __dead2 a3700_system_reset(void)
+ {
+ 	psci_0_2_system_reset();
+ 	/* we shouldn't get to this point */
+@@ -147,14 +147,14 @@ static void __dead2 a8k_system_reset(void)
+  * platform layer will take care of registering the handlers with PSCI.
+  ******************************************************************************/
+ const plat_psci_ops_t plat_arm_psci_pm_ops = {
+-	.cpu_standby = a8k_cpu_standby,
+-	.pwr_domain_on = a8k_pwr_domain_on,
+-	.pwr_domain_off = a8k_pwr_domain_off,
+-	.pwr_domain_suspend = a8k_pwr_domain_suspend,
+-	.pwr_domain_on_finish = a8k_pwr_domain_on_finish,
+-	.pwr_domain_suspend_finish = a8k_pwr_domain_suspend_finish,
+-	.system_off = a8k_system_off,
+-	.system_reset = a8k_system_reset,
+-	.validate_power_state = a8k_validate_power_state,
+-	.validate_ns_entrypoint = a8k_validate_ns_entrypoint
++	.cpu_standby = a3700_cpu_standby,
++	.pwr_domain_on = a3700_pwr_domain_on,
++	.pwr_domain_off = a3700_pwr_domain_off,
++	.pwr_domain_suspend = a3700_pwr_domain_suspend,
++	.pwr_domain_on_finish = a3700_pwr_domain_on_finish,
++	.pwr_domain_suspend_finish = a3700_pwr_domain_suspend_finish,
++	.system_off = a3700_system_off,
++	.system_reset = a3700_system_reset,
++	.validate_power_state = a3700_validate_power_state,
++	.validate_ns_entrypoint = a3700_validate_ns_entrypoint
+ };
+diff --git a/plat/marvell/a3700/a3700_z/plat_topology.c b/plat/marvell/a3700/a3700_z/plat_topology.c
+index bf72182..1d49a65 100644
+--- a/plat/marvell/a3700/a3700_z/plat_topology.c
++++ b/plat/marvell/a3700/a3700_z/plat_topology.c
+@@ -56,9 +56,9 @@ const unsigned char arm_power_domain_tree_desc[] = {
+  ******************************************************************************/
+ int plat_core_pos_by_mpidr(u_register_t mpidr)
+ {
+-	int target_id = mpidr / 0x100;
++	int target_id = mpidr;
+ 
+-	if (target_id < 1 || target_id > 3)
++	if (target_id > 1)
+ 		return -1;
+ 
+ 	return target_id;
+diff --git a/plat/marvell/a3700/a3700_z/platform.mk b/plat/marvell/a3700/a3700_z/platform.mk
+index 4c2ee85..b3b1fc6 100644
+--- a/plat/marvell/a3700/a3700_z/platform.mk
++++ b/plat/marvell/a3700/a3700_z/platform.mk
+@@ -41,34 +41,34 @@ CALL_DOIMAGE		:= y
+ $(eval $(call add_define,PLAT_MARVELL_7000_Z0))
+ 
+ MARVELL_GIC_SOURCES	:=	drivers/arm/gic/common/gic_common.c	\
+-				drivers/arm/gic/v2/gicv2_main.c				\
+-				drivers/arm/gic/v2/gicv2_helpers.c			\
+-				plat/common/plat_gicv2.c
++				drivers/arm/gic/v3/gicv3_main.c		\
++				drivers/arm/gic/v3/gicv3_helpers.c	\
++				plat/common/plat_gicv3.c
+ 
+ ATF_INCLUDES		:=	-Iinclude/common/tbbr
+ 
+ PLAT_INCLUDES		:=	-I$(PLAT_FAMILY_BASE)/$(PLAT)			\
+-				-I$(PLAT_FAMILY_BASE)/$(PLAT)/include			\
+-				-I$(PLAT_INCLUDE_BASE)/$(PLAT)/board/common		\
+-				-I$(PLAT_INCLUDE_BASE)/common					\
+-				-I$(PLAT_INCLUDE_BASE)/common/aarch64			\
+-				-I$(PLAT_SRC_BASE)								\
+-				-Idrivers/marvell/uart			\
++				-I$(PLAT_FAMILY_BASE)/$(PLAT)/include		\
++				-I$(PLAT_INCLUDE_BASE)/$(PLAT)/board/common	\
++				-I$(PLAT_INCLUDE_BASE)/common			\
++				-I$(PLAT_INCLUDE_BASE)/common/aarch64		\
++				-I$(PLAT_SRC_BASE)				\
++				-Idrivers/marvell/uart				\
+ 				${ATF_INCLUDES}
+ 
+-PLAT_BL_COMMON_SOURCES	:=	$(PLAT_SRC_BASE)/aarch64/a7040_rz_common.c	\
+-				drivers/console/console.S							\
++PLAT_BL_COMMON_SOURCES	:=	$(PLAT_SRC_BASE)/aarch64/a3700_z_common.c	\
++				drivers/console/console.S			\
+ 				drivers/marvell/uart/a3700_console.S
+ 
+ BL1_SOURCES		+=	$(PLAT_SRC_BASE)/aarch64/plat_helpers.S	\
+-				lib/cpus/aarch64/cortex_a72.S
++				lib/cpus/aarch64/cortex_a53.S
+ 
+-BL31_SOURCES		+=	lib/cpus/aarch64/cortex_a72.S		\
+-				$(PLAT_SRC_BASE)/aarch64/plat_helpers.S		\
+-				$(PLAT_SRC_BASE)/aarch64/plat_psci.S		\
+-				$(PLAT_SRC_BASE)/plat_pm.c					\
+-				$(PLAT_SRC_BASE)/plat_topology.c			\
+-				plat/marvell/common/marvell_gicv2.c			\
++BL31_SOURCES		+=	lib/cpus/aarch64/cortex_a53.S		\
++				$(PLAT_SRC_BASE)/aarch64/plat_helpers.S	\
++				$(PLAT_SRC_BASE)/aarch64/plat_psci.S	\
++				$(PLAT_SRC_BASE)/plat_pm.c		\
++				$(PLAT_SRC_BASE)/plat_topology.c	\
++				plat/marvell/common/marvell_gicv3.c	\
+ 				${MARVELL_GIC_SOURCES}
+ 
+ # Disable the PSCI platform compatibility layer (allows porting from Old Platform APIs
+diff --git a/plat/marvell/common/marvell_gicv3.c b/plat/marvell/common/marvell_gicv3.c
+new file mode 100644
+index 0000000..b1bcbe5
+--- /dev/null
++++ b/plat/marvell/common/marvell_gicv3.c
+@@ -0,0 +1,151 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2016 Marvell International Ltd.
++* ***************************************************************************
++*
++* Redistribution and use in source and binary forms, with or without
++* modification, are permitted provided that the following conditions are met:
++*
++* Redistributions of source code must retain the above copyright notice, this
++* list of conditions and the following disclaimer.
++*
++* Redistributions in binary form must reproduce the above copyright notice,
++* this list of conditions and the following disclaimer in the documentation
++* and/or other materials provided with the distribution.
++*
++* Neither the name of Marvell nor the names of its contributors may be used
++* to endorse or promote products derived from this software without specific
++* prior written permission.
++*
++* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
++* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++* POSSIBILITY OF SUCH DAMAGE.
++*
++***************************************************************************
++*/
++/*
++ * Copyright (c) 2015, ARM Limited and Contributors. All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ *
++ * Redistributions of source code must retain the above copyright notice, this
++ * list of conditions and the following disclaimer.
++ *
++ * Redistributions in binary form must reproduce the above copyright notice,
++ * this list of conditions and the following disclaimer in the documentation
++ * and/or other materials provided with the distribution.
++ *
++ * Neither the name of ARM nor the names of its contributors may be used
++ * to endorse or promote products derived from this software without specific
++ * prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
++ */
++
++#include <arm_def.h>
++#include <gicv3.h>
++#include <plat_marvell.h>
++#include <platform.h>
++#include <platform_def.h>
++
++/******************************************************************************
++ * The following functions are defined as weak to allow a platform to override
++ * the way the GICv3 driver is initialised and used.
++ *****************************************************************************/
++#pragma weak plat_marvell_gic_driver_init
++#pragma weak plat_marvell_gic_init
++#pragma weak plat_marvell_gic_cpuif_enable
++#pragma weak plat_marvell_gic_cpuif_disable
++#pragma weak plat_marvell_gic_pcpu_init
++
++
++/* The GICv3 driver only needs to be initialized in EL3 */
++uintptr_t rdistif_base_addrs[PLATFORM_CORE_COUNT];
++
++/* Array of Group1 secure interrupts to be configured by the gic driver */
++const unsigned int g1s_interrupt_array[] = {
++	PLAT_MARVELL_G1S_IRQS
++};
++
++/* Array of Group0 interrupts to be configured by the gic driver */
++const unsigned int g0_interrupt_array[] = {
++	PLAT_MARVELL_G0_IRQS
++};
++
++const gicv3_driver_data_t marvell_gic_data = {
++	.gicd_base = PLAT_MARVELL_GICD_BASE,
++	.gicr_base = PLAT_MARVELL_GICR_BASE,
++	.g0_interrupt_num = ARRAY_SIZE(g0_interrupt_array),
++	.g1s_interrupt_num = ARRAY_SIZE(g1s_interrupt_array),
++	.g0_interrupt_array = g0_interrupt_array,
++	.g1s_interrupt_array = g1s_interrupt_array,
++	.rdistif_num = PLATFORM_CORE_COUNT,
++	.rdistif_base_addrs = rdistif_base_addrs,
++	.mpidr_to_core_pos = plat_arm_calc_core_pos
++};
++
++void plat_marvell_gic_driver_init(void)
++{
++	/*
++	 * The GICv3 driver is initialized in EL3 and does not need
++	 * to be initialized again in SEL1. This is because the S-EL1
++	 * can use GIC system registers to manage interrupts and does
++	 * not need GIC interface base addresses to be configured.
++	 */
++#if IMAGE_BL31
++	gicv3_driver_init(&marvell_gic_data);
++#endif
++}
++
++/******************************************************************************
++ * ARM common helper to initialize the GIC. Only invoked by BL31
++ *****************************************************************************/
++void plat_marvell_gic_init(void)
++{
++	gicv3_distif_init();
++	gicv3_rdistif_init(plat_my_core_pos());
++	gicv3_cpuif_enable(plat_my_core_pos());
++}
++
++/******************************************************************************
++ * ARM common helper to enable the GIC CPU interface
++ *****************************************************************************/
++void plat_marvell_gic_cpuif_enable(void)
++{
++	gicv3_cpuif_enable(plat_my_core_pos());
++}
++
++/******************************************************************************
++ * ARM common helper to disable the GIC CPU interface
++ *****************************************************************************/
++void plat_marvell_gic_cpuif_disable(void)
++{
++	gicv3_cpuif_disable(plat_my_core_pos());
++}
++
++/******************************************************************************
++ * ARM common helper to initialize the per-cpu redistributor interface in GICv3
++ *****************************************************************************/
++void plat_marvell_gic_pcpu_init(void)
++{
++	gicv3_rdistif_init(plat_my_core_pos());
++}
+-- 
+1.9.1
+

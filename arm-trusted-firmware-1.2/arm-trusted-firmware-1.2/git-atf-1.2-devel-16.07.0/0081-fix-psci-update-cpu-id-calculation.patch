@@ -1,0 +1,141 @@
+From 253187cfd9c513a2dbefc61e395c738df8d0c8ab Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Wed, 30 Mar 2016 18:02:10 +0300
+Subject: [PATCH 081/239] fix: psci: update cpu id calculation
+
+- calulate cpu id (whcih is used during cpu_on process)
+  according to cluster id and cpu number.
+- the calulation is affected by the platform definition
+  of number of cores per cpu.
+
+Change-Id: I1de2bf17b0cf9000f73f7cc4003ef1076620f23a
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28682
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/plat/marvell/a8k/common/arm_def.h     |  5 +----
+ plat/marvell/a8k/a70x0/include/platform_def.h | 11 ++++++++--
+ plat/marvell/a8k/a70x0/plat_def.h             |  2 --
+ plat/marvell/a8k/a70x0/plat_topology.c        | 31 +++++++++++++++++++--------
+ 4 files changed, 32 insertions(+), 17 deletions(-)
+
+diff --git a/include/plat/marvell/a8k/common/arm_def.h b/include/plat/marvell/a8k/common/arm_def.h
+index df8471a..b2b3b7f 100644
+--- a/include/plat/marvell/a8k/common/arm_def.h
++++ b/include/plat/marvell/a8k/common/arm_def.h
+@@ -77,8 +77,6 @@
+ /* Special value used to verify platform parameters from BL2 to BL31 */
+ #define MARVELL_BL31_PLAT_PARAM_VAL		0x0f1e2d3c4b5a6978ULL
+ 
+-#define MARVELL_CLUSTER_COUNT		2
+-#define MARVELL_SYSTEM_COUNT		1
+ 
+ #define MARVELL_CACHE_WRITEBACK_SHIFT	6
+ 
+@@ -213,8 +211,7 @@
+ #define PLAT_MAX_OFF_STATE		MARVELL_LOCAL_STATE_OFF
+ 
+ 
+-#define PLATFORM_CORE_COUNT		(PLAT_MARVELL_CLUSTER0_CORE_COUNT + \
+-					 PLAT_MARVELL_CLUSTER1_CORE_COUNT)
++#define PLATFORM_CORE_COUNT		PLAT_MARVELL_CORE_COUNT
+ 
+ /*
+  * Some data must be aligned on the biggest cache line size in the platform.
+diff --git a/plat/marvell/a8k/a70x0/include/platform_def.h b/plat/marvell/a8k/a70x0/include/platform_def.h
+index 2092f78..6f99a3c 100644
+--- a/plat/marvell/a8k/a70x0/include/platform_def.h
++++ b/plat/marvell/a8k/a70x0/include/platform_def.h
+@@ -111,8 +111,15 @@ Trusted SRAM section 0x4000000..0x4200000:
+ #define PLAT_MARVELL_FIP_BASE			(PLAT_MARVELL_ATF_LOAD_ADDR + 0x20000)
+ #define PLAT_MARVELL_FIP_MAX_SIZE		0x4000000
+ 
+-#define PLAT_MARVELL_CLUSTER0_CORE_COUNT	4
+-#define PLAT_MARVELL_CLUSTER1_CORE_COUNT	4
++#ifdef PLAT_MARVELL_APN_806_Z
++#define PLAT_MARVELL_CLUSTER_COUNT		4
++#define PLAT_MARVELL_CLUSTER_CORE_COUNT		1
++#else
++#define PLAT_MARVELL_CLUSTER_COUNT		2
++#define PLAT_MARVELL_CLUSTER_CORE_COUNT		2
++#endif
++
++#define PLAT_MARVELL_CORE_COUNT			(PLAT_MARVELL_CLUSTER_COUNT * PLAT_MARVELL_CLUSTER_CORE_COUNT)
+ 
+ #define PLAT_MARVELL_TRUSTED_ROM_BASE	PLAT_MARVELL_ATF_LOAD_ADDR	/* DRAM[2MB..66MB] is used as Trusted ROM */
+ #define PLAT_MARVELL_TRUSTED_ROM_SIZE	0x04000000	/* 64 MB TODO: reduce this to minimum needed according
+diff --git a/plat/marvell/a8k/a70x0/plat_def.h b/plat/marvell/a8k/a70x0/plat_def.h
+index 8bc16cf..1b88b01 100644
+--- a/plat/marvell/a8k/a70x0/plat_def.h
++++ b/plat/marvell/a8k/a70x0/plat_def.h
+@@ -38,8 +38,6 @@
+ #include <arm_def.h>
+ 
+ 
+-#define MVEBU_MAX_CPUS_PER_CLUSTER	4
+-
+ #define MVEBU_PRIMARY_CPU		0x0
+ 
+ #if PALLADIUM
+diff --git a/plat/marvell/a8k/a70x0/plat_topology.c b/plat/marvell/a8k/a70x0/plat_topology.c
+index bf72182..d95cefe 100644
+--- a/plat/marvell/a8k/a70x0/plat_topology.c
++++ b/plat/marvell/a8k/a70x0/plat_topology.c
+@@ -32,19 +32,27 @@
+ ***************************************************************************
+ */
+ 
+-
+ #include <plat_marvell.h>
++#include <assert.h>
++
++#define MPIDR_CLUSTER_ID_OFFEST		8
++#define MPIDR_CLUSTER_ID_MASK		0xF
++#define MPIDR_CPU_ID_MASK		0x3
+ 
+-/* Note: This file implements functions and structures which
+-   are required by ATF build */
+ 
+ const unsigned char arm_power_domain_tree_desc[] = {
+ 	/* No of root nodes */
+-	MARVELL_CLUSTER_COUNT,
++	PLAT_MARVELL_CLUSTER_COUNT,
+ 	/* No of children for the first node */
+-	PLAT_MARVELL_CLUSTER0_CORE_COUNT,
++	PLAT_MARVELL_CLUSTER_CORE_COUNT,
+ 	/* No of children for the second node */
+-	PLAT_MARVELL_CLUSTER1_CORE_COUNT
++	PLAT_MARVELL_CLUSTER_CORE_COUNT,
++#ifdef PLAT_MARVELL_APN_806_Z /* there are 4 clusters in Z1 */
++	/* No of children for the third node */
++	PLAT_MARVELL_CLUSTER_CORE_COUNT,
++	/* No of children for the fourth node */
++	PLAT_MARVELL_CLUSTER_CORE_COUNT
++#endif
+ };
+ 
+ 
+@@ -56,10 +64,15 @@ const unsigned char arm_power_domain_tree_desc[] = {
+  ******************************************************************************/
+ int plat_core_pos_by_mpidr(u_register_t mpidr)
+ {
+-	int target_id = mpidr / 0x100;
++	int target_id;
++	int cluster, cpu;
++
++	cluster = (mpidr >> MPIDR_CLUSTER_ID_OFFEST) & MPIDR_CLUSTER_ID_MASK;
++	cpu = mpidr & MPIDR_CPU_ID_MASK;
++
++	assert(cpu < PLAT_MARVELL_CLUSTER_CORE_COUNT);
+ 
+-	if (target_id < 1 || target_id > 3)
+-		return -1;
++	target_id = (cluster * PLAT_MARVELL_CLUSTER_CORE_COUNT) + cpu;
+ 
+ 	return target_id;
+ }
+-- 
+1.9.1
+

@@ -1,0 +1,70 @@
+From a3a3e4fdd010421f7f6490b950490cd04f90529d Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Tue, 9 Feb 2016 14:18:40 +0200
+Subject: [PATCH 0844/1240] psci: re-enable psci configuration when running in
+ EL2
+
+when booting using ATF, ATF is responsible for the psci.
+u-boot, in this case, is only responsible for updating
+the Linux fdt with the ATF BL31 address so it will be
+marked as reserved.
+
+Change-Id: Ic56132b76fc531fd20d2c76f3e830fbca81f4ff5
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27376
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ arch/arm/cpu/armv8/cpu-dt.c | 21 +++++++++++++++------
+ 1 file changed, 15 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/cpu-dt.c b/arch/arm/cpu/armv8/cpu-dt.c
+index 585eb19..ad4329b 100644
+--- a/arch/arm/cpu/armv8/cpu-dt.c
++++ b/arch/arm/cpu/armv8/cpu-dt.c
+@@ -10,6 +10,9 @@
+ 
+ #ifdef CONFIG_ARMV8_PSCI
+ 
++#define ATF_RESERVED_MEM_START	0x4023000
++#define ATF_RESERVED_MEM_SIZE	0x10000
++
+ static void psci_reserve_mem(void *fdt)
+ {
+ #ifndef CONFIG_ARMV8_SECURE_BASE
+@@ -36,10 +39,17 @@ static void psci_reserve_mem(void *fdt)
+ 	nodeoff = fdt_add_subnode(fdt, nodeoff, "psci-area");
+ 	if (nodeoff < 0)
+ 		return;
+-	fdt_setprop_u64(fdt, nodeoff, "reg", (unsigned long)__secure_start);
+-	fdt_appendprop_u64(fdt, nodeoff, "reg",
+-			   (unsigned long)__secure_end
+-			   - (unsigned long)__secure_start);
++
++	if (is_psci_enabled()) {
++		fdt_setprop_u64(fdt, nodeoff, "reg", (unsigned long)__secure_start);
++		fdt_appendprop_u64(fdt, nodeoff, "reg",
++				   (unsigned long)__secure_end
++				   - (unsigned long)__secure_start);
++	} else {
++		fdt_setprop_u64(fdt, nodeoff, "reg", (unsigned long)ATF_RESERVED_MEM_START);
++		fdt_appendprop_u64(fdt, nodeoff, "reg", (unsigned long)ATF_RESERVED_MEM_SIZE);
++	}
++
+ 	fdt_setprop(fdt, nodeoff, "no-map", 0, 0);
+ #endif
+ }
+@@ -164,8 +174,7 @@ static void cpu_update_dt_spin_table(void *blob)
+ int cpu_update_dt(void *fdt)
+ {
+ #ifdef CONFIG_ARMV8_PSCI
+-	if (is_psci_enabled())
+-		cpu_update_dt_psci(fdt);
++	cpu_update_dt_psci(fdt);
+ #else
+ 	cpu_update_dt_spin_table(fdt);
+ #endif
+-- 
+1.9.1
+

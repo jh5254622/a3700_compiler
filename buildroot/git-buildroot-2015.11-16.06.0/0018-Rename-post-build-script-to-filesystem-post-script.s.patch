@@ -1,0 +1,73 @@
+From 821d62c78f0268abfbd8f735b24554a10e335d9d Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Sun, 30 Aug 2015 14:55:56 +0300
+Subject: [PATCH 18/66] Rename post build script to filesystem-post-script.sh
+
+Change-Id: I01dce83bab4ebc3d29e9ef01c2a4d05177a0807d
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23308
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ board/marvell/scripts/create_pxp_ramdisk.sh     | 9 ---------
+ board/marvell/scripts/filesystem-post-script.sh | 9 +++++++++
+ configs/mvebu_armv8_tiny_le_defconfig           | 9 ++-------
+ 3 files changed, 11 insertions(+), 16 deletions(-)
+ delete mode 100755 board/marvell/scripts/create_pxp_ramdisk.sh
+ create mode 100755 board/marvell/scripts/filesystem-post-script.sh
+
+diff --git a/board/marvell/scripts/create_pxp_ramdisk.sh b/board/marvell/scripts/create_pxp_ramdisk.sh
+deleted file mode 100755
+index 981b9fb..0000000
+--- a/board/marvell/scripts/create_pxp_ramdisk.sh
++++ /dev/null
+@@ -1,9 +0,0 @@
+-#!/bin/sh
+-
+-export CROSS_COMPILE=output/host/usr/bin/aarch64-linux-gnu-
+-for f in `ls output/images/rootfs.ext*`; do
+-	./board/marvell/scripts/mkimage -O linux -T ramdisk -A arm64 -C none -n "Ramdisk" -d $f $(dirname $f)/u_$(basename $f)
+-done
+-echo -n "bin2hex..."
+-./board/marvell/scripts/bin2phex.pl -i $1/u_rootfs.ext2 -o $1/u_rootfs_ext2.hex -b 0x3000000
+-echo "Done."
+diff --git a/board/marvell/scripts/filesystem-post-script.sh b/board/marvell/scripts/filesystem-post-script.sh
+new file mode 100755
+index 0000000..981b9fb
+--- /dev/null
++++ b/board/marvell/scripts/filesystem-post-script.sh
+@@ -0,0 +1,9 @@
++#!/bin/sh
++
++export CROSS_COMPILE=output/host/usr/bin/aarch64-linux-gnu-
++for f in `ls output/images/rootfs.ext*`; do
++	./board/marvell/scripts/mkimage -O linux -T ramdisk -A arm64 -C none -n "Ramdisk" -d $f $(dirname $f)/u_$(basename $f)
++done
++echo -n "bin2hex..."
++./board/marvell/scripts/bin2phex.pl -i $1/u_rootfs.ext2 -o $1/u_rootfs_ext2.hex -b 0x3000000
++echo "Done."
+diff --git a/configs/mvebu_armv8_tiny_le_defconfig b/configs/mvebu_armv8_tiny_le_defconfig
+index 9e3c3de..77b8df9 100644
+--- a/configs/mvebu_armv8_tiny_le_defconfig
++++ b/configs/mvebu_armv8_tiny_le_defconfig
+@@ -1,16 +1,11 @@
+ BR2_aarch64=y
+ BR2_TOOLCHAIN_EXTERNAL=y
+-BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y
+-BR2_TOOLCHAIN_EXTERNAL_PATH="/path/to/compiler"
+-BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="$(ARCH)-linux-gnu"
+-BR2_TOOLCHAIN_EXTERNAL_HEADERS_3_17=y
+-BR2_TOOLCHAIN_EXTERNAL_CUSTOM_GLIBC=y
+-BR2_TOOLCHAIN_EXTERNAL_CXX=y
+ BR2_MVEBU_RELEASE_NAME="2015_T3.0.eng_drop_v1"
+ BR2_TARGET_GENERIC_GETTY_PORT="ttyS0"
+ BR2_ROOTFS_OVERLAY="user_files"
+-BR2_ROOTFS_POST_IMAGE_SCRIPT="board/marvell/scripts/create_pxp_ramdisk.sh"
++BR2_ROOTFS_POST_IMAGE_SCRIPT="board/marvell/scripts/filesystem-post-script.sh"
+ BR2_TARGET_ROOTFS_CPIO=y
+ BR2_TARGET_ROOTFS_EXT2=y
+ BR2_TARGET_ROOTFS_EXT2_2r1=y
++BR2_TARGET_ROOTFS_EXT2_GZIP=y
+ BR2_TARGET_ROOTFS_TAR_GZIP=y
+-- 
+1.9.1
+

@@ -1,0 +1,49 @@
+From e7e313e396bc2a7d84e715f1e9262898879be1c2 Mon Sep 17 00:00:00 2001
+From: Victor Axelrod <victora@marvell.com>
+Date: Thu, 9 Jun 2016 20:30:56 +0300
+Subject: [PATCH 207/239] mv_ddr: a80x0: Add 64-bit wl supp bypass
+
+This patch is a bypass for 64-bit write leveling supplementary
+stage. It should be removed when the stage is implemented.
+
+Change-Id: I521a077aea76d41e12c7c4d02702bfd031ad210f
+Signed-off-by: Victor Axelrod <victora@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30402
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/ddr3_training_leveling.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/drivers/marvell/mv_ddr/ddr3_training_leveling.c b/drivers/marvell/mv_ddr/ddr3_training_leveling.c
+index 93c86ea..5daa04c 100644
+--- a/drivers/marvell/mv_ddr/ddr3_training_leveling.c
++++ b/drivers/marvell/mv_ddr/ddr3_training_leveling.c
+@@ -1315,11 +1315,24 @@ int ddr3_tip_dynamic_write_leveling(u32 dev_num)
+ 					 * ([4:0] ADLL, [8:6] Phase, [15:10]
+ 					 * (centralization) ADLL + 0x10)
+ 					 */
++/* FIXME: 64-bit write leveling supplementary workaround (a80x0)*/
++#if defined(CONFIG_64BIT) && defined(a80x0)
++					if (bus_cnt > 3) {
++						reg_data = (reg_data & 0x1f) |
++							   ((((reg_data & 0xe0) >> 5) + 2) << 6) |
++							   (((reg_data & 0x1f) + phy_reg1_val) << 10);
++					} else {
++						reg_data = (reg_data & 0x1f) |
++							   (((reg_data & 0xe0) >> 5) << 6) |
++							   (((reg_data & 0x1f) + phy_reg1_val) << 10);
++					}
++#else
+ 					reg_data =
+ 						(reg_data & 0x1f) |
+ 						(((reg_data & 0xe0) >> 5) << 6) |
+ 						(((reg_data & 0x1f) +
+ 						  phy_reg1_val) << 10);
++#endif
+ 					ddr3_tip_bus_write(
+ 						dev_num,
+ 						ACCESS_TYPE_UNICAST,
+-- 
+1.9.1
+

@@ -1,0 +1,77 @@
+From d168dbef3d24a0165c972df21207bbd740abc106 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Mon, 7 Dec 2015 17:36:25 +0200
+Subject: [PATCH 0581/1240] clock: a3700: Connect the CPU counter to reference
+ clock
+
+- Modify the clock initialization function for leaving
+  the CPU counter clock to be connected to XTAL and have
+  divider set to 1.
+- Adjust the value of counter clock in armadalp.h config
+  file according to reference clock divided by minimal
+  CPU counter prescaler (2) resulting in 12.5MHz clock
+
+Change-Id: Ia7b1bde3f7cfdff3c78a0a168fd3d18bf7497735
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25691
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv8/armadalp/mvebu_clock.c |  7 +++++--
+ include/configs/armadalp.h                | 12 ++++--------
+ 2 files changed, 9 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armadalp/mvebu_clock.c b/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
+index e89057b..01800a7 100644
+--- a/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
++++ b/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
+@@ -544,7 +544,9 @@ u32 set_a3700_clocks(u32 cpu_clk_mhz, u32 ddr_clk_mhz, u32 tbg_a_kvco_mhz, u32 t
+ 	reg_val |= (clk_cfg->nb_clk_cfg.div2.eip97_clk_prscl2 & 0x7) << 19;
+ 	reg_val |= (clk_cfg->nb_clk_cfg.div2.eip97_clk_prscl1 & 0x7) << 22;
+ 	reg_val |= (clk_cfg->nb_clk_cfg.div2.atb_clk_div_sel & 0x3) << 25;
++	/* Always use "divide by 1 (0)" for counter clock and ignore table value
+ 	reg_val |= (clk_cfg->nb_clk_cfg.div2.cpu_cnt_clk_div_sel & 0x3) << 27;
++	*/
+ 	reg_val |= (clk_cfg->nb_clk_cfg.div2.plkdbg_clk_div_sel & 0x3) << 29;
+ 	writel(reg_val, MVEBU_NORTH_CLOCK_DIVIDER_SELECT2_REG);
+ 
+@@ -622,8 +624,9 @@ u32 set_a3700_clocks(u32 cpu_clk_mhz, u32 ddr_clk_mhz, u32 tbg_a_kvco_mhz, u32 t
+ 	writel(reg_val, MVEBU_NORTH_BRG_TBG_CTRL3);
+ #endif /* MVEBU_A3700_ENABLE_SSC */
+ 
+-	/* Switch all North/South Bridge clock sources from XTAL to clock divider */
+-	writel(0x0000BFFF, MVEBU_NORTH_CLOCK_SELECT_REG);
++	/* Switch all North/South Bridge clock sources from XTAL to clock divider
++	   excepting counter clock, which remains to be connected to XTAL */
++	writel(0x00009FFF, MVEBU_NORTH_CLOCK_SELECT_REG);
+ 	writel(0x000007AA, MVEBU_SOUTH_CLOCK_SELECT_REG);
+ 
+ 	rval = init_ddr_clock(ddr_clk_mhz);
+diff --git a/include/configs/armadalp.h b/include/configs/armadalp.h
+index ceb3892..7b719f8 100644
+--- a/include/configs/armadalp.h
++++ b/include/configs/armadalp.h
+@@ -53,15 +53,11 @@
+ #define COUNTER_FREQUENCY	(6000)
+ #else
+ /*
+- * Current system counter clock source is derived from TBG-BS,
+- * then it will be divided by COUNTER_CLK_PRSCL and CPU_CNT_CLK_DIV_SEL.
+- * Current value, TBG-BS: 800MHZ, CPU_CNT_CLK_DIV_SEL: divide by 2,
+- * COUNTER_CLK_PRSCL: divide by 5, result: 800/2/5 = 80MHZ
+- * Please PAY ATTENTION this frequency should be changed accordingly
+- * if counter clock source, TBG-BS, COUNTER_CLK_PRSCL or CPU_CNT_CLK_DIV_SEL
+- * are changed.
++ * The counter on A3700 always fed from reference clock (XTAL)
++ * However minimal CPU counter prescaler is 2, so the counter
++ * frequency will be divided by 2
+  */
+-#define COUNTER_FREQUENCY	(80 * 1000000)
++#define COUNTER_FREQUENCY	(12500000)
+ #endif
+ 
+ /* DRAM detection stuff */
+-- 
+1.9.1
+

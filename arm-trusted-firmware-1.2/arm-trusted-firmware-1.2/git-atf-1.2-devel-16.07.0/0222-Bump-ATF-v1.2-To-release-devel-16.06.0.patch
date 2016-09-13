@@ -1,0 +1,24 @@
+From 474a0512d9537914fe0322b6ee700e0f4b136779 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Mon, 20 Jun 2016 14:26:50 +0300
+Subject: [PATCH 222/239] Bump ATF v1.2 To release devel-16.06.0
+
+Change-Id: I95c22e350ecd06ff8f4395d745d6bf40ae14fe8b
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30576
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+---
+ version.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/version.mk b/version.mk
+index 0507c0c..271d0c3 100644
+--- a/version.mk
++++ b/version.mk
+@@ -1 +1 @@
+-BUILD_STRING = devel-16.05.1
++BUILD_STRING = devel-16.06.0
+-- 
+1.9.1
+

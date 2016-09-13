@@ -1,0 +1,76 @@
+From daadaeee793585b1a3768aecc0681759fdf8dee4 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 26 Aug 2015 03:38:04 +0300
+Subject: [PATCH 0349/1240] fix: comphy: ap806: added PLL lock check for AP-806
+ Comphys
+
+Change-Id: I7438cfc7008cf39cc7a06becd39cb51d5dbb0c21
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23171
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/include/asm/arch-mvebu/comphy_hpipe.h |  3 +++
+ drivers/phy/comphy_ap806_z1.c                  | 11 ++++++++---
+ 2 files changed, 11 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h b/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h
+index 25ce787..6407045 100644
+--- a/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h
++++ b/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h
+@@ -71,6 +71,9 @@
+ #define HPIPE_G2_SETTINGS_3_REG                 0x448
+ #define HPIPE_G2_SETTINGS_4_REG                 0x44C
+ #define HPIPE_LANE_STATUS0_REG			0x60C
++#define HPIPE_LANE_STATUS0_PCLK_EN_OFFSET	0
++#define HPIPE_LANE_STATUS0_PCLK_EN_MASK		(0x1 << HPIPE_LANE_STATUS0_PCLK_EN_OFFSET)
++
+ #define HPIPE_LANE_CFG4_REG                     0x620
+ 
+ #define HPIPE_RST_CLK_CTRL_REG			0x704
+diff --git a/drivers/phy/comphy_ap806_z1.c b/drivers/phy/comphy_ap806_z1.c
+index c6ffe8b..6966c54 100644
+--- a/drivers/phy/comphy_ap806_z1.c
++++ b/drivers/phy/comphy_ap806_z1.c
+@@ -117,8 +117,11 @@ static int comphy_pcie_power_up(u32 lane, u32 pcie_by4, void __iomem *hpipe_addr
+ 	if (!pcie_by4)
+ 		comphy_pcie_release_soft_reset(hpipe_addr);
+ 
++	udelay(20000);
++
+ 	debug_exit();
+-	return 0;
++	/* Return the status of the PLL */
++	return readl(hpipe_addr + HPIPE_LANE_STATUS0_REG) & HPIPE_LANE_STATUS0_PCLK_EN_MASK;
+ }
+ 
+ int comphy_ap806_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy_map *serdes_map)
+@@ -126,7 +129,7 @@ int comphy_ap806_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy
+ 	struct comphy_map *ptr_comphy_map;
+ 	void __iomem *comphy_base_addr, *hpipe_base_addr;
+ 	void __iomem *hpipe_addr;
+-	u32 comphy_max_count, lane;
++	u32 comphy_max_count, lane, ret = 0;
+ 	u32 pcie_by4 = 1;
+ 
+ 	debug_enter();
+@@ -159,13 +162,15 @@ int comphy_ap806_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy
+ 		case PEX1:
+ 		case PEX2:
+ 		case PEX3:
+-			comphy_pcie_power_up(lane, pcie_by4, hpipe_addr);
++			ret = comphy_pcie_power_up(lane, pcie_by4, hpipe_addr);
+ 			udelay(20);
+ 			break;
+ 		default:
+ 			debug("Unknown SerDes type, skip initialize SerDes %d\n", lane);
+ 			break;
+ 		}
++		if (ret == 0)
++			error("PLL is not locked - Failed to initialize lane %d\n", lane);
+ 	}
+ 
+ 	/* SW reset for PCIe for all lanes after power up */
+-- 
+1.9.1
+

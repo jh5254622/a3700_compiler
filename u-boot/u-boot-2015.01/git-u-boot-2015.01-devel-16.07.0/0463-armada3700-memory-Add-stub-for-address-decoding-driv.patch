@@ -1,0 +1,422 @@
+From cca800e66b92ea8c321150f2fbd44d8e436d3e8c Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Sun, 25 Oct 2015 16:56:44 +0200
+Subject: [PATCH 0463/1240] armada3700: memory: Add stub for address decoding
+ driver
+
+- Add stub for io address decoding driver under "misc"
+- Extend SPL makefile for including drivers/misc in case
+  of CONFIG_MVEBU_A3700_IO_ADDR_DEC inclusion
+- The reason for adding a separate io address decoding driver
+  to A3700 platform is inability to configure various SoC
+  units address maps using common MBUS driver.
+- Modify the default configuration for Palladium to include
+  the io address decoding and MBUS drivers support and remove
+  DRAM window bypass since it's not required inside SPL when
+  running from SRAM (rWTM RAM)
+- Add calls to init_a3700_io_addr_dec and init_mbus() from SPL
+- Add new configuration option CONFIG_MVEBU_MBUS_SPL_ONLY.
+  If this option is set and init_mbus() is called from mvebu_soc_init()
+  inside u-boot, only read memory windows information from DT
+  instead of doing actual memory windows configuration.
+
+Change-Id: I85e19f6f763fa5b8f32439abb5b03403adadf17c
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24253
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/spl.c               | 14 +++++
+ arch/arm/include/asm/arch-mvebu/io_addr_dec.h | 25 +++++++++
+ arch/arm/include/asm/arch-mvebu/mbus.h        |  1 -
+ configs/mvebu_armadalp_defconfig              |  7 ++-
+ configs/mvebu_armadalp_palladium_defconfig    |  7 ++-
+ drivers/misc/Kconfig                          | 18 +++++++
+ drivers/misc/Makefile                         |  1 +
+ drivers/misc/mvebu_io_addr_dec.c              | 34 ++++++++++++
+ drivers/misc/mvebu_mbus.c                     | 75 +++++++++++++++++++++------
+ scripts/Makefile.spl                          |  1 +
+ 10 files changed, 161 insertions(+), 22 deletions(-)
+ create mode 100644 arch/arm/include/asm/arch-mvebu/io_addr_dec.h
+ create mode 100644 drivers/misc/mvebu_io_addr_dec.c
+
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index 6e7e161..17acf27 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -35,6 +35,12 @@
+ #ifdef CONFIG_MVEBU_FLC
+ #include <asm/arch-mvebu/flc.h>
+ #endif
++#ifdef CONFIG_MVEBU_A3700_IO_ADDR_DEC
++#include <asm/arch-mvebu/io_addr_dec.h>
++#endif
++#ifdef CONFIG_MVEBU_MBUS
++#include <asm/arch-mvebu/mbus.h>
++#endif
+ 
+ #ifdef CONFIG_MVEBU_SPL_SAR_DUMP
+ extern void mvebu_sar_dump_reg(void);
+@@ -100,12 +106,20 @@ void board_init_f(ulong silent)
+ 	init_flc();
+ #endif
+ 
++#ifdef CONFIG_MVEBU_MBUS
++	init_mbus();
++#endif
++#ifdef CONFIG_MVEBU_A3700_IO_ADDR_DEC
++	init_a3700_io_addr_dec();
++#endif
++
+ #ifdef CONFIG_MVEBU_SPL_MEMORY_TEST
+ 	if (run_memory_test())
+ 		printf("**** DRAM test failed ****\n");
+ #endif
+ 
+ #ifdef CONFIG_TARGET_ARMADA_LP
++	debug("SPL processing done. Jumping to u-boot\n\n");
+ 	ptr_uboot_start = 0;
+ 	/* Jump from SPL to u-boot start address */
+ 	ptr_uboot_start();
+diff --git a/arch/arm/include/asm/arch-mvebu/io_addr_dec.h b/arch/arm/include/asm/arch-mvebu/io_addr_dec.h
+new file mode 100644
+index 0000000..61850ea
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/io_addr_dec.h
+@@ -0,0 +1,25 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _IO_ADDR_DEC_H_
++#define _IO_ADDR_DEC_H_
++
++int init_a3700_io_addr_dec(void);
++
++#endif /* _IO_ADDR_DEC_H_ */
++
+diff --git a/arch/arm/include/asm/arch-mvebu/mbus.h b/arch/arm/include/asm/arch-mvebu/mbus.h
+index 41b485c..2340e76 100644
+--- a/arch/arm/include/asm/arch-mvebu/mbus.h
++++ b/arch/arm/include/asm/arch-mvebu/mbus.h
+@@ -34,7 +34,6 @@ struct  mbus_win_map {
+ 	struct mbus_win mbus_windows[MBUS_WIN_MAP_NUM_MAX];
+ 	int mbus_win_num;
+ };
+-
+ void dump_mbus(void);
+ int init_mbus(void);
+ int remap_mbus(phys_addr_t input, phys_addr_t output);
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index 6d9f064..4274993 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -11,8 +11,11 @@ CONFIG_I2C_MV_PAD_REG=n
+ +S:CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT=y
+ +S:CONFIG_DEVEL_BOARD=y
+ CONFIG_CUSTOMER_BOARD=y
+-CONFIG_MVEBU_MBUS=y
+-CONFIG_MVEBU_MBUS_SKIP_DRAM_WIN=y
+++S:CONFIG_SPL_DRIVERS_MISC_SUPPORT=y
+++S:CONFIG_MVEBU_A3700_IO_ADDR_DEC=y
+++S:CONFIG_MVEBU_MBUS=y
+++S:CONFIG_MVEBU_MBUS_SPL_ONLY=y
+++S:CONFIG_MVEBU_MBUS_SKIP_DRAM_WIN=y
+ CONFIG_MVEBU_ADVK_PCIE=y
+ CONFIG_CMD_BDI=y
+ CONFIG_CMD_SPI=y
+diff --git a/configs/mvebu_armadalp_palladium_defconfig b/configs/mvebu_armadalp_palladium_defconfig
+index 378123a..012e276 100644
+--- a/configs/mvebu_armadalp_palladium_defconfig
++++ b/configs/mvebu_armadalp_palladium_defconfig
+@@ -9,8 +9,11 @@ CONFIG_I2C_MV=y
+ CONFIG_I2C_MV_PAD_REG=n
+ +S:CONFIG_MVEBU_UART_ARLP=y
+ +S:CONFIG_DEVEL_BOARD=y
+-CONFIG_MVEBU_MBUS=y
+-CONFIG_MVEBU_MBUS_SKIP_DRAM_WIN=y
+++S:CONFIG_SPL_DRIVERS_MISC_SUPPORT=y
+++S:CONFIG_MVEBU_A3700_IO_ADDR_DEC=y
+++S:CONFIG_MVEBU_MBUS=y
+++S:CONFIG_MVEBU_MBUS_SPL_ONLY=y
+++S:CONFIG_MVEBU_MBUS_SKIP_DRAM_WIN=y
+ CONFIG_MVEBU_ADVK_PCIE=y
+ CONFIG_CMD_BDI=y
+ CONFIG_CMD_SPI=y
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index a6f2dea..474d17c 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -39,6 +39,16 @@ config MVEBU_MBUS
+ 	  This driver initialize the MBUS windows
+ 	  only.
+ 
++config MVEBU_MBUS_SPL_ONLY
++	bool "MBUS address decoding driver in SPL only"
++	depends on MVEBU_MBUS
++	default n
++	help
++	  Choose this option to do MBUS windows
++	  modifications in SPL executable only
++	  In regular u-boot image MBUS driver will
++	  only read memory windows information from DT
++
+ config MVEBU_MBUS_SKIP_DRAM_WIN
+ 	bool "skip DRAM window configuration in MBUS driver"
+ 	depends on MVEBU_MBUS
+@@ -60,4 +70,12 @@ config MVEBU_FLC
+ 	  Memory Controller driver.
+ 	  This driver enable FLC and open the FLC windows.
+ 
++config MVEBU_A3700_IO_ADDR_DEC
++	bool "Armada-3700 Address decoding support"
++	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
++	default n
++	help
++	  Choose this option to add support
++	  for Marvell Armada-3700 address decoding driver
++
+ endmenu
+diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
+index 84f9e30..9309389 100644
+--- a/drivers/misc/Makefile
++++ b/drivers/misc/Makefile
+@@ -33,3 +33,4 @@ obj-$(CONFIG_MVEBU_RFU) += mvebu_rfu.o
+ obj-$(CONFIG_MVEBU_IOB) += mvebu_iob.o
+ obj-$(CONFIG_MVEBU_MBUS) += mvebu_mbus.o
+ obj-$(CONFIG_MVEBU_FLC) += mvebu_flc.o
++obj-$(CONFIG_MVEBU_A3700_IO_ADDR_DEC) += mvebu_io_addr_dec.o
+diff --git a/drivers/misc/mvebu_io_addr_dec.c b/drivers/misc/mvebu_io_addr_dec.c
+new file mode 100644
+index 0000000..be9e005
+--- /dev/null
++++ b/drivers/misc/mvebu_io_addr_dec.c
+@@ -0,0 +1,34 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#define DEBUG
++#include <common.h>
++#include <asm/arch-mvebu/mvebu.h>
++
++int init_a3700_io_addr_dec(void)
++{
++	int	rval = 0;
++
++	debug_enter();
++
++	/* Add units configuration code here */
++
++	debug_exit();
++	return rval;
++}
++
+diff --git a/drivers/misc/mvebu_mbus.c b/drivers/misc/mvebu_mbus.c
+index c74710a..987d6bb 100644
+--- a/drivers/misc/mvebu_mbus.c
++++ b/drivers/misc/mvebu_mbus.c
+@@ -16,7 +16,7 @@
+  * ***************************************************************************
+  */
+ 
+-
++/*#define DEBUG*/
+ #include <common.h>
+ #include <asm/system.h>
+ #include <asm/io.h>
+@@ -29,8 +29,11 @@
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+-#define MBUS_REMAP_SIZE_64	64
+-#define MBUS_TARGET_DRAM_NUM	0
++#define MBUS_REMAP_SIZE_64		64
++#define MBUS_TARGET_DRAM_NUM		0
++#ifdef CONFIG_MVEBU_MBUS_SPL_ONLY
++#define MBUS_TARGET_RWTM_RAM_NUM	7
++#endif
+ 
+ struct mbus_configuration {
+ 	void __iomem *mbus_base;
+@@ -49,6 +52,19 @@ struct mbus_fdt_info {
+ };
+ 
+ 
++struct mbus_fdt_info __attribute__((section(".data")))fdt_inf_arr[MBUS_WIN_MAP_NUM_MAX];
++struct mbus_win __attribute__((section(".data")))memory_map_arr[MBUS_WIN_MAP_NUM_MAX];
++
++/* The MBUS driver can be called twice - from SPL and from u-boot itself
++   In order to prevent double configuration of memory windows, do the following:
++   1. If CONFIG_MVEBU_MBUS_SPL_ONLY is not defined, do the full memory configuration.
++      This case intended to cover cases when SPL is not used.
++   2. If CONFIG_MVEBU_MBUS_SPL_ONLY is defined, make sure that the memory windows
++      only configured when called from inside the SPL (CONFIG_SPL_BUILD is defined)
++      Otherwise only read the windows information from DT in u-boot content and
++      assume that all windows parameters were already set by SPL
++*/
++#if (defined(CONFIG_MVEBU_MBUS_SPL_ONLY) && defined(CONFIG_SPL_BUILD)) || !defined(CONFIG_MVEBU_MBUS_SPL_ONLY)
+ static void mbus_win_check(struct mbus_win *win, u32 win_num)
+ {
+ 	/* check if address is aligned to the size */
+@@ -92,6 +108,7 @@ static void mbus_win_set(struct mbus_win *win, u32 win_num)
+ 	}
+ 	return;
+ }
++#endif /* (defined(CONFIG_MVEBU_MBUS_SPL_ONLY) && defined(CONFIG_SPL_BUILD)) || !defined(CONFIG_MVEBU_MBUS_SPL_ONLY) */
+ 
+ /*
+  * mbus_win_get
+@@ -218,9 +235,13 @@ int remap_mbus(phys_addr_t input, phys_addr_t output)
+ 
+ int init_mbus(void)
+ {
+-	u32 win_id, index, mbus_win, count, node, start_win_id = 0;
+-	struct mbus_fdt_info *fdt_info;
+-	struct mbus_win *memory_map, *win;
++/* Se detailed case description on next IF occurance */
++#if (defined(CONFIG_MVEBU_MBUS_SPL_ONLY) && defined(CONFIG_SPL_BUILD)) || !defined(CONFIG_MVEBU_MBUS_SPL_ONLY)
++	u32	win_id, mbus_win, start_win_id = 0;
++#endif
++	u32	node, count, index;
++	struct mbus_fdt_info *fdt_info = fdt_inf_arr;
++	struct mbus_win *memory_map = memory_map_arr, *win;
+ 	const void *blob = gd->fdt_blob;
+ 
+ 	debug("Initializing MBUS address decoding\n");
+@@ -239,6 +260,10 @@ int init_mbus(void)
+ 	mbus_info->max_win = fdtdec_get_int(blob, node, "max-win", 0);
+ 	if (mbus_info->max_win == 0)
+ 		error("failed reading max windows number\n");
++	else if (mbus_info->max_win > MBUS_WIN_MAP_NUM_MAX) {
++		error("max windows number is larger than %d\n", MBUS_WIN_MAP_NUM_MAX);
++		return -1;
++	}
+ 
+ 	/* Get the maximum number of MBUS remap windows */
+ 	mbus_info->max_remap = fdtdec_get_int(blob, node, "max-remap", 0);
+@@ -255,14 +280,6 @@ int init_mbus(void)
+ 	if (mbus_info->internal_win == 0)
+ 		error("failed reading internal windows number\n");
+ 
+-	memory_map = malloc(mbus_info->max_win * sizeof(struct mbus_win));
+-	if (memory_map == 0)
+-		error("failed allocating struct to init windows configuration\n");
+-
+-	fdt_info = malloc(mbus_info->max_win * sizeof(struct mbus_fdt_info));
+-	if (fdt_info == 0)
+-		error("failed allocating struct to get windows configuration from FDT\n");
+-
+ 	/* Get the array of the windows and fill the map data */
+ 	count = fdtdec_get_int_array_count(blob, node, "windows", (u32 *)fdt_info, mbus_info->max_win * 3);
+ 	if (count <= 0) {
+@@ -281,6 +298,16 @@ int init_mbus(void)
+ 	}
+ 	win->enabled = -1;
+ 
++/* The MBUS driver can be called twice - from SPL and from u-boot itself
++   In order to prevent double configuration of memory windows, do the following:
++   1. If CONFIG_MVEBU_MBUS_SPL_ONLY is not defined, do the full memory configuration.
++      This case intended to cover cases when SPL is not used.
++   2. If CONFIG_MVEBU_MBUS_SPL_ONLY is defined, make sure that the memory windows
++      only configured when called from inside the SPL (CONFIG_SPL_BUILD is defined)
++      Otherwise only read the windows information from DT in u-boot content and
++      assume that all windows parameters were already set by SPL
++*/
++#if (defined(CONFIG_MVEBU_MBUS_SPL_ONLY) && defined(CONFIG_SPL_BUILD)) || !defined(CONFIG_MVEBU_MBUS_SPL_ONLY)
+ #ifdef CONFIG_MVEBU_MBUS_SKIP_DRAM_WIN
+ 	/* for some Soc, like ArmadaLP, DRAM window has to be at the begining,
+ 	     and could not be configured by anyway (keep the default value),
+@@ -291,15 +318,25 @@ int init_mbus(void)
+ #endif
+ 	/* disable all windows */
+ 	for (win_id = start_win_id; win_id < mbus_info->max_win; win_id++) {
++#ifdef CONFIG_MVEBU_MBUS_SPL_ONLY
++		/* Skip rWTM RAM window in SPL since the SPL runs from rWTM RAM */
++		if (MBUS_TARGET_RWTM_RAM_NUM == memory_map[win_id].target)
++			continue;
++#endif
+ 		mbus_win = readl(mbus_info->mbus_base + MBUS_WIN_CTRL_REG(win_id));
+ 		mbus_win &= ~MBUS_CR_WIN_ENABLE;
+ 		writel(mbus_win, mbus_info->mbus_base + MBUS_WIN_CTRL_REG(win_id));
+ 	}
+ 
+ 	/* enable the remapped windows first, the remap windows is at the first 8 windows */
+-	for (win_id = start_win_id, win = ++memory_map; win_id < mbus_info->max_win; win_id++, win++) {
++	for (win_id = start_win_id, win = &memory_map[start_win_id]; win_id < mbus_info->max_win; win_id++, win++) {
+ 		if ((win->win_size == 0) || (win->enabled == 0) || (win->remapped == 0))
+ 			continue;
++#ifdef CONFIG_MVEBU_MBUS_SPL_ONLY
++		/* Skip rWTM RAM window in SPL since the SPL runs from rWTM RAM */
++		if (MBUS_TARGET_RWTM_RAM_NUM == win->target)
++			continue;
++#endif
+ 		mbus_win_check(win, win_id);
+ 		debug("set window %d: target %d, base = 0x%lx, size = 0x%lx, attribute = 0x%x, remapped\n",
+ 			win_id, win->target, win->base_addr, win->win_size, win->attribute);
+@@ -311,16 +348,20 @@ int init_mbus(void)
+ 	for (win_id = start_win_id, win = memory_map; win_id < mbus_info->max_win; win_id++, win++) {
+ 		if ((win->win_size == 0) || (win->enabled == 0) || (win->remapped))
+ 			continue;
+-
++#ifdef CONFIG_MVEBU_MBUS_SPL_ONLY
++		/* Skip rWTM RAM window in SPL since the SPL runs from rWTM RAM */
++		if (MBUS_TARGET_RWTM_RAM_NUM == win->target)
++			continue;
++#endif
+ 		mbus_win_check(win, win_id);
+ 		debug("set window %d: target = %d, base = 0x%lx, size = 0x%lx, attribute = 0x%x\n",
+ 			win_id, win->target, win->base_addr, win->win_size, win->attribute);
+ 
+ 		mbus_win_set(win, win_id);
+ 	}
++#endif /* (defined(CONFIG_MVEBU_MBUS_SPL_ONLY) && defined(CONFIG_SPL_BUILD)) || !defined(CONFIG_MVEBU_MBUS_SPL_ONLY) */
+ 
+ 	debug("Done MBUS address decoding initializing\n");
+ 	debug_exit();
+ 	return 0;
+ }
+-
+diff --git a/scripts/Makefile.spl b/scripts/Makefile.spl
+index c72f15e..738a105 100644
+--- a/scripts/Makefile.spl
++++ b/scripts/Makefile.spl
+@@ -84,6 +84,7 @@ libs-$(CONFIG_MVEBU_COMPHY_SUPPORT) += drivers/phy/
+ libs-$(CONFIG_OF_EMBED) += dts/
+ libs-$(CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT) += drivers/pci/
+ libs-$(CONFIG_MVEBU_FLC) += drivers/misc/
++libs-$(CONFIG_MVEBU_A3700_IO_ADDR_DEC) += drivers/misc/
+ 
+ head-y		:= $(addprefix $(obj)/,$(head-y))
+ libs-y		:= $(addprefix $(obj)/,$(libs-y))
+-- 
+1.9.1
+

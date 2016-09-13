@@ -1,0 +1,92 @@
+From 4cb78d04bcdedb8e62ca1114a44a24792c98c6c9 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Thu, 3 Dec 2015 11:47:47 +0200
+Subject: [PATCH 0569/1240] fix: dts: a3700: rearrange mdio and comphy settings
+ in board level
+
+	mdio (Ethernet PHY) and comphy (type and speed) settings) are only board depandant.
+	This patch relocates the above from SoC dtsi to proper board level.
+	(comphy left as unconnected with lowest speed in SoC level, to avoid unepected comphy driver behavior)
+
+Change-Id: Ic7cb18ecd17263e16c41c1bd4b0ae05ae17bc2f6
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25585
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/armada-lp-db.dts | 14 ++++++++++++++
+ arch/arm/dts/armada-lp.dtsi   | 11 ++++-------
+ 2 files changed, 18 insertions(+), 7 deletions(-)
+
+diff --git a/arch/arm/dts/armada-lp-db.dts b/arch/arm/dts/armada-lp-db.dts
+index 7a65be4..2c96dba 100644
+--- a/arch/arm/dts/armada-lp-db.dts
++++ b/arch/arm/dts/armada-lp-db.dts
+@@ -17,13 +17,27 @@
+ 			};
+ 			neta0: neta@30000 {
+ 				status = "okay";
++				phy_addr = <0x0>;
++				phy_mode = "rgmii";
+ 			};
+ 			neta1: neta@40000 {
+ 				status = "okay";
++				phy_addr = <0x1>;
++				phy_mode = "sgmii";
+ 			};
+ 			i2c: i2c@11000 {
+ 				status = "okay";
+ 			};
++			comphy {
++				phy0 {
++					phy-type = <PHY_TYPE_PEX0>;
++					phy-speed = <PHY_SPEED_2_5G>;
++				};
++				phy1 {
++					phy-type = <PHY_TYPE_SGMII1>;
++					phy-speed = <PHY_SPEED_1_25G>;
++				};
++			};
+ 			pcie-controller {
+ 				pcie@1,0 {
+ 					status = "okay";
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index 657c2e1..857e315 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -65,15 +65,11 @@
+ 			neta0: neta@30000 {
+ 				compatible = "marvell,armadalp-neta";
+ 				reg = <0x30000 0x20>;
+-				phy_addr = <0x0>;
+-				phy_mode = "rgmii";
+ 				status = "disabled";
+ 			};
+ 			neta1: neta@40000 {
+ 				compatible = "marvell,armadalp-neta";
+ 				reg = <0x40000 0x20>;
+-				phy_addr = <0x1>;
+-				phy_mode = "sgmii";
+ 				status = "disabled";
+ 			};
+ 			i2c: i2c@11000 {
+@@ -87,12 +83,13 @@
+ 				max-lanes = <2>;
+ 				reg-comphy = <0x18300 0x28>;
+ 				reg-hpipe3 = <0x1F300 0x3D000>;
++				/* phy-type & phy-speed selection should be done in board level device tree */
+ 				phy0 {
+-					phy-type = <PHY_TYPE_PEX0>;
+-					phy-speed = <PHY_SPEED_2_5G>;
++					phy-type = <PHY_TYPE_UNCONNECTED>;
++					phy-speed = <PHY_SPEED_1_25G>;
+ 				};
+ 				phy1 {
+-					phy-type = <PHY_TYPE_SGMII1>;
++					phy-type = <PHY_TYPE_UNCONNECTED>;
+ 					phy-speed = <PHY_SPEED_1_25G>;
+ 				};
+ 			};
+-- 
+1.9.1
+

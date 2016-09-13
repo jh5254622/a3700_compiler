@@ -1,0 +1,55 @@
+From 3f534e3cac2c79807b8ec4d906c96d0dcc800c1b Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Thu, 21 Jan 2016 22:00:41 +0800
+Subject: [PATCH 0741/1240] fix: dts: a3700: separate Device Trees of customer
+ and Marvell boards
+
+	Right now all a3700 dts would be compiled for a3700 DB,
+	including two dts for a3700 db, one for palladium and
+	one for	customer (alpha). And only one dtb would be
+	linked into spl and u-boot.
+
+	In this patch:
+	*  when DEVEL_BOARD is defined, only dts files for
+	   A3700 DB and Palladium would be compiled.
+	*  when DEVEL_BOARD is not defined, customer boards'
+	   dts files would be compiled and linked with command:
+	   make command: make -j4 DEVICE_TREE=armada-lp-xxxx
+
+Change-Id: I1bef52b7903b8467ab3f06dbdebdfb5494ff1749
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26961
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ arch/arm/dts/Makefile | 14 ++++++++++----
+ 1 file changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index 3a6fd43..00e8004 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -52,10 +52,16 @@ dtb-$(CONFIG_AM33XX) += am335x-boneblack.dtb
+ dtb-$(CONFIG_SOCFPGA) += socfpga_cyclone5_socrates.dtb
+ 
+ dtb-$(CONFIG_TARGET_ARMADA_38X) += armada-385-db.dtb
+-dtb-$(CONFIG_TARGET_ARMADA_LP) += armada-lp-db.dtb \
+-				  armada-lp-palladium.dtb \
+-				  armada-lp-db-sgmii1.dtb \
+-				  armada-lp-customer0.dtb
++ifdef CONFIG_TARGET_ARMADA_LP
++ifndef CONFIG_DEVEL_BOARD
++dtb-y += armada-lp-customer0.dtb
++else
++dtb-y += armada-lp-db.dtb \
++	 armada-lp-db-sgmii1.dtb \
++	 armada-lp-palladium.dtb
++endif #CONFIG_DEVEL_BOARD
++endif #CONFIG_TARGET_ARMADA_LP
++
+ dtb-$(CONFIG_TARGET_ARMADA_8K) += apn-806-db.dtb \
+ 		       apn-806-pd.dtb \
+ 		       apn-806-pd-a0.dtb \
+-- 
+1.9.1
+

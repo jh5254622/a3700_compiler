@@ -1,0 +1,381 @@
+From 100d24ba6ac7bb97c6e7551182f2a457236a66e1 Mon Sep 17 00:00:00 2001
+From: Jing Hua <jinghua@marvell.com>
+Date: Fri, 14 Aug 2015 16:30:17 +0800
+Subject: [PATCH 0433/1240] fix: arlp: add support for I2C driver for ArmadaLP
+
+	1. Added support for I2C driver for ArmadaLP.
+	2. Added I2C node in ArmadaLP device tree.
+	3. Modified i2c_init routine in mv_i2c.c to get base address from device tree.
+	4. This driver has been tested on Palladium.
+	5. This driver need additional GPIO configuration
+		SET VALUE /SIZE=LONG 0xD0018830=0x573fa
+		0xD0013830[10] = 1'b0 (select GPIO pins to use for I2C_1)
+	6. Since there is no MPP driver now, GPIO configuration that I2C need
+	is put in routine soc_init in file soc-init.c, and will be removed
+	when MPP driver is ready.
+
+Change-Id: I5c69b4fff247cb4e063366775bf244b8b1c91413
+Signed-off-by: Jing Hua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22840
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv8/armadalp/soc-init.c     | 25 ++++++++++
+ arch/arm/dts/armada-lp-db.dts              |  3 ++
+ arch/arm/dts/armada-lp-palladium.dts       |  3 ++
+ arch/arm/dts/armada-lp.dtsi                |  5 ++
+ configs/mvebu_armadalp_defconfig           |  2 +
+ configs/mvebu_armadalp_palladium_defconfig |  2 +
+ drivers/i2c/Kconfig                        | 35 +++++++++++++-
+ drivers/i2c/mv_i2c.c                       | 78 +++++++++++++++++++++++++++---
+ include/configs/mvebu-common.h             |  4 +-
+ include/fdtdec.h                           |  1 +
+ lib/fdtdec.c                               |  1 +
+ 11 files changed, 149 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armadalp/soc-init.c b/arch/arm/cpu/armv8/armadalp/soc-init.c
+index de02246..9fae561 100644
+--- a/arch/arm/cpu/armv8/armadalp/soc-init.c
++++ b/arch/arm/cpu/armv8/armadalp/soc-init.c
+@@ -49,6 +49,19 @@ void soc_init(void)
+ {
+ 	/* Do early SOC specific init here */
+ 
++	/* now there is no timer/MPP driver,
++	  * currently we put all this kind of
++	  * configuration here, and will remove
++	  * this after official driver is ready
++	  */
++#ifdef CONFIG_PALLADIUM
++
++#ifdef CONFIG_I2C_MV
++	/* 0xD0013830[10] = 1'b0 (select GPIO pins to use for I2C_1) */
++	writel((readl(0xd0013830) & ~(1 << 10)), 0xd0013830);
++#endif /* CONFIG_I2C_MV */
++
++#endif /* CONFIG_PALLADIUM */
+ 	return;
+ }
+ 
+@@ -83,6 +96,18 @@ int cpu_eth_init(bd_t *bis)
+ }
+ #endif /* CONFIG_MVNETA */
+ 
++#ifdef CONFIG_I2C_MV
++void i2c_clk_enable(void)
++{
++	/* i2c is enabled by default,
++	  * but need this empty routine
++	  * to pass compilation.
++	*/
++	return;
++}
++
++#endif /* CONFIG_I2C_MV */
++
+ int dram_init(void)
+ {
+ #ifdef CONFIG_PALLADIUM
+diff --git a/arch/arm/dts/armada-lp-db.dts b/arch/arm/dts/armada-lp-db.dts
+index 8342c18..8688b99 100644
+--- a/arch/arm/dts/armada-lp-db.dts
++++ b/arch/arm/dts/armada-lp-db.dts
+@@ -21,6 +21,9 @@
+ 			neta1: neta@40000 {
+ 				status = "okay";
+ 			};
++			i2c: i2c@11000 {
++				status = "okay";
++			};
+ 		};
+ 	};
+ };
+diff --git a/arch/arm/dts/armada-lp-palladium.dts b/arch/arm/dts/armada-lp-palladium.dts
+index cf54086..80b163e 100644
+--- a/arch/arm/dts/armada-lp-palladium.dts
++++ b/arch/arm/dts/armada-lp-palladium.dts
+@@ -23,6 +23,9 @@
+ 			neta1: neta@40000 {
+ 				status = "okay";
+ 			};
++			i2c: i2c@11000 {
++				status = "okay";
++			};
+ 		};
+ 	};
+ };
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index 684ce20..a298adf 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -62,6 +62,11 @@
+ 				phy_mode = "rgmii";
+ 				status = "disabled";
+ 			};
++			i2c: i2c@11000 {
++				compatible = "marvell,armadalp-i2c";
++				reg = <0x11000 0x100>;
++				status = "disabled";
++			};
+ 		};
+ 	};
+ };
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index eb26062..d0598bf 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -5,6 +5,8 @@ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ CONFIG_MVEBU_SPI=y
+ CONFIG_MVNETA=y
+ CONFIG_MVEBU_NETA_BYPASS_DEC_WIN=y
++CONFIG_I2C_MV=y
++CONFIG_I2C_MV_PAD_REG=n
+ +S:CONFIG_MVEBU_UART_ARLP=y
+ +S:CONFIG_DEVEL_BOARD=y
+ CONFIG_CUSTOMER_BOARD=y
+diff --git a/configs/mvebu_armadalp_palladium_defconfig b/configs/mvebu_armadalp_palladium_defconfig
+index 78c739c..1e29c5f 100644
+--- a/configs/mvebu_armadalp_palladium_defconfig
++++ b/configs/mvebu_armadalp_palladium_defconfig
+@@ -5,6 +5,8 @@ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ CONFIG_MVEBU_SPI=y
+ CONFIG_MVNETA=y
+ CONFIG_MVEBU_NETA_BYPASS_DEC_WIN=y
++CONFIG_I2C_MV=y
++CONFIG_I2C_MV_PAD_REG=n
+ +S:CONFIG_MVEBU_UART_ARLP=y
+ +S:CONFIG_DEVEL_BOARD=y
+ CONFIG_MVEBU_MBUS=y
+diff --git a/drivers/i2c/Kconfig b/drivers/i2c/Kconfig
+index 1f953db..e2c2428 100644
+--- a/drivers/i2c/Kconfig
++++ b/drivers/i2c/Kconfig
+@@ -1,11 +1,42 @@
+ menu "I2C Support"
+ 
++config HARD_I2C
++	bool "Legacy I2C Support"
++	default n
++	help
++	  Choose this option to enable
++	  legacy I2C serial bus commands
++	  and include the appropriate
++	  I2C driver for the selected CPU.
++
+ config MVEBU_I2C
+ 	bool "MVEBU I2C support"
+ 	default n
+ 	select CMD_I2C
+ 	help
+-	  Choose this option to add support
+-	  for Marvell's MVEBU I2C driver
++	  Choose this option to add
++	  support for Marvell's MVEBU
++	  I2C driver, which is used
++	  by Armada8k and Armada38x.
++
++config I2C_MV
++	bool "I2C support for armada100/armadaLP"
++	default n
++	select CMD_I2C
++	select HARD_I2C
++	help
++	  Choose this option to
++	  add support for I2C
++	  driver of Marvell's SoC
++	  Armada100 and ArmadaLP.
++
++config I2C_MV_PAD_REG
++	bool "4 bytes pad between every two I2C registers"
++	default y
++	help
++	  Choose this option to add
++	  4 bytes pad between every
++	  two I2C registers, it fits
++	  some SoC like Armada100.
+ 
+ endmenu
+diff --git a/drivers/i2c/mv_i2c.c b/drivers/i2c/mv_i2c.c
+index dac3463..f15276b 100644
+--- a/drivers/i2c/mv_i2c.c
++++ b/drivers/i2c/mv_i2c.c
+@@ -19,6 +19,8 @@
+ 
+ #include <common.h>
+ #include <asm/io.h>
++#include <fdtdec.h>
++#include <asm/arch-mvebu/fdt.h>
+ 
+ #ifdef CONFIG_HARD_I2C
+ #include <i2c.h>
+@@ -37,7 +39,7 @@ struct i2c_msg {
+ 	u8 direction;
+ 	u8 data;
+ };
+-
++#ifdef CONFIG_I2C_MV_PAD_REG
+ struct mv_i2c {
+ 	u32 ibmr;
+ 	u32 pad0;
+@@ -49,7 +51,15 @@ struct mv_i2c {
+ 	u32 pad3;
+ 	u32 isar;
+ };
+-
++#else
++struct mv_i2c {
++	u32 ibmr;
++	u32 idbr;
++	u32 icr;
++	u32 isr;
++	u32 isar;
++};
++#endif
+ static struct mv_i2c *base;
+ static void i2c_board_init(struct mv_i2c *base)
+ {
+@@ -99,6 +109,9 @@ unsigned int i2c_get_bus_num(void)
+ {
+ 	return current_bus;
+ }
++#else
++/* without Multibus, I2C_NUM has to be 1 */
++#define CONFIG_MV_I2C_NUM 1
+ #endif
+ 
+ /*
+@@ -268,13 +281,64 @@ i2c_transfer_finish:
+ /* ------------------------------------------------------------------------ */
+ void i2c_init(int speed, int slaveaddr)
+ {
++#ifdef CONFIG_OF_CONTROL
++
++	DECLARE_GLOBAL_DATA_PTR;
++
++	int node_list[CONFIG_MV_I2C_NUM], node;
++	int i, count;
++	unsigned long i2c_reg_base = 0;
++
++	/* in dts file, go through all the 'i2c' nodes.
++	 */
++	count = fdtdec_find_aliases_for_id(gd->fdt_blob, "i2c",
++			COMPAT_MVEBU_ARLP_I2C, node_list, 2);
++	if (count == 0) {
++		error("could not find i2c node in FDT, initialization failed!\n");
++		return;
++	}
++	for (i = 0; i < count ; i++) {
++		node = node_list[i];
++
++		if (node <= 0)
++			continue;
++
++		/* in dts file, there should be several "i2c" nodes that are enabled, and in
++		 * dtsi file there are the 'reg' attribute for register base of each i2c unit.
++		 */
++		/* fetch 'reg' propertiy from 'i2c' node */
++		i2c_reg_base = (unsigned long)fdt_get_regs_offs(gd->fdt_blob, node, "reg");
++		if (i2c_reg_base == FDT_ADDR_T_NONE) {
++			error("could not find reg in i2c node, initialization failed!\n");
++			return;
++		}
+ #ifdef CONFIG_I2C_MULTI_BUS
++		i2c_regs[i] = i2c_reg_base;
++#endif
++	}
++
++#endif /* CONFIG_OF_CONTROL */
++
++#ifdef CONFIG_I2C_MULTI_BUS
++	/* in multi-bus mode:
++	  * If fdt is supported, i2c reg base array (i2c_regs) comes from fdt file
++	  * and the values are put into it in this routine;
++	  * If fdt is not supported, i2c reg base array (i2c_regs) comes from define,
++	  * and since it is array, it is inited at declaration and not in this routine.
++	*/
+ 	current_bus = 0;
+ 	base = (struct mv_i2c *)i2c_regs[current_bus];
++#else /* CONFIG_I2C_MULTI_BUS */
++	/* in single bus mode, if fdt is supported, i2c reg base comes from fdt file;
++	  * else, it comes from define.
++	*/
++#ifdef CONFIG_OF_CONTROL
++	base = (struct mv_i2c *)i2c_reg_base;
+ #else
+ 	base = (struct mv_i2c *)CONFIG_MV_I2C_REG;
+-#endif
++#endif /* CONFIG_OF_CONTROL */
+ 
++#endif /* CONFIG_I2C_MULTI_BUS */
+ 	i2c_board_init(base);
+ }
+ 
+@@ -385,8 +449,8 @@ int i2c_read(uchar chip, uint addr, int alen, uchar *buffer, int len)
+ 			return -1;
+ 
+ 		*buffer = msg.data;
+-		PRINTD(("i2c_read: reading byte (0x%08x)=0x%02x\n",
+-			(unsigned int)buffer, *buffer));
++		PRINTD(("i2c_read: reading byte (0x%08lx)=0x%02x\n",
++			(unsigned long)buffer, *buffer));
+ 		buffer++;
+ 	}
+ 
+@@ -448,8 +512,8 @@ int i2c_write(uchar chip, uint addr, int alen, uchar *buffer, int len)
+ 
+ 	/* write bytes; send NACK at last byte */
+ 	while (len--) {
+-		PRINTD(("i2c_write: writing byte (0x%08x)=0x%02x\n",
+-			(unsigned int)buffer, *buffer));
++		PRINTD(("i2c_write: writing byte (0x%08lx)=0x%02x\n",
++			(unsigned long)buffer, *buffer));
+ 
+ 		if (len == 0)
+ 			msg.condition = I2C_COND_STOP;
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index a1c9b33..254e150 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -238,12 +238,14 @@
+ #ifdef CONFIG_MVEBU_I2C
+ 	#define CONFIG_SYS_I2C
+ 	#define CONFIG_I2C_MULTI_BUS
+-	#define CONFIG_SYS_I2C_SPEED            100000  /* I2C speed default */
+ /*	#define CONFIG_CMD_EEPROM
+ 	#define CONFIG_SYS_I2C_EEPROM_ADDR_LEN  1
+ 	#define CONFIG_SYS_I2C_MULTI_EEPROMS
+ 	#define CONFIG_SYS_I2C_SLAVE		0x0*/
+ #endif
++#if defined(CONFIG_MVEBU_I2C) || defined(CONFIG_I2C_MV)
++	#define CONFIG_SYS_I2C_SPEED            100000  /* I2C speed default */
++#endif
+ 
+ /* RTC */
+ #if defined(MV_INCLUDE_RTC)
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index d225bbe..5216909 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -127,6 +127,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_NETA,
+ 	COMPAT_MVEBU_TCLOCK,
+ 	COMPAT_MVEBU_I2C,
++	COMPAT_MVEBU_ARLP_I2C,
+ 	COMPAT_MVEBU_SAR,
+ 	COMPAT_MVEBU_PINCTL,
+ 	COMPAT_MVEBU_MPP_BUS,
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 991b71a..1cd28be 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -89,6 +89,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_NETA, "marvell,armadalp-neta"),
+ 	COMPAT(MVEBU_TCLOCK, "marvell,tclk"),
+ 	COMPAT(MVEBU_I2C, "marvell,mvebu-i2c"),
++	COMPAT(MVEBU_ARLP_I2C, "marvell,armadalp-i2c"),
+ 	COMPAT(MVEBU_SAR, "marvell,sample-at-reset"),
+ 	COMPAT(MVEBU_PINCTL, "marvell,mvebu-pinctl"),
+ 	COMPAT(MVEBU_MPP_BUS, "marvell,mvebu-mpp-bus"),
+-- 
+1.9.1
+

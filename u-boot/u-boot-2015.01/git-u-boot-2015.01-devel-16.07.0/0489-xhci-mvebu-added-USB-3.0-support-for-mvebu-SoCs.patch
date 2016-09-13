@@ -1,0 +1,221 @@
+From ceeb15601d03d2796a6daaa541ce992f1bdce925 Mon Sep 17 00:00:00 2001
+From: Jing Hua <jinghua@marvell.com>
+Date: Wed, 11 Nov 2015 14:44:59 +0800
+Subject: [PATCH 0489/1240] xhci: mvebu: added USB 3.0 support for mvebu SoCs
+
+	Added USB 3.0 support for mvebu SoCs.
+	- Added new file drivers/usb/host/xhci-mvebu.c, in which defines routine
+	  xhci_hcd_init and xhci_hcd_init.
+	- Routine xhci_hcd_init takes XHCI base register from FDT node.
+
+Change-Id: I9d1158127f4903e875151e46838f9a1b693639d9
+Signed-off-by: Jing Hua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24731
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ doc/device-tree-bindings/README.mvebu       |  3 +-
+ doc/device-tree-bindings/usb/mvebu-usb3.txt | 17 +++++++
+ drivers/usb/host/Kconfig                    | 10 ++++
+ drivers/usb/host/Makefile                   |  1 +
+ drivers/usb/host/xhci-mvebu.c               | 74 +++++++++++++++++++++++++++++
+ include/configs/mvebu-common.h              |  5 ++
+ include/fdtdec.h                            |  1 +
+ lib/fdtdec.c                                |  1 +
+ 8 files changed, 111 insertions(+), 1 deletion(-)
+ create mode 100644 doc/device-tree-bindings/usb/mvebu-usb3.txt
+ create mode 100644 drivers/usb/host/xhci-mvebu.c
+
+diff --git a/doc/device-tree-bindings/README.mvebu b/doc/device-tree-bindings/README.mvebu
+index b3b0c28..56fbe99 100644
+--- a/doc/device-tree-bindings/README.mvebu
++++ b/doc/device-tree-bindings/README.mvebu
+@@ -59,7 +59,8 @@ Group Ltd.
+ 				Specify the PCIe interface for armadaLP, check doc/device-tree-bindings/pci/mvebu-pci.txt
+ 			2.1.9 /soc/internal-regs/sata/ node;
+ 				Specify the SATA interface for mvebu, check doc/device-tree-bindings/sata/mvebu-sata.txt
+-
++			2.1.10 /soc/internal-regs/usb3/ node;
++				Specify the USB 3.0 interface for mvebu, check doc/device-tree-bindings/usb/mvebu-usb3.txt
+ 3) /sar/ node:
+ 	Specify the sample at reset database, check
+ 	doc/device-tree-bindings/misc/mvebu-sar.txt
+diff --git a/doc/device-tree-bindings/usb/mvebu-usb3.txt b/doc/device-tree-bindings/usb/mvebu-usb3.txt
+new file mode 100644
+index 0000000..ff03a8c
+--- /dev/null
++++ b/doc/device-tree-bindings/usb/mvebu-usb3.txt
+@@ -0,0 +1,17 @@
++Marvell EBU USB 3.0 bindings
++====================
++
++This USB 3.0 driver is based on mainline xHCI, and it supports Marvell EBU SoC,
++which implements the xHCI core operations.
++
++The USB 3.0 node requires the following properties:
++	- compatible
++		should be "marvell,mvebu-usb3".
++	- reg: the base address of the xHCI unit.
++
++Example for USB 3.0 node:
++	usb3: usb3@58000 {
++		compatible = "marvell,mvebu-usb3";
++		reg = <0x58000 0x450>;
++		status = "disabled";
++	};
+diff --git a/drivers/usb/host/Kconfig b/drivers/usb/host/Kconfig
+index 30d1457..77e523e 100644
+--- a/drivers/usb/host/Kconfig
++++ b/drivers/usb/host/Kconfig
+@@ -15,6 +15,16 @@ config USB_XHCI
+ 	---help---
+ 	  TODO: rename after most boards switch to Kconfig
+ 
++config USB_XHCI_MVEBU
++	bool "mvebu USB 3.0 support"
++	default y
++	depends on MVEBU && USB_XHCI_HCD
++	---help---
++	  Choose this option to add support
++	  for USB 3.0 driver on mvebu SoCs,
++	  which includes Armada8K, Armada3700
++	  and other Armada family SoCs.
++
+ if USB_XHCI_HCD
+ 
+ endif
+diff --git a/drivers/usb/host/Makefile b/drivers/usb/host/Makefile
+index c11b551..63b71c7 100644
+--- a/drivers/usb/host/Makefile
++++ b/drivers/usb/host/Makefile
+@@ -47,6 +47,7 @@ obj-$(CONFIG_USB_XHCI) += xhci.o xhci-mem.o xhci-ring.o
+ obj-$(CONFIG_USB_XHCI_KEYSTONE) += xhci-keystone.o
+ obj-$(CONFIG_USB_XHCI_EXYNOS) += xhci-exynos5.o
+ obj-$(CONFIG_USB_XHCI_OMAP) += xhci-omap.o
++obj-$(CONFIG_USB_XHCI_MVEBU) += xhci-mvebu.o
+ 
+ # designware
+ obj-$(CONFIG_USB_DWC2) += dwc2.o
+diff --git a/drivers/usb/host/xhci-mvebu.c b/drivers/usb/host/xhci-mvebu.c
+new file mode 100644
+index 0000000..d665784
+--- /dev/null
++++ b/drivers/usb/host/xhci-mvebu.c
+@@ -0,0 +1,74 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++#include <common.h>
++#include <asm/arch-mvebu/soc.h>
++#include <fdtdec.h>
++#include <asm/arch-mvebu/fdt.h>
++
++#ifdef CONFIG_USB_XHCI
++#include "usb.h"
++#include "xhci.h"
++#endif
++
++#ifdef CONFIG_USB_XHCI
++int xhci_hcd_init(int index, struct xhci_hccr **hccr, struct xhci_hcor **hcor)
++{
++	int node_list[CONFIG_SYS_USB_XHCI_MAX_ROOT_PORTS], node;
++	int i, count;
++	unsigned long usb3_reg_base;
++
++	/* in dts file, go through all the 'usb3' nodes.
++	 */
++	count = fdtdec_find_aliases_for_id(gd->fdt_blob, "usb3",
++			COMPAT_MVEBU_USB3, node_list, CONFIG_SYS_USB_XHCI_MAX_ROOT_PORTS);
++	if (count == 0) {
++		error("could not find usb3 node in FDT, initialization skipped!\n");
++		return -ENXIO;
++	}
++	for (i = 0; i < count ; i++) {
++		node = node_list[i];
++
++		if (node <= 0)
++			continue;
++
++		/* fetch 'reg' propertiy from 'usb3' node */
++		usb3_reg_base = (unsigned long)fdt_get_regs_offs(gd->fdt_blob, node, "reg");
++		if (usb3_reg_base == FDT_ADDR_T_NONE) {
++			error("could not find reg in usb3 node, initialization skipped!\n");
++			return -ENXIO;
++		}
++
++		*hccr = (struct xhci_hccr *)usb3_reg_base;
++		*hcor = (struct xhci_hcor *)((unsigned long) *hccr
++					+ HC_LENGTH(xhci_readl(&(*hccr)->cr_capbase)));
++
++		debug("mvebu-xhci: init hccr %lx and hcor %lx hc_length %ld\n",
++		      (uintptr_t)*hccr, (uintptr_t)*hcor,
++			(uintptr_t)HC_LENGTH(xhci_readl(&(*hccr)->cr_capbase)));
++		return 0;
++	}
++
++	return -ENXIO;
++}
++
++void xhci_hcd_stop(int index)
++{
++	return;
++}
++#endif
++
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 1038a5b..1441015 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -268,6 +268,11 @@
+ 	#define CONFIG_SYS_NVRAM_BASE_ADDR DEVICE_CS1_BASE      /* dummy */
+ #endif
+ 
++/* USB 3.0 */
++#ifdef CONFIG_USB_XHCI_HCD
++#define CONFIG_SYS_USB_XHCI_MAX_ROOT_PORTS 2
++#endif
++
+ /* USB */
+ #ifdef MV_INCLUDE_USB
+ 	#define CONFIG_CMD_USB
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index b9774f2..59e08ae 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -141,6 +141,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_PCIE,
+ 	COMPAT_MVEBU_DW_PCIE,
+ 	COMPAT_MVEBU_COMPHY,
++	COMPAT_MVEBU_USB3,
+ 	COMPAT_COMPHY_ARMADA_38X,
+ 	COMPAT_COMPHY_AP806,
+ 	COMPAT_COMPHY_ARMADA_LP,
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 2a5f168..34541d6 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -103,6 +103,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_PCIE, "marvell,mvebu-pcie"),
+ 	COMPAT(MVEBU_DW_PCIE, "marvell,mvebu-dw-pcie"),
+ 	COMPAT(MVEBU_COMPHY, "marvell,mvebu-comphy"),
++	COMPAT(MVEBU_USB3, "marvell,mvebu-usb3"),
+ 	COMPAT(COMPHY_ARMADA_38X, "marvell,comphy-armada38x"),
+ 	COMPAT(COMPAT_COMPHY_AP806, "marvell,comphy-ap806"),
+ 	COMPAT(COMPAT_COMPHY_ARMADA_LP, "marvell,comphy-armadalp"),
+-- 
+1.9.1
+

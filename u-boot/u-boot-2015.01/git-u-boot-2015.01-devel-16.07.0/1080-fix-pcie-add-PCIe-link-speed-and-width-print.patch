@@ -1,0 +1,79 @@
+From 8354adb2323dc7fceb4fe56fd33e259d085d49e7 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 27 Apr 2016 16:42:43 +0300
+Subject: [PATCH 1080/1240] fix: pcie: add PCIe link speed and width print
+
+Change-Id: Ib062f45bbad29b641364686165e35a0cf6f3947a
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29401
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/pci/pcie_dw.c       | 15 +++++++++++++++
+ drivers/pci/pcie_dw.h       |  2 ++
+ drivers/pci/pcie_mvebu_dw.c |  3 ++-
+ 3 files changed, 19 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/pci/pcie_dw.c b/drivers/pci/pcie_dw.c
+index a765d60..cd9f4ed 100644
+--- a/drivers/pci/pcie_dw.c
++++ b/drivers/pci/pcie_dw.c
+@@ -37,6 +37,11 @@ DECLARE_GLOBAL_DATA_PTR;
+ 
+ /* PCI Config space registers */
+ #define PCIE_CONFIG_BAR0		0x10
++#define PCIE_LINK_STATUS_REG		0x80
++#define PCIE_LINK_STATUS_SPEED_OFF	16
++#define PCIE_LINK_STATUS_SPEED_MASK	0xf
++#define PCIE_LINK_STATUS_WIDTH_OFF	20
++#define PCIE_LINK_STATUS_WIDTH_MASK	0xf
+ 
+ /* Resizable bar capability registers */
+ #define RESIZABLE_BAR_CAP		0x250
+@@ -74,6 +79,16 @@ DECLARE_GLOBAL_DATA_PTR;
+ #define GEN3_EQU_DISABLE		(1 << 16)
+ #define GEN3_ZRXDC_NON_COMP		(1 << 0)
+ 
++int dw_pcie_get_link_speed(uintptr_t regs_base)
++{
++	return ((readl(regs_base + PCIE_LINK_STATUS_REG)) >> PCIE_LINK_STATUS_SPEED_OFF) & PCIE_LINK_STATUS_SPEED_MASK;
++}
++
++int dw_pcie_get_link_width(uintptr_t regs_base)
++{
++	return ((readl(regs_base + PCIE_LINK_STATUS_REG)) >> PCIE_LINK_STATUS_WIDTH_OFF) & PCIE_LINK_STATUS_WIDTH_MASK;
++}
++
+ /*
+  * iATU region setup
+  */
+diff --git a/drivers/pci/pcie_dw.h b/drivers/pci/pcie_dw.h
+index 517e5e8..c19c1ba 100644
+--- a/drivers/pci/pcie_dw.h
++++ b/drivers/pci/pcie_dw.h
+@@ -38,6 +38,8 @@ int dw_pcie_init(int host_id, uintptr_t regs_base, struct pcie_win *mem_win,
+ 		struct pcie_win *cfg_win, int first_busno);
+ int dw_pcie_set_endpoint(u32 hid, u32 regs_base);
+ void dw_pcie_configure(uintptr_t regs_base);
++int dw_pcie_get_link_speed(uintptr_t regs_base);
++int dw_pcie_get_link_width(uintptr_t regs_base);
+ 
+ /* Must be implemented by SoC wrapper layer. */
+ int soc_pcie_link_up(uintptr_t regs_base);
+diff --git a/drivers/pci/pcie_mvebu_dw.c b/drivers/pci/pcie_mvebu_dw.c
+index a6fa698..f7e978c 100644
+--- a/drivers/pci/pcie_mvebu_dw.c
++++ b/drivers/pci/pcie_mvebu_dw.c
+@@ -135,7 +135,8 @@ void pci_init_board(void)
+ 			printf("PCIE-%d: Link down\n", host_id);
+ 			continue;
+ 		}
+-		printf("PCIE-%d: Link up (Bus %d)\n", host_id, first_busno);
++		printf("PCIE-%d: Link up (Gen%d-x%d, Bus%d)\n", host_id, dw_pcie_get_link_speed(regs_base),
++		       dw_pcie_get_link_width(regs_base), first_busno);
+ 
+ 		err = fdtdec_get_int_array(blob, port_node, "mem", (u32 *)&mem_win, 2);
+ 		if (err) {
+-- 
+1.9.1
+

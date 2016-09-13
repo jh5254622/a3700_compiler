@@ -1,0 +1,46 @@
+From 6c01856b296b3b6c20638b4cf209bdbcf73cbac4 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Tue, 28 Jul 2015 16:19:03 +0300
+Subject: [PATCH 0279/1240] boot: a8k: changed boot command from bootm to booti
+
+bootm command requires a u-boot header appended to the image
+in arm64, the kernel already includes a built-in header so a
+efficient command "booti".
+the kernel address is changed to avoid copying the kernel to its
+natural boot address 0x8000. we modify the kernel TEXT_OFFSET to
+0x180000 and then set the kernel_addr to the same value
+
+Change-Id: Ia9fd7563c6579e1cc97dc4059ca86020b4fc66f4
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22262
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Neta Zur Hershkovits <neta@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/armada8k.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index 9eb7029..193fa89 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -88,14 +88,14 @@ extern char __end_of_spl[];
+ 				"mem=128M init=/bin/sh root=/dev/ram0 rw"
+ 
+ #undef  CONFIG_EXTRA_ENV_SETTINGS
+-#define CONFIG_EXTRA_ENV_SETTINGS	"kernel_addr=0x107ffc0\0"	\
++#define CONFIG_EXTRA_ENV_SETTINGS	"kernel_addr=0x180000\0"	\
+ 					"fdt_addr=0x1000000\0"		\
+ 					"ramfs_addr=0x3000000\0"	\
+ 					"fdt_high=0xa0000000\0"		\
+ 					"initrd_high=0xffffffffffffffff\0"
+ 
+ #undef  CONFIG_BOOTCOMMAND
+-#define CONFIG_BOOTCOMMAND		"bootm $kernel_addr $ramfs_addr $fdt_addr"
++#define CONFIG_BOOTCOMMAND		"booti $kernel_addr $ramfs_addr $fdt_addr"
+ 
+ #endif /*CONFIG_PALLADIUM*/
+ 
+-- 
+1.9.1
+

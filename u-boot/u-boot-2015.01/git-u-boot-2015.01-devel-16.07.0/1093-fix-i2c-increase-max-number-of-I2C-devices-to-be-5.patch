@@ -1,0 +1,72 @@
+From 064455658d0fc67d1566aa0a48579e4a0f89888f Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 8 May 2016 19:17:33 +0300
+Subject: [PATCH 1093/1240] fix: i2c: increase max number of I2C devices to be
+ 5
+
+Update max number of I2C devices to be 5
+For Armada-70x0/80x0 can enabled 5 I2C devices:
+1 - AP-806
+2 - CP-110
+2 - MSS-CP-110
+
+Change-Id: Ieb5a1944a5788be3ba59bec5fcc17a94eba6425c
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29608
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/i2c/mvebu_i2c.c | 24 +++++++++++++++++++++++-
+ 1 file changed, 23 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/i2c/mvebu_i2c.c b/drivers/i2c/mvebu_i2c.c
+index 827c85e..9fcf378 100644
+--- a/drivers/i2c/mvebu_i2c.c
++++ b/drivers/i2c/mvebu_i2c.c
+@@ -24,7 +24,7 @@
+ #include <asm/arch-mvebu/clock.h>
+ #include <asm/arch-mvebu/fdt.h>
+ 
+-#define CONFIG_MAX_I2C_NUM			2
++#define CONFIG_MAX_I2C_NUM			5
+ #define I2C_TIMEOUT_VALUE			0x500
+ #define I2C_MAX_RETRY_CNT			1000
+ #define I2C_CMD_WRITE				0x0
+@@ -122,8 +122,15 @@ enum i2c_bridge_error {
+ static struct mvebu_i2c_bus i2c_bus[CONFIG_MAX_I2C_NUM] = { { .i2c_reg = NULL, .i2c_bridge_reg = NULL, .clock = -1,
+ 					 .two_bytes_addr = {[0 ... MAX_CHIPS_PER_BUS - 1] = -1}, .status = false},
+ 							    { .i2c_reg = NULL, .i2c_bridge_reg = NULL, .clock = -1,
++					 .two_bytes_addr = {[0 ... MAX_CHIPS_PER_BUS - 1] = -1}, .status = false},
++							    { .i2c_reg = NULL, .i2c_bridge_reg = NULL, .clock = -1,
++					 .two_bytes_addr = {[0 ... MAX_CHIPS_PER_BUS - 1] = -1}, .status = false},
++							    { .i2c_reg = NULL, .i2c_bridge_reg = NULL, .clock = -1,
++					 .two_bytes_addr = {[0 ... MAX_CHIPS_PER_BUS - 1] = -1}, .status = false},
++							    { .i2c_reg = NULL, .i2c_bridge_reg = NULL, .clock = -1,
+ 					 .two_bytes_addr = {[0 ... MAX_CHIPS_PER_BUS - 1] = -1}, .status = false} };
+ 
++
+ #define i2c_reg(x) (&i2c_bus[gd->cur_i2c_bus].i2c_reg->x)
+ #define i2c_bridge_reg(x) (&i2c_bus[gd->cur_i2c_bus].i2c_bridge_reg->x)
+ 
+@@ -877,3 +884,18 @@ U_BOOT_I2C_ADAP_COMPLETE(mvebu1, mvebu_i2c_init, mvebu_i2c_probe,
+ 			 mvebu_i2c_read, mvebu_i2c_write,
+ 			 mvebu_i2c_bus_speed_set,
+ 			 CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE, 1)
++
++U_BOOT_I2C_ADAP_COMPLETE(mvebu2, mvebu_i2c_init, mvebu_i2c_probe,
++			 mvebu_i2c_read, mvebu_i2c_write,
++			 mvebu_i2c_bus_speed_set,
++			 CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE, 2)
++
++U_BOOT_I2C_ADAP_COMPLETE(mvebu3, mvebu_i2c_init, mvebu_i2c_probe,
++			 mvebu_i2c_read, mvebu_i2c_write,
++			 mvebu_i2c_bus_speed_set,
++			 CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE, 3)
++
++U_BOOT_I2C_ADAP_COMPLETE(mvebu4, mvebu_i2c_init, mvebu_i2c_probe,
++			 mvebu_i2c_read, mvebu_i2c_write,
++			 mvebu_i2c_bus_speed_set,
++			 CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE, 4)
+-- 
+1.9.1
+

@@ -1,0 +1,35 @@
+From bf346f6b69ae707ebe3021e5da2d43cd9371426b Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 27 Aug 2015 01:50:27 +0300
+Subject: [PATCH 0368/1240] fix: ap806: fixed clock definitions for AP-806
+
+Change-Id: I2a48e043dcad7ef00519b75c776b09aa2693a557
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23241
+Reviewed-by: Neta Zur Hershkovits <neta@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ include/configs/armada8k.h | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index eb0ba12..ad16e12 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -47,8 +47,13 @@
+ #define CONFIG_REMAKE_ELF
+ 
+ /* Clock Definitions */
++#ifndef CONFIG_PALLADIUM
++#define COUNTER_FREQUENCY	(25 * 1000000)
++#define CONFIG_MSS_FREQUENCY	(200 * MHZ)
++#else
+ #define COUNTER_FREQUENCY	(48000)
+ #define CONFIG_MSS_FREQUENCY	(384000)
++#endif
+ 
+ #ifdef CONFIG_SPL_BUILD
+ /* SPL */
+-- 
+1.9.1
+

@@ -1,0 +1,61 @@
+From 04bb1eafdd9994014214b752106d28e174bfd208 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 15 Jun 2014 21:04:53 +0300
+Subject: [PATCH 0037/1240] a8k: add soc_early_init_f function called from
+ board_early_init_f
+
+	- added soc_early_init_f, weak function, will include initial code for
+	  SOC.
+
+Change-Id: Ib9c83e519b3b7091462c20d67adedbd3b7bc2259
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/8535
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/soc-init.c | 5 +++++
+ board/mvebu/common/init.c              | 8 ++++++++
+ 2 files changed, 13 insertions(+)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/soc-init.c b/arch/arm/cpu/armv8/armada8k/soc-init.c
+index 00c622a..89ba703 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc-init.c
++++ b/arch/arm/cpu/armv8/armada8k/soc-init.c
+@@ -25,6 +25,11 @@
+ #include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-armada8k/armada8k.h>
+ 
++int soc_early_init_f(void)
++{
++	return 0;
++}
++
+ int soc_get_rev(void)
+ {
+ 	/* This should read the soc rev from some register*/
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index cba1c85..62b73a6 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -42,10 +42,18 @@ int board_late_init(void)
+ }
+ #endif
+ 
++int __soc_early_init_f(void)
++{
++	return 0;
++}
++int soc_early_init_f(void)
++		__attribute__((weak, alias("__soc_early_init_f")));
++
+ #ifdef CONFIG_BOARD_EARLY_INIT_F
+ /* Do very basic stuff like board and soc detection */
+ int board_early_init_f(void)
+ {
++	soc_early_init_f();
+ 	return 0;
+ }
+ #endif
+-- 
+1.9.1
+

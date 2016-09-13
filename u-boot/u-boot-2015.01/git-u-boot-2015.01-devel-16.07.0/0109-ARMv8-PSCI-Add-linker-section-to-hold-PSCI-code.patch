@@ -1,0 +1,87 @@
+From 1df758413b23c46c95e76713f187cbb268b87bef Mon Sep 17 00:00:00 2001
+From: Arnab Basu <arnab_basu@rocketmail.com>
+Date: Tue, 13 Jan 2015 02:26:28 +0530
+Subject: [PATCH 0109/1240] ARMv8: PSCI: Add linker section to hold PSCI code
+
+A separate linker section makes it possible to keep this code either
+in DDR or in some secure memory location provided specifically for the
+purpose.
+
+So far no one is using this section.
+
+Change-Id: Iccde52e6552ba28e8fb41aa098b2270b8ff053c9
+Signed-off-by: Arnab Basu <arnab_basu@rocketmail.com>
+Cc: Bhupesh Sharma <bhupesh.sharma@freescale.com>
+Cc: Marc Zyngier <marc.zyngier@arm.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/16358
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/config.mk            |  2 +-
+ arch/arm/cpu/armv8/u-boot.lds | 30 ++++++++++++++++++++++++++++++
+ 2 files changed, 31 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/config.mk b/arch/arm/config.mk
+index 0667984..d388022 100644
+--- a/arch/arm/config.mk
++++ b/arch/arm/config.mk
+@@ -113,7 +113,7 @@ endif
+ 
+ # limit ourselves to the sections we want in the .bin.
+ ifdef CONFIG_ARM64
+-OBJCOPYFLAGS += -j .text -j .rodata -j .data -j .u_boot_list -j .rela.dyn
++OBJCOPYFLAGS += -j .text -j .secure_text -j .rodata -j .data -j .u_boot_list -j .rela.dyn
+ else
+ OBJCOPYFLAGS += -j .text -j .secure_text -j .rodata -j .hash -j .data -j .got.plt -j .u_boot_list -j .rel.dyn
+ endif
+diff --git a/arch/arm/cpu/armv8/u-boot.lds b/arch/arm/cpu/armv8/u-boot.lds
+index 4c12222..bd95fff 100644
+--- a/arch/arm/cpu/armv8/u-boot.lds
++++ b/arch/arm/cpu/armv8/u-boot.lds
+@@ -8,6 +8,8 @@
+  * SPDX-License-Identifier:	GPL-2.0+
+  */
+ 
++#include <config.h>
++
+ OUTPUT_FORMAT("elf64-littleaarch64", "elf64-littleaarch64", "elf64-littleaarch64")
+ OUTPUT_ARCH(aarch64)
+ ENTRY(_start)
+@@ -23,6 +25,34 @@ SECTIONS
+ 		*(.text*)
+ 	}
+ 
++#ifdef CONFIG_ARMV8_PSCI
++
++#ifndef CONFIG_ARMV8_SECURE_BASE
++#define CONFIG_ARMV8_SECURE_BASE
++#endif
++
++	.__secure_start : {
++		. = ALIGN(0x1000);
++		*(.__secure_start)
++	}
++
++	.secure_text CONFIG_ARMV8_SECURE_BASE :
++		AT(ADDR(.__secure_start) + SIZEOF(.__secure_start))
++	{
++		*(._secure.text)
++	}
++
++	. = LOADADDR(.__secure_start) +
++		SIZEOF(.__secure_start) +
++		SIZEOF(.secure_text);
++
++	__secure_end_lma = .;
++	.__secure_end : AT(__secure_end_lma) {
++		*(.__secure_end)
++		LONG(0x1d1071c);	/* Must output something to reset LMA */
++	}
++#endif
++
+ 	. = ALIGN(8);
+ 	.rodata : { *(SORT_BY_ALIGNMENT(SORT_BY_NAME(.rodata*))) }
+ 
+-- 
+1.9.1
+

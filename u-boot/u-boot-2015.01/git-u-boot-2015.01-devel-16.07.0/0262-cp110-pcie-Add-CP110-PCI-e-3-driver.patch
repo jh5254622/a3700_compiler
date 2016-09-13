@@ -1,0 +1,226 @@
+From bb7a6ef02db6596f43e18f82509be2444927c43f Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Wed, 22 Jul 2015 10:42:38 +0300
+Subject: [PATCH 0262/1240] cp110: pcie: Add CP110 PCI-e 3 driver
+
+	This driver is based on designware PCIe core driver.
+
+Change-Id: Id122de2eb35a07b0d4e208e5a95eef837702e33f
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22056
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/pci/Kconfig            |  12 +++--
+ drivers/pci/Makefile           |   1 +
+ drivers/pci/pcie_mvebu_dw.c    | 120 +++++++++++++++++++++++++++++++++++++++++
+ include/configs/mvebu-common.h |   4 +-
+ include/fdtdec.h               |   1 +
+ lib/fdtdec.c                   |   1 +
+ 6 files changed, 134 insertions(+), 5 deletions(-)
+ create mode 100644 drivers/pci/pcie_mvebu_dw.c
+
+diff --git a/drivers/pci/Kconfig b/drivers/pci/Kconfig
+index 2cc7a57..29570ef 100644
+--- a/drivers/pci/Kconfig
++++ b/drivers/pci/Kconfig
+@@ -1,6 +1,12 @@
++menu "PCI Bus Support"
++
+ config DW_PCIE
+-	bool "Enable DesignWare PCIe 3 driver"
++
++config MVEBU_DW_PCIE
++	bool "Enable MVEBU DesignWare PCIe 3 driver"
++	default false
++	select DW_PCIE
+ 	help
+-	  If you want to use driver model for serial drivers, say Y.
+-	  To use legacy serial drivers, say N.
++	  Enable MVEBU PCIe 3 drivers based on designware IP.
+ 
++endmenu
+diff --git a/drivers/pci/Makefile b/drivers/pci/Makefile
+index da7fe48..8e75de8 100755
+--- a/drivers/pci/Makefile
++++ b/drivers/pci/Makefile
+@@ -21,3 +21,4 @@ obj-$(CONFIG_WINBOND_83C553) += w83c553f.o
+ obj-$(CONFIG_PCIE_LAYERSCAPE) += pcie_layerscape.o
+ obj-$(CONFIG_MVEBU_PCI) += pci_mvebu.o
+ obj-$(CONFIG_DW_PCIE) += pcie_dw.o
++obj-$(CONFIG_MVEBU_DW_PCIE) += pcie_mvebu_dw.o
+diff --git a/drivers/pci/pcie_mvebu_dw.c b/drivers/pci/pcie_mvebu_dw.c
+new file mode 100644
+index 0000000..1180fb1
+--- /dev/null
++++ b/drivers/pci/pcie_mvebu_dw.c
+@@ -0,0 +1,120 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++/*
++** Based on:
++**   - drivers/pci/pcie_imx.c
++**   - drivers/pci/pci_mvebu.c
++*/
++
++#include <common.h>
++#include <pci.h>
++#include <fdtdec.h>
++#include <asm/io.h>
++#include <linux/sizes.h>
++#include <errno.h>
++#include <asm/arch-mvebu/fdt.h>
++#include "pcie_dw.h"
++
++DECLARE_GLOBAL_DATA_PTR;
++
++#define PCIE_LINK_UP_TIMEOUT_US		(1000000)
++
++#define PCIE_GLOBAL_STATUS		0x8008
++#define PCIE_GLB_STS_RDLH_LINK_UP	(1 << 1)
++#define PCIE_GLB_STS_PHY_LINK_UP	(1 << 9)
++
++static int mvebu_pcie_link_up(uintptr_t regs_base)
++{
++	u32 reg, mask;
++	int timeout = PCIE_LINK_UP_TIMEOUT_US;
++
++	while (timeout > 0) {
++		/* Check for link. */
++		reg = readl(regs_base + PCIE_GLOBAL_STATUS);
++		mask = PCIE_GLB_STS_RDLH_LINK_UP | PCIE_GLB_STS_PHY_LINK_UP;
++		if ((reg & mask) == mask)
++			return 1;
++		udelay(10);
++		timeout--;
++	}
++
++	return 0;
++}
++
++void pci_init_board(void)
++{
++	int host_id = -1;
++	int first_busno = 0;
++	int bus_node, port_node, count;
++	const void *blob = gd->fdt_blob;
++	struct pcie_win mem_win, cfg_win;
++	uintptr_t regs_base;
++	int err, link;
++
++	count = fdtdec_find_aliases_for_id(blob, "pcie-controller",
++			COMPAT_MVEBU_DW_PCIE, &bus_node, 1);
++
++	if (count <= 0)
++		return;
++
++	fdt_for_each_subnode(blob, port_node, bus_node) {
++		host_id++;
++
++		if (!fdtdec_get_is_enabled(blob, port_node))
++			continue;
++
++		regs_base = (uintptr_t)fdt_get_regs_offs(blob, port_node, "reg");
++		if (regs_base == 0) {
++			error("Missing registers in PCIe node\n");
++			continue;
++		}
++
++		if (fdtdec_get_bool(blob, port_node, "endpoint")) {
++			dw_pcie_set_endpoint(host_id, regs_base);
++			continue;
++		}
++
++		/* Don't register host if link is down */
++		if (!dw_pcie_link_up(regs_base))
++			continue;
++
++		err = fdtdec_get_int_array(blob, port_node, "mem", (u32 *)&mem_win, 2);
++		if (err) {
++			error("pcie: missing pci memory space in fdt\n");
++			continue;
++		}
++
++		err = fdtdec_get_int_array(blob, port_node, "cfg", (u32 *)&cfg_win, 2);
++		if (err) {
++			error("pcie: missing pci configuration space in fdt\n");
++			continue;
++		}
++
++		/* If all is well register the host */
++		first_busno = dw_pcie_init(host_id, regs_base, &mem_win, &cfg_win, first_busno);
++		if (first_busno < 0)
++			/* Print error message, and try to initialize other
++			** hosts. */
++			printf("Failed to initialize PCIe host %d.\n", host_id);
++
++		/* Check the link status - for info only */
++		link = mvebu_pcie_link_up(regs_base);
++		printf("PCIE-%d: Link %s (Bus %d)\n", host_id, (link ? "Up" : "Down"), first_busno);
++	}
++}
++
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 63a1f0b..1c64603 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -255,7 +255,7 @@
+ #endif
+ 
+ /* PCI-E */
+-#ifdef CONFIG_MVEBU_PCI
++#if defined(CONFIG_MVEBU_PCI) || defined(CONFIG_MVEBU_DW_PCIE_)
+ 	#define CONFIG_PCI
+ 	#define CONFIG_PCI_PNP  /* Enable plug-and-play */
+ 	/*#define CONFIG_MVEBU_PCI_EP*/ /* Set PCI host as end point */
+@@ -290,7 +290,7 @@
+ #endif /* CONFIG_MVEBU_NET */
+ 
+ /* SATA AHCI over PCIe */
+-#if defined(CONFIG_DEVEL_BOARD) && defined(CONFIG_MVEBU_PCI)
++#if defined(CONFIG_DEVEL_BOARD) && (defined(CONFIG_MVEBU_PCI) || defined(CONFIG_MVEBU_DW_PCIE_))
+ 
+ 	#define CONFIG_CMD_SCSI
+ 	#define CONFIG_CMD_EXT2
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 089ebcf..270a357 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -133,6 +133,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_RFU,
+ 	COMPAT_MVEBU_IOB,
+ 	COMPAT_MVEBU_PCIE,
++	COMPAT_MVEBU_DW_PCIE,
+ 	COMPAT_MVEBU_COMPHY,
+ 	COMPAT_COMPHY_ARMADA_38X,
+ 
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 5387a37..f2c59f4 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -95,6 +95,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_RFU, "marvell,mvebu-rfu"),
+ 	COMPAT(MVEBU_IOB, "marvell,mvebu-iob"),
+ 	COMPAT(MVEBU_PCIE, "marvell,mvebu-pcie"),
++	COMPAT(MVEBU_DW_PCIE, "marvell,mvebu-dw-pcie"),
+ 	COMPAT(MVEBU_COMPHY, "marvell,mvebu-comphy"),
+ 	COMPAT(COMPHY_ARMADA_38X, "marvell,comphy-armada38x"),
+ };
+-- 
+1.9.1
+

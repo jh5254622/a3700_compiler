@@ -1,0 +1,46 @@
+From 379fb303e580fcde08d741cc1a79025ceb116d96 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 26 Aug 2015 07:41:58 +0300
+Subject: [PATCH 0352/1240] fix: ap806: updated tclock frequency for AP-806 DB
+ board
+
+Change-Id: I6de1ead2f11877e010e0381313c83a18f209ac7e
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23189
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/apn-806-pd.dts | 4 ++++
+ arch/arm/dts/apn-806.dtsi   | 2 +-
+ 2 files changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/apn-806-pd.dts b/arch/arm/dts/apn-806-pd.dts
+index 7c3422e..59f9589 100644
+--- a/arch/arm/dts/apn-806-pd.dts
++++ b/arch/arm/dts/apn-806-pd.dts
+@@ -28,6 +28,10 @@
+ 
+ 		internal-regs {
+ 
++			tclk: tclk {
++				clock-frequency = <125000>;
++			};
++
+ 			spi0: spi@510600 {
+ 				spi-max-frequency = <51200>;
+ 			};
+diff --git a/arch/arm/dts/apn-806.dtsi b/arch/arm/dts/apn-806.dtsi
+index 59db3b8..51e69da 100644
+--- a/arch/arm/dts/apn-806.dtsi
++++ b/arch/arm/dts/apn-806.dtsi
+@@ -43,7 +43,7 @@
+ 			tclk: tclk {
+ 				compatible = "marvell,tclk";
+ 				#clock-cells = <0>;
+-				clock-frequency = <125000>;
++				clock-frequency = <200000000>;
+ 			};
+ 
+ 			i2c0: i2c@511000 {
+-- 
+1.9.1
+

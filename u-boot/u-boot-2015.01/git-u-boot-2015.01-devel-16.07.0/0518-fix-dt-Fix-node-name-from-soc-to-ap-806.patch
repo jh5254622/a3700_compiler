@@ -1,0 +1,30 @@
+From 2a26b79d5796193216e74d4ba674fd4938c2b341 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Sun, 22 Nov 2015 17:43:08 +0200
+Subject: [PATCH 0518/1240] fix: dt: Fix node name from soc to ap-806
+
+Change-Id: I6d494b29c2b60681b10ff7389a28a15182f0a76e
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25152
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/apn-806-db.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/apn-806-db.dtsi b/arch/arm/dts/apn-806-db.dtsi
+index 66652ed..8528010 100644
+--- a/arch/arm/dts/apn-806-db.dtsi
++++ b/arch/arm/dts/apn-806-db.dtsi
+@@ -20,7 +20,7 @@
+ #include "apn-806-z1.dtsi"
+ 
+ / {
+-	soc {
++	ap-806 {
+ 		internal-regs {
+ 
+ 			ddr-mac {
+-- 
+1.9.1
+

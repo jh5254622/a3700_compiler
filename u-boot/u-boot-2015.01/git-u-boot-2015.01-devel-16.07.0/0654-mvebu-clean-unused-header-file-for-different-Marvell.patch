@@ -1,0 +1,213 @@
+From 0639277bd2d40106156e4c0efd12a88f88000d15 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 7 Jan 2016 19:57:51 +0200
+Subject: [PATCH 0654/1240] mvebu: clean unused header file for different
+ Marvell SoCs
+
+Change-Id: Ic70cdc2226ca876d5c7026f2bb563d84abdea916
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26632
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ arch/arm/cpu/armv7/armada38x/soc-init.c            |  1 -
+ arch/arm/cpu/armv7/armadalp/soc-init.c             |  1 -
+ arch/arm/cpu/armv8/armada8k/soc.c                  |  1 -
+ arch/arm/cpu/armv8/armadalp/soc-init.c             |  1 -
+ arch/arm/include/asm/arch-armada38x/armada38x.h    | 27 ----------------------
+ arch/arm/include/asm/arch-armada8k/armada8k.h      | 27 ----------------------
+ arch/arm/include/asm/arch-armadalp/armadalp.h      | 26 ---------------------
+ arch/arm/include/asm/arch-mvebu/driver_interface.h | 19 ---------------
+ board/mvebu/common/eth_init.c                      |  1 -
+ 9 files changed, 104 deletions(-)
+ delete mode 100644 arch/arm/include/asm/arch-armada38x/armada38x.h
+ delete mode 100644 arch/arm/include/asm/arch-armada8k/armada8k.h
+ delete mode 100644 arch/arm/include/asm/arch-armadalp/armadalp.h
+ delete mode 100644 arch/arm/include/asm/arch-mvebu/driver_interface.h
+
+diff --git a/arch/arm/cpu/armv7/armada38x/soc-init.c b/arch/arm/cpu/armv7/armada38x/soc-init.c
+index d961eaf..6ebc6cb 100644
+--- a/arch/arm/cpu/armv7/armada38x/soc-init.c
++++ b/arch/arm/cpu/armv7/armada38x/soc-init.c
+@@ -23,7 +23,6 @@
+ #include <asm/arch-mvebu/soc.h>
+ #include <asm/arch-mvebu/mpp.h>
+ #include <asm/arch-mvebu/pinctl.h>
+-#include <asm/arch-armada38x/armada38x.h>
+ 
+ #define MBUS_SDRAM_WIN_ENABLE			0x1
+ #define MBUS_SDRAM_BASE_REG(win)		(MVEBU_ADEC_BASE + 0x180 + (win * 0x8))
+diff --git a/arch/arm/cpu/armv7/armadalp/soc-init.c b/arch/arm/cpu/armv7/armadalp/soc-init.c
+index 8f17b6d..980211e 100644
+--- a/arch/arm/cpu/armv7/armadalp/soc-init.c
++++ b/arch/arm/cpu/armv7/armadalp/soc-init.c
+@@ -21,7 +21,6 @@
+ #include <common.h>
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/soc.h>
+-#include <asm/arch-armadalp/armadalp.h>
+ 
+ int soc_early_init_f(void)
+ {
+diff --git a/arch/arm/cpu/armv8/armada8k/soc.c b/arch/arm/cpu/armv8/armada8k/soc.c
+index ef2c7dd..45d7cda 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc.c
++++ b/arch/arm/cpu/armv8/armada8k/soc.c
+@@ -22,7 +22,6 @@
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/soc.h>
+ #include <asm/arch-mvebu/system_info.h>
+-#include <asm/arch-armada8k/armada8k.h>
+ #include <asm/arch/regs-base.h>
+ #include <asm/arch-mvebu/pinctl.h>
+ #include <linux/sizes.h>
+diff --git a/arch/arm/cpu/armv8/armadalp/soc-init.c b/arch/arm/cpu/armv8/armadalp/soc-init.c
+index 9c4b930..37ac81f 100644
+--- a/arch/arm/cpu/armv8/armadalp/soc-init.c
++++ b/arch/arm/cpu/armv8/armadalp/soc-init.c
+@@ -21,7 +21,6 @@
+ #include <common.h>
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/soc.h>
+-#include <asm/arch-armadalp/armadalp.h>
+ #include <netdev.h>
+ #include <asm/arch/mbus_reg.h>
+ #include <asm/arch-mvebu/mbus.h>
+diff --git a/arch/arm/include/asm/arch-armada38x/armada38x.h b/arch/arm/include/asm/arch-armada38x/armada38x.h
+deleted file mode 100644
+index 5bb43c0..0000000
+--- a/arch/arm/include/asm/arch-armada38x/armada38x.h
++++ /dev/null
+@@ -1,27 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#ifndef _ARMADA8K_H_
+-#define _ARMADA8K_H_
+-
+-#include <asm/arch-mvebu/mvebu.h>
+-
+-int a38x_init(void);
+-extern struct mvebu_soc_family a38x_family_info;
+-
+-#endif	/* _ARMADA8K_H_ */
+diff --git a/arch/arm/include/asm/arch-armada8k/armada8k.h b/arch/arm/include/asm/arch-armada8k/armada8k.h
+deleted file mode 100644
+index 602c4ad..0000000
+--- a/arch/arm/include/asm/arch-armada8k/armada8k.h
++++ /dev/null
+@@ -1,27 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#ifndef _ARMADA8K_H_
+-#define _ARMADA8K_H_
+-
+-#include <asm/arch-mvebu/mvebu.h>
+-
+-int a8k_init(void);
+-extern struct mvebu_soc_family a8k_family_info;
+-
+-#endif	/* _ARMADA8K_H_ */
+diff --git a/arch/arm/include/asm/arch-armadalp/armadalp.h b/arch/arm/include/asm/arch-armadalp/armadalp.h
+deleted file mode 100644
+index 5a769c8..0000000
+--- a/arch/arm/include/asm/arch-armadalp/armadalp.h
++++ /dev/null
+@@ -1,26 +0,0 @@
+-/*
+-* ***************************************************************************
+-* Copyright (C) 2015 Marvell International Ltd.
+-* ***************************************************************************
+-* This program is free software: you can redistribute it and/or modify it
+-* under the terms of the GNU General Public License as published by the Free
+-* Software Foundation, either version 2 of the License, or any later version.
+-*
+-* This program is distributed in the hope that it will be useful,
+-* but WITHOUT ANY WARRANTY; without even the implied warranty of
+-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-* GNU General Public License for more details.
+-*
+-* You should have received a copy of the GNU General Public License
+-* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-* ***************************************************************************
+-*/
+-
+-#ifndef _ARMADALP_H_
+-#define _ARMADALP_H_
+-
+-#include <asm/arch-mvebu/mvebu.h>
+-
+-extern struct mvebu_soc_family armadalp_family_info;
+-
+-#endif	/* _ARMADA8K_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/driver_interface.h b/arch/arm/include/asm/arch-mvebu/driver_interface.h
+deleted file mode 100644
+index ccc5429..0000000
+--- a/arch/arm/include/asm/arch-mvebu/driver_interface.h
++++ /dev/null
+@@ -1,19 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-void mvebu_pcie_init_board(int max_hosts, u16 active_mask, u16 ep_mask);
+diff --git a/board/mvebu/common/eth_init.c b/board/mvebu/common/eth_init.c
+index 25d62e4..02aa36a 100644
+--- a/board/mvebu/common/eth_init.c
++++ b/board/mvebu/common/eth_init.c
+@@ -20,7 +20,6 @@
+ #include <errno.h>
+ #include <netdev.h>
+ #include <spi.h>
+-#include <asm/arch-mvebu/driver_interface.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+-- 
+1.9.1
+

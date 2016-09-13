@@ -1,0 +1,35 @@
+From 96ccb8271616a9c5585aefc779018d46e843fbb8 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 13 Oct 2015 14:59:26 +0300
+Subject: [PATCH 0434/1240] fix: ddr: update address of scratch variable not to
+ use address 0x0
+
+- When access to address 0x0 the device stuck, this patch update the code to
+  use different address (not 0x0)
+
+Change-Id: I04632b1a0721a8501263656b5dcb86f2f5156438
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23971
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ include/configs/mvebu-common.h | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 254e150..9b91b79 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -144,7 +144,8 @@
+ 
+ /* Memory commands / tests. */
+ #ifdef CONFIG_CMD_MEMTEST
+-#define CONFIG_SYS_ALT_MEMTEST	/* More comprehensive mtest algorithm */
++#define CONFIG_SYS_ALT_MEMTEST		/* More comprehensive mtest algorithm */
++#define CONFIG_SYS_MEMTEST_SCRATCH	0x10800000
+ #endif
+ 
+ 
+-- 
+1.9.1
+

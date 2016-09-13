@@ -1,0 +1,37 @@
+From b529c48b7a73c5dcbffb3960f30d9e78ae87618c Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Mon, 15 Feb 2016 21:00:03 +0800
+Subject: [PATCH 0853/1240] fix: pin-ctrl: correct the test pin for SDIO to
+ SDIO mode
+
+issue: the SD cards can not be detected, it is caused by
+    the pin control patch which overwrites the SDIO/GPIO
+    enable bit.
+fix: This patch correct the test pin bit for SDIO/GPIO to
+    SDIO mode
+
+Change-Id: I1695e8b05c13fab7ab70ac2d577828796481c2cc
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27496
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/dts/armada-lp-db.dts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/armada-lp-db.dts b/arch/arm/dts/armada-lp-db.dts
+index ab28d8e..a1da1b7 100644
+--- a/arch/arm/dts/armada-lp-db.dts
++++ b/arch/arm/dts/armada-lp-db.dts
+@@ -119,6 +119,6 @@
+ 		   MII      8
+ 		*/
+ 			/* 0 1 2 3 4 5 6 7 */
+-	pin-func = < 1 1 1 0 1 1 0 0
++	pin-func = < 1 1 0 0 1 1 0 0
+ 			   0 >;
+ };
+-- 
+1.9.1
+

@@ -1,0 +1,30 @@
+From 3a5859539f6c55bfe42df7daad2417d49c8ea5a0 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 24 Nov 2015 12:50:13 +0200
+Subject: [PATCH 0523/1240] loadb: ap806: added support for loadb commands in
+ U-Boot
+
+Change-Id: If4f4e34b871e27fafa8d0462db8a8322175cfba0
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25203
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ configs/mvebu_apn806_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/configs/mvebu_apn806_defconfig b/configs/mvebu_apn806_defconfig
+index dad1c31..35b8f60 100644
+--- a/configs/mvebu_apn806_defconfig
++++ b/configs/mvebu_apn806_defconfig
+@@ -12,6 +12,7 @@ CONFIG_CMD_EDITENV=y
+ CONFIG_CMD_SAVEENV=y
+ CONFIG_CMD_MEMORY=y
+ CONFIG_CMD_MEMTEST=y
++CONFIG_CMD_LOADB=y
+ CONFIG_CMD_NET=y
+ CONFIG_CMD_PING=y
+ CONFIG_CMD_TIME=y
+-- 
+1.9.1
+

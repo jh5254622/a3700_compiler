@@ -1,0 +1,3144 @@
+From 7f457291aa7ff298c4bbae81039896a55f2fe359 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Wed, 11 Nov 2015 17:29:33 +0200
+Subject: [PATCH 0538/1240] misc: mvebu: relocate SoC specific drivers from
+ drivers/misc to SoC specific code
+
+	- Before: alot of specific drivers are placed in generic code location (driver/misc), and defined in it's Kconfig.
+	- all specific drivers relocate to SoC specific code (armada_lp or ap806).
+	- JIRA SYSTEMSW-2031 and SYSTEMSW-2032.
+
+Change-Id: Ia6f4cb31981587206ca346f931a67658d456b0b2
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24766
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Tested-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/Kconfig             |  40 +++-
+ arch/arm/cpu/armv8/armada8k/Makefile            |   4 +
+ arch/arm/cpu/armv8/armada8k/mvebu_ccu.c         | 283 +++++++++++++++++++++++
+ arch/arm/cpu/armv8/armada8k/mvebu_flc.c         | 226 +++++++++++++++++++
+ arch/arm/cpu/armv8/armada8k/mvebu_iob.c         | 216 ++++++++++++++++++
+ arch/arm/cpu/armv8/armada8k/mvebu_rfu.c         | 214 ++++++++++++++++++
+ arch/arm/cpu/armv8/armadalp/Kconfig             |  35 +++
+ arch/arm/cpu/armv8/armadalp/Makefile            |   4 +
+ arch/arm/cpu/armv8/armadalp/mvebu_clock.c       | 163 ++++++++++++++
+ arch/arm/cpu/armv8/armadalp/mvebu_gpio.c        |  61 +++++
+ arch/arm/cpu/armv8/armadalp/mvebu_io_addr_dec.c | 178 +++++++++++++++
+ arch/arm/cpu/armv8/armadalp/mvebu_misc_init.c   |  41 ++++
+ drivers/misc/Kconfig                            |  73 ------
+ drivers/misc/Makefile                           |   8 -
+ drivers/misc/mvebu_ccu.c                        | 284 ------------------------
+ drivers/misc/mvebu_clock.c                      | 163 --------------
+ drivers/misc/mvebu_flc.c                        | 226 -------------------
+ drivers/misc/mvebu_gpio.c                       |  61 -----
+ drivers/misc/mvebu_io_addr_dec.c                | 178 ---------------
+ drivers/misc/mvebu_iob.c                        | 216 ------------------
+ drivers/misc/mvebu_misc_init.c                  |  41 ----
+ drivers/misc/mvebu_rfu.c                        | 214 ------------------
+ 22 files changed, 1464 insertions(+), 1465 deletions(-)
+ create mode 100644 arch/arm/cpu/armv8/armada8k/mvebu_ccu.c
+ create mode 100644 arch/arm/cpu/armv8/armada8k/mvebu_flc.c
+ create mode 100644 arch/arm/cpu/armv8/armada8k/mvebu_iob.c
+ create mode 100644 arch/arm/cpu/armv8/armada8k/mvebu_rfu.c
+ create mode 100644 arch/arm/cpu/armv8/armadalp/mvebu_clock.c
+ create mode 100644 arch/arm/cpu/armv8/armadalp/mvebu_gpio.c
+ create mode 100644 arch/arm/cpu/armv8/armadalp/mvebu_io_addr_dec.c
+ create mode 100644 arch/arm/cpu/armv8/armadalp/mvebu_misc_init.c
+ delete mode 100644 drivers/misc/mvebu_ccu.c
+ delete mode 100644 drivers/misc/mvebu_clock.c
+ delete mode 100644 drivers/misc/mvebu_flc.c
+ delete mode 100644 drivers/misc/mvebu_gpio.c
+ delete mode 100644 drivers/misc/mvebu_io_addr_dec.c
+ delete mode 100644 drivers/misc/mvebu_iob.c
+ delete mode 100644 drivers/misc/mvebu_misc_init.c
+ delete mode 100644 drivers/misc/mvebu_rfu.c
+
+diff --git a/arch/arm/cpu/armv8/armada8k/Kconfig b/arch/arm/cpu/armv8/armada8k/Kconfig
+index dc0732e..de51744 100644
+--- a/arch/arm/cpu/armv8/armada8k/Kconfig
++++ b/arch/arm/cpu/armv8/armada8k/Kconfig
+@@ -35,5 +35,43 @@ config MVEBU_LLC_ENABLE
+ 	help
+ 	  Enable LLC in PSCI code
+ 
+-endif
++config MVEBU_CCU
++	bool "CCU address decoding driver"
++	default n
++	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
++	help
++	  Choose this option to add support
++	  for CCU address decoding driver.
++	  This driver initialize the CCU windows
++	  only.
+ 
++config MVEBU_IOB
++	bool "IOB address decoding driver"
++	default n
++	help
++	  Choose this option to add support
++	  for IOB address decoding driver.
++	  This driver initialize the IOB windows
++	  only.
++
++config MVEBU_RFU
++	bool "RFU address decoding driver"
++	default n
++	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
++	help
++	  Choose this option to add support
++	  for RFU address decoding driver.
++	  This driver initialize the RFU windows
++	  which come after the CCU window.
++
++config MVEBU_FLC
++	bool "MBUS Final Level Cache driver"
++	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
++	default n
++	help
++	  Choose this option to add support
++	  for Final Level Cache for the Marvell McKinley
++	  Memory Controller driver.
++	  This driver enable FLC and open the FLC windows.
++
++endif
+diff --git a/arch/arm/cpu/armv8/armada8k/Makefile b/arch/arm/cpu/armv8/armada8k/Makefile
+index 42cbff5..720e756 100644
+--- a/arch/arm/cpu/armv8/armada8k/Makefile
++++ b/arch/arm/cpu/armv8/armada8k/Makefile
+@@ -20,3 +20,7 @@ obj-y += soc.o
+ obj-y += clock.o
+ obj-$(CONFIG_ARMV8_PSCI)	+= psci.o
+ obj-$(CONFIG_MVEBU_LLC_ENABLE)	+= cache_llc.o
++obj-$(CONFIG_MVEBU_CCU) += mvebu_ccu.o
++obj-$(CONFIG_MVEBU_RFU) += mvebu_rfu.o
++obj-$(CONFIG_MVEBU_IOB) += mvebu_iob.o
++obj-$(CONFIG_MVEBU_FLC) += mvebu_flc.o
+diff --git a/arch/arm/cpu/armv8/armada8k/mvebu_ccu.c b/arch/arm/cpu/armv8/armada8k/mvebu_ccu.c
+new file mode 100644
+index 0000000..d64b2b9
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armada8k/mvebu_ccu.c
+@@ -0,0 +1,283 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG */
++/* #define DEBUG_REG */
++
++#include <common.h>
++#include <asm/system.h>
++#include <asm/io.h>
++#include <fdtdec.h>
++#include <asm/arch-mvebu/mvebu.h>
++#include <asm/arch-mvebu/fdt.h>
++#include <asm/arch-mvebu/ccu.h>
++
++/* common defines */
++#define WIN_ENABLE_BIT			(0x1)
++/* Physical address of the base of the window = {AddrLow[19:0],20’h0} */
++#define ADDRESS_SHIFT			(20 - 4)
++#define ADDRESS_MASK			(0xFFFFFFF0)
++#define CCU_WIN_ALIGNMENT		(0x100000)
++
++/* AP registers */
++#define CCU_MAX_WIN_NUM			(8)
++#define CCU_WIN_CR_OFFSET(win)		(ccu_info->ccu_base + 0x0 + (0x10 * win))
++#define CCU_TARGET_ID_OFFSET		(8)
++#define CCU_TARGET_ID_MASK		(0x7F)
++
++#define CCU_WIN_SCR_OFFSET(win)		(ccu_info->ccu_base + 0x4 + (0x10 * win))
++#define CCU_WIN_ENA_READ_SECURE		(0x1)
++#define CCU_WIN_ENA_WRITE_SECURE	(0x2)
++
++#define CCU_WIN_ALR_OFFSET(win)		(ccu_info->ccu_base + 0x8 + (0x10 * win))
++#define CCU_WIN_AHR_OFFSET(win)		(ccu_info->ccu_base + 0xC + (0x10 * win))
++
++#define CCU_WIN_GCR_OFFSET		(ccu_info->ccu_base + 0xD0)
++#define CCU_GCR_TARGET_OFFSET		(8)
++#define CCU_GCR_TARGET_MASK		(0xF)
++
++DECLARE_GLOBAL_DATA_PTR;
++
++struct ccu_configuration {
++	void __iomem *ccu_base;
++	u32 max_win;
++};
++struct ccu_configuration __attribute__((section(".data")))ccu_config;
++struct ccu_configuration __attribute__((section(".data")))*ccu_info = &ccu_config;
++
++struct ccu_win {
++	u32 base_addr_high;
++	u32 base_addr_low;
++	u32 win_size_high;
++	u32 win_size_low;
++	u32 target_id;
++};
++
++enum ccu_target_ids {
++	IO_0_TID        = 0x00,
++	DRAM_0_TID      = 0x03,
++	IO_1_TID        = 0x0F,
++	CFG_REG_TID     = 0x10,
++	RAR_TID         = 0x20,
++	SRAM_TID        = 0x40,
++	DRAM_1_TID      = 0xC0,
++	CCU_MAX_TID,
++	INVALID_TID	= 0xFF
++};
++
++struct ccu_target_name_map {
++	enum ccu_target_ids trgt_id;
++	char name[10];
++};
++
++struct ccu_target_name_map ccu_target_name_table[] = {
++	{IO_0_TID,	"IO-0   "},
++	{DRAM_0_TID,	"DRAM-0 "},
++	{IO_1_TID,	"IO-1   "},
++	{CFG_REG_TID,	"CFG-REG"},
++	{RAR_TID,	"RAR    "},
++	{SRAM_TID,	"SRAM   "},
++	{DRAM_1_TID,	"DRAM-1 "},
++	{INVALID_TID,	"INVALID"},
++};
++
++static char *ccu_target_name_get(enum ccu_target_ids trgt_id)
++{
++	int i;
++
++	for (i = 0; i < CCU_MAX_TID; i++)
++		if (ccu_target_name_table[i].trgt_id == trgt_id)
++			return ccu_target_name_table[i].name;
++	return ccu_target_name_get(INVALID_TID);
++}
++
++static void ccu_win_check(struct ccu_win *win, u32 win_num)
++{
++	u64 start_addr, win_size;
++	/* check if address is aligned to 1M */
++	start_addr = ((u64)win->base_addr_high << 32) + win->base_addr_low;
++	if (IS_NOT_ALIGN(start_addr, CCU_WIN_ALIGNMENT)) {
++		start_addr = ALIGN_UP(start_addr, CCU_WIN_ALIGNMENT);
++		error("Window %d: base address unaligned to 0x%x\n", win_num, CCU_WIN_ALIGNMENT);
++		printf("Align up the base address to 0x%llx\n", start_addr);
++		win->base_addr_high = (u32)(start_addr >> 32);
++		win->base_addr_low = (u32)(start_addr);
++	}
++
++	/* size parameter validity check */
++	win_size = ((u64)win->win_size_high << 32) + win->win_size_low;
++	if (IS_NOT_ALIGN(win_size, CCU_WIN_ALIGNMENT)) {
++		win_size = ALIGN_UP(win_size, CCU_WIN_ALIGNMENT);
++		error("Window %d: window size unaligned to 0x%x\n", win_num, CCU_WIN_ALIGNMENT);
++		printf("Aligning size to 0x%llx\n", win_size);
++		win->win_size_high = (u32)(win_size >> 32);
++		win->win_size_low = (u32)(win_size);
++	}
++}
++
++static void ccu_enable_win(struct ccu_win *win, u32 win_id)
++{
++	u32 ccu_win_reg;
++	u32 alr, ahr;
++	u64 start_addr, end_addr;
++
++	start_addr = ((u64)win->base_addr_high << 32) + win->base_addr_low;
++	end_addr = (start_addr + (((u64)win->win_size_high << 32) + win->win_size_low) - 1);
++	alr = (u32)((start_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
++	ahr = (u32)((end_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
++
++	writel(alr, CCU_WIN_ALR_OFFSET(win_id));
++	writel(ahr, CCU_WIN_AHR_OFFSET(win_id));
++
++	ccu_win_reg = WIN_ENABLE_BIT;
++	ccu_win_reg |= (win->target_id & CCU_TARGET_ID_MASK) << CCU_TARGET_ID_OFFSET;
++	writel(ccu_win_reg, CCU_WIN_CR_OFFSET(win_id));
++}
++
++void dump_ccu(void)
++{
++	u32 win_id, win_cr, alr, ahr;
++	u8 target_id;
++	u64 start, end;
++
++	/* Dump all AP windows */
++	printf("bank  id target   start              end\n");
++	printf("----------------------------------------------------\n");
++	for (win_id = 0; win_id < ccu_info->max_win; win_id++) {
++		win_cr = readl(CCU_WIN_CR_OFFSET(win_id));
++		if (win_cr & WIN_ENABLE_BIT) {
++			target_id = (win_cr >> CCU_TARGET_ID_OFFSET) & CCU_TARGET_ID_MASK;
++			alr = readl(CCU_WIN_ALR_OFFSET(win_id));
++			ahr = readl(CCU_WIN_AHR_OFFSET(win_id));
++			start = ((u64)alr << ADDRESS_SHIFT);
++			end = (((u64)ahr + 0x10) << ADDRESS_SHIFT);
++			printf("ccu   %02x %s  0x%016llx 0x%016llx\n"
++				, win_id, ccu_target_name_get(target_id), start, end);
++		}
++	}
++	win_cr = readl(CCU_WIN_GCR_OFFSET);
++	target_id = (win_cr >> CCU_GCR_TARGET_OFFSET) & CCU_GCR_TARGET_MASK;
++	printf("ccu   GCR %s - all other transactions\n", ccu_target_name_get(target_id));
++
++	return;
++}
++
++static bool skip_ccu_window(u32 win_reg)
++{
++	u8 target_id;
++
++	/* avoid overriding internal register and SRAM windows
++	   At SPL stage BootROM open the SRAM window and close it
++	   at the end of the SPL stage */
++	if (win_reg & WIN_ENABLE_BIT) {
++		target_id = (win_reg >> CCU_TARGET_ID_OFFSET) & CCU_TARGET_ID_MASK;
++		if (((target_id) == SRAM_TID) || ((target_id) == CFG_REG_TID))
++			return true;
++	}
++
++	return false;
++}
++
++int init_ccu(bool sw_init)
++{
++	struct ccu_win memory_map[CCU_MAX_WIN_NUM], *win;
++	const void *blob = gd->fdt_blob;
++	u32 win_id, win_reg;
++	u32 node, win_count, array_id;
++
++	debug_enter();
++	debug("Initializing CCU Address decoding\n");
++
++	/* Get address decoding node from the FDT blob */
++	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_CCU));
++	if (node < 0) {
++		error("No CCU address decoding node found in FDT blob\n");
++		return -1;
++	}
++	/* Get the base address of the address decoding CCU */
++	ccu_info->ccu_base = (void *)fdt_get_regs_offs(blob, node, "reg");
++
++	/* Get the maximum number of CCU windows supported */
++	ccu_info->max_win = fdtdec_get_int(blob, node, "max-win", 0);
++	if ((ccu_info->max_win == 0) || (ccu_info->max_win > CCU_MAX_WIN_NUM)) {
++		ccu_info->max_win = CCU_MAX_WIN_NUM;
++		error("failed reading max windows number, set window max size to %d\n", ccu_info->max_win);
++	}
++
++	if (sw_init) {
++		/* init only the ccu_info structure without updating the ccu windows.
++		   The ccu_info is required for the dump_ccu function */
++		debug("Done SW CCU Address decoding Initializing\n");
++		return 0;
++	}
++
++	/* Get the array of the windows and fill the map data */
++	win_count = fdtdec_get_int_array_count(blob, node, "windows", (u32 *)memory_map, ccu_info->max_win * 5);
++	if (win_count <= 0) {
++		debug("no windows configurations found\n");
++		return 0;
++	}
++	win_count = win_count/5; /* every window had 5 variables in FDT:
++				    base high, base low, size high, size low, target id) */
++
++#ifndef CONFIG_SPL_BUILD
++
++	/* Set the default target ID to DRAM 0 */
++	/* At SPL stage - running from SRAM */
++	win_reg = (DRAM_0_TID & CCU_GCR_TARGET_MASK) << CCU_GCR_TARGET_OFFSET;
++	writel(win_reg, CCU_WIN_GCR_OFFSET);
++#endif
++
++	/* disable AP windows */
++	for (win_id = 0; win_id < ccu_info->max_win; win_id++) {
++		win_reg = readl(CCU_WIN_CR_OFFSET(win_id));
++		if (skip_ccu_window(win_reg))
++				continue;
++
++		win_reg &= ~WIN_ENABLE_BIT;
++		writel(win_reg, CCU_WIN_CR_OFFSET(win_id));
++
++		win_reg = ~CCU_WIN_ENA_READ_SECURE;
++		win_reg |= ~CCU_WIN_ENA_WRITE_SECURE;
++		writel(win_reg, CCU_WIN_SCR_OFFSET(win_id));
++	}
++
++	for (win_id = 0, array_id = 0, win = memory_map;
++		  ((win_id < ccu_info->max_win) && (array_id < win_count)); win_id++) {
++		/* win_id is the index of the current ccu window
++			array_id is the index of the current FDT window entry */
++
++		win_reg = readl(CCU_WIN_CR_OFFSET(win_id));
++		if (skip_ccu_window(win_reg))
++				continue;
++
++		ccu_win_check(win, win_id);
++		ccu_enable_win(win, win_id);
++
++		win++;
++		array_id++;
++	}
++
++	if (array_id != win_count)
++		error("Set only %d CCU windows. expected %d", array_id, win_count);
++
++	debug("Done CCU Address decoding Initializing\n");
++	debug_exit();
++
++	return 0;
++}
+diff --git a/arch/arm/cpu/armv8/armada8k/mvebu_flc.c b/arch/arm/cpu/armv8/armada8k/mvebu_flc.c
+new file mode 100644
+index 0000000..3fdd2fa
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armada8k/mvebu_flc.c
+@@ -0,0 +1,226 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/*#define DEBUG*/
++/*#define DEBUG_REG*/
++
++#include <common.h>
++#include <asm/system.h>
++#include <asm/io.h>
++#include <fdtdec.h>
++#include <asm/arch-mvebu/mvebu.h>
++#include <asm/arch-mvebu/fdt.h>
++#include <asm/arch-mvebu/flc.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++/* FLC defines */
++#define MMAP_FLC_OFFSET				(flc_base + 0x0)
++#define MMAP_FLC_HIGH_OFFSET		(flc_base + 0x4)
++#define MMAP_NC_FLC_OFFSET			(flc_base + 0x8)
++#define MMAP_NC_FLC_HIGH_OFFSET		(flc_base + 0xc)
++
++#define FLC_ENABLE_BIT			(0x1)
++
++/* low base address [31:23] */
++#define FLC_ADDRESS_MASK	(0xFF800000)
++
++#define FLC_SIZE_OFFSET		(16)
++#define FLC_SIZE_MASK		(0x1F)
++
++struct flc_map {
++	u32 base_addr_high;
++	u32 base_addr_low;
++	u32 flc_size_high;
++	u32 flc_size_low;
++};
++
++char *mapping_flc_size[] = {
++	"Reserved", /* 0x0 */
++	"Reserved", /* 0x1 */
++	"Reserved", /* 0x2 */
++	"Reserved", /* 0x3 */
++	"Reserved", /* 0x4 */
++	"Reserved", /* 0x5 */
++	"Reserved", /* 0x6 */
++	"8 MB",     /* 0x7 */
++	"16 MB",    /* 0x8 */
++	"32 MB",    /* 0x9 */
++	"64 MB",    /* 0xA */
++	"128 MB",   /* 0xB */
++	"256 MB",   /* 0xC */
++	"512 MB",   /* 0xD */
++	"1 GB",     /* 0xE */
++	"2 GB",     /* 0xF */
++	"4 GB",     /* 0x10 */
++	"8 GB",     /* 0x11 */
++	"16 GB",    /* 0x12 */
++	"32 GB",    /* 0x13 */
++	"64 GB",    /* 0x14 */
++	"128 GB",   /* 0x15 */
++	"256 GB",   /* 0x16 */
++	"512 GB",   /* 0x17 */
++	"1 TB",     /* 0x18 */
++	"Reserved", /* 0x19 */
++	"Reserved", /* 0x1A */
++	"Reserved", /* 0x1B */
++	"Reserved", /* 0x1C */
++	"Reserved", /* 0x1D */
++	"Reserved", /* 0x1E */
++	"Reserved", /* 0x1F */
++};
++
++static int get_flc_size(u64 size)
++{
++	switch (size) {
++	case 0x800000:
++		return 7;
++	case 0x1000000:
++		return 8;
++	case 0x2000000:
++		return 9;
++	case 0x4000000:
++		return 0xa;
++	case 0x8000000:
++		return 0xb;
++	case 0x10000000:
++		return 0xc;
++	case 0x20000000:
++		return 0xd;
++	case 0x40000000:
++		return 0xe;
++	case 0x80000000:
++		return 0xf;
++	case 0x100000000:
++		return 0x10;
++	case 0x200000000:
++		return 0x11;
++	case 0x400000000:
++		return 0x12;
++	case 0x800000000:
++		return 0x13;
++	case 0x1000000000:
++		return 0x14;
++	case 0x2000000000:
++		return 0x15;
++	case 0x4000000000:
++		return 0x16;
++	case 0x8000000000:
++		return 0x17;
++	case 0x10000000000:
++		return 0x18;
++	default:
++		error("No valid size, size must be a power of 2 between 8 MB to 1 TB");
++	}
++
++	return -1;
++}
++
++void __iomem *flc_base;
++
++static void print_flc_mmap_reg_val(u32 reg_val, u32 reg_val_high)
++{
++	u64 start_addr;
++	u32 alr;
++
++	if (!(reg_val & FLC_ENABLE_BIT)) {
++		printf("\nEntry disable\n");
++		return;
++	}
++
++	alr = reg_val & FLC_ADDRESS_MASK;
++	start_addr = alr | ((u64)reg_val_high << 32);
++
++	printf("0x%016llx   %s\n", start_addr,
++	       mapping_flc_size[(reg_val >> FLC_SIZE_OFFSET) & FLC_SIZE_MASK]);
++}
++
++static u32 get_flc_mmap_reg_val(struct flc_map *memory_map)
++{
++	u32 reg_val;
++	int     size;
++
++	size = get_flc_size(memory_map->flc_size_low |
++						((u64)memory_map->flc_size_high  << 32));
++
++	reg_val = FLC_ENABLE_BIT;
++	reg_val |= (memory_map->base_addr_low & FLC_ADDRESS_MASK);
++	reg_val |= size << FLC_SIZE_OFFSET;
++
++	return reg_val;
++}
++
++
++void dump_flc(void)
++{
++	/* Dump all FLC mapping */
++	printf("FLC MMAP     start                 size\n");
++	printf("-----------------------------------------\n");
++
++	printf("FLC        ");
++	print_flc_mmap_reg_val(readl(MMAP_FLC_OFFSET), readl(MMAP_FLC_HIGH_OFFSET));
++	printf("\nNC FLC     ");
++	print_flc_mmap_reg_val(readl(MMAP_NC_FLC_OFFSET), readl(MMAP_NC_FLC_HIGH_OFFSET));
++
++	return;
++}
++
++int init_flc(void)
++{
++	struct flc_map memory_map;
++	const void *blob = gd->fdt_blob;
++	u32 node, array_count, size;
++
++	debug_enter();
++	debug("Initializing FLC\n");
++
++	/* Get FLC node from the FDT blob */
++	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_FLC));
++	if (node < 0) {
++		debug("No FLC node found in FDT blob\n");
++		return -1;
++	}
++	/* Get the base address of the FLC */
++	flc_base = (void *)fdt_get_regs_offs(blob, node, "reg");
++
++	size = sizeof(struct flc_map) / sizeof(u32);
++
++	/* Get the FLC non-cacheable parameters */
++	array_count = fdtdec_get_int_array_count(blob, node, "flc_nc_map", (u32 *)&memory_map, size);
++	if (array_count != -FDT_ERR_NOTFOUND) {
++		/* FLC MMAP NC is Optional */
++		writel(memory_map.base_addr_high, MMAP_NC_FLC_HIGH_OFFSET);
++		writel(get_flc_mmap_reg_val(&memory_map), MMAP_NC_FLC_OFFSET);
++	}
++
++	/* Get the FLC mapping parameters */
++	array_count = fdtdec_get_int_array_count(blob, node, "flc_ext_dev_map", (u32 *)&memory_map, size);
++	if (array_count == -FDT_ERR_NOTFOUND) {
++		error("no flc_ext_dev_map found\n");
++		return 0;
++	}
++
++	/* set the flc map */
++	writel(memory_map.base_addr_high, MMAP_FLC_HIGH_OFFSET);
++	writel(get_flc_mmap_reg_val(&memory_map), MMAP_FLC_OFFSET);
++
++	debug("Done FLC Initializing\n");
++	debug_exit();
++
++	return 0;
++}
+diff --git a/arch/arm/cpu/armv8/armada8k/mvebu_iob.c b/arch/arm/cpu/armv8/armada8k/mvebu_iob.c
+new file mode 100644
+index 0000000..8372305
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armada8k/mvebu_iob.c
+@@ -0,0 +1,216 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG */
++/* #define DEBUG_REG */
++
++#include <common.h>
++#include <asm/system.h>
++#include <asm/io.h>
++#include <fdtdec.h>
++#include <malloc.h>
++#include <asm/arch-mvebu/mvebu.h>
++#include <asm/arch-mvebu/fdt.h>
++#include <asm/arch-mvebu/iob.h>
++
++/* common defines */
++#define WIN_ENABLE_BIT			(0x1)
++/* Physical address of the base of the window = {AddrLow[19:0],20`h0} */
++#define ADDRESS_SHIFT			(20 - 4)
++#define ADDRESS_MASK			(0xFFFFFFF0)
++#define IOB_WIN_ALIGNMENT		(0x100000)
++
++/* IOB registers */
++#define IOB_MAX_WIN_NUM			(24)
++
++#define IOB_WIN_CR_OFFSET(win)		(iob_info->iob_base + 0x0 + (0x20 * win))
++#define IOB_TARGET_ID_OFFSET		(8)
++#define IOB_TARGET_ID_MASK		(0xF)
++
++#define IOB_WIN_SCR_OFFSET(win)		(iob_info->iob_base + 0x4 + (0x20 * win))
++#define IOB_WIN_ENA_CTRL_WRITE_SECURE	(0x1)
++#define IOB_WIN_ENA_CTRL_READ_SECURE	(0x2)
++#define IOB_WIN_ENA_WRITE_SECURE	(0x4)
++#define IOB_WIN_ENA_READ_SECURE		(0x8)
++
++#define IOB_WIN_ALR_OFFSET(win)		(iob_info->iob_base + 0x8 + (0x20 * win))
++#define IOB_WIN_AHR_OFFSET(win)		(iob_info->iob_base + 0xC + (0x20 * win))
++
++DECLARE_GLOBAL_DATA_PTR;
++
++struct iob_configuration {
++	void __iomem *iob_base;
++	u32 max_win;
++};
++struct iob_configuration __attribute__((section(".data")))iob_config;
++struct iob_configuration __attribute__((section(".data")))*iob_info = &iob_config;
++
++struct iob_win {
++	u32 base_addr_high;
++	u32 base_addr_low;
++	u32 win_size_high;
++	u32 win_size_low;
++	u32 target_id;
++};
++
++enum target_ids_iob {
++	INTERNAL_TID    = 0x0,
++	IHB0_TID        = 0x1,
++	PEX1_TID        = 0x2,
++	PEX2_TID        = 0x3,
++	PEX0_TID        = 0x4,
++	NAND_TID        = 0x5,
++	RUNIT_TID       = 0x6,
++	IHB1_TID        = 0x7,
++	IOB_MAX_TID
++};
++
++static void iob_win_check(struct iob_win *win, u32 win_num)
++{
++	u64 base_addr, win_size;
++	/* check if address is aligned to the size */
++	base_addr = ((u64)win->base_addr_high << 32) + win->base_addr_low;
++	if (IS_NOT_ALIGN(base_addr, IOB_WIN_ALIGNMENT)) {
++		base_addr = ALIGN_UP(base_addr, IOB_WIN_ALIGNMENT);
++		error("Window %d: base address unaligned to 0x%x\n", win_num, IOB_WIN_ALIGNMENT);
++		printf("Align up the base address to 0x%llx\n", base_addr);
++		win->base_addr_high = (u32)(base_addr >> 32);
++		win->base_addr_low = (u32)(base_addr);
++	}
++
++	/* size parameter validity check */
++	win_size = ((u64)win->win_size_high << 32) + win->win_size_low;
++	if (IS_NOT_ALIGN(win_size, IOB_WIN_ALIGNMENT)) {
++		win_size = ALIGN_UP(win_size, IOB_WIN_ALIGNMENT);
++		error("Window %d: window size unaligned to 0x%x\n", win_num, IOB_WIN_ALIGNMENT);
++		printf("Aligning size to 0x%llx\n", win_size);
++		win->win_size_high = (u32)(win_size >> 32);
++		win->win_size_low = (u32)(win_size);
++	}
++}
++
++static void iob_enable_win(struct iob_win *win, u32 win_id)
++{
++	u32 iob_win_reg;
++	u32 alr, ahr;
++	u64 start_addr, end_addr;
++
++	iob_win_reg = WIN_ENABLE_BIT;
++	iob_win_reg |= (win->target_id & IOB_TARGET_ID_MASK) << IOB_TARGET_ID_OFFSET;
++	writel(iob_win_reg, IOB_WIN_CR_OFFSET(win_id));
++
++	start_addr = ((u64)win->base_addr_high << 32) + win->base_addr_low;
++	end_addr = (start_addr + (((u64)win->win_size_high << 32) + win->win_size_low) - 1);
++	alr = (u32)((start_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
++	ahr = (u32)((end_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
++
++	writel(alr, IOB_WIN_ALR_OFFSET(win_id));
++	writel(ahr, IOB_WIN_AHR_OFFSET(win_id));
++}
++
++void dump_iob(void)
++{
++	u32 win_id, win_cr, alr, ahr;
++	u8 target_id;
++	u64 start, end;
++	char *iob_target_name[IOB_MAX_TID] = {"CONFIG", "IHB0 ", "PEX1 ", "PEX2 ",
++					      "PEX0 ", "NAND ", "RUNIT", "IHB1 "};
++
++	/* Dump all IOB windows */
++	printf("bank  id target  start              end\n");
++	printf("----------------------------------------------------\n");
++	for (win_id = 0; win_id < iob_info->max_win; win_id++) {
++		win_cr = readl(IOB_WIN_CR_OFFSET(win_id));
++		if (win_cr & WIN_ENABLE_BIT) {
++			target_id = (win_cr >> IOB_TARGET_ID_OFFSET) & IOB_TARGET_ID_MASK;
++			alr = readl(IOB_WIN_ALR_OFFSET(win_id));
++			ahr = readl(IOB_WIN_AHR_OFFSET(win_id));
++			start = ((u64)alr << ADDRESS_SHIFT);
++			end = (((u64)ahr + 0x10) << ADDRESS_SHIFT);
++			printf("iob   %02d %s   0x%016llx 0x%016llx\n"
++					, win_id, iob_target_name[target_id], start, end);
++		}
++	}
++
++	return;
++}
++
++int init_iob(void)
++{
++	struct iob_win *memory_map, *win;
++	const void *blob = gd->fdt_blob;
++	u32 win_id, win_reg;
++	u32 node, win_count;
++
++	debug_enter();
++	debug("Initializing IOB Address decoding\n");
++
++	/* Get address decoding node from the FDT blob */
++	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_IOB));
++	if (node < 0) {
++		error("No IOB address decoding node found in FDT blob\n");
++		return -1;
++	}
++	/* Get the base address of the address decoding MBUS */
++	iob_info->iob_base = (void *)fdt_get_regs_offs(blob, node, "reg");
++
++	/* Get the maximum number of iob windows supported */
++	iob_info->max_win = fdtdec_get_int(blob, node, "max-win", 0);
++	if (iob_info->max_win == 0) {
++		iob_info->max_win = IOB_MAX_WIN_NUM;
++		error("failed reading max windows number\n");
++	}
++
++	memory_map = malloc(iob_info->max_win * sizeof(struct iob_win));
++	if (memory_map == 0) {
++		error("failed allocating struct to init windows configuration\n");
++		return -1;
++	}
++
++	/* Get the array of the windows and fill the map data */
++	win_count = fdtdec_get_int_array_count(blob, node, "windows", (u32 *)memory_map, iob_info->max_win * 5);
++	if (win_count <= 0) {
++		debug("no windows configurations found\n");
++		return 0;
++	}
++	win_count = win_count/5; /* every window had 5 variables in FDT:
++				    base high, base low, size high, size low, target id) */
++
++	/* disable all IOB windows, start from win_id = 1 because can't disable internal register window */
++	for (win_id = 1; win_id < iob_info->max_win; win_id++) {
++		win_reg = readl(IOB_WIN_CR_OFFSET(win_id));
++		win_reg &= ~WIN_ENABLE_BIT;
++		writel(win_reg, IOB_WIN_CR_OFFSET(win_id));
++
++		win_reg = ~IOB_WIN_ENA_CTRL_WRITE_SECURE;
++		win_reg |= ~IOB_WIN_ENA_CTRL_READ_SECURE;
++		win_reg |= ~IOB_WIN_ENA_WRITE_SECURE;
++		win_reg |= ~IOB_WIN_ENA_READ_SECURE;
++		writel(win_reg, IOB_WIN_SCR_OFFSET(win_id));
++	}
++
++	for (win_id = 1, win = memory_map; win_id < win_count + 1; win_id++, win++) {
++		iob_win_check(win, win_id);
++		iob_enable_win(win, win_id);
++	}
++
++	debug("Done IOB Address decoding Initializing\n");
++	debug_exit();
++
++	return 0;
++}
+diff --git a/arch/arm/cpu/armv8/armada8k/mvebu_rfu.c b/arch/arm/cpu/armv8/armada8k/mvebu_rfu.c
+new file mode 100644
+index 0000000..ba6522d
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armada8k/mvebu_rfu.c
+@@ -0,0 +1,214 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG */
++/* #define DEBUG_REG */
++
++#include <common.h>
++#include <asm/system.h>
++#include <asm/io.h>
++#include <fdtdec.h>
++#include <asm/arch-mvebu/mvebu.h>
++#include <asm/arch-mvebu/fdt.h>
++#include <asm/arch-mvebu/rfu.h>
++
++/* common defines */
++#define WIN_ENABLE_BIT			(0x1)
++/* Physical address of the base of the window = {Addr[19:0],20`h0} */
++#define ADDRESS_SHIFT			(20 - 4)
++#define ADDRESS_MASK			(0xFFFFFFF0)
++#define RFU_WIN_ALIGNMENT_1M		(0x100000)
++#define RFU_WIN_ALIGNMENT_64K		(0x10000)
++
++DECLARE_GLOBAL_DATA_PTR;
++
++void __attribute__((section(".data"))) __iomem *rfu_base;
++
++struct rfu_win {
++	u32 base_addr_high;
++	u32 base_addr_low;
++	u32 win_size_high;
++	u32 win_size_low;
++	u32 target_id;
++};
++
++enum rfu_target_ids {
++	BOOTROM_TID	= 0x0,
++	STM_TID		= 0x1,
++	SPI_TID		= 0x2,
++	PCIE_REGS_TID	= 0x3,
++	IHBPHY_TID	= 0x4,
++	PCIE_PORT_TID	= 0x5,
++	RFU_MAX_TID
++};
++
++static void rfu_win_check(struct rfu_win *win, u32 win_num)
++{
++	u64 base_addr, win_size;
++	u32 alignment_value = RFU_WIN_ALIGNMENT_1M;
++	/* for RFU The base is always 1M aligned */
++	/* check if address is aligned to 1M */
++	base_addr = ((u64)win->base_addr_high << 32) + win->base_addr_low;
++	if (IS_NOT_ALIGN(base_addr, RFU_WIN_ALIGNMENT_1M)) {
++		base_addr = ALIGN_UP(base_addr, RFU_WIN_ALIGNMENT_1M);
++		error("Window %d: base address unaligned to 0x%x\n", win_num, RFU_WIN_ALIGNMENT_1M);
++		printf("Align up the base address to 0x%llx\n", base_addr);
++		win->base_addr_high = (u32)(base_addr >> 32);
++		win->base_addr_low = (u32)(base_addr);
++	}
++
++	/* targets that have AHR must have size aligned to 1M.
++	   targets with no AHR (pcie-reg, bootrom) have a fixed size of 64k */
++	if (win->target_id == BOOTROM_TID || win->target_id == PCIE_REGS_TID)
++		alignment_value = RFU_WIN_ALIGNMENT_64K;
++	/* size parameter validity check */
++	win_size = ((u64)win->win_size_high << 32) + win->win_size_low;
++	if (IS_NOT_ALIGN(win_size, alignment_value)) {
++		win_size = ALIGN_UP(win_size, alignment_value);
++		error("Window %d: window size unaligned to 0x%x\n", win_num, alignment_value);
++		printf("Aligning size to 0x%llx\n", win_size);
++		win->win_size_high = (u32)(win_size >> 32);
++		win->win_size_low = (u32)(win_size);
++	}
++}
++
++static void *rfu_alr_offset_get(u32 trgt_id)
++{
++	u32 rfu_alr_offset[RFU_MAX_TID] = {0x0, 0x10, 0x20, 0x208, 0x210, 0x218};
++
++	if (trgt_id < 0 || trgt_id > RFU_MAX_TID) {
++		error("target ID is wrong");
++		return rfu_base;
++	}
++	return rfu_base + rfu_alr_offset[trgt_id];
++}
++
++static void *rfu_ahr_offset_get(u32 trgt_id)
++{
++	u32 rfu_ahr_offset[RFU_MAX_TID] = {0x0, 0x18, 0x28, 0x0, 0x214, 0x21c};
++
++	if (trgt_id < 0 || trgt_id > RFU_MAX_TID) {
++		error("target ID is wrong");
++		return rfu_base;
++	}
++	return rfu_base + rfu_ahr_offset[trgt_id];
++}
++
++static void rfu_enable_win(struct rfu_win *win, u32 trgt_id)
++{
++	u32 alr, ahr;
++	u64 start_addr, end_addr;
++
++	start_addr = ((u64)win->base_addr_high << 32) + win->base_addr_low;
++	end_addr = (start_addr + (((u64)win->win_size_high << 32) + win->win_size_low) - 1);
++
++	/* there's no ahr for bootrom and pcie-regs windows */
++	if (trgt_id != BOOTROM_TID && trgt_id != PCIE_REGS_TID) {
++		ahr = (u32)((end_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
++		writel(ahr, rfu_ahr_offset_get(trgt_id));
++	}
++
++	alr = (u32)((start_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
++	if (trgt_id != PCIE_REGS_TID)
++		alr |= WIN_ENABLE_BIT;
++	writel(alr, rfu_alr_offset_get(trgt_id));
++}
++
++void dump_rfu(void)
++{
++	u32 trgt_id;
++	u32 alr, ahr;
++	u64 start, end;
++	char *rfu_target_name[RFU_MAX_TID] = {"BootRoom ", "STM      ", "SPI      ",
++					"PCIe-reg ", "IHB-Port ", "PCIe-Port"};
++
++	/* Dump all RFU windows */
++	printf("bank  target     start              end\n");
++	printf("----------------------------------------------------\n");
++	for (trgt_id = 0; trgt_id < RFU_MAX_TID; trgt_id++) {
++		alr = readl(rfu_alr_offset_get(trgt_id));
++		if (alr & WIN_ENABLE_BIT) {
++			alr &= ~WIN_ENABLE_BIT;
++			if (trgt_id == BOOTROM_TID || trgt_id == PCIE_REGS_TID)
++				ahr = alr;
++			else
++				ahr = readl(rfu_ahr_offset_get(trgt_id));
++			start = ((u64)alr << ADDRESS_SHIFT);
++			end = (((u64)ahr + 0x10) << ADDRESS_SHIFT);
++			printf("rfu   %s  0x%016llx 0x%016llx\n", rfu_target_name[trgt_id], start, end);
++		}
++	}
++	printf("rfu   PIDI-port  - all other IO transactions\n");
++
++	return;
++}
++
++int init_rfu(bool sw_init)
++{
++	struct rfu_win memory_map[RFU_MAX_TID], *win;
++	const void *blob = gd->fdt_blob;
++	u32 win_id, win_reg, trgt_id;
++	u32 win_count;
++	int node;
++
++	debug_enter();
++	debug("Initializing RFU Address decoding\n");
++
++	/* Get address decoding node from the FDT blob */
++	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_RFU));
++	if (node < 0) {
++		debug("No RFU address decoding node found in FDT blob\n");
++		return 0;
++	}
++
++	/* Get the base address of the address decoding MBUS */
++	rfu_base = (void *)fdt_get_regs_offs(blob, node, "reg");
++
++	if (sw_init) {
++		/* init only the rfu_base without update the rfu windows.
++			The rfu_base required for the dump_rfu function */
++		debug("Done SW RFU Address decoding Initializing\n");
++		return 0;
++	}
++
++	/* Get the array of the windows and fill the map data */
++	win_count = fdtdec_get_int_array_count(blob, node, "windows", (u32 *)memory_map, RFU_MAX_TID * 5);
++	if (win_count <= 0) {
++		debug("no windows configurations found\n");
++		return 0;
++	}
++	win_count = win_count/5; /* every window had 5 variables in FDT:
++				    base high, base low, size high, size low, target id) */
++
++	/* disable all RFU windows */
++	for (trgt_id = 0; trgt_id < RFU_MAX_TID; trgt_id++) {
++		win_reg = readl(rfu_alr_offset_get(trgt_id));
++		win_reg &= ~WIN_ENABLE_BIT;
++		writel(win_reg, rfu_alr_offset_get(trgt_id));
++	}
++
++	for (win_id = 0, win = memory_map; win_id < win_count; win_id++, win++) {
++		rfu_win_check(win, win_id);
++		rfu_enable_win(win, win->target_id);
++	}
++
++	debug("Done RFU Address decoding Initializing\n");
++	debug_exit();
++
++	return 0;
++}
+diff --git a/arch/arm/cpu/armv8/armadalp/Kconfig b/arch/arm/cpu/armv8/armadalp/Kconfig
+index 6b9422d..95d0892 100644
+--- a/arch/arm/cpu/armv8/armadalp/Kconfig
++++ b/arch/arm/cpu/armv8/armadalp/Kconfig
+@@ -27,5 +27,40 @@ config ARMV8_PSCI
+ config PALLADIUM
+ 	bool "Support palladium emulation"
+ 	default y
++
++config MVEBU_SPL_A3700_GPIO
++	bool "GPIO configuration for A3700 in SPL"
++	depends on TARGET_ARMADA_LP
++	default y
++	help
++	  Choose this option to enable GPIO
++	  configuration for A3700 in SPL.
++	  This will be removed later, and be
++	  implemented by MPP/PIN-CTRL driver.
++
++config MVEBU_A3700_IO_ADDR_DEC
++	bool "Armada-3700 Address decoding support"
++	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
++	default n
++	help
++	  Choose this option to add support
++	  for Marvell Armada-3700 address decoding driver
++
++config MVEBU_A3700_MISC_INIT
++	bool "Armada-3700 miscellaneous initialization procedures support"
++	default n
++	help
++	  Choose this option to add support
++	  for Marvell Armada-3700 miscellaneous init procedures
++
++config MVEBU_A3700_CLOCK
++	bool "Armada-3700  clock support"
++	default n
++	help
++	  Choose this option to support
++	  Marvell Armada-3700 clock driver.
++	  For the first stage all clocks will be enabled
++	  by default.
++
+ endif
+ 
+diff --git a/arch/arm/cpu/armv8/armadalp/Makefile b/arch/arm/cpu/armv8/armadalp/Makefile
+index e356a87..69eb250 100644
+--- a/arch/arm/cpu/armv8/armadalp/Makefile
++++ b/arch/arm/cpu/armv8/armadalp/Makefile
+@@ -19,3 +19,7 @@
+ obj-y += soc-init.o
+ obj-y += clock.o
+ obj-$(CONFIG_ARMV8_PSCI)	+= psci.o
++obj-$(CONFIG_MVEBU_A3700_IO_ADDR_DEC) += mvebu_io_addr_dec.o
++obj-$(CONFIG_MVEBU_SPL_A3700_GPIO) += mvebu_gpio.o
++obj-$(CONFIG_MVEBU_A3700_MISC_INIT) += mvebu_misc_init.o
++obj-$(CONFIG_MVEBU_A3700_CLOCK) += mvebu_clock.o
+diff --git a/arch/arm/cpu/armv8/armadalp/mvebu_clock.c b/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
+new file mode 100644
+index 0000000..f33d49f
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
+@@ -0,0 +1,163 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <asm/arch-mvebu/mvebu.h>
++#include <asm/arch-mvebu/clock.h>
++#include <asm/io.h>
++
++/* north bridge clock source register */
++#define MVEBU_NORTH_CLOCK_SELEC_REG	0x10
++
++#define WCPU_CLK_SEL		(1 << 15)
++#define COUNTER_CLK_SEL		(1 << 13)
++#define TRACE_CLK_SEL		(1 << 12)
++#define DDR_FCLK_CLK_SEL	(1 << 11)
++#define DDR_PHY_CLK_SEL		(1 << 10)
++#define EIP97_CLK_SEL		(1 << 9)
++#define PWM_CLK_SEL		(1 << 8)
++#define SQF_CLK_SEL		(1 << 7)
++#define AVS_CLK_SEL		(1 << 6)
++#define SETM_TMX_CLK_SEL	(1 << 5)
++#define TSECM_CLK_SEL		(1 << 4)
++#define SEC_DAP_CLK_SEL		(1 << 3)
++#define SEC_AT_CLK_SEL		(1 << 2)
++#define SATA_HOST_CLK_SEL	(1 << 1)
++#define MMC_CLK_SEL		(1 << 0)
++/* change all clock source to PLL */
++#define NB_PLL_CLK_SOURCES	(WCPU_CLK_SEL | COUNTER_CLK_SEL | TRACE_CLK_SEL | DDR_FCLK_CLK_SEL |\
++				DDR_PHY_CLK_SEL | EIP97_CLK_SEL | PWM_CLK_SEL | SQF_CLK_SEL |\
++				AVS_CLK_SEL | SETM_TMX_CLK_SEL | TSECM_CLK_SEL | SEC_DAP_CLK_SEL |\
++				SEC_AT_CLK_SEL | SATA_HOST_CLK_SEL | MMC_CLK_SEL)
++
++/* north bridge clock enable register */
++#define MVEBU_NORTH_CLOCK_ENABLE_REG	0x14
++#define SB_AXI_CLK_EN		(0 << 27)
++#define EIP97_CLK_EN		(0 << 26)
++#define SATA_HOST_AXI_CLK_EN	(0 << 25)
++#define ATB_CLK_EN		(0 << 24)
++#define COUNTER_CLK_EN		(0 << 23)
++#define TRACE_CLK_EN		(0 << 22)
++#define DDR_FCLK_CLK_EN		(0 << 21)
++#define DDR_PHY_MCK_CLK_EN	(0 << 19)
++#define DDR_AXI_CLK_EN		(0 << 18)
++#define TWSI_1_CLK_EN		(0 << 17)
++#define TWSI_2_CLK_EN		(0 << 16)
++#define SEC_AXI_CLK_EN		(0 << 15)
++#define PWM_CLK_EN		(0 << 13)
++#define SQF_CLK_EN		(0 << 12)
++#define AVS_CLK_EN		(0 << 11)
++#define SETM_TMX_CLK_EN		(0 << 10)
++#define DMA_CLK_EN		(0 << 9)
++#define TSECM_CLK_EN		(0 << 8)
++#define SEC_DAP_CLK_EN		(0 << 7)
++#define SEC_AT_CLK_EN		(0 << 6)
++#define SEC_XTAL_CLK_EN		(0 << 5)
++#define CPU_CNT_EN		(0 << 4)
++#define SATA_HOST_CLK_EN	(0 << 3)
++#define MMC_CLK_CLK_EN		(0 << 2)
++#define MMC_SYSBUS_CLK_EN	(0 << 1)
++#define MMC_DEBOUNCE_CLK_EN	(0 << 0)
++
++/* enable all the north bridge clocks by default */
++#define NB_CLK_ENABLE		(SB_AXI_CLK_EN | EIP97_CLK_EN | SATA_HOST_AXI_CLK_EN | ATB_CLK_EN |\
++				COUNTER_CLK_EN | TRACE_CLK_EN | DDR_FCLK_CLK_EN | DDR_PHY_MCK_CLK_EN |\
++				DDR_AXI_CLK_EN | TWSI_1_CLK_EN | TWSI_2_CLK_EN | SEC_AXI_CLK_EN |\
++				PWM_CLK_EN | SQF_CLK_EN | AVS_CLK_EN | SETM_TMX_CLK_EN |\
++				DMA_CLK_EN | TSECM_CLK_EN | SEC_DAP_CLK_EN | SEC_AT_CLK_EN |\
++				SEC_XTAL_CLK_EN | CPU_CNT_EN | SATA_HOST_CLK_EN | MMC_CLK_CLK_EN |\
++				MMC_SYSBUS_CLK_EN | TSECM_CLK_EN)
++
++/* south bridge clock source register */
++#define MVEBU_SOUTH_CLOCK_SELEC_REG	0x10
++#define SB_AXI_CLK_SEL		(1 << 10)
++#define USB32_SS_SYS_CLK_SEL	(1 << 9)
++#define USB32_USB2_SYS_CLK_SEL	(1 << 8)
++#define SDIO_CLK_SEL		(1 << 7)
++#define GBE_CORE_CLK_SEL	(1 << 5)
++#define GBE_125_CLK_SEL		(1 << 3)
++#define GBE_50_CLK_SEL		(1 << 1)
++
++#define SB_PLL_CLK_SOURCES	(SB_AXI_CLK_SEL | USB32_SS_SYS_CLK_SEL | USB32_USB2_SYS_CLK_SEL |\
++				SDIO_CLK_SEL | GBE_CORE_CLK_SEL | GBE_125_CLK_SEL | GBE_50_CLK_SEL)
++
++/* south bridge clock enable register */
++#define MVEBU_SOUTH_CLOCK_ENABLE_REG	0x14
++#define GBE0_PWR_UP_CLK_EN	(1 << 20)
++#define GBE1_PWR_UP_CLK_EN	(1 << 19)
++#define USB32_AXI_CLK_EN	(0 << 18)
++#define USB32_SS_SYS_CLK_EN	(0 << 17)
++#define USB32_USB2_SYS_CLK_EN	(0 << 16)
++#define USB2_HOST_CLK_EN	(0 << 15)
++#define PCIE_CLKK_EN		(0 << 14)
++#define USB32_REF_CLK_EN	(0 << 13)
++#define USB2_HOST_REF_CLK_EN	(0 << 12)
++#define SDIO_CLK_EN		(0 << 11)
++#define SDIO_SYSBUS_CLK_EN	(0 << 10)
++#define GBE_BM_CORE_CLK_EN	(0 << 9)
++#define GBE_BM_AXI_CLK_EN	(0 << 8)
++#define GBE0_AXI_CLK_EN		(0 << 7)
++#define GBE1_AXI_CLK_EN		(0 << 6)
++#define GBE0_CORE_CLK_EN	(0 << 5)
++#define GBE1_CORE_CLK_EN	(0 << 4)
++#define GBE0_125_CLK_EN		(0 << 3)
++#define GBE1_125_CLK_EN		(0 << 2)
++#define GBE0_50_CLK_DIS_EN	(0 << 1)
++#define GBE1_50_CLK_DIS_EN	(0 << 0)
++/* enable all the south bridge clocks by default */
++#define SB_CLK_ENABLE		(GBE0_PWR_UP_CLK_EN | GBE1_PWR_UP_CLK_EN | USB32_AXI_CLK_EN | USB32_SS_SYS_CLK_EN |\
++				USB32_USB2_SYS_CLK_EN | USB2_HOST_CLK_EN | PCIE_CLKK_EN | USB32_REF_CLK_EN |\
++				USB2_HOST_REF_CLK_EN | SDIO_CLK_EN | SDIO_SYSBUS_CLK_EN | GBE_BM_CORE_CLK_EN |\
++				GBE_BM_AXI_CLK_EN | GBE0_AXI_CLK_EN | GBE1_AXI_CLK_EN | GBE0_CORE_CLK_EN |\
++				GBE1_CORE_CLK_EN | GBE0_125_CLK_EN | GBE1_125_CLK_EN | GBE0_50_CLK_DIS_EN |\
++				GBE1_50_CLK_DIS_EN)
++
++int init_a3700_clock(void)
++{
++	int ret = 0;
++
++	debug_enter();
++
++	/* Both of north and south bridge clocks will be enabled by default.
++	 * But most of the clock sources will be from XTAL by default.
++	 * need to change clock sources from XTAL to PLL and enable all the clocks again.
++	 */
++	/* change north bridge clock source from XTAL to clock divider */
++	writel(NB_PLL_CLK_SOURCES, MVEBU_NORTH_CLOCK_REGS_BASE + MVEBU_NORTH_CLOCK_SELEC_REG);
++	debug("North bridge clock source is set to 0x%x\n",
++	      readl(MVEBU_NORTH_CLOCK_REGS_BASE + MVEBU_NORTH_CLOCK_SELEC_REG));
++
++	/* enable north bridge clocks */
++	writel(NB_CLK_ENABLE, MVEBU_NORTH_CLOCK_REGS_BASE + MVEBU_NORTH_CLOCK_ENABLE_REG);
++	debug("North bridge clocks are enabled 0x%x\n",
++	      readl(MVEBU_NORTH_CLOCK_REGS_BASE + MVEBU_NORTH_CLOCK_ENABLE_REG));
++
++	/* change south bridge clock source from XTAL to clock divider */
++	writel(SB_PLL_CLK_SOURCES, MVEBU_SOUTH_CLOCK_REGS_BASE + MVEBU_SOUTH_CLOCK_SELEC_REG);
++	debug("South bridge clock source is set to 0x%x\n",
++	      readl(MVEBU_SOUTH_CLOCK_REGS_BASE + MVEBU_SOUTH_CLOCK_SELEC_REG));
++
++	/* enable south bridge clocks */
++	writel(SB_CLK_ENABLE, MVEBU_SOUTH_CLOCK_REGS_BASE + MVEBU_SOUTH_CLOCK_ENABLE_REG);
++	debug("South bridge clocks are enabled 0x%x\n",
++	      readl(MVEBU_SOUTH_CLOCK_REGS_BASE + MVEBU_SOUTH_CLOCK_ENABLE_REG));
++
++	debug_exit();
++	return ret;
++}
++
+diff --git a/arch/arm/cpu/armv8/armadalp/mvebu_gpio.c b/arch/arm/cpu/armv8/armadalp/mvebu_gpio.c
+new file mode 100644
+index 0000000..182e9d4
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armadalp/mvebu_gpio.c
+@@ -0,0 +1,61 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++
++#include <common.h>
++#include <asm/io.h>
++
++/*
++ * mvebu_a3700_gpio
++ *
++ * This function sets GPIO configuration for Armada3700
++ * by hardcoded value.
++ * And this routine (patch) will be removed (revert),
++ * and implemented by MPP/PIN-CTRL driver later.
++ *
++ */
++void mvebu_a3700_gpio(void)
++{
++	u32 reg_val;
++
++	/*
++	  * NETA GPIO
++	  * on Palladium, RGMII is used
++	  */
++	reg_val = readl(MVEBU_A3700_GPIO_SB_SEL);
++	reg_val = reg_val & (~(1 << MVEBU_A3700_GPIO_RGMII_GPIO_EN_OFF));
++	writel(reg_val, MVEBU_A3700_GPIO_SB_SEL);
++
++	/*
++	  * I2C, SPI GPIO
++	  */
++	reg_val = readl(MVEBU_A3700_GPIO_NB_SEL);
++	/* enable GPIO for I2C */
++	reg_val = reg_val & (~(1 << MVEBU_A3700_GPIO_TW1_GPIO_EN_OFF));
++	/* enable GPIO for SPI
++	  * In A3700 Register Spec, it says that In North bridge GPIO configuration,
++	  * bit 18 is for SPI quad mode, but this is not accurate description.
++	  * In fact, bit 18 controls HOLD and WP pins for SPI, which is needed for all
++	  * SPI mode, single, dual, and quad.
++	*/
++	reg_val = reg_val & (~(1 << MVEBU_A3700_GPIO_SPI_GPIO_EN_OFF));
++	writel(reg_val, MVEBU_A3700_GPIO_NB_SEL);
++
++	return;
++}
++
+diff --git a/arch/arm/cpu/armv8/armadalp/mvebu_io_addr_dec.c b/arch/arm/cpu/armv8/armadalp/mvebu_io_addr_dec.c
+new file mode 100644
+index 0000000..2f8fd43
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armadalp/mvebu_io_addr_dec.c
+@@ -0,0 +1,178 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG */
++#include <common.h>
++#include <asm/arch-mvebu/mvebu.h>
++#include <asm/arch-mvebu/mbus.h>
++#include <asm/io.h>
++#include <fdtdec.h>
++#include <asm/arch-mvebu/fdt.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++struct dec_win_config {
++	void __iomem *dec_win_base;
++	u32 max_win;
++	u32 max_remap;
++	u32 remap_size;
++	u32 win_offset;
++};
++
++struct io_dec_fdt_info {
++	u32 base;
++	u32 size;
++	u32 flags;
++};
++
++/* There are up to 14 IO unit which need address deocode in Armada-3700 */
++#define IO_UNIT_NUM_MAX		(14)
++struct io_dec_fdt_info __attribute__((section(".data")))io_dec_fdt_arr[IO_UNIT_NUM_MAX];
++
++#define MVEBU_DEC_WIN_CTRL_REG(base, win, off)	(base + (win * off))
++#define MVEBU_DEC_WIN_BASE_REG(base, win, off)	(base + (win * off) + 0x4)
++#define MVEBU_DEC_WIN_REMAP_REG(base, win, off)	(base + (win * off) + 0x8)
++
++#define MVEBU_DEC_WIN_CTRL_SIZE_OFF	(16)
++#define MVEBU_DEC_WIN_CTRL_ATTR_OFF	(8)
++#define MVEBU_DEC_WIN_CTRL_TARGET_OFF	(4)
++#define MVEBU_DEC_WIN_CTRL_EN_OFF	(0)
++#define MVEBU_DEC_WIN_BASE_OFF		(16)
++
++/* set io decode window */
++int set_io_addr_dec(struct mbus_win_map *win_map, struct dec_win_config *dec_win)
++{
++	struct mbus_win *win;
++	int id;
++	u32 ctrl = 0;
++	u32 base = 0;
++
++	/* disable all windows first */
++	for (id = 0; id < dec_win->max_win; id++)
++		writel(0, MVEBU_DEC_WIN_CTRL_REG(dec_win->dec_win_base, id, dec_win->win_offset));
++
++	/* configure eMMC decode windows for DRAM, according to CPU-DRAM
++	 * decode window configurations
++	 */
++	for (id = 0, win = &win_map->mbus_windows[id]; id < win_map->mbus_win_num; id++, win++) {
++		/* set size */
++		ctrl = win->win_size << MVEBU_DEC_WIN_CTRL_SIZE_OFF;
++		/* set attr */
++		ctrl |= win->attribute << MVEBU_DEC_WIN_CTRL_ATTR_OFF;
++		/* set target */
++		ctrl |= win->target << MVEBU_DEC_WIN_CTRL_TARGET_OFF;
++		/* set base */
++		base = win->base_addr << MVEBU_DEC_WIN_BASE_OFF;
++
++		/* set base address*/
++		writel(base, MVEBU_DEC_WIN_BASE_REG(dec_win->dec_win_base, id, dec_win->win_offset));
++		/* set remap window, some unit does not have remap window */
++		if (id < dec_win->max_remap)
++			writel(base, MVEBU_DEC_WIN_REMAP_REG(dec_win->dec_win_base, id, dec_win->win_offset));
++		/* set control register */
++		writel(ctrl, MVEBU_DEC_WIN_CTRL_REG(dec_win->dec_win_base, id, dec_win->win_offset));
++		/* enable the address decode window at last to make it effective */
++		ctrl |= win->enabled << MVEBU_DEC_WIN_CTRL_EN_OFF;
++		writel(ctrl, MVEBU_DEC_WIN_CTRL_REG(dec_win->dec_win_base, id, dec_win->win_offset));
++
++		debug("set_io_addr_dec %d result: ctrl(0x%x) base(0x%x)",
++		      id, readl(MVEBU_DEC_WIN_CTRL_REG(dec_win->dec_win_base, id, dec_win->win_offset)),
++		      readl(MVEBU_DEC_WIN_BASE_REG(dec_win->dec_win_base, id, dec_win->win_offset)));
++		if (id < dec_win->max_remap)
++			debug(" remap(%x)\n",
++			      readl(MVEBU_DEC_WIN_REMAP_REG(dec_win->dec_win_base, id, dec_win->win_offset)));
++		else
++			debug("\n");
++	}
++	return 0;
++}
++
++int init_a3700_io_addr_dec(void)
++{
++	int ret = 0;
++	u32 node;
++	u32 count;
++	int index;
++	struct mbus_win_map win_map;
++	struct dec_win_config dec_win;
++	const void *blob = gd->fdt_blob;
++	struct io_dec_fdt_info *fdt_info = io_dec_fdt_arr;
++
++	debug("Initializing MBUS IO address decode windows\n");
++	debug_enter();
++
++	/* fetch CPU-DRAM window mapping information by reading
++	 * CPU-DRAM decode windows (only the enabled ones)
++	 */
++	mbus_win_map_build(&win_map);
++	for (index = 0; index < win_map.mbus_win_num; index++)
++		debug("MBUS DRAM mapping %d base(0x%llx) size(0x%llx) target(%d) attr(%d)\n",
++		      index, (u64)win_map.mbus_windows[index].base_addr, (u64)win_map.mbus_windows[index].win_size,
++		      win_map.mbus_windows[index].target, win_map.mbus_windows[index].attribute);
++
++	/* Get I/O address decoding node from the FDT blob */
++	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_MBUS_IO_DEC));
++	if (node < 0) {
++		error("No I/O address decoding node found in FDT blob\n");
++		return -1;
++	}
++
++	/* Get the array of the windows and fill the map data */
++	count = fdtdec_get_int_array_count(blob, node, "unit_io_decode_info", (u32 *)fdt_info, IO_UNIT_NUM_MAX * 3);
++	if (count <= 0) {
++		debug("no windows configurations found\n");
++		return 0;
++	}
++
++	/* each window has 3 variables in FDT (base, size, flags)
++	 * base: base address of IO decode window
++	 * size: size of IO decode window register in unit of byte
++	 * flags: information about this IO decode window which is combined by IO_ATTR
++	 *     IO_ATTR(max_win, max_remap, remap_size, win_offset) (((max_win) << 24) | ((max_remap) << 16) |
++	 *            ((remap_size) << 8) | (win_offset))
++	 *            max_win: how many decode window that this unit has
++	 *            max_remap: the decode window number including remapping that this unit has
++	 *            remap_size: remap window size in unit of bits, normally should be 32 or 64
++	 *            win_offset: the offset between continuous decode windows with the same unit, typically 0x10
++	 *
++	 * Example in FDT: <0xcb00 0x30 IO_ATTR(3, 0, 32, 0x10)>
++	 */
++	count = count / 3;
++	for (index = 0; index < count; index++, fdt_info++) {
++		dec_win.dec_win_base = (void *)((u64)fdt_info->base);
++		dec_win.max_win = (fdt_info->flags >> 24) & 0xFF;
++		dec_win.max_remap = (fdt_info->flags >> 16) & 0xFF;
++		dec_win.remap_size = (fdt_info->flags >> 8) & 0xFF;
++		dec_win.win_offset = fdt_info->flags & 0xFF;
++
++		/* set I/O address decode window */
++		ret = set_io_addr_dec(&win_map, &dec_win);
++		if (ret) {
++			error("failed to set io address decode\n");
++			break;
++		}
++		debug("set io decode window successfully, base(0x%x) size(0x%x)",
++		      fdt_info->base, fdt_info->size);
++		debug(" max_win(%d) max_remap(%d) remap_size(%d) win_offset(%d)\n",
++		      dec_win.max_win, dec_win.max_remap, dec_win.remap_size, dec_win.win_offset);
++	}
++
++	debug_exit();
++	return ret;
++}
++
+diff --git a/arch/arm/cpu/armv8/armadalp/mvebu_misc_init.c b/arch/arm/cpu/armv8/armadalp/mvebu_misc_init.c
+new file mode 100644
+index 0000000..64cd517
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armadalp/mvebu_misc_init.c
+@@ -0,0 +1,41 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch-mvebu/mvebu.h>
++
++void misc_init_cci400(void)
++{
++	debug_enter();
++
++	/*
++	   CCI-400 enable snoop and dvm on S3 port.
++	   For details see the <CoreLink CCI-400 Cache Coherent Interconnect> document.
++	   bit[0] - Enable issuing of snoop requests from this slave interface.
++	   bit[1] - Enable issuing of DVM message requests from this slave interface
++	   bit[29:2] - Reserved
++	   bit[30] - Slave interface supports snoops
++	   bit[31] - Slave interface supports DVM messages
++	 */
++	writel(0xC0000003, MVEBU_CCI_S3_SNOOP_CTRL_REG);
++
++	/* Add units configuration code here */
++
++	debug_exit();
++}
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index 59de884..9362f3c 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -1,34 +1,5 @@
+ menu "Misc drivers"
+ 
+-config MVEBU_CCU
+-	bool "CCU address decoding driver"
+-	default n
+-	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+-	help
+-	  Choose this option to add support
+-	  for CCU address decoding driver.
+-	  This driver initialize the CCU windows
+-	  only.
+-
+-config MVEBU_IOB
+-	bool "IOB address decoding driver"
+-	default n
+-	help
+-	  Choose this option to add support
+-	  for IOB address decoding driver.
+-	  This driver initialize the IOB windows
+-	  only.
+-
+-config MVEBU_RFU
+-	bool "RFU address decoding driver"
+-	default n
+-	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+-	help
+-	  Choose this option to add support
+-	  for RFU address decoding driver.
+-	  This driver initialize the RFU windows
+-	  which come after the CCU window.
+-
+ config MVEBU_MBUS
+ 	bool "MBUS address decoding driver"
+ 	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+@@ -60,48 +31,4 @@ config MVEBU_MBUS_SKIP_DRAM_WIN
+ 	  be at the beginning, and could not be
+ 	  configured by anyway (keep the default value).
+ 
+-config MVEBU_SPL_A3700_GPIO
+-	bool "GPIO configuration for A3700 in SPL"
+-	depends on TARGET_ARMADA_LP
+-	default y
+-	help
+-	  Choose this option to enable GPIO
+-	  configuration for A3700 in SPL.
+-	  This will be removed later, and be
+-	  implemented by MPP/PIN-CTRL driver.
+-
+-config MVEBU_FLC
+-	bool "MBUS Final Level Cache driver"
+-	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+-	default n
+-	help
+-	  Choose this option to add support
+-	  for Final Level Cache for the Marvell McKinley
+-	  Memory Controller driver.
+-	  This driver enable FLC and open the FLC windows.
+-
+-config MVEBU_A3700_IO_ADDR_DEC
+-	bool "Armada-3700 Address decoding support"
+-	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+-	default n
+-	help
+-	  Choose this option to add support
+-	  for Marvell Armada-3700 address decoding driver
+-
+-config MVEBU_A3700_MISC_INIT
+-	bool "Armada-3700 miscellaneous initialization procedures support"
+-	default n
+-	help
+-	  Choose this option to add support
+-	  for Marvell Armada-3700 miscellaneous init procedures
+-
+-config MVEBU_A3700_CLOCK
+-	bool "Armada-3700  clock support"
+-	default n
+-	help
+-	  Choose this option to support
+-	  Marvell Armada-3700 clock driver.
+-	  For the first stage all clocks will be enabled
+-	  by dfault.
+-
+ endmenu
+diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
+index 3b7a11c..39a6997 100644
+--- a/drivers/misc/Makefile
++++ b/drivers/misc/Makefile
+@@ -28,12 +28,4 @@ obj-$(CONFIG_SMSC_LPC47M) += smsc_lpc47m.o
+ obj-$(CONFIG_STATUS_LED) += status_led.o
+ obj-$(CONFIG_TWL4030_LED) += twl4030_led.o
+ obj-$(CONFIG_FSL_IFC) += fsl_ifc.o
+-obj-$(CONFIG_MVEBU_CCU) += mvebu_ccu.o
+-obj-$(CONFIG_MVEBU_RFU) += mvebu_rfu.o
+-obj-$(CONFIG_MVEBU_IOB) += mvebu_iob.o
+ obj-$(CONFIG_MVEBU_MBUS) += mvebu_mbus.o
+-obj-$(CONFIG_MVEBU_FLC) += mvebu_flc.o
+-obj-$(CONFIG_MVEBU_A3700_IO_ADDR_DEC) += mvebu_io_addr_dec.o
+-obj-$(CONFIG_MVEBU_SPL_A3700_GPIO) += mvebu_gpio.o
+-obj-$(CONFIG_MVEBU_A3700_MISC_INIT) += mvebu_misc_init.o
+-obj-$(CONFIG_MVEBU_A3700_CLOCK) += mvebu_clock.o
+diff --git a/drivers/misc/mvebu_ccu.c b/drivers/misc/mvebu_ccu.c
+deleted file mode 100644
+index 3ce32ef..0000000
+--- a/drivers/misc/mvebu_ccu.c
++++ /dev/null
+@@ -1,284 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-/* #define DEBUG */
+-/* #define DEBUG_REG */
+-
+-#include <common.h>
+-#include <asm/system.h>
+-#include <asm/io.h>
+-#include <fdtdec.h>
+-#include <asm/arch-mvebu/mvebu.h>
+-#include <asm/arch-mvebu/fdt.h>
+-#include <asm/arch-mvebu/ccu.h>
+-
+-/* common defines */
+-#define WIN_ENABLE_BIT			(0x1)
+-/* Physical address of the base of the window = {AddrLow[19:0],20’h0} */
+-#define ADDRESS_SHIFT			(20 - 4)
+-#define ADDRESS_MASK			(0xFFFFFFF0)
+-#define CCU_WIN_ALIGNMENT		(0x100000)
+-
+-/* AP registers */
+-#define CCU_MAX_WIN_NUM			(8)
+-#define CCU_WIN_CR_OFFSET(win)		(ccu_info->ccu_base + 0x0 + (0x10 * win))
+-#define CCU_TARGET_ID_OFFSET		(8)
+-#define CCU_TARGET_ID_MASK		(0x7F)
+-
+-#define CCU_WIN_SCR_OFFSET(win)		(ccu_info->ccu_base + 0x4 + (0x10 * win))
+-#define CCU_WIN_ENA_READ_SECURE		(0x1)
+-#define CCU_WIN_ENA_WRITE_SECURE	(0x2)
+-
+-#define CCU_WIN_ALR_OFFSET(win)		(ccu_info->ccu_base + 0x8 + (0x10 * win))
+-#define CCU_WIN_AHR_OFFSET(win)		(ccu_info->ccu_base + 0xC + (0x10 * win))
+-
+-#define CCU_WIN_GCR_OFFSET		(ccu_info->ccu_base + 0xD0)
+-#define CCU_GCR_TARGET_OFFSET		(8)
+-#define CCU_GCR_TARGET_MASK		(0xF)
+-
+-DECLARE_GLOBAL_DATA_PTR;
+-
+-struct ccu_configuration {
+-	void __iomem *ccu_base;
+-	u32 max_win;
+-};
+-struct ccu_configuration __attribute__((section(".data")))ccu_config;
+-struct ccu_configuration __attribute__((section(".data")))*ccu_info = &ccu_config;
+-
+-struct ccu_win {
+-	u32 base_addr_high;
+-	u32 base_addr_low;
+-	u32 win_size_high;
+-	u32 win_size_low;
+-	u32 target_id;
+-};
+-
+-enum ccu_target_ids {
+-	IO_0_TID        = 0x00,
+-	DRAM_0_TID      = 0x03,
+-	IO_1_TID        = 0x0F,
+-	CFG_REG_TID     = 0x10,
+-	RAR_TID         = 0x20,
+-	SRAM_TID        = 0x40,
+-	DRAM_1_TID      = 0xC0,
+-	CCU_MAX_TID,
+-	INVALID_TID	= 0xFF
+-};
+-
+-struct ccu_target_name_map {
+-	enum ccu_target_ids trgt_id;
+-	char name[10];
+-};
+-
+-struct ccu_target_name_map ccu_target_name_table[] = {
+-	{IO_0_TID,	"IO-0   "},
+-	{DRAM_0_TID,	"DRAM-0 "},
+-	{IO_1_TID,	"IO-1   "},
+-	{CFG_REG_TID,	"CFG-REG"},
+-	{RAR_TID,	"RAR    "},
+-	{SRAM_TID,	"SRAM   "},
+-	{DRAM_1_TID,	"DRAM-1 "},
+-	{INVALID_TID,	"INVALID"},
+-};
+-
+-static char *ccu_target_name_get(enum ccu_target_ids trgt_id)
+-{
+-	int i;
+-
+-	for (i = 0; i < CCU_MAX_TID; i++)
+-		if (ccu_target_name_table[i].trgt_id == trgt_id)
+-			return ccu_target_name_table[i].name;
+-	return ccu_target_name_get(INVALID_TID);
+-}
+-
+-static void ccu_win_check(struct ccu_win *win, u32 win_num)
+-{
+-	u64 start_addr, win_size;
+-	/* check if address is aligned to 1M */
+-	start_addr = ((u64)win->base_addr_high << 32) + win->base_addr_low;
+-	if (IS_NOT_ALIGN(start_addr, CCU_WIN_ALIGNMENT)) {
+-		start_addr = ALIGN_UP(start_addr, CCU_WIN_ALIGNMENT);
+-		error("Window %d: base address unaligned to 0x%x\n", win_num, CCU_WIN_ALIGNMENT);
+-		printf("Align up the base address to 0x%llx\n", start_addr);
+-		win->base_addr_high = (u32)(start_addr >> 32);
+-		win->base_addr_low = (u32)(start_addr);
+-	}
+-
+-	/* size parameter validity check */
+-	win_size = ((u64)win->win_size_high << 32) + win->win_size_low;
+-	if (IS_NOT_ALIGN(win_size, CCU_WIN_ALIGNMENT)) {
+-		win_size = ALIGN_UP(win_size, CCU_WIN_ALIGNMENT);
+-		error("Window %d: window size unaligned to 0x%x\n", win_num, CCU_WIN_ALIGNMENT);
+-		printf("Aligning size to 0x%llx\n", win_size);
+-		win->win_size_high = (u32)(win_size >> 32);
+-		win->win_size_low = (u32)(win_size);
+-	}
+-}
+-
+-static void ccu_enable_win(struct ccu_win *win, u32 win_id)
+-{
+-	u32 ccu_win_reg;
+-	u32 alr, ahr;
+-	u64 start_addr, end_addr;
+-
+-	start_addr = ((u64)win->base_addr_high << 32) + win->base_addr_low;
+-	end_addr = (start_addr + (((u64)win->win_size_high << 32) + win->win_size_low) - 1);
+-	alr = (u32)((start_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
+-	ahr = (u32)((end_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
+-
+-	writel(alr, CCU_WIN_ALR_OFFSET(win_id));
+-	writel(ahr, CCU_WIN_AHR_OFFSET(win_id));
+-
+-	ccu_win_reg = WIN_ENABLE_BIT;
+-	ccu_win_reg |= (win->target_id & CCU_TARGET_ID_MASK) << CCU_TARGET_ID_OFFSET;
+-	writel(ccu_win_reg, CCU_WIN_CR_OFFSET(win_id));
+-
+-}
+-
+-void dump_ccu(void)
+-{
+-	u32 win_id, win_cr, alr, ahr;
+-	u8 target_id;
+-	u64 start, end;
+-
+-	/* Dump all AP windows */
+-	printf("bank  id target   start              end\n");
+-	printf("----------------------------------------------------\n");
+-	for (win_id = 0; win_id < ccu_info->max_win; win_id++) {
+-		win_cr = readl(CCU_WIN_CR_OFFSET(win_id));
+-		if (win_cr & WIN_ENABLE_BIT) {
+-			target_id = (win_cr >> CCU_TARGET_ID_OFFSET) & CCU_TARGET_ID_MASK;
+-			alr = readl(CCU_WIN_ALR_OFFSET(win_id));
+-			ahr = readl(CCU_WIN_AHR_OFFSET(win_id));
+-			start = ((u64)alr << ADDRESS_SHIFT);
+-			end = (((u64)ahr + 0x10) << ADDRESS_SHIFT);
+-			printf("ccu   %02x %s  0x%016llx 0x%016llx\n"
+-				, win_id, ccu_target_name_get(target_id), start, end);
+-		}
+-	}
+-	win_cr = readl(CCU_WIN_GCR_OFFSET);
+-	target_id = (win_cr >> CCU_GCR_TARGET_OFFSET) & CCU_GCR_TARGET_MASK;
+-	printf("ccu   GCR %s - all other transactions\n", ccu_target_name_get(target_id));
+-
+-	return;
+-}
+-
+-static bool skip_ccu_window(u32 win_reg)
+-{
+-	u8 target_id;
+-
+-	/* avoid overriding internal register and SRAM windows
+-	   At SPL stage BootROM open the SRAM window and close it
+-	   at the end of the SPL stage */
+-	if (win_reg & WIN_ENABLE_BIT) {
+-		target_id = (win_reg >> CCU_TARGET_ID_OFFSET) & CCU_TARGET_ID_MASK;
+-		if (((target_id) == SRAM_TID) || ((target_id) == CFG_REG_TID))
+-			return true;
+-	}
+-
+-	return false;
+-}
+-
+-int init_ccu(bool sw_init)
+-{
+-	struct ccu_win memory_map[CCU_MAX_WIN_NUM], *win;
+-	const void *blob = gd->fdt_blob;
+-	u32 win_id, win_reg;
+-	u32 node, win_count, array_id;
+-
+-	debug_enter();
+-	debug("Initializing CCU Address decoding\n");
+-
+-	/* Get address decoding node from the FDT blob */
+-	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_CCU));
+-	if (node < 0) {
+-		error("No CCU address decoding node found in FDT blob\n");
+-		return -1;
+-	}
+-	/* Get the base address of the address decoding CCU */
+-	ccu_info->ccu_base = (void *)fdt_get_regs_offs(blob, node, "reg");
+-
+-	/* Get the maximum number of CCU windows supported */
+-	ccu_info->max_win = fdtdec_get_int(blob, node, "max-win", 0);
+-	if ((ccu_info->max_win == 0) || (ccu_info->max_win > CCU_MAX_WIN_NUM)) {
+-		ccu_info->max_win = CCU_MAX_WIN_NUM;
+-		error("failed reading max windows number, set window max size to %d\n", ccu_info->max_win);
+-	}
+-
+-	if (sw_init) {
+-		/* init only the ccu_info structure without updating the ccu windows.
+-		   The ccu_info is required for the dump_ccu function */
+-		debug("Done SW CCU Address decoding Initializing\n");
+-		return 0;
+-	}
+-
+-	/* Get the array of the windows and fill the map data */
+-	win_count = fdtdec_get_int_array_count(blob, node, "windows", (u32 *)memory_map, ccu_info->max_win * 5);
+-	if (win_count <= 0) {
+-		debug("no windows configurations found\n");
+-		return 0;
+-	}
+-	win_count = win_count/5; /* every window had 5 variables in FDT:
+-				    base high, base low, size high, size low, target id) */
+-
+-#ifndef CONFIG_SPL_BUILD
+-
+-	/* Set the default target ID to DRAM 0 */
+-	/* At SPL stage - running from SRAM */
+-	win_reg = (DRAM_0_TID & CCU_GCR_TARGET_MASK) << CCU_GCR_TARGET_OFFSET;
+-	writel(win_reg, CCU_WIN_GCR_OFFSET);
+-#endif
+-
+-	/* disable AP windows */
+-	for (win_id = 0; win_id < ccu_info->max_win; win_id++) {
+-		win_reg = readl(CCU_WIN_CR_OFFSET(win_id));
+-		if (skip_ccu_window(win_reg))
+-				continue;
+-
+-		win_reg &= ~WIN_ENABLE_BIT;
+-		writel(win_reg, CCU_WIN_CR_OFFSET(win_id));
+-
+-		win_reg = ~CCU_WIN_ENA_READ_SECURE;
+-		win_reg |= ~CCU_WIN_ENA_WRITE_SECURE;
+-		writel(win_reg, CCU_WIN_SCR_OFFSET(win_id));
+-	}
+-
+-	for (win_id = 0, array_id = 0, win = memory_map;
+-		  ((win_id < ccu_info->max_win) && (array_id < win_count)); win_id++) {
+-		/* win_id is the index of the current ccu window
+-			array_id is the index of the current FDT window entry */
+-
+-		win_reg = readl(CCU_WIN_CR_OFFSET(win_id));
+-		if (skip_ccu_window(win_reg))
+-				continue;
+-
+-		ccu_win_check(win, win_id);
+-		ccu_enable_win(win, win_id);
+-
+-		win++;
+-		array_id++;
+-	}
+-
+-	if (array_id != win_count)
+-		error("Set only %d CCU windows. expected %d", array_id, win_count);
+-
+-	debug("Done CCU Address decoding Initializing\n");
+-	debug_exit();
+-
+-	return 0;
+-}
+diff --git a/drivers/misc/mvebu_clock.c b/drivers/misc/mvebu_clock.c
+deleted file mode 100644
+index f33d49f..0000000
+--- a/drivers/misc/mvebu_clock.c
++++ /dev/null
+@@ -1,163 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#include <common.h>
+-#include <asm/arch-mvebu/mvebu.h>
+-#include <asm/arch-mvebu/clock.h>
+-#include <asm/io.h>
+-
+-/* north bridge clock source register */
+-#define MVEBU_NORTH_CLOCK_SELEC_REG	0x10
+-
+-#define WCPU_CLK_SEL		(1 << 15)
+-#define COUNTER_CLK_SEL		(1 << 13)
+-#define TRACE_CLK_SEL		(1 << 12)
+-#define DDR_FCLK_CLK_SEL	(1 << 11)
+-#define DDR_PHY_CLK_SEL		(1 << 10)
+-#define EIP97_CLK_SEL		(1 << 9)
+-#define PWM_CLK_SEL		(1 << 8)
+-#define SQF_CLK_SEL		(1 << 7)
+-#define AVS_CLK_SEL		(1 << 6)
+-#define SETM_TMX_CLK_SEL	(1 << 5)
+-#define TSECM_CLK_SEL		(1 << 4)
+-#define SEC_DAP_CLK_SEL		(1 << 3)
+-#define SEC_AT_CLK_SEL		(1 << 2)
+-#define SATA_HOST_CLK_SEL	(1 << 1)
+-#define MMC_CLK_SEL		(1 << 0)
+-/* change all clock source to PLL */
+-#define NB_PLL_CLK_SOURCES	(WCPU_CLK_SEL | COUNTER_CLK_SEL | TRACE_CLK_SEL | DDR_FCLK_CLK_SEL |\
+-				DDR_PHY_CLK_SEL | EIP97_CLK_SEL | PWM_CLK_SEL | SQF_CLK_SEL |\
+-				AVS_CLK_SEL | SETM_TMX_CLK_SEL | TSECM_CLK_SEL | SEC_DAP_CLK_SEL |\
+-				SEC_AT_CLK_SEL | SATA_HOST_CLK_SEL | MMC_CLK_SEL)
+-
+-/* north bridge clock enable register */
+-#define MVEBU_NORTH_CLOCK_ENABLE_REG	0x14
+-#define SB_AXI_CLK_EN		(0 << 27)
+-#define EIP97_CLK_EN		(0 << 26)
+-#define SATA_HOST_AXI_CLK_EN	(0 << 25)
+-#define ATB_CLK_EN		(0 << 24)
+-#define COUNTER_CLK_EN		(0 << 23)
+-#define TRACE_CLK_EN		(0 << 22)
+-#define DDR_FCLK_CLK_EN		(0 << 21)
+-#define DDR_PHY_MCK_CLK_EN	(0 << 19)
+-#define DDR_AXI_CLK_EN		(0 << 18)
+-#define TWSI_1_CLK_EN		(0 << 17)
+-#define TWSI_2_CLK_EN		(0 << 16)
+-#define SEC_AXI_CLK_EN		(0 << 15)
+-#define PWM_CLK_EN		(0 << 13)
+-#define SQF_CLK_EN		(0 << 12)
+-#define AVS_CLK_EN		(0 << 11)
+-#define SETM_TMX_CLK_EN		(0 << 10)
+-#define DMA_CLK_EN		(0 << 9)
+-#define TSECM_CLK_EN		(0 << 8)
+-#define SEC_DAP_CLK_EN		(0 << 7)
+-#define SEC_AT_CLK_EN		(0 << 6)
+-#define SEC_XTAL_CLK_EN		(0 << 5)
+-#define CPU_CNT_EN		(0 << 4)
+-#define SATA_HOST_CLK_EN	(0 << 3)
+-#define MMC_CLK_CLK_EN		(0 << 2)
+-#define MMC_SYSBUS_CLK_EN	(0 << 1)
+-#define MMC_DEBOUNCE_CLK_EN	(0 << 0)
+-
+-/* enable all the north bridge clocks by default */
+-#define NB_CLK_ENABLE		(SB_AXI_CLK_EN | EIP97_CLK_EN | SATA_HOST_AXI_CLK_EN | ATB_CLK_EN |\
+-				COUNTER_CLK_EN | TRACE_CLK_EN | DDR_FCLK_CLK_EN | DDR_PHY_MCK_CLK_EN |\
+-				DDR_AXI_CLK_EN | TWSI_1_CLK_EN | TWSI_2_CLK_EN | SEC_AXI_CLK_EN |\
+-				PWM_CLK_EN | SQF_CLK_EN | AVS_CLK_EN | SETM_TMX_CLK_EN |\
+-				DMA_CLK_EN | TSECM_CLK_EN | SEC_DAP_CLK_EN | SEC_AT_CLK_EN |\
+-				SEC_XTAL_CLK_EN | CPU_CNT_EN | SATA_HOST_CLK_EN | MMC_CLK_CLK_EN |\
+-				MMC_SYSBUS_CLK_EN | TSECM_CLK_EN)
+-
+-/* south bridge clock source register */
+-#define MVEBU_SOUTH_CLOCK_SELEC_REG	0x10
+-#define SB_AXI_CLK_SEL		(1 << 10)
+-#define USB32_SS_SYS_CLK_SEL	(1 << 9)
+-#define USB32_USB2_SYS_CLK_SEL	(1 << 8)
+-#define SDIO_CLK_SEL		(1 << 7)
+-#define GBE_CORE_CLK_SEL	(1 << 5)
+-#define GBE_125_CLK_SEL		(1 << 3)
+-#define GBE_50_CLK_SEL		(1 << 1)
+-
+-#define SB_PLL_CLK_SOURCES	(SB_AXI_CLK_SEL | USB32_SS_SYS_CLK_SEL | USB32_USB2_SYS_CLK_SEL |\
+-				SDIO_CLK_SEL | GBE_CORE_CLK_SEL | GBE_125_CLK_SEL | GBE_50_CLK_SEL)
+-
+-/* south bridge clock enable register */
+-#define MVEBU_SOUTH_CLOCK_ENABLE_REG	0x14
+-#define GBE0_PWR_UP_CLK_EN	(1 << 20)
+-#define GBE1_PWR_UP_CLK_EN	(1 << 19)
+-#define USB32_AXI_CLK_EN	(0 << 18)
+-#define USB32_SS_SYS_CLK_EN	(0 << 17)
+-#define USB32_USB2_SYS_CLK_EN	(0 << 16)
+-#define USB2_HOST_CLK_EN	(0 << 15)
+-#define PCIE_CLKK_EN		(0 << 14)
+-#define USB32_REF_CLK_EN	(0 << 13)
+-#define USB2_HOST_REF_CLK_EN	(0 << 12)
+-#define SDIO_CLK_EN		(0 << 11)
+-#define SDIO_SYSBUS_CLK_EN	(0 << 10)
+-#define GBE_BM_CORE_CLK_EN	(0 << 9)
+-#define GBE_BM_AXI_CLK_EN	(0 << 8)
+-#define GBE0_AXI_CLK_EN		(0 << 7)
+-#define GBE1_AXI_CLK_EN		(0 << 6)
+-#define GBE0_CORE_CLK_EN	(0 << 5)
+-#define GBE1_CORE_CLK_EN	(0 << 4)
+-#define GBE0_125_CLK_EN		(0 << 3)
+-#define GBE1_125_CLK_EN		(0 << 2)
+-#define GBE0_50_CLK_DIS_EN	(0 << 1)
+-#define GBE1_50_CLK_DIS_EN	(0 << 0)
+-/* enable all the south bridge clocks by default */
+-#define SB_CLK_ENABLE		(GBE0_PWR_UP_CLK_EN | GBE1_PWR_UP_CLK_EN | USB32_AXI_CLK_EN | USB32_SS_SYS_CLK_EN |\
+-				USB32_USB2_SYS_CLK_EN | USB2_HOST_CLK_EN | PCIE_CLKK_EN | USB32_REF_CLK_EN |\
+-				USB2_HOST_REF_CLK_EN | SDIO_CLK_EN | SDIO_SYSBUS_CLK_EN | GBE_BM_CORE_CLK_EN |\
+-				GBE_BM_AXI_CLK_EN | GBE0_AXI_CLK_EN | GBE1_AXI_CLK_EN | GBE0_CORE_CLK_EN |\
+-				GBE1_CORE_CLK_EN | GBE0_125_CLK_EN | GBE1_125_CLK_EN | GBE0_50_CLK_DIS_EN |\
+-				GBE1_50_CLK_DIS_EN)
+-
+-int init_a3700_clock(void)
+-{
+-	int ret = 0;
+-
+-	debug_enter();
+-
+-	/* Both of north and south bridge clocks will be enabled by default.
+-	 * But most of the clock sources will be from XTAL by default.
+-	 * need to change clock sources from XTAL to PLL and enable all the clocks again.
+-	 */
+-	/* change north bridge clock source from XTAL to clock divider */
+-	writel(NB_PLL_CLK_SOURCES, MVEBU_NORTH_CLOCK_REGS_BASE + MVEBU_NORTH_CLOCK_SELEC_REG);
+-	debug("North bridge clock source is set to 0x%x\n",
+-	      readl(MVEBU_NORTH_CLOCK_REGS_BASE + MVEBU_NORTH_CLOCK_SELEC_REG));
+-
+-	/* enable north bridge clocks */
+-	writel(NB_CLK_ENABLE, MVEBU_NORTH_CLOCK_REGS_BASE + MVEBU_NORTH_CLOCK_ENABLE_REG);
+-	debug("North bridge clocks are enabled 0x%x\n",
+-	      readl(MVEBU_NORTH_CLOCK_REGS_BASE + MVEBU_NORTH_CLOCK_ENABLE_REG));
+-
+-	/* change south bridge clock source from XTAL to clock divider */
+-	writel(SB_PLL_CLK_SOURCES, MVEBU_SOUTH_CLOCK_REGS_BASE + MVEBU_SOUTH_CLOCK_SELEC_REG);
+-	debug("South bridge clock source is set to 0x%x\n",
+-	      readl(MVEBU_SOUTH_CLOCK_REGS_BASE + MVEBU_SOUTH_CLOCK_SELEC_REG));
+-
+-	/* enable south bridge clocks */
+-	writel(SB_CLK_ENABLE, MVEBU_SOUTH_CLOCK_REGS_BASE + MVEBU_SOUTH_CLOCK_ENABLE_REG);
+-	debug("South bridge clocks are enabled 0x%x\n",
+-	      readl(MVEBU_SOUTH_CLOCK_REGS_BASE + MVEBU_SOUTH_CLOCK_ENABLE_REG));
+-
+-	debug_exit();
+-	return ret;
+-}
+-
+diff --git a/drivers/misc/mvebu_flc.c b/drivers/misc/mvebu_flc.c
+deleted file mode 100644
+index 0fd5271..0000000
+--- a/drivers/misc/mvebu_flc.c
++++ /dev/null
+@@ -1,226 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-/*#define DEBUG*/
+-/*#define DEBUG_REG*/
+-
+-#include <common.h>
+-#include <asm/system.h>
+-#include <asm/io.h>
+-#include <fdtdec.h>
+-#include <asm/arch-mvebu/mvebu.h>
+-#include <asm/arch-mvebu/fdt.h>
+-#include <asm/arch-mvebu/flc.h>
+-
+-DECLARE_GLOBAL_DATA_PTR;
+-
+-/* FLC defines */
+-#define MMAP_FLC_OFFSET				(flc_base + 0x0)
+-#define MMAP_FLC_HIGH_OFFSET		(flc_base + 0x4)
+-#define MMAP_NC_FLC_OFFSET			(flc_base + 0x8)
+-#define MMAP_NC_FLC_HIGH_OFFSET		(flc_base + 0xc)
+-
+-#define FLC_ENABLE_BIT			(0x1)
+-
+-/* low base address [31:23] */
+-#define FLC_ADDRESS_MASK	(0xFF800000)
+-
+-#define FLC_SIZE_OFFSET		(16)
+-#define FLC_SIZE_MASK		(0x1F)
+-
+-struct flc_map {
+-	u32 base_addr_high;
+-	u32 base_addr_low;
+-	u32 flc_size_high;
+-	u32 flc_size_low;
+-};
+-
+-char *mapping_flc_size[] = {
+-	"Reserved", /* 0x0 */
+-	"Reserved", /* 0x1 */
+-	"Reserved", /* 0x2 */
+-	"Reserved", /* 0x3 */
+-	"Reserved", /* 0x4 */
+-	"Reserved", /* 0x5 */
+-	"Reserved", /* 0x6 */
+-	"8 MB",     /* 0x7 */
+-	"16 MB",    /* 0x8 */
+-	"32 MB",    /* 0x9 */
+-	"64 MB",    /* 0xA */
+-	"128 MB",   /* 0xB */
+-	"256 MB",   /* 0xC */
+-	"512 MB",   /* 0xD */
+-	"1 GB",     /* 0xE */
+-	"2 GB",     /* 0xF */
+-	"4 GB",     /* 0x10 */
+-	"8 GB",     /* 0x11 */
+-	"16 GB",    /* 0x12 */
+-	"32 GB",    /* 0x13 */
+-	"64 GB",    /* 0x14 */
+-	"128 GB",   /* 0x15 */
+-	"256 GB",   /* 0x16 */
+-	"512 GB",   /* 0x17 */
+-	"1 TB",     /* 0x18 */
+-	"Reserved", /* 0x19 */
+-	"Reserved", /* 0x1A */
+-	"Reserved", /* 0x1B */
+-	"Reserved", /* 0x1C */
+-	"Reserved", /* 0x1D */
+-	"Reserved", /* 0x1E */
+-	"Reserved", /* 0x1F */
+-};
+-
+-static int get_flc_size(u64 size)
+-{
+-	switch (size) {
+-	case 0x800000:
+-		return 7;
+-	case 0x1000000:
+-		return 8;
+-	case 0x2000000:
+-		return 9;
+-	case 0x4000000:
+-		return 0xa;
+-	case 0x8000000:
+-		return 0xb;
+-	case 0x10000000:
+-		return 0xc;
+-	case 0x20000000:
+-		return 0xd;
+-	case 0x40000000:
+-		return 0xe;
+-	case 0x80000000:
+-		return 0xf;
+-	case 0x100000000:
+-		return 0x10;
+-	case 0x200000000:
+-		return 0x11;
+-	case 0x400000000:
+-		return 0x12;
+-	case 0x800000000:
+-		return 0x13;
+-	case 0x1000000000:
+-		return 0x14;
+-	case 0x2000000000:
+-		return 0x15;
+-	case 0x4000000000:
+-		return 0x16;
+-	case 0x8000000000:
+-		return 0x17;
+-	case 0x10000000000:
+-		return 0x18;
+-	default:
+-		error("No valid size, size must be a power of 2 between 8 MB to 1 TB");
+-	}
+-
+-	return -1;
+-}
+-
+-void __iomem *flc_base;
+-
+-static void print_flc_mmap_reg_val(u32 reg_val, u32 reg_val_high)
+-{
+-	u64 start_addr;
+-	u32 alr;
+-
+-	if (!(reg_val & FLC_ENABLE_BIT)) {
+-		printf("\nEntry disable\n");
+-		return;
+-	}
+-
+-	alr = reg_val & FLC_ADDRESS_MASK;
+-	start_addr = alr | ((u64)reg_val_high << 32);
+-
+-	printf("0x%016llx   %s\n", start_addr,
+-		   mapping_flc_size[(reg_val >> FLC_SIZE_OFFSET) & FLC_SIZE_MASK]);
+-}
+-
+-static u32 get_flc_mmap_reg_val(struct flc_map *memory_map)
+-{
+-	u32 reg_val;
+-	int     size;
+-
+-	size = get_flc_size(memory_map->flc_size_low |
+-						((u64)memory_map->flc_size_high  << 32));
+-
+-	reg_val = FLC_ENABLE_BIT;
+-	reg_val |= (memory_map->base_addr_low & FLC_ADDRESS_MASK);
+-	reg_val |= size << FLC_SIZE_OFFSET;
+-
+-	return reg_val;
+-}
+-
+-
+-void dump_flc(void)
+-{
+-	/* Dump all FLC mapping */
+-	printf("FLC MMAP     start                 size\n");
+-	printf("-----------------------------------------\n");
+-
+-	printf("FLC        ");
+-	print_flc_mmap_reg_val(readl(MMAP_FLC_OFFSET), readl(MMAP_FLC_HIGH_OFFSET));
+-	printf("\nNC FLC     ");
+-	print_flc_mmap_reg_val(readl(MMAP_NC_FLC_OFFSET), readl(MMAP_NC_FLC_HIGH_OFFSET));
+-
+-	return;
+-}
+-
+-int init_flc(void)
+-{
+-	struct flc_map memory_map;
+-	const void *blob = gd->fdt_blob;
+-	u32 node, array_count, size;
+-
+-	debug_enter();
+-	debug("Initializing FLC\n");
+-
+-	/* Get FLC node from the FDT blob */
+-	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_FLC));
+-	if (node < 0) {
+-		debug("No FLC node found in FDT blob\n");
+-		return -1;
+-	}
+-	/* Get the base address of the FLC */
+-	flc_base = (void *)fdt_get_regs_offs(blob, node, "reg");
+-
+-	size = sizeof(struct flc_map) / sizeof(u32);
+-
+-	/* Get the FLC non-cacheable parameters */
+-	array_count = fdtdec_get_int_array_count(blob, node, "flc_nc_map", (u32 *)&memory_map, size);
+-	if (array_count != -FDT_ERR_NOTFOUND) {
+-		/* FLC MMAP NC is Optional */
+-		writel(memory_map.base_addr_high, MMAP_NC_FLC_HIGH_OFFSET);
+-		writel(get_flc_mmap_reg_val(&memory_map), MMAP_NC_FLC_OFFSET);
+-	}
+-
+-	/* Get the FLC mapping parameters */
+-	array_count = fdtdec_get_int_array_count(blob, node, "flc_ext_dev_map", (u32 *)&memory_map, size);
+-	if (array_count == -FDT_ERR_NOTFOUND) {
+-		error("no flc_ext_dev_map found\n");
+-		return 0;
+-	}
+-
+-	/* set the flc map */
+-	writel(memory_map.base_addr_high, MMAP_FLC_HIGH_OFFSET);
+-	writel(get_flc_mmap_reg_val(&memory_map), MMAP_FLC_OFFSET);
+-
+-	debug("Done FLC Initializing\n");
+-	debug_exit();
+-
+-	return 0;
+-}
+diff --git a/drivers/misc/mvebu_gpio.c b/drivers/misc/mvebu_gpio.c
+deleted file mode 100644
+index 182e9d4..0000000
+--- a/drivers/misc/mvebu_gpio.c
++++ /dev/null
+@@ -1,61 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-
+-#include <common.h>
+-#include <asm/io.h>
+-
+-/*
+- * mvebu_a3700_gpio
+- *
+- * This function sets GPIO configuration for Armada3700
+- * by hardcoded value.
+- * And this routine (patch) will be removed (revert),
+- * and implemented by MPP/PIN-CTRL driver later.
+- *
+- */
+-void mvebu_a3700_gpio(void)
+-{
+-	u32 reg_val;
+-
+-	/*
+-	  * NETA GPIO
+-	  * on Palladium, RGMII is used
+-	  */
+-	reg_val = readl(MVEBU_A3700_GPIO_SB_SEL);
+-	reg_val = reg_val & (~(1 << MVEBU_A3700_GPIO_RGMII_GPIO_EN_OFF));
+-	writel(reg_val, MVEBU_A3700_GPIO_SB_SEL);
+-
+-	/*
+-	  * I2C, SPI GPIO
+-	  */
+-	reg_val = readl(MVEBU_A3700_GPIO_NB_SEL);
+-	/* enable GPIO for I2C */
+-	reg_val = reg_val & (~(1 << MVEBU_A3700_GPIO_TW1_GPIO_EN_OFF));
+-	/* enable GPIO for SPI
+-	  * In A3700 Register Spec, it says that In North bridge GPIO configuration,
+-	  * bit 18 is for SPI quad mode, but this is not accurate description.
+-	  * In fact, bit 18 controls HOLD and WP pins for SPI, which is needed for all
+-	  * SPI mode, single, dual, and quad.
+-	*/
+-	reg_val = reg_val & (~(1 << MVEBU_A3700_GPIO_SPI_GPIO_EN_OFF));
+-	writel(reg_val, MVEBU_A3700_GPIO_NB_SEL);
+-
+-	return;
+-}
+-
+diff --git a/drivers/misc/mvebu_io_addr_dec.c b/drivers/misc/mvebu_io_addr_dec.c
+deleted file mode 100644
+index 2f8fd43..0000000
+--- a/drivers/misc/mvebu_io_addr_dec.c
++++ /dev/null
+@@ -1,178 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-/* #define DEBUG */
+-#include <common.h>
+-#include <asm/arch-mvebu/mvebu.h>
+-#include <asm/arch-mvebu/mbus.h>
+-#include <asm/io.h>
+-#include <fdtdec.h>
+-#include <asm/arch-mvebu/fdt.h>
+-
+-DECLARE_GLOBAL_DATA_PTR;
+-
+-struct dec_win_config {
+-	void __iomem *dec_win_base;
+-	u32 max_win;
+-	u32 max_remap;
+-	u32 remap_size;
+-	u32 win_offset;
+-};
+-
+-struct io_dec_fdt_info {
+-	u32 base;
+-	u32 size;
+-	u32 flags;
+-};
+-
+-/* There are up to 14 IO unit which need address deocode in Armada-3700 */
+-#define IO_UNIT_NUM_MAX		(14)
+-struct io_dec_fdt_info __attribute__((section(".data")))io_dec_fdt_arr[IO_UNIT_NUM_MAX];
+-
+-#define MVEBU_DEC_WIN_CTRL_REG(base, win, off)	(base + (win * off))
+-#define MVEBU_DEC_WIN_BASE_REG(base, win, off)	(base + (win * off) + 0x4)
+-#define MVEBU_DEC_WIN_REMAP_REG(base, win, off)	(base + (win * off) + 0x8)
+-
+-#define MVEBU_DEC_WIN_CTRL_SIZE_OFF	(16)
+-#define MVEBU_DEC_WIN_CTRL_ATTR_OFF	(8)
+-#define MVEBU_DEC_WIN_CTRL_TARGET_OFF	(4)
+-#define MVEBU_DEC_WIN_CTRL_EN_OFF	(0)
+-#define MVEBU_DEC_WIN_BASE_OFF		(16)
+-
+-/* set io decode window */
+-int set_io_addr_dec(struct mbus_win_map *win_map, struct dec_win_config *dec_win)
+-{
+-	struct mbus_win *win;
+-	int id;
+-	u32 ctrl = 0;
+-	u32 base = 0;
+-
+-	/* disable all windows first */
+-	for (id = 0; id < dec_win->max_win; id++)
+-		writel(0, MVEBU_DEC_WIN_CTRL_REG(dec_win->dec_win_base, id, dec_win->win_offset));
+-
+-	/* configure eMMC decode windows for DRAM, according to CPU-DRAM
+-	 * decode window configurations
+-	 */
+-	for (id = 0, win = &win_map->mbus_windows[id]; id < win_map->mbus_win_num; id++, win++) {
+-		/* set size */
+-		ctrl = win->win_size << MVEBU_DEC_WIN_CTRL_SIZE_OFF;
+-		/* set attr */
+-		ctrl |= win->attribute << MVEBU_DEC_WIN_CTRL_ATTR_OFF;
+-		/* set target */
+-		ctrl |= win->target << MVEBU_DEC_WIN_CTRL_TARGET_OFF;
+-		/* set base */
+-		base = win->base_addr << MVEBU_DEC_WIN_BASE_OFF;
+-
+-		/* set base address*/
+-		writel(base, MVEBU_DEC_WIN_BASE_REG(dec_win->dec_win_base, id, dec_win->win_offset));
+-		/* set remap window, some unit does not have remap window */
+-		if (id < dec_win->max_remap)
+-			writel(base, MVEBU_DEC_WIN_REMAP_REG(dec_win->dec_win_base, id, dec_win->win_offset));
+-		/* set control register */
+-		writel(ctrl, MVEBU_DEC_WIN_CTRL_REG(dec_win->dec_win_base, id, dec_win->win_offset));
+-		/* enable the address decode window at last to make it effective */
+-		ctrl |= win->enabled << MVEBU_DEC_WIN_CTRL_EN_OFF;
+-		writel(ctrl, MVEBU_DEC_WIN_CTRL_REG(dec_win->dec_win_base, id, dec_win->win_offset));
+-
+-		debug("set_io_addr_dec %d result: ctrl(0x%x) base(0x%x)",
+-		      id, readl(MVEBU_DEC_WIN_CTRL_REG(dec_win->dec_win_base, id, dec_win->win_offset)),
+-		      readl(MVEBU_DEC_WIN_BASE_REG(dec_win->dec_win_base, id, dec_win->win_offset)));
+-		if (id < dec_win->max_remap)
+-			debug(" remap(%x)\n",
+-			      readl(MVEBU_DEC_WIN_REMAP_REG(dec_win->dec_win_base, id, dec_win->win_offset)));
+-		else
+-			debug("\n");
+-	}
+-	return 0;
+-}
+-
+-int init_a3700_io_addr_dec(void)
+-{
+-	int ret = 0;
+-	u32 node;
+-	u32 count;
+-	int index;
+-	struct mbus_win_map win_map;
+-	struct dec_win_config dec_win;
+-	const void *blob = gd->fdt_blob;
+-	struct io_dec_fdt_info *fdt_info = io_dec_fdt_arr;
+-
+-	debug("Initializing MBUS IO address decode windows\n");
+-	debug_enter();
+-
+-	/* fetch CPU-DRAM window mapping information by reading
+-	 * CPU-DRAM decode windows (only the enabled ones)
+-	 */
+-	mbus_win_map_build(&win_map);
+-	for (index = 0; index < win_map.mbus_win_num; index++)
+-		debug("MBUS DRAM mapping %d base(0x%llx) size(0x%llx) target(%d) attr(%d)\n",
+-		      index, (u64)win_map.mbus_windows[index].base_addr, (u64)win_map.mbus_windows[index].win_size,
+-		      win_map.mbus_windows[index].target, win_map.mbus_windows[index].attribute);
+-
+-	/* Get I/O address decoding node from the FDT blob */
+-	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_MBUS_IO_DEC));
+-	if (node < 0) {
+-		error("No I/O address decoding node found in FDT blob\n");
+-		return -1;
+-	}
+-
+-	/* Get the array of the windows and fill the map data */
+-	count = fdtdec_get_int_array_count(blob, node, "unit_io_decode_info", (u32 *)fdt_info, IO_UNIT_NUM_MAX * 3);
+-	if (count <= 0) {
+-		debug("no windows configurations found\n");
+-		return 0;
+-	}
+-
+-	/* each window has 3 variables in FDT (base, size, flags)
+-	 * base: base address of IO decode window
+-	 * size: size of IO decode window register in unit of byte
+-	 * flags: information about this IO decode window which is combined by IO_ATTR
+-	 *     IO_ATTR(max_win, max_remap, remap_size, win_offset) (((max_win) << 24) | ((max_remap) << 16) |
+-	 *            ((remap_size) << 8) | (win_offset))
+-	 *            max_win: how many decode window that this unit has
+-	 *            max_remap: the decode window number including remapping that this unit has
+-	 *            remap_size: remap window size in unit of bits, normally should be 32 or 64
+-	 *            win_offset: the offset between continuous decode windows with the same unit, typically 0x10
+-	 *
+-	 * Example in FDT: <0xcb00 0x30 IO_ATTR(3, 0, 32, 0x10)>
+-	 */
+-	count = count / 3;
+-	for (index = 0; index < count; index++, fdt_info++) {
+-		dec_win.dec_win_base = (void *)((u64)fdt_info->base);
+-		dec_win.max_win = (fdt_info->flags >> 24) & 0xFF;
+-		dec_win.max_remap = (fdt_info->flags >> 16) & 0xFF;
+-		dec_win.remap_size = (fdt_info->flags >> 8) & 0xFF;
+-		dec_win.win_offset = fdt_info->flags & 0xFF;
+-
+-		/* set I/O address decode window */
+-		ret = set_io_addr_dec(&win_map, &dec_win);
+-		if (ret) {
+-			error("failed to set io address decode\n");
+-			break;
+-		}
+-		debug("set io decode window successfully, base(0x%x) size(0x%x)",
+-		      fdt_info->base, fdt_info->size);
+-		debug(" max_win(%d) max_remap(%d) remap_size(%d) win_offset(%d)\n",
+-		      dec_win.max_win, dec_win.max_remap, dec_win.remap_size, dec_win.win_offset);
+-	}
+-
+-	debug_exit();
+-	return ret;
+-}
+-
+diff --git a/drivers/misc/mvebu_iob.c b/drivers/misc/mvebu_iob.c
+deleted file mode 100644
+index 8372305..0000000
+--- a/drivers/misc/mvebu_iob.c
++++ /dev/null
+@@ -1,216 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-/* #define DEBUG */
+-/* #define DEBUG_REG */
+-
+-#include <common.h>
+-#include <asm/system.h>
+-#include <asm/io.h>
+-#include <fdtdec.h>
+-#include <malloc.h>
+-#include <asm/arch-mvebu/mvebu.h>
+-#include <asm/arch-mvebu/fdt.h>
+-#include <asm/arch-mvebu/iob.h>
+-
+-/* common defines */
+-#define WIN_ENABLE_BIT			(0x1)
+-/* Physical address of the base of the window = {AddrLow[19:0],20`h0} */
+-#define ADDRESS_SHIFT			(20 - 4)
+-#define ADDRESS_MASK			(0xFFFFFFF0)
+-#define IOB_WIN_ALIGNMENT		(0x100000)
+-
+-/* IOB registers */
+-#define IOB_MAX_WIN_NUM			(24)
+-
+-#define IOB_WIN_CR_OFFSET(win)		(iob_info->iob_base + 0x0 + (0x20 * win))
+-#define IOB_TARGET_ID_OFFSET		(8)
+-#define IOB_TARGET_ID_MASK		(0xF)
+-
+-#define IOB_WIN_SCR_OFFSET(win)		(iob_info->iob_base + 0x4 + (0x20 * win))
+-#define IOB_WIN_ENA_CTRL_WRITE_SECURE	(0x1)
+-#define IOB_WIN_ENA_CTRL_READ_SECURE	(0x2)
+-#define IOB_WIN_ENA_WRITE_SECURE	(0x4)
+-#define IOB_WIN_ENA_READ_SECURE		(0x8)
+-
+-#define IOB_WIN_ALR_OFFSET(win)		(iob_info->iob_base + 0x8 + (0x20 * win))
+-#define IOB_WIN_AHR_OFFSET(win)		(iob_info->iob_base + 0xC + (0x20 * win))
+-
+-DECLARE_GLOBAL_DATA_PTR;
+-
+-struct iob_configuration {
+-	void __iomem *iob_base;
+-	u32 max_win;
+-};
+-struct iob_configuration __attribute__((section(".data")))iob_config;
+-struct iob_configuration __attribute__((section(".data")))*iob_info = &iob_config;
+-
+-struct iob_win {
+-	u32 base_addr_high;
+-	u32 base_addr_low;
+-	u32 win_size_high;
+-	u32 win_size_low;
+-	u32 target_id;
+-};
+-
+-enum target_ids_iob {
+-	INTERNAL_TID    = 0x0,
+-	IHB0_TID        = 0x1,
+-	PEX1_TID        = 0x2,
+-	PEX2_TID        = 0x3,
+-	PEX0_TID        = 0x4,
+-	NAND_TID        = 0x5,
+-	RUNIT_TID       = 0x6,
+-	IHB1_TID        = 0x7,
+-	IOB_MAX_TID
+-};
+-
+-static void iob_win_check(struct iob_win *win, u32 win_num)
+-{
+-	u64 base_addr, win_size;
+-	/* check if address is aligned to the size */
+-	base_addr = ((u64)win->base_addr_high << 32) + win->base_addr_low;
+-	if (IS_NOT_ALIGN(base_addr, IOB_WIN_ALIGNMENT)) {
+-		base_addr = ALIGN_UP(base_addr, IOB_WIN_ALIGNMENT);
+-		error("Window %d: base address unaligned to 0x%x\n", win_num, IOB_WIN_ALIGNMENT);
+-		printf("Align up the base address to 0x%llx\n", base_addr);
+-		win->base_addr_high = (u32)(base_addr >> 32);
+-		win->base_addr_low = (u32)(base_addr);
+-	}
+-
+-	/* size parameter validity check */
+-	win_size = ((u64)win->win_size_high << 32) + win->win_size_low;
+-	if (IS_NOT_ALIGN(win_size, IOB_WIN_ALIGNMENT)) {
+-		win_size = ALIGN_UP(win_size, IOB_WIN_ALIGNMENT);
+-		error("Window %d: window size unaligned to 0x%x\n", win_num, IOB_WIN_ALIGNMENT);
+-		printf("Aligning size to 0x%llx\n", win_size);
+-		win->win_size_high = (u32)(win_size >> 32);
+-		win->win_size_low = (u32)(win_size);
+-	}
+-}
+-
+-static void iob_enable_win(struct iob_win *win, u32 win_id)
+-{
+-	u32 iob_win_reg;
+-	u32 alr, ahr;
+-	u64 start_addr, end_addr;
+-
+-	iob_win_reg = WIN_ENABLE_BIT;
+-	iob_win_reg |= (win->target_id & IOB_TARGET_ID_MASK) << IOB_TARGET_ID_OFFSET;
+-	writel(iob_win_reg, IOB_WIN_CR_OFFSET(win_id));
+-
+-	start_addr = ((u64)win->base_addr_high << 32) + win->base_addr_low;
+-	end_addr = (start_addr + (((u64)win->win_size_high << 32) + win->win_size_low) - 1);
+-	alr = (u32)((start_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
+-	ahr = (u32)((end_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
+-
+-	writel(alr, IOB_WIN_ALR_OFFSET(win_id));
+-	writel(ahr, IOB_WIN_AHR_OFFSET(win_id));
+-}
+-
+-void dump_iob(void)
+-{
+-	u32 win_id, win_cr, alr, ahr;
+-	u8 target_id;
+-	u64 start, end;
+-	char *iob_target_name[IOB_MAX_TID] = {"CONFIG", "IHB0 ", "PEX1 ", "PEX2 ",
+-					      "PEX0 ", "NAND ", "RUNIT", "IHB1 "};
+-
+-	/* Dump all IOB windows */
+-	printf("bank  id target  start              end\n");
+-	printf("----------------------------------------------------\n");
+-	for (win_id = 0; win_id < iob_info->max_win; win_id++) {
+-		win_cr = readl(IOB_WIN_CR_OFFSET(win_id));
+-		if (win_cr & WIN_ENABLE_BIT) {
+-			target_id = (win_cr >> IOB_TARGET_ID_OFFSET) & IOB_TARGET_ID_MASK;
+-			alr = readl(IOB_WIN_ALR_OFFSET(win_id));
+-			ahr = readl(IOB_WIN_AHR_OFFSET(win_id));
+-			start = ((u64)alr << ADDRESS_SHIFT);
+-			end = (((u64)ahr + 0x10) << ADDRESS_SHIFT);
+-			printf("iob   %02d %s   0x%016llx 0x%016llx\n"
+-					, win_id, iob_target_name[target_id], start, end);
+-		}
+-	}
+-
+-	return;
+-}
+-
+-int init_iob(void)
+-{
+-	struct iob_win *memory_map, *win;
+-	const void *blob = gd->fdt_blob;
+-	u32 win_id, win_reg;
+-	u32 node, win_count;
+-
+-	debug_enter();
+-	debug("Initializing IOB Address decoding\n");
+-
+-	/* Get address decoding node from the FDT blob */
+-	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_IOB));
+-	if (node < 0) {
+-		error("No IOB address decoding node found in FDT blob\n");
+-		return -1;
+-	}
+-	/* Get the base address of the address decoding MBUS */
+-	iob_info->iob_base = (void *)fdt_get_regs_offs(blob, node, "reg");
+-
+-	/* Get the maximum number of iob windows supported */
+-	iob_info->max_win = fdtdec_get_int(blob, node, "max-win", 0);
+-	if (iob_info->max_win == 0) {
+-		iob_info->max_win = IOB_MAX_WIN_NUM;
+-		error("failed reading max windows number\n");
+-	}
+-
+-	memory_map = malloc(iob_info->max_win * sizeof(struct iob_win));
+-	if (memory_map == 0) {
+-		error("failed allocating struct to init windows configuration\n");
+-		return -1;
+-	}
+-
+-	/* Get the array of the windows and fill the map data */
+-	win_count = fdtdec_get_int_array_count(blob, node, "windows", (u32 *)memory_map, iob_info->max_win * 5);
+-	if (win_count <= 0) {
+-		debug("no windows configurations found\n");
+-		return 0;
+-	}
+-	win_count = win_count/5; /* every window had 5 variables in FDT:
+-				    base high, base low, size high, size low, target id) */
+-
+-	/* disable all IOB windows, start from win_id = 1 because can't disable internal register window */
+-	for (win_id = 1; win_id < iob_info->max_win; win_id++) {
+-		win_reg = readl(IOB_WIN_CR_OFFSET(win_id));
+-		win_reg &= ~WIN_ENABLE_BIT;
+-		writel(win_reg, IOB_WIN_CR_OFFSET(win_id));
+-
+-		win_reg = ~IOB_WIN_ENA_CTRL_WRITE_SECURE;
+-		win_reg |= ~IOB_WIN_ENA_CTRL_READ_SECURE;
+-		win_reg |= ~IOB_WIN_ENA_WRITE_SECURE;
+-		win_reg |= ~IOB_WIN_ENA_READ_SECURE;
+-		writel(win_reg, IOB_WIN_SCR_OFFSET(win_id));
+-	}
+-
+-	for (win_id = 1, win = memory_map; win_id < win_count + 1; win_id++, win++) {
+-		iob_win_check(win, win_id);
+-		iob_enable_win(win, win_id);
+-	}
+-
+-	debug("Done IOB Address decoding Initializing\n");
+-	debug_exit();
+-
+-	return 0;
+-}
+diff --git a/drivers/misc/mvebu_misc_init.c b/drivers/misc/mvebu_misc_init.c
+deleted file mode 100644
+index 64cd517..0000000
+--- a/drivers/misc/mvebu_misc_init.c
++++ /dev/null
+@@ -1,41 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#include <common.h>
+-#include <asm/io.h>
+-#include <asm/arch-mvebu/mvebu.h>
+-
+-void misc_init_cci400(void)
+-{
+-	debug_enter();
+-
+-	/*
+-	   CCI-400 enable snoop and dvm on S3 port.
+-	   For details see the <CoreLink CCI-400 Cache Coherent Interconnect> document.
+-	   bit[0] - Enable issuing of snoop requests from this slave interface.
+-	   bit[1] - Enable issuing of DVM message requests from this slave interface
+-	   bit[29:2] - Reserved
+-	   bit[30] - Slave interface supports snoops
+-	   bit[31] - Slave interface supports DVM messages
+-	 */
+-	writel(0xC0000003, MVEBU_CCI_S3_SNOOP_CTRL_REG);
+-
+-	/* Add units configuration code here */
+-
+-	debug_exit();
+-}
+diff --git a/drivers/misc/mvebu_rfu.c b/drivers/misc/mvebu_rfu.c
+deleted file mode 100644
+index ba6522d..0000000
+--- a/drivers/misc/mvebu_rfu.c
++++ /dev/null
+@@ -1,214 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-/* #define DEBUG */
+-/* #define DEBUG_REG */
+-
+-#include <common.h>
+-#include <asm/system.h>
+-#include <asm/io.h>
+-#include <fdtdec.h>
+-#include <asm/arch-mvebu/mvebu.h>
+-#include <asm/arch-mvebu/fdt.h>
+-#include <asm/arch-mvebu/rfu.h>
+-
+-/* common defines */
+-#define WIN_ENABLE_BIT			(0x1)
+-/* Physical address of the base of the window = {Addr[19:0],20`h0} */
+-#define ADDRESS_SHIFT			(20 - 4)
+-#define ADDRESS_MASK			(0xFFFFFFF0)
+-#define RFU_WIN_ALIGNMENT_1M		(0x100000)
+-#define RFU_WIN_ALIGNMENT_64K		(0x10000)
+-
+-DECLARE_GLOBAL_DATA_PTR;
+-
+-void __attribute__((section(".data"))) __iomem *rfu_base;
+-
+-struct rfu_win {
+-	u32 base_addr_high;
+-	u32 base_addr_low;
+-	u32 win_size_high;
+-	u32 win_size_low;
+-	u32 target_id;
+-};
+-
+-enum rfu_target_ids {
+-	BOOTROM_TID	= 0x0,
+-	STM_TID		= 0x1,
+-	SPI_TID		= 0x2,
+-	PCIE_REGS_TID	= 0x3,
+-	IHBPHY_TID	= 0x4,
+-	PCIE_PORT_TID	= 0x5,
+-	RFU_MAX_TID
+-};
+-
+-static void rfu_win_check(struct rfu_win *win, u32 win_num)
+-{
+-	u64 base_addr, win_size;
+-	u32 alignment_value = RFU_WIN_ALIGNMENT_1M;
+-	/* for RFU The base is always 1M aligned */
+-	/* check if address is aligned to 1M */
+-	base_addr = ((u64)win->base_addr_high << 32) + win->base_addr_low;
+-	if (IS_NOT_ALIGN(base_addr, RFU_WIN_ALIGNMENT_1M)) {
+-		base_addr = ALIGN_UP(base_addr, RFU_WIN_ALIGNMENT_1M);
+-		error("Window %d: base address unaligned to 0x%x\n", win_num, RFU_WIN_ALIGNMENT_1M);
+-		printf("Align up the base address to 0x%llx\n", base_addr);
+-		win->base_addr_high = (u32)(base_addr >> 32);
+-		win->base_addr_low = (u32)(base_addr);
+-	}
+-
+-	/* targets that have AHR must have size aligned to 1M.
+-	   targets with no AHR (pcie-reg, bootrom) have a fixed size of 64k */
+-	if (win->target_id == BOOTROM_TID || win->target_id == PCIE_REGS_TID)
+-		alignment_value = RFU_WIN_ALIGNMENT_64K;
+-	/* size parameter validity check */
+-	win_size = ((u64)win->win_size_high << 32) + win->win_size_low;
+-	if (IS_NOT_ALIGN(win_size, alignment_value)) {
+-		win_size = ALIGN_UP(win_size, alignment_value);
+-		error("Window %d: window size unaligned to 0x%x\n", win_num, alignment_value);
+-		printf("Aligning size to 0x%llx\n", win_size);
+-		win->win_size_high = (u32)(win_size >> 32);
+-		win->win_size_low = (u32)(win_size);
+-	}
+-}
+-
+-static void *rfu_alr_offset_get(u32 trgt_id)
+-{
+-	u32 rfu_alr_offset[RFU_MAX_TID] = {0x0, 0x10, 0x20, 0x208, 0x210, 0x218};
+-
+-	if (trgt_id < 0 || trgt_id > RFU_MAX_TID) {
+-		error("target ID is wrong");
+-		return rfu_base;
+-	}
+-	return rfu_base + rfu_alr_offset[trgt_id];
+-}
+-
+-static void *rfu_ahr_offset_get(u32 trgt_id)
+-{
+-	u32 rfu_ahr_offset[RFU_MAX_TID] = {0x0, 0x18, 0x28, 0x0, 0x214, 0x21c};
+-
+-	if (trgt_id < 0 || trgt_id > RFU_MAX_TID) {
+-		error("target ID is wrong");
+-		return rfu_base;
+-	}
+-	return rfu_base + rfu_ahr_offset[trgt_id];
+-}
+-
+-static void rfu_enable_win(struct rfu_win *win, u32 trgt_id)
+-{
+-	u32 alr, ahr;
+-	u64 start_addr, end_addr;
+-
+-	start_addr = ((u64)win->base_addr_high << 32) + win->base_addr_low;
+-	end_addr = (start_addr + (((u64)win->win_size_high << 32) + win->win_size_low) - 1);
+-
+-	/* there's no ahr for bootrom and pcie-regs windows */
+-	if (trgt_id != BOOTROM_TID && trgt_id != PCIE_REGS_TID) {
+-		ahr = (u32)((end_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
+-		writel(ahr, rfu_ahr_offset_get(trgt_id));
+-	}
+-
+-	alr = (u32)((start_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
+-	if (trgt_id != PCIE_REGS_TID)
+-		alr |= WIN_ENABLE_BIT;
+-	writel(alr, rfu_alr_offset_get(trgt_id));
+-}
+-
+-void dump_rfu(void)
+-{
+-	u32 trgt_id;
+-	u32 alr, ahr;
+-	u64 start, end;
+-	char *rfu_target_name[RFU_MAX_TID] = {"BootRoom ", "STM      ", "SPI      ",
+-					"PCIe-reg ", "IHB-Port ", "PCIe-Port"};
+-
+-	/* Dump all RFU windows */
+-	printf("bank  target     start              end\n");
+-	printf("----------------------------------------------------\n");
+-	for (trgt_id = 0; trgt_id < RFU_MAX_TID; trgt_id++) {
+-		alr = readl(rfu_alr_offset_get(trgt_id));
+-		if (alr & WIN_ENABLE_BIT) {
+-			alr &= ~WIN_ENABLE_BIT;
+-			if (trgt_id == BOOTROM_TID || trgt_id == PCIE_REGS_TID)
+-				ahr = alr;
+-			else
+-				ahr = readl(rfu_ahr_offset_get(trgt_id));
+-			start = ((u64)alr << ADDRESS_SHIFT);
+-			end = (((u64)ahr + 0x10) << ADDRESS_SHIFT);
+-			printf("rfu   %s  0x%016llx 0x%016llx\n", rfu_target_name[trgt_id], start, end);
+-		}
+-	}
+-	printf("rfu   PIDI-port  - all other IO transactions\n");
+-
+-	return;
+-}
+-
+-int init_rfu(bool sw_init)
+-{
+-	struct rfu_win memory_map[RFU_MAX_TID], *win;
+-	const void *blob = gd->fdt_blob;
+-	u32 win_id, win_reg, trgt_id;
+-	u32 win_count;
+-	int node;
+-
+-	debug_enter();
+-	debug("Initializing RFU Address decoding\n");
+-
+-	/* Get address decoding node from the FDT blob */
+-	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_RFU));
+-	if (node < 0) {
+-		debug("No RFU address decoding node found in FDT blob\n");
+-		return 0;
+-	}
+-
+-	/* Get the base address of the address decoding MBUS */
+-	rfu_base = (void *)fdt_get_regs_offs(blob, node, "reg");
+-
+-	if (sw_init) {
+-		/* init only the rfu_base without update the rfu windows.
+-			The rfu_base required for the dump_rfu function */
+-		debug("Done SW RFU Address decoding Initializing\n");
+-		return 0;
+-	}
+-
+-	/* Get the array of the windows and fill the map data */
+-	win_count = fdtdec_get_int_array_count(blob, node, "windows", (u32 *)memory_map, RFU_MAX_TID * 5);
+-	if (win_count <= 0) {
+-		debug("no windows configurations found\n");
+-		return 0;
+-	}
+-	win_count = win_count/5; /* every window had 5 variables in FDT:
+-				    base high, base low, size high, size low, target id) */
+-
+-	/* disable all RFU windows */
+-	for (trgt_id = 0; trgt_id < RFU_MAX_TID; trgt_id++) {
+-		win_reg = readl(rfu_alr_offset_get(trgt_id));
+-		win_reg &= ~WIN_ENABLE_BIT;
+-		writel(win_reg, rfu_alr_offset_get(trgt_id));
+-	}
+-
+-	for (win_id = 0, win = memory_map; win_id < win_count; win_id++, win++) {
+-		rfu_win_check(win, win_id);
+-		rfu_enable_win(win, win->target_id);
+-	}
+-
+-	debug("Done RFU Address decoding Initializing\n");
+-	debug_exit();
+-
+-	return 0;
+-}
+-- 
+1.9.1
+

@@ -1,0 +1,56 @@
+From 7db11e9b75a213233ba89c3289950a5a4fdb8d18 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 9 Jun 2016 09:40:35 +0300
+Subject: [PATCH 1195/1240] fix: mpp: a70x0: a80x0: check if mpp bus adapted
+ with boot source
+
+- Check if MPP bus is adapted with boot source, if not print an error, and ask
+  from the user to change the device tree according the required boot source
+
+Change-Id: I7403327cdebb0aa710259d5d1bb20112bf0a291a
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30381
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ board/mvebu/armada8k/devel-board.c | 15 ++++++++++-----
+ 1 file changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/board/mvebu/armada8k/devel-board.c b/board/mvebu/armada8k/devel-board.c
+index 7745190..58470ea 100644
+--- a/board/mvebu/armada8k/devel-board.c
++++ b/board/mvebu/armada8k/devel-board.c
+@@ -167,6 +167,7 @@ void board_usb_vbus_init(void)
+ int mvebu_devel_board_init(void)
+ {
+ #ifdef CONFIG_MVEBU_MPP_BUS
++	char name[8];
+ 	struct sar_val sar;
+ #endif
+ 
+@@ -178,13 +179,17 @@ int mvebu_devel_board_init(void)
+ 	mvebu_sar_value_get(SAR_BOOT_SRC, &sar);
+ 
+ 	if (sar.bootsrc.type == BOOTSRC_NAND)
+-		mpp_enable_bus("nand");
+-
+-	if (sar.bootsrc.type == BOOTSRC_SPI) {
+-		char name[8];
++		sprintf(name, "nand");
++	else if (sar.bootsrc.type == BOOTSRC_SPI)
+ 		sprintf(name, "spi%d", sar.bootsrc.index);
+-		mpp_enable_bus(name);
++	else
++		sprintf(name, "na");
++
++	if (!mpp_is_bus_enabled(name)) {
++		error("Selected boot source (%s) does not match MPP configuration in device tree\n", name);
++		printf("HINT: please select proper device tree using fdt_config command\n");
+ 	}
++
+ #endif /* CONFIG_MVEBU_MPP_BUS */
+ 
+ 	/* Set USB Current Limit signals as output and set output value as enabled */
+-- 
+1.9.1
+

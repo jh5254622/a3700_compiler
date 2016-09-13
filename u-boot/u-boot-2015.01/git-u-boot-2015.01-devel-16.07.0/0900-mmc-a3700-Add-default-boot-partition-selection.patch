@@ -1,0 +1,184 @@
+From 93ebdaa1d182a580fa55a1e203d40bd1424bb9b8 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Mon, 15 Feb 2016 11:04:52 +0200
+Subject: [PATCH 0900/1240] mmc: a3700: Add default boot partition selection
+
+- Add default eMMC boot partition selection to Kconfig.
+  The default partition for eMMC boot image and u-boot
+  environment is BOOT0 or partition 1 in Kconfig terms.
+- Add boot partition selection support to TIM descriptor
+  generation script.
+- Modify Makefile for supporting partition selection.
+- Update documentation for reflecting the changes.
+
+Change-Id: I01ff1f3a8c610d5fa8815cc7a7be8041c4991d6e
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27505
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ Makefile                          |  7 +++++--
+ arch/arm/cpu/mvebu-common/Kconfig | 14 ++++++++++++++
+ doc/mvebu/build.txt               | 23 ++++++++++++++++-------
+ scripts/buildtim.sh               | 37 ++++++++++++++++++-------------------
+ 4 files changed, 53 insertions(+), 28 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 810f561..8b92489 100644
+--- a/Makefile
++++ b/Makefile
+@@ -897,10 +897,13 @@ DDRCFG		:= $(srctree)/tools/wtp/ddr-600.txt
+ 
+ ifeq ($(CONFIG_MVEBU_SPI_BOOT),y)
+ BOOTDEV		:= SPINOR
++PARTNUM		:= 0
+ else ifeq ($(CONFIG_MVEBU_MMC_BOOT),y)
+ BOOTDEV		:= EMMCNORM
++PARTNUM		:= $(CONFIG_SYS_MMC_ENV_PART)
+ else
+ BOOTDEV		:= UART
++PARTNUM		:= 0
+ endif
+ 
+ ifdef CONFIG_MVEBU_SECURE_BOOT
+@@ -921,8 +924,8 @@ TIM2IMGARGS	:= -i $(DOIMAGE_CFG)
+ endif #CONFIG_MVEBU_SECURE_BOOT
+ 
+ TIM_IMAGE	:= $(shell grep "Image Filename:" -m 1 $(DOIMAGE_CFG) | cut -c 17-)
+-TIMBLDARGS	:= $(SECURE) $(BOOTDEV) $(IMAGESPATH) $(DDRCFG) $(DOIMAGE_CFG) $(TIMNCFG) $(TIMNSIG)
+-TIMBLDUARTARGS	:= $(SECURE) UART $(IMAGESPATH) $(DDRCFG) $(DOIMAGE_CFG) $(TIMNCFG) $(TIMNSIG)
++TIMBLDARGS	:= $(SECURE) $(BOOTDEV) $(IMAGESPATH) $(DDRCFG) $(PARTNUM) $(DOIMAGE_CFG) $(TIMNCFG) $(TIMNSIG)
++TIMBLDUARTARGS	:= $(SECURE) UART $(IMAGESPATH) $(DDRCFG) 0 $(DOIMAGE_CFG) $(TIMNCFG) $(TIMNSIG)
+ UARTIMGARCH	:= $(srctree)/uart-images
+ 
+ DOIMAGE_FLAGS := -r $(DOIMAGE_CFG)
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index 7fbe4a9..b063570 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -124,6 +124,20 @@ config MVEBU_MMC_BOOT
+ 
+ endchoice
+ 
++config SYS_MMC_ENV_PART
++	int "eMMC Boot Partition"
++	depends on MVEBU_MMC_BOOT
++	default 1
++	help
++	  Set the eMMC boot partition to flash
++	  the boot image to and for saving the
++	  u-boot environment.
++	  Partition 0 is used for the user data
++	  and should not be selected for boot.
++	  Partition 1 is named BOOT0 and partition 2
++	  named BOOT1. These are the valid partitions
++	  for usage as a boot device.
++
+ menu "NAND Boot Parameters"
+ depends on MVEBU_NAND_BOOT
+ 
+diff --git a/doc/mvebu/build.txt b/doc/mvebu/build.txt
+index fbe737a..956d371 100644
+--- a/doc/mvebu/build.txt
++++ b/doc/mvebu/build.txt
+@@ -62,13 +62,22 @@ Boot device selection note:
+ 	-> ARM architecture
+ 	  -> Flash for image
+ 	and select "eMMC flash boot".
+-	The eMMC has 2 boot partitions (BOOT0 and BOOT1), which are numbered as
+-	partition 1 and 2 in MMC driver. Partition number 0 is the user data partition.
+-	The default build script uses BOOT0 (partition 1) for storing the boot image
+-	and u-boot parameters.  For changing the default boot partition, edit the
+-	TIM descriptor builder script scripts/builditm.sh.
+-	The default value: "EMMCPART=0x00000001" can be changed to "EMMCPART=0x00000002"
+-	in order to use eMMC BOOT1 partition as the boot device.
++	The eMMC has 2 boot partitions (BOOT0 and BOOT1) and a user data partition (DATA).
++	The boot partitions are numbered as partition 1 and 2 in MMC driver.
++	Number 0 is used for user data partition and should not be utilized for storing
++	boot images and u-boot environment in RAW mode since it will break file system
++	structures usually located here.
++	The default boot partition is BOOT0. It is selected by the following parameter:
++	CONFIG_SYS_MMC_ENV_PART=1
++	Valid values for this parameter are 1 for BOOT0 and 2 for BOOT1.
++	Please never use partition number 0 here!
++	It can be changed in "menuconfig" location:
++	-> ARM architecture
++	  -> eMMC Boot Partition
++	Please note that this configuration is only available when "Flash for image"
++	selects "eMMC flash boot" device as described above.
++	The selected partition will be used by u-boot "bubt" and "savenv" commands
++	for flashing the boot image and saving u-boot configuration.
+ 	The boot partition can be written from Linux command line using the following
+ 	commands:
+ 	# sudo echo 0 > /sys/block/mmcblk0boot0/force_ro
+diff --git a/scripts/buildtim.sh b/scripts/buildtim.sh
+index a75f087..5db2139 100755
+--- a/scripts/buildtim.sh
++++ b/scripts/buildtim.sh
+@@ -6,17 +6,18 @@
+ # $2 - Boot device (SPINOR/SPINAND/EMMCNORM/EMMCALT/SATA/UART)
+ # $3 - Path to image text files
+ # $4 - DDR init data text file
+-# $5 - Output TIM/NTIM file name
+-# $6 - Output TIMN file name (valid for trusted mode only)
+-# $7 - TIMN CSK sign key file name (valid for trusted mode only)
++# $5 - Partition number
++# $6 - Output TIM/NTIM file name
++# $7 - Output TIMN file name (valid for trusted mode only)
++# $8 - TIMN CSK sign key file name (valid for trusted mode only)
+ #
+ 
+ DATE=`date +%d%m%Y`
+ IMGPATH=$3
+ DDRFILE=$4
+-OUTFILE=$5
++BOOTPART=$5
++OUTFILE=$6
+ 
+-EMMCPART=0x00000001
+ 
+ # All file names extention
+ FILEEXT="txt"
+@@ -37,8 +38,8 @@ CSKPREF="csk"
+ KAKPREF="kak"
+ 
+ # Below values used only by TIMN
+-TIMNOUTFILE=$6
+-SIGNFILE=$7
++TIMNOUTFILE=$7
++SIGNFILE=$8
+ # TIMN image definition file name prefix
+ TIMNPREF="timn"
+ # Reserved area definition for TIMN - file name prefix
+@@ -214,18 +215,16 @@ else
+ 	echo "" >> $OUTFILE
+ fi
+ 
+-# Replace partition number in the output for EMMC
+-if [[ "$2" = "EMMCNORM" || "$2" = "EMMCALT" ]]; then
+-	mv $OUTFILE $OUTFILE.temp
+-	while IFS='' read -r line; do
+-		if [[ "$line" == *"Partition Number:"* ]]; then
+-			echo "Partition Number:               $EMMCPART" >> $OUTFILE
+-		else
+-			echo "$line" >> $OUTFILE
+-		fi
+-	done < $OUTFILE.temp
+-	rm $OUTFILE.temp
+-fi
++# Set correct partition number in the output
++mv $OUTFILE $OUTFILE.temp
++while IFS='' read -r line; do
++	if [[ "$line" == *"Partition Number:"* ]]; then
++		echo "Partition Number:               $BOOTPART" >> $OUTFILE
++	else
++		echo "$line" >> $OUTFILE
++	fi
++done < $OUTFILE.temp
++rm $OUTFILE.temp
+ 
+ # Untrusted NTIM does not require more operations, continue with trusted stuff
+ if [ "$TRUSTED" = "0x00000001" ]; then
+-- 
+1.9.1
+

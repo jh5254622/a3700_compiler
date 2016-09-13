@@ -1,0 +1,31 @@
+From 12eb254c7b52f556266dfe349bf9d3b621ecd387 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Sun, 30 Aug 2015 14:23:36 +0300
+Subject: [PATCH 17/66] Create uboot images for all ext* filesystem images
+
+Change-Id: Ifa4fa3e4c7e7817e935f8e895ba2990d0523cddc
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23306
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ board/marvell/scripts/create_pxp_ramdisk.sh | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/board/marvell/scripts/create_pxp_ramdisk.sh b/board/marvell/scripts/create_pxp_ramdisk.sh
+index 2d19216..981b9fb 100755
+--- a/board/marvell/scripts/create_pxp_ramdisk.sh
++++ b/board/marvell/scripts/create_pxp_ramdisk.sh
+@@ -1,7 +1,9 @@
+ #!/bin/sh
+ 
+ export CROSS_COMPILE=output/host/usr/bin/aarch64-linux-gnu-
+-./board/marvell/scripts/mkimage -O linux -T ramdisk -A arm64 -C none -n "Ramdisk" -d $1/rootfs.ext2 $1/u_rootfs.ext2
++for f in `ls output/images/rootfs.ext*`; do
++	./board/marvell/scripts/mkimage -O linux -T ramdisk -A arm64 -C none -n "Ramdisk" -d $f $(dirname $f)/u_$(basename $f)
++done
+ echo -n "bin2hex..."
+ ./board/marvell/scripts/bin2phex.pl -i $1/u_rootfs.ext2 -o $1/u_rootfs_ext2.hex -b 0x3000000
+ echo "Done."
+-- 
+1.9.1
+

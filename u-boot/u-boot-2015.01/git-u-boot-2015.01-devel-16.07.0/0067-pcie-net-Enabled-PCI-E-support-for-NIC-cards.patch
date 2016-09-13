@@ -1,0 +1,186 @@
+From d905b39a71f808d5c08b99ba7e79a4853a9139c3 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 24 Aug 2014 16:08:33 +0300
+Subject: [PATCH 0067/1240] pcie: net: Enabled PCI-E support for NIC cards
+
+	- Enabled support for e1000 & e100 for devel boards
+	- Workaround a memory access transaltion in e1000 & e100 drivers
+	- Added basic networking support
+	- Cleaned up PCI related CONFIGs
+
+Change-Id: I6cee6fc1f1539f717f79282de96f7bc67f0f69ee
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/11265
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ board/mvebu/common/Makefile    |  1 +
+ board/mvebu/common/eth_init.c  | 40 +++++++++++++++++++++++++++++++++++++
+ drivers/net/e1000.c            |  4 ++++
+ drivers/net/eepro100.c         |  2 +-
+ include/configs/mvebu-common.h | 45 +++++++++++++++++++++---------------------
+ 5 files changed, 68 insertions(+), 24 deletions(-)
+ create mode 100644 board/mvebu/common/eth_init.c
+ mode change 100644 => 100755 drivers/net/eepro100.c
+
+diff --git a/board/mvebu/common/Makefile b/board/mvebu/common/Makefile
+index 29f0a32..a2267eb 100644
+--- a/board/mvebu/common/Makefile
++++ b/board/mvebu/common/Makefile
+@@ -22,6 +22,7 @@ obj-y	+= entry.o
+ obj-y	+= init.o
+ obj-$(CONFIG_MVEBU_SPI) += spi_init.o
+ obj-$(CONFIG_MVEBU_PCI)	+= pcie_init.o
++obj-$(CONFIG_CMD_NET)	+= eth_init.o
+ 
+ ifdef CONFIG_MVEBU_DEVEL_BOARD
+ obj-y	+= sar.o
+diff --git a/board/mvebu/common/eth_init.c b/board/mvebu/common/eth_init.c
+new file mode 100644
+index 0000000..cf2569c
+--- /dev/null
++++ b/board/mvebu/common/eth_init.c
+@@ -0,0 +1,40 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <errno.h>
++#include <netdev.h>
++#include <asm/arch-mvebu/unit-info.h>
++#include <asm/arch-mvebu/driver_interface.h>
++
++int board_eth_init(bd_t *bis)
++{
++#if defined(CONFIG_SK98)
++	skge_initialize(bis);
++#endif
++
++#if defined(CONFIG_E1000)
++	e1000_initialize(bis);
++#endif
++
++#ifdef CONFIG_EEPRO100
++	eepro100_initialize(bis);
++#endif
++	return 0;
++}
+diff --git a/drivers/net/e1000.c b/drivers/net/e1000.c
+index 6531030..af9d881 100644
+--- a/drivers/net/e1000.c
++++ b/drivers/net/e1000.c
+@@ -33,7 +33,11 @@ tested on both gig copper and gig fiber boards
+ 
+ #define TOUT_LOOP   100000
+ 
++#ifdef CONFIG_MVEBU
++#define virt_to_bus(devno, v)	(pci_addr_t)(v)
++#else
+ #define virt_to_bus(devno, v)	pci_virt_to_mem(devno, (void *) (v))
++#endif
+ #define bus_to_phys(devno, a)	pci_mem_to_phys(devno, a)
+ 
+ #define E1000_DEFAULT_PCI_PBA	0x00000030
+diff --git a/drivers/net/eepro100.c b/drivers/net/eepro100.c
+old mode 100644
+new mode 100755
+index a23a585..134bb09
+--- a/drivers/net/eepro100.c
++++ b/drivers/net/eepro100.c
+@@ -230,7 +230,7 @@ static int eepro100_send(struct eth_device *dev, void *packet, int length);
+ static int eepro100_recv (struct eth_device *dev);
+ static void eepro100_halt (struct eth_device *dev);
+ 
+-#if defined(CONFIG_E500)
++#if defined(CONFIG_E500) || defined(CONFIG_MVEBU)
+ #define bus_to_phys(a) (a)
+ #define phys_to_bus(a) (a)
+ #else
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 987dd8d..03aab8e 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -234,41 +234,40 @@
+ #ifdef CONFIG_MVEBU_PCI
+ 	#define CONFIG_PCI
+ 	#define CONFIG_CMD_PCI
+-	#define CONFIG_PCI_HOST PCI_HOST_FORCE  /* select pci host function     */
+-	#define CONFIG_PCI_PNP                  /* do pci plug-and-play         */
++	#define CONFIG_PCI_PNP  /* Enable plug-and-play */
+ 
+-	/* PnP PCI Network cards */
+-	#define CONFIG_EEPRO100 /* Support for Intel 82557/82559/82559ER chips */
+-	#define CONFIG_E1000
+-	/*#define CONFIG_SK98
+-	#define YUK_ETHADDR                     "00:00:00:EE:51:81"*/
+-
+-	#undef MV_MEM_OVER_PEX_WA
+-
+-	#define PCI_HOST_ADAPTER 0      /* configure ar pci adapter     */
+-	#define PCI_HOST_FORCE   1      /* configure as pci host        */
+-	#define PCI_HOST_AUTO    2      /* detected via arbiter enable  */
++	/* Enable PCIE NIC for devel boards */
++	#ifdef CONFIG_MVEBU_DEVEL_BOARD
++		#define CONFIG_EEPRO100
++		#define CONFIG_E1000
++		#define CONFIG_MVEBU_NET
++	#endif
+ 
+ #endif /* CONFIG_MVEBU_PCI */
+ 
+-
+-/* Network */
++/* Neta */
+ #ifdef CONFIG_MV_ETH_NETA
+-	#define CONFIG_CMD_NET
+-	#define CONFIG_CMD_DHCP
+-	#define CONFIG_CMD_PING
++	#define CONFIG_MVEBU_NET
+ 	#define MV_INCLUDE_GIG_ETH
+ 	#define CONFIG_MV_INCLUDE_GIG_ETH
+ 	#define MV_ETH_NETA
+-	#define CONFIG_NET_MULTI
++#endif /* CONFIG_MV_ETH_NETA */
++
++/* General Networking */
++#ifdef CONFIG_MVEBU_NET
++	/* Commands */
++	#define CONFIG_CMD_NET
++	#define CONFIG_CMD_DHCP
++	#define CONFIG_CMD_PING
++
++	/* Environment */
+ 	#define CONFIG_IPADDR           10.4.50.154
+ 	#define CONFIG_SERVERIP         10.4.50.3
+ 	#define CONFIG_NETMASK          255.255.255.0
+ 	#define ETHADDR                 "00:00:00:00:51:81"
+-	#define ENV_ETH_PRIME           "egiga0"
+-#else
+-	#undef CONFIG_CMD_NET
+-#endif /* CONFIG_MV_ETH_NETA */
++	#define ENV_ETH_PRIME           "e1000#0"
++
++#endif /* CONFIG_MVEBU_NET */
+ 
+ /* IDE / SATA */
+ #ifdef MV_INCLUDE_SATA
+-- 
+1.9.1
+

@@ -1,0 +1,105 @@
+From 25fcaf9f75f2d146c455a3ae1326e12277dcba8c Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Mon, 11 Jan 2016 17:44:36 +0200
+Subject: [PATCH 0670/1240] usb: set general USB definition for mvebu platforms
+
+- relocate USB storage and command definitions from defconfig files
+  to shared mvebu config file
+- set missing definitions (DOS and ISO partitions, etc) to shared file
+
+Change-Id: I3db37ee1bcdc2850d1c20acaa8da27870913a6f5
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26713
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ configs/mvebu_armadalp_defconfig           |  2 --
+ configs/mvebu_armadalp_palladium_defconfig |  2 --
+ include/configs/mvebu-common.h             | 22 ++++++----------------
+ 3 files changed, 6 insertions(+), 20 deletions(-)
+
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index e426ef6..62a2183 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -11,7 +11,6 @@ CONFIG_I2C_MV=y
+ CONFIG_I2C_MV_PAD_REG=n
+ CONFIG_USB=y
+ CONFIG_USB_XHCI_HCD=y
+-CONFIG_USB_STORAGE=y
+ +S:CONFIG_MVEBU_UART_ARLP=y
+ +S:CONFIG_DEVEL_BOARD=y
+ CONFIG_CUSTOMER_BOARD=y
+@@ -30,7 +29,6 @@ CONFIG_CMD_RUN=y
+ CONFIG_CMD_EDITENV=y
+ CONFIG_CMD_SAVEENV=y
+ CONFIG_CMD_MEMORY=y
+-CONFIG_CMD_USB=y
+ CONFIG_CMD_NET=y
+ CONFIG_CMD_PING=y
+ CONFIG_CMD_MII=y
+diff --git a/configs/mvebu_armadalp_palladium_defconfig b/configs/mvebu_armadalp_palladium_defconfig
+index c92a737..7a1cbe7 100644
+--- a/configs/mvebu_armadalp_palladium_defconfig
++++ b/configs/mvebu_armadalp_palladium_defconfig
+@@ -11,7 +11,6 @@ CONFIG_I2C_MV=y
+ CONFIG_I2C_MV_PAD_REG=n
+ CONFIG_USB=y
+ CONFIG_USB_XHCI_HCD=y
+-CONFIG_USB_STORAGE=y
+ +S:CONFIG_MVEBU_UART_ARLP=y
+ +S:CONFIG_DEVEL_BOARD=y
+ +S:CONFIG_SPL_DRIVERS_MISC_SUPPORT=y
+@@ -28,7 +27,6 @@ CONFIG_CMD_RUN=y
+ CONFIG_CMD_EDITENV=y
+ CONFIG_CMD_SAVEENV=y
+ CONFIG_CMD_MEMORY=y
+-CONFIG_CMD_USB=y
+ CONFIG_CMD_NET=y
+ CONFIG_CMD_PING=y
+ +S:CONFIG_OF_CONTROL=y
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 9bea7c8..66f5491 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -283,9 +283,14 @@
+ #endif
+ 
+ /* Shared USB3.0 and USB2.0 definitions*/
+-#if defined(CONFIG_USB_XHCI) || defined(CONFIG_USB_EHCI)
++#if defined(CONFIG_USB)
+ #define CONFIG_USB_HOST_ETHER
+ #define CONFIG_USB_ETHER_ASIX
++#define CONFIG_USB_STORAGE
++#define CONFIG_CMD_USB
++#define CONFIG_EHCI_IS_TDI
++#define CONFIG_DOS_PARTITION
++#define CONFIG_ISO_PARTITION
+ #endif
+ 
+ /* USB 3.0 */
+@@ -293,21 +298,6 @@
+ #define CONFIG_SYS_USB_XHCI_MAX_ROOT_PORTS 2
+ #endif
+ 
+-/* USB */
+-#ifdef MV_INCLUDE_USB
+-	#define CONFIG_CMD_USB
+-	#define CONFIG_USB_STORAGE
+-	#define CONFIG_USB_EHCI
+-	#define CONFIG_USB_EHCI_MARVELL
+-	#define CONFIG_EHCI_IS_TDI
+-	#define CONFIG_DOS_PARTITION
+-	#define CONFIG_ISO_PARTITION
+-	#define ENV_USB0_MODE   "host"
+-	#define ENV_USB1_MODE   "host"
+-	#define ENV_USB2_MODE   "device"
+-	#define ENV_USB_ACTIVE  "0"
+-#endif
+-
+ /* MMC-SD */
+ #if MV_INCLUDE_SDIO
+ 	#define  CONFIG_MMC
+-- 
+1.9.1
+

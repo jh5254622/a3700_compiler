@@ -1,0 +1,24 @@
+From f85f7b6f14aee3b65f7321d225cbd1c8f97be2a8 Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Mon, 11 Apr 2016 23:03:18 +0300
+Subject: [PATCH 109/239] Bump ATF v1.2 To release devel-16.04.1
+
+Change-Id: Id550e973cf09bbc85f9f52b5037e58a7d57da42a
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28940
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ version.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/version.mk b/version.mk
+index 71a7c12..7827424 100644
+--- a/version.mk
++++ b/version.mk
+@@ -1 +1 @@
+-BUILD_STRING = 16.04.0 ED
++BUILD_STRING = devel-16.04.1
+-- 
+1.9.1
+

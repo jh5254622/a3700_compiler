@@ -1,0 +1,36 @@
+From 76a07cc958a66d30448790db18ff1663374944c1 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Thu, 18 Feb 2016 18:59:34 +0200
+Subject: [PATCH 0884/1240] fix: fdt_config: mvebu: fix fdt validation when
+ trying to select FDT
+
+- Before: in case there are two FDT with the same fdt_config_id,
+  but with different board id, the 1st FDT was selected.
+- This patch add board ID validation, to avoid this issue.
+
+Change-Id: Ib261c0bdbbd7ac6e5f344f588fdb01babd0b7e59
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27662
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ board/mvebu/common/cfg_eeprom.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/board/mvebu/common/cfg_eeprom.c b/board/mvebu/common/cfg_eeprom.c
+index 22b0bfd..68f8278 100644
+--- a/board/mvebu/common/cfg_eeprom.c
++++ b/board/mvebu/common/cfg_eeprom.c
+@@ -91,7 +91,8 @@ bool cfg_eeprom_upload_fdt_from_flash(u8 fdt_config_id)
+ 
+ 	debug("FDT config id = %x\n", fdt_config_id);
+ 	for (i = 0; fdt_check_header(fdt_blob_temp) == 0; i++) {
+-		if ((u8)fdtdec_get_int(fdt_blob_temp, 0, "fdt_config_id", -1) == fdt_config_id) {
++		if ((u8)fdtdec_get_int(fdt_blob_temp, 0, "fdt_config_id", -1) == fdt_config_id &&
++		    (u8)fdtdec_get_int(fdt_blob_temp, 0, "board_id", -1) == cfg_eeprom_get_board_id()) {
+ 			memcpy((void *)board_config_val.fdt_blob, fdt_blob_temp, MVEBU_FDT_SIZE);
+ 			return true;
+ 		}
+-- 
+1.9.1
+

@@ -1,0 +1,37 @@
+From bb1bf11a019b8a5981b2595fd320650367e0eb3a Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Thu, 19 Nov 2015 10:44:18 +0800
+Subject: [PATCH 0510/1240] fix: clock: armada3700: remove duplicated CLOCK
+ base
+
+issue: there are duplicated clock base address definition.
+       This issue was issued when a patch was merged while
+       it has dependency on other patch.
+fix: to remove the duplicated definitions in regs-base.h
+
+Change-Id: Ib0f7ab7b040cecb672b628d013461ab18cbec2ea
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25042
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ arch/arm/include/asm/arch-armadalp/regs-base.h | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/arch/arm/include/asm/arch-armadalp/regs-base.h b/arch/arm/include/asm/arch-armadalp/regs-base.h
+index d016bae..b76cc67 100644
+--- a/arch/arm/include/asm/arch-armadalp/regs-base.h
++++ b/arch/arm/include/asm/arch-armadalp/regs-base.h
+@@ -54,8 +54,4 @@
+ #define MVEBU_NORTH_CLOCK_REGS_BASE	(MVEBU_REGS_BASE + 0x13000)
+ #define MVEBU_SOUTH_CLOCK_REGS_BASE	(MVEBU_REGS_BASE + 0x18000)
+ 
+-/* clock registers */
+-#define MVEBU_NORTH_CLOCK_REGS_BASE	(MVEBU_REGS_BASE + 0x13000)
+-#define MVEBU_SOUTH_CLOCK_REGS_BASE	(MVEBU_REGS_BASE + 0x18000)
+-
+ #endif	/* _REGS_BASE_H_ */
+-- 
+1.9.1
+

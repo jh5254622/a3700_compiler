@@ -1,0 +1,39 @@
+From 3c25ae7374df0044e36aa997c8aa926a4a666820 Mon Sep 17 00:00:00 2001
+From: Arnab Basu <arnab_basu@rocketmail.com>
+Date: Tue, 13 Jan 2015 02:27:29 +0530
+Subject: [PATCH 0112/1240] ARMv8: PSCI: Enable SMC
+
+Enable the SMC instruction so that the kernel can use the psci code
+
+Change-Id: I94172a6d5e39bf6805f08b2dbd0b6f3a39f346e1
+Signed-off-by: Arnab Basu <arnab_basu@rocketmail.com>
+Cc: Bhupesh Sharma <bhupesh.sharma@freescale.com>
+Cc: Marc Zyngier <marc.zyngier@arm.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/16362
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/include/asm/macro.h | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/arch/arm/include/asm/macro.h b/arch/arm/include/asm/macro.h
+index 1c8c425..e36f043 100644
+--- a/arch/arm/include/asm/macro.h
++++ b/arch/arm/include/asm/macro.h
+@@ -106,8 +106,13 @@ lr	.req	x30
+ .endm
+ 
+ .macro armv8_switch_to_el2_m, xreg1
++#ifdef CONFIG_ARMV8_PSCI
++	/* 64bit EL2 | HCE | RES1 (Bits[5:4]) | Non-secure EL0/EL1 */
++	mov	\xreg1, #0x531
++#else
+ 	/* 64bit EL2 | HCE | SMD | RES1 (Bits[5:4]) | Non-secure EL0/EL1 */
+ 	mov	\xreg1, #0x5b1
++#endif
+ 	msr	scr_el3, \xreg1
+ 	msr	cptr_el3, xzr		/* Disable coprocessor traps to EL3 */
+ 	mov	\xreg1, #0x33ff
+-- 
+1.9.1
+

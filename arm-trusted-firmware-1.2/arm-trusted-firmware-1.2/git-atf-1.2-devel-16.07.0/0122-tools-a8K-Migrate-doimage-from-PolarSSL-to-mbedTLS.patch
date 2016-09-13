@@ -1,0 +1,380 @@
+From 929b6dac11183fbabe6eb107a9f360aa8c8f4487 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Wed, 13 Apr 2016 17:34:25 +0300
+Subject: [PATCH 122/239] tools: a8K: Migrate doimage from PolarSSL to mbedTLS
+
+- The PolarSSL is not compatible with mbedTLS starting
+  from version 2.0
+- The doimage utility code is migrated to the new mbedTLS
+  APIs that are avaliable from version 2.0 and up.
+  This code is not backward compatible with PolarSSL 1.3
+
+Change-Id: I8ae662baa49a698f688e2674bbe51cc30837158f
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29014
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ Makefile                |   8 +--
+ tools/doimage/Makefile  |   2 +-
+ tools/doimage/doimage.c | 135 ++++++++++++++++++++++++------------------------
+ 3 files changed, 73 insertions(+), 72 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index ffd9921..78cbaa1 100644
+--- a/Makefile
++++ b/Makefile
+@@ -405,13 +405,13 @@ DOIMAGE_SEC     	:= 	tools/secure/sec_img.cfg
+ ifeq (${MARVELL_SECURE_BOOT},1)
+ DOIMAGE_SEC_FLAGS := -c $(DOIMAGE_SEC)
+ DOIMAGE_LIBS_CHECK = \
+-        if ! [ -d "/usr/include/polarssl" ]; then \
++        if ! [ -d "/usr/include/mbedtls" ]; then \
+                         echo "****************************************" >&2; \
+-                        echo "Missing PolarSSL installation! " >&2; \
++                        echo "Missing mbedTLS installation! " >&2; \
+                         echo "Please download it from \"tls.mbed.org\"" >&2; \
+ 			echo "Alternatively on Debian/Ubuntu system install" >&2; \
+-			echo "\"libpolarssl-dev\" package" >&2; \
+-                        echo "Make sure to use version 1.3.11 or later" >&2; \
++			echo "\"libmbedtls-dev\" package" >&2; \
++                        echo "Make sure to use version 2.1.0 or later" >&2; \
+                         echo "****************************************" >&2; \
+                 exit 1; \
+         else if ! [ -f "/usr/include/libconfig.h" ]; then \
+diff --git a/tools/doimage/Makefile b/tools/doimage/Makefile
+index 81009cf..653c6d3 100644
+--- a/tools/doimage/Makefile
++++ b/tools/doimage/Makefile
+@@ -40,7 +40,7 @@ endif
+ 
+ ifeq (${MARVELL_SECURE_BOOT},1)
+ DOIMAGE_CC_FLAGS := -DCONFIG_MVEBU_SECURE_BOOT
+-DOIMAGE_LD_FLAGS := -lconfig -lpolarssl
++DOIMAGE_LD_FLAGS := -lconfig -lmbedtls -lmbedcrypto -lmbedx509
+ endif
+ 
+ CFLAGS += ${DOIMAGE_CC_FLAGS}
+diff --git a/tools/doimage/doimage.c b/tools/doimage/doimage.c
+index 13f9810..a3d31c8 100644
+--- a/tools/doimage/doimage.c
++++ b/tools/doimage/doimage.c
+@@ -26,7 +26,6 @@
+ * ***************************************************************************
+ */
+ 
+-
+ #include <unistd.h>
+ #include <stdlib.h>
+ #include <stdio.h>
+@@ -39,26 +38,26 @@
+ #ifdef CONFIG_MVEBU_SECURE_BOOT
+ #include <libconfig.h>	/* for parsing config file */
+ 
+-#if !defined(POLARSSL_CONFIG_FILE)
+-#include "polarssl/config.h"
++#if !defined(MBEDTLS_CONFIG_FILE)
++#include "mbedtls/config.h"
+ #else
+-#include POLARSSL_CONFIG_FILE
++#include MBEDTLS_CONFIG_FILE
+ #endif
+ 
+-/* PolarSSL (mbedTLS) stuff */
+-#if defined(POLARSSL_BIGNUM_C) && defined(POLARSSL_ENTROPY_C) && \
+-	defined(POLARSSL_SHA256_C) && \
+-	defined(POLARSSL_PK_PARSE_C) && defined(POLARSSL_FS_IO) && \
+-	defined(POLARSSL_CTR_DRBG_C)
+-#include <polarssl/error.h>
+-#include <polarssl/entropy.h>
+-#include <polarssl/ctr_drbg.h>
+-#include <polarssl/md.h>
+-#include <polarssl/pk.h>
+-#include <polarssl/sha256.h>
+-#include <polarssl/x509.h>
++/* mbedTLS stuff */
++#if defined(MBEDTLS_BIGNUM_C) && defined(MBEDTLS_ENTROPY_C) && \
++	defined(MBEDTLS_SHA256_C) && \
++	defined(MBEDTLS_PK_PARSE_C) && defined(MBEDTLS_FS_IO) && \
++	defined(MBEDTLS_CTR_DRBG_C)
++#include <mbedtls/error.h>
++#include <mbedtls/entropy.h>
++#include <mbedtls/ctr_drbg.h>
++#include <mbedtls/md.h>
++#include <mbedtls/pk.h>
++#include <mbedtls/sha256.h>
++#include <mbedtls/x509.h>
+ #else
+-#error "Bad PolarSSL/mbedTLS configuration!"
++#error "Bad mbedTLS configuration!"
+ #endif
+ #endif /* CONFIG_MVEBU_SECURE_BOOT */
+ 
+@@ -72,7 +71,7 @@
+ #define MAX_RSA_DER_BYTE_LEN	524
+ #define CP_CTRL_EL_ARRAY_SZ	32	/* Number of address pairs in control array */
+ 
+-#define VERSION_STRING		"Marvell(C) doimage utility version 3.1"
++#define VERSION_STRING		"Marvell(C) doimage utility version 3.2"
+ 
+ /* A8K definitions */
+ 
+@@ -170,8 +169,8 @@ typedef struct _sec_options {
+ 	uint8_t		efuse_disable;
+ 	uint32_t	cp_ctrl_arr[CP_CTRL_EL_ARRAY_SZ];
+ 	uint32_t	cp_efuse_arr[CP_CTRL_EL_ARRAY_SZ];
+-	pk_context	kak_pk;
+-	pk_context	csk_pk[CSK_ARR_SZ];
++	mbedtls_pk_context	kak_pk;
++	mbedtls_pk_context	csk_pk[CSK_ARR_SZ];
+ 	uint8_t		aes_key[AES_KEY_BYTE_LEN];
+ 	uint8_t		*encrypted_image;
+ 	uint32_t	enc_image_sz;
+@@ -297,27 +296,28 @@ uint32_t checksum32(uint32_t *start, uint32_t len)
+ *          0 on success
+ *******************************************************************************/
+ #ifdef CONFIG_MVEBU_SECURE_BOOT
+-int create_rsa_signature(pk_context		*pk_ctx,
++int create_rsa_signature(mbedtls_pk_context	*pk_ctx,
+ 			 const unsigned char	*input,
+ 			 size_t			ilen,
+ 			 const char		*pers,
+ 			 uint8_t		*signature)
+ {
+-	entropy_context		entropy;
+-	ctr_drbg_context	ctr_drbg;
+-	unsigned char		hash[32];
+-	unsigned char		buf[POLARSSL_MPI_MAX_SIZE];
+-	int					rval;
++	mbedtls_entropy_context		entropy;
++	mbedtls_ctr_drbg_context	ctr_drbg;
++	unsigned char			hash[32];
++	unsigned char			buf[MBEDTLS_MPI_MAX_SIZE];
++	int				rval;
+ 
+ 	/* Not sure this is required, but it's safer to start with empty buffers */
+ 	memset(hash, 0, sizeof(hash));
+ 	memset(buf, 0, sizeof(buf));
+ 
+-	entropy_init(&entropy);
++	mbedtls_ctr_drbg_init(&ctr_drbg);
++	mbedtls_entropy_init(&entropy);
+ 
+ 	/* Seed the random number generator */
+-	rval = ctr_drbg_init(&ctr_drbg, entropy_func, &entropy,
+-			     (const unsigned char *)pers, strlen(pers));
++	rval = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
++				(const unsigned char *)pers, strlen(pers));
+ 	if (rval != 0) {
+ 		fprintf(stderr, " Failed in ctr_drbg_init call (%d)!\n", rval);
+ 		goto sign_exit;
+@@ -325,14 +325,14 @@ int create_rsa_signature(pk_context		*pk_ctx,
+ 
+ 	/* The PK context should be already initalized.
+ 	   Set the padding type for this PK context */
+-	rsa_set_padding(pk_rsa(*pk_ctx), RSA_PKCS_V21, POLARSSL_MD_SHA256);
++	mbedtls_rsa_set_padding(mbedtls_pk_rsa(*pk_ctx), MBEDTLS_RSA_PKCS_V21, MBEDTLS_MD_SHA256);
+ 
+ 	/* First compute the SHA256 hash for the input blob */
+-	sha256(input, ilen, hash, 0);
++	mbedtls_sha256(input, ilen, hash, 0);
+ 
+ 	/* Then calculate the hash signature */
+-	rval = rsa_rsassa_pss_sign(pk_rsa(*pk_ctx), ctr_drbg_random, &ctr_drbg,
+-				   RSA_PRIVATE, POLARSSL_MD_SHA256, 0, hash, buf);
++	rval = mbedtls_rsa_rsassa_pss_sign(mbedtls_pk_rsa(*pk_ctx), mbedtls_ctr_drbg_random, &ctr_drbg,
++				   MBEDTLS_RSA_PRIVATE, MBEDTLS_MD_SHA256, 0, hash, buf);
+ 	if (rval != 0) {
+ 		fprintf(stderr,  "Failed to create RSA signature for %s. Error %d\n", pers, rval);
+ 		goto sign_exit;
+@@ -340,8 +340,8 @@ int create_rsa_signature(pk_context		*pk_ctx,
+ 	memcpy(signature, buf, 256);
+ 
+ sign_exit:
+-	ctr_drbg_free(&ctr_drbg);
+-	entropy_free(&entropy);
++	mbedtls_ctr_drbg_free(&ctr_drbg);
++	mbedtls_entropy_free(&entropy);
+ 
+ 	return rval;
+ } /* end of create_rsa_signature */
+@@ -369,49 +369,50 @@ int verify_rsa_signature(const unsigned char	*pub_key,
+ 			 const char		*pers,
+ 			 uint8_t		*signature)
+ {
+-	entropy_context		entropy;
+-	ctr_drbg_context	ctr_drbg;
+-	pk_context		pk_ctx;
+-	unsigned char		hash[32];
+-	int			rval;
++	mbedtls_entropy_context		entropy;
++	mbedtls_ctr_drbg_context	ctr_drbg;
++	mbedtls_pk_context		pk_ctx;
++	unsigned char			hash[32];
++	int				rval;
+ 
+ 	/* Not sure this is required, but it's safer to start with empty buffer */
+ 	memset(hash, 0, sizeof(hash));
+ 
+-	pk_init(&pk_ctx);
+-	entropy_init(&entropy);
++	mbedtls_pk_init(&pk_ctx);
++	mbedtls_ctr_drbg_init(&ctr_drbg);
++	mbedtls_entropy_init(&entropy);
+ 
+ 	/* Seed the random number generator */
+-	rval = ctr_drbg_init(&ctr_drbg, entropy_func, &entropy,
+-			     (const unsigned char *)pers, strlen(pers));
++	rval = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
++				(const unsigned char *)pers, strlen(pers));
+ 	if (rval != 0) {
+ 		fprintf(stderr, " Failed in ctr_drbg_init call (%d)!\n", rval);
+ 		goto verify_exit;
+ 	}
+ 
+ 	/* Check ability to read the public key */
+-	rval = pk_parse_public_key(&pk_ctx, pub_key, MAX_RSA_DER_BYTE_LEN);
++	rval = mbedtls_pk_parse_public_key(&pk_ctx, pub_key, MAX_RSA_DER_BYTE_LEN);
+ 	if (rval != 0) {
+ 		fprintf(stderr, " Failed in pk_parse_public_key (%#x)!\n", rval);
+ 		goto verify_exit;
+ 	}
+ 
+ 	/* Set the padding type for the new PK context */
+-	rsa_set_padding(pk_rsa(pk_ctx), RSA_PKCS_V21, POLARSSL_MD_SHA256);
++	mbedtls_rsa_set_padding(mbedtls_pk_rsa(pk_ctx), MBEDTLS_RSA_PKCS_V21, MBEDTLS_MD_SHA256);
+ 
+ 	/* Compute the SHA256 hash for the input buffer */
+-	sha256(input, ilen, hash, 0);
++	mbedtls_sha256(input, ilen, hash, 0);
+ 
+-	rval = rsa_rsassa_pss_verify(pk_rsa(pk_ctx), ctr_drbg_random, &ctr_drbg,
+-				     RSA_PUBLIC, POLARSSL_MD_SHA256, 0, hash, signature);
++	rval = mbedtls_rsa_rsassa_pss_verify(mbedtls_pk_rsa(pk_ctx), mbedtls_ctr_drbg_random, &ctr_drbg,
++				     MBEDTLS_RSA_PUBLIC, MBEDTLS_MD_SHA256, 0, hash, signature);
+ 	if (rval != 0)
+ 		fprintf(stderr, "Failed to verify signature (%d)!\n", rval);
+ 
+ verify_exit:
+ 
+-	pk_free(&pk_ctx);
+-	ctr_drbg_free(&ctr_drbg);
+-	entropy_free(&entropy);
++	mbedtls_pk_free(&pk_ctx);
++	mbedtls_ctr_drbg_free(&ctr_drbg);
++	mbedtls_entropy_free(&entropy);
+ 	return rval;
+ } /* end of verify_rsa_signature */
+ 
+@@ -436,7 +437,7 @@ int image_encrypt(uint8_t *buf, uint32_t blen)
+ 	unsigned char	digest[32];
+ 	unsigned char	IV[AES_BLOCK_SZ];
+ 	int				i, k;
+-	aes_context		aes_ctx;
++	mbedtls_aes_context		aes_ctx;
+ 	int				rval = -1;
+ 	uint8_t			*test_img = 0;
+ 
+@@ -445,7 +446,7 @@ int image_encrypt(uint8_t *buf, uint32_t blen)
+ 		return rval;
+ 	}
+ 
+-	aes_init(&aes_ctx);
++	mbedtls_aes_init(&aes_ctx);
+ 	memset(IV, 0, AES_BLOCK_SZ);
+ 	memset(digest, 0, 32);
+ 
+@@ -461,9 +462,9 @@ int image_encrypt(uint8_t *buf, uint32_t blen)
+ 		IV[i] ^= ptmp[k];
+ 
+ 	/* compute SHA-256 digest of the results and use it as the init vector (IV) */
+-	sha256(IV, AES_BLOCK_SZ, digest, 0);
++	mbedtls_sha256(IV, AES_BLOCK_SZ, digest, 0);
+ 	memcpy(IV, digest, AES_BLOCK_SZ);
+-	aes_setkey_enc(&aes_ctx, opts.sec_opts->aes_key, AES_KEY_BIT_LEN);
++	mbedtls_aes_setkey_enc(&aes_ctx, opts.sec_opts->aes_key, AES_KEY_BIT_LEN);
+ 
+ 	/* The output image has to include extra space for IV
+ 	   and to be aligned to the AES block size.
+@@ -482,7 +483,7 @@ int image_encrypt(uint8_t *buf, uint32_t blen)
+ 	memcpy(opts.sec_opts->encrypted_image +
+ 		   opts.sec_opts->enc_image_sz - AES_BLOCK_SZ,
+ 		   IV, AES_BLOCK_SZ);
+-	rval = aes_crypt_cbc(&aes_ctx, AES_ENCRYPT,
++	rval = mbedtls_aes_crypt_cbc(&aes_ctx, MBEDTLS_AES_ENCRYPT,
+ 			     opts.sec_opts->enc_image_sz - AES_BLOCK_SZ,
+ 			     IV, buf, opts.sec_opts->encrypted_image);
+ 	if (rval != 0) {
+@@ -490,11 +491,11 @@ int image_encrypt(uint8_t *buf, uint32_t blen)
+ 		goto encrypt_exit;
+ 	}
+ 
+-	aes_free(&aes_ctx);
++	mbedtls_aes_free(&aes_ctx);
+ 
+ 	/* Try to decrypt the image and compare it with the original data */
+-	aes_init(&aes_ctx);
+-	aes_setkey_dec(&aes_ctx, opts.sec_opts->aes_key, AES_KEY_BIT_LEN);
++	mbedtls_aes_init(&aes_ctx);
++	mbedtls_aes_setkey_dec(&aes_ctx, opts.sec_opts->aes_key, AES_KEY_BIT_LEN);
+ 
+ 	test_img = calloc(opts.sec_opts->enc_image_sz - AES_BLOCK_SZ, 1);
+ 	if (test_img == 0) {
+@@ -506,7 +507,7 @@ int image_encrypt(uint8_t *buf, uint32_t blen)
+ 	memcpy(IV, opts.sec_opts->encrypted_image +
+ 		   opts.sec_opts->enc_image_sz - AES_BLOCK_SZ,
+ 		   AES_BLOCK_SZ);
+-	rval = aes_crypt_cbc(&aes_ctx, AES_DECRYPT,
++	rval = mbedtls_aes_crypt_cbc(&aes_ctx, MBEDTLS_AES_DECRYPT,
+ 			     opts.sec_opts->enc_image_sz - AES_BLOCK_SZ,
+ 			     IV, opts.sec_opts->encrypted_image, test_img);
+ 	if (rval != 0) {
+@@ -524,7 +525,7 @@ int image_encrypt(uint8_t *buf, uint32_t blen)
+ 
+ encrypt_exit:
+ 
+-	aes_free(&aes_ctx);
++	mbedtls_aes_free(&aes_ctx);
+ 	if (test_img)
+ 		free(test_img);
+ 
+@@ -787,7 +788,7 @@ int format_sec_ext(char *filename, FILE *out_fd)
+ 	/* Bring up RSA context and read private keys from their files */
+ 	for (index = 0; index < (CSK_ARR_SZ + 1); index++) {
+ 		/* for every private key file */
+-		pk_context	*pk_ctx = (index == CSK_ARR_SZ) ?
++		mbedtls_pk_context	*pk_ctx = (index == CSK_ARR_SZ) ?
+ 					&opts.sec_opts->kak_pk :
+ 					&opts.sec_opts->csk_pk[index];
+ 		char		*fname = (index == CSK_ARR_SZ) ?
+@@ -813,15 +814,15 @@ int format_sec_ext(char *filename, FILE *out_fd)
+ 			continue;
+ 		}
+ 
+-		pk_init(pk_ctx);
++		mbedtls_pk_init(pk_ctx);
+ 		/* Read the private RSA key into the context and verify it (no password) */
+-		if (pk_parse_keyfile(pk_ctx, fname, "") != 0) {
++		if (mbedtls_pk_parse_keyfile(pk_ctx, fname, "") != 0) {
+ 			fprintf(stderr, "Cannot read RSA private key file %s\n", fname);
+ 			return 1;
+ 		}
+ 
+ 		/* Create a public key out of private one and store it in DER format */
+-		output_len = pk_write_pubkey_der(pk_ctx, output_buf, DER_BUF_SZ);
++		output_len = mbedtls_pk_write_pubkey_der(pk_ctx, output_buf, DER_BUF_SZ);
+ 		if (output_len < 0) {
+ 			fprintf(stderr, "Failed to create DER coded PUB key (%s)\n", fname);
+ 			return 1;
+@@ -1243,7 +1244,7 @@ int parse_image(uint8_t *buf, int size)
+ 					goto error;
+ 				}
+ 
+-				sha256(sec_entry->kak_key, MAX_RSA_DER_BYTE_LEN, hash, 0);
++				mbedtls_sha256(sec_entry->kak_key, MAX_RSA_DER_BYTE_LEN, hash, 0);
+ 				fprintf(stdout, ">>>>>>>>>>> KAK KEY HASH >>>>>>>>>>>\n");
+ 				fprintf(stdout, "SHA256: ");
+ 				for (i = 0; i < 32; i++)
+-- 
+1.9.1
+

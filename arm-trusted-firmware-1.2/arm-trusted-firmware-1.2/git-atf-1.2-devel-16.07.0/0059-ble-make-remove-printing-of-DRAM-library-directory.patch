@@ -1,0 +1,27 @@
+From 199e8b1cabb48221d023cb3273ef0aa8e987f4ca Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 13 Mar 2016 16:29:25 +0200
+Subject: [PATCH 059/239] ble: make: remove printing of DRAM library directory
+
+Change-Id: I75c0d730d167b9e5966121436a198127d53a4255
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28199
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ ble/ble.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/ble/ble.mk b/ble/ble.mk
+index 7fa75cb..6b76636 100644
+--- a/ble/ble.mk
++++ b/ble/ble.mk
+@@ -38,4 +38,4 @@ PLAT_INCLUDES		+= 	-I$(DRAM_ROOT)
+ BLE_LINKERFILE		:=	ble/ble.ld.S
+ 
+ $(DRAM_LIB):
+-	make -C $(DRAM_ROOT) PLATFORM=$(PLAT)
++	@make -C $(DRAM_ROOT) --no-print-directory PLATFORM=$(PLAT)
+-- 
+1.9.1
+

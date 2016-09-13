@@ -1,0 +1,43 @@
+From dc2b00d38aed92114af7a45f20895862573aca64 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Sun, 13 Mar 2016 18:50:50 +0200
+Subject: [PATCH 0978/1240] hw_info: arm70x0: enable hw_info command in arm70x0
+ and arm70x0_rz
+
+Change-Id: Ic338562584f086983986804577d506bb978aebf0
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28205
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ configs/mvebu_armada70x0_defconfig    | 1 +
+ configs/mvebu_armada70x0_rz_defconfig | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/configs/mvebu_armada70x0_defconfig b/configs/mvebu_armada70x0_defconfig
+index 2a69c5e..eb0c418 100644
+--- a/configs/mvebu_armada70x0_defconfig
++++ b/configs/mvebu_armada70x0_defconfig
+@@ -21,6 +21,7 @@ CONFIG_CMD_MVEBU_SAR=y
+ CONFIG_CMD_MVEBU_MPP=y
+ CONFIG_CMD_MVEBU_BUBT=y
+ CONFIG_CMD_MVEBU_TSEN=y
++CONFIG_CMD_MVEBU_HW_INFO=y
+ CONFIG_OF_CONTROL=y
+ CONFIG_OF_EMBED=y
+ CONFIG_DEFAULT_DEVICE_TREE="armada-70x0-db_router"
+diff --git a/configs/mvebu_armada70x0_rz_defconfig b/configs/mvebu_armada70x0_rz_defconfig
+index 9f95aef..f79fe28 100644
+--- a/configs/mvebu_armada70x0_rz_defconfig
++++ b/configs/mvebu_armada70x0_rz_defconfig
+@@ -21,6 +21,7 @@ CONFIG_CMD_MVEBU_SAR=y
+ CONFIG_CMD_MVEBU_MPP=y
+ CONFIG_CMD_MVEBU_BUBT=y
+ CONFIG_CMD_MVEBU_TSEN=y
++CONFIG_CMD_MVEBU_HW_INFO=y
+ CONFIG_OF_CONTROL=y
+ CONFIG_OF_EMBED=y
+ CONFIG_DEFAULT_DEVICE_TREE="armada-7040-rz-db_router"
+-- 
+1.9.1
+

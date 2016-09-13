@@ -1,0 +1,31 @@
+From 6690d8d133b145c30d8bb872bd6055a6be173096 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Thu, 10 Dec 2015 16:38:06 +0800
+Subject: [PATCH 0591/1240] Bump U-Boot 2015.01 To release
+ 2016_T1.0.eng_drop_v2
+
+Change-Id: I2aa6f276d7b990610ab9d5b8bf7dd6321618a141
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25769
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ include/configs/mvebu-common.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 14ea2c8..fe7dd6b 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -22,7 +22,7 @@
+ #include <asm/arch/regs-base.h>
+ 
+ /* Version */
+-#define CONFIG_IDENT_STRING             "  Marvell version: 2016_T1.0.eng_drop_v1"
++#define CONFIG_IDENT_STRING             "  Marvell version: 2016_T1.0.eng_drop_v2"
+ 
+ /* Temp */
+ #define CONFIG_ADEC
+-- 
+1.9.1
+

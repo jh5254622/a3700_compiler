@@ -1,0 +1,39 @@
+From 64e3d78b484d7a751674e35b3658b5a5bf245e5d Mon Sep 17 00:00:00 2001
+From: zachary <zhangzg@marvell.com>
+Date: Fri, 22 Apr 2016 00:13:54 +0800
+Subject: [PATCH 1100/1240] fix: a3700: correct soc name in aramda3700 head
+ file
+
+Change-Id: Icb0cd5e4a4599407488919cf21f77e5cac25bbd3
+Signed-off-by: zachary <zhangzg@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28495
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ include/configs/armada3700.h | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/include/configs/armada3700.h b/include/configs/armada3700.h
+index 75b13f5..23ade41 100644
+--- a/include/configs/armada3700.h
++++ b/include/configs/armada3700.h
+@@ -16,8 +16,8 @@
+  * ***************************************************************************
+  */
+ 
+-#ifndef __ARMADA_LP_H
+-#define __ARMADA_LP_H
++#ifndef __ARMADA_3700_H
++#define __ARMADA_3700_H
+ 
+ /* Version */
+ #define CONFIG_BOOTP_VCI_STRING		" U-boot.armv8.armada3700"
+@@ -156,4 +156,4 @@ extern char __end_of_spl[];
+ 					"fdt_high=0xa0000000\0"
+ #endif /*CONFIG_PALLADIUM*/
+ 
+-#endif /* __ARMADA_LP_H */
++#endif /* __ARMADA_3700_H */
+-- 
+1.9.1
+

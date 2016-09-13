@@ -1,0 +1,161 @@
+From e40fb2b328501e2b652d0cb2d8d64adf64d35c68 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Tue, 31 May 2016 17:09:28 +0300
+Subject: [PATCH 199/239] iob: a80x0: Add CP1 support to IOB windows mapping
+
+- Extend the marvell_get_iob_memory_map() API with
+  CP index parameter for all platforms
+- Add CP1 IOB windows mappings to 80x0 platform
+
+Change-Id: I9398dafbed5a5ee37883f8cb5f1dc6808acc1373
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30222
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ drivers/marvell/iob.c                              |  2 +-
+ include/plat/marvell/a8k/a70x0/board/plat_config.h |  2 +-
+ .../a8k/a7040_rz/board/marvell_plat_config.c       |  2 +-
+ plat/marvell/a8k/a70x0/board/marvell_plat_config.c |  2 +-
+ .../a8k/a70x0_cust/board/marvell_plat_config.c     |  2 +-
+ plat/marvell/a8k/a80x0/board/marvell_plat_config.c | 34 +++++++++++++++++-----
+ .../marvell/a8k/apn806/board/marvell_plat_config.c |  2 +-
+ 7 files changed, 32 insertions(+), 14 deletions(-)
+
+diff --git a/drivers/marvell/iob.c b/drivers/marvell/iob.c
+index 4eaa939..2a559c2 100644
+--- a/drivers/marvell/iob.c
++++ b/drivers/marvell/iob.c
+@@ -172,7 +172,7 @@ int init_iob(int cp_index)
+ 	}
+ 
+ 	/* Get the array of the windows and fill the map data */
+-	marvell_get_iob_memory_map(&win, &win_count);
++	marvell_get_iob_memory_map(&win, &win_count, cp_index);
+ 	if (win_count <= 0) {
+ 		INFO("no windows configurations found\n");
+ 		return 0;
+diff --git a/include/plat/marvell/a8k/a70x0/board/plat_config.h b/include/plat/marvell/a8k/a70x0/board/plat_config.h
+index 54e5176..5322d61 100644
+--- a/include/plat/marvell/a8k/a70x0/board/plat_config.h
++++ b/include/plat/marvell/a8k/a70x0/board/plat_config.h
+@@ -52,7 +52,7 @@ int marvell_get_ccu_max_win(void);
+    standard platform */
+ int marvell_get_amb_memory_map(struct amb_win **win, uint32_t *size);
+ int marvell_get_rfu_memory_map(struct rfu_win **win, uint32_t *size);
+-int marvell_get_iob_memory_map(struct iob_win **win, uint32_t *size);
++int marvell_get_iob_memory_map(struct iob_win **win, uint32_t *size, int cp_index);
+ int marvell_get_ccu_memory_map(struct ccu_win **win, uint32_t *size);
+ 
+ #endif /* __BOARD_CONFIG_H__ */
+diff --git a/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c b/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c
+index 29e31f8..0954fe2 100644
+--- a/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c
+@@ -99,7 +99,7 @@ int marvell_get_iob_max_win(void)
+ 	return MARVELL_IOB_MAX_WIN;
+ }
+ 
+-int marvell_get_iob_memory_map(struct iob_win **win, uint32_t *size)
++int marvell_get_iob_memory_map(struct iob_win **win, uint32_t *size, int cp_index)
+ {
+ 	*win = iob_memory_map;
+ 	*size = sizeof(iob_memory_map)/sizeof(struct iob_win);
+diff --git a/plat/marvell/a8k/a70x0/board/marvell_plat_config.c b/plat/marvell/a8k/a70x0/board/marvell_plat_config.c
+index a0bfb22..2529b14 100644
+--- a/plat/marvell/a8k/a70x0/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a70x0/board/marvell_plat_config.c
+@@ -103,7 +103,7 @@ int marvell_get_iob_max_win(void)
+ 	return MARVELL_IOB_MAX_WIN;
+ }
+ 
+-int marvell_get_iob_memory_map(struct iob_win **win, uint32_t *size)
++int marvell_get_iob_memory_map(struct iob_win **win, uint32_t *size, int cp_index)
+ {
+ 	*win = iob_memory_map;
+ 	*size = sizeof(iob_memory_map)/sizeof(struct iob_win);
+diff --git a/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c b/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c
+index 1b02039..9fd8d3e 100644
+--- a/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c
+@@ -105,7 +105,7 @@ int marvell_get_iob_max_win(void)
+ 	return MARVELL_IOB_MAX_WIN;
+ }
+ 
+-int marvell_get_iob_memory_map(struct iob_win **win, uint32_t *size)
++int marvell_get_iob_memory_map(struct iob_win **win, uint32_t *size, int cp_index)
+ {
+ 	*win = iob_memory_map;
+ 	*size = sizeof(iob_memory_map)/sizeof(struct iob_win);
+diff --git a/plat/marvell/a8k/a80x0/board/marvell_plat_config.c b/plat/marvell/a8k/a80x0/board/marvell_plat_config.c
+index 5945c97..76a7a4a 100644
+--- a/plat/marvell/a8k/a80x0/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a80x0/board/marvell_plat_config.c
+@@ -85,12 +85,20 @@ int marvell_get_rfu_memory_map(struct rfu_win **win, uint32_t *size)
+ /*******************************************************************************
+  * IOB Configuration
+  ******************************************************************************/
+-#define MARVELL_IOB_MAX_WIN	16
++#define MARVELL_IOB_MAX_WIN		16
+ 
+-struct iob_win iob_memory_map[] = {
++struct iob_win iob_memory_map_cp0[] = {
++	/* CP0 */
+ 	{0x0,	0xf7000000,	0x0,	0x1000000,	PEX1_TID}, /* PEX1_X1 window */
+ 	{0x0,	0xf8000000,	0x0,	0x1000000,	PEX2_TID}, /* PEX2_X1 window */
+-	{0x0,	0xf6000000,	0x0,	0x1000000,	PEX0_TID}, /* PEX0_X4 window */
++	{0x0,	0xf6000000,	0x0,	0x1000000,	PEX0_TID}  /* PEX0_X4 window */
++};
++
++struct iob_win iob_memory_map_cp1[] = {
++	/* CP1 */
++	{0x0,	0xfb000000,	0x0,	0x1000000,	PEX1_TID}, /* PEX1_X1 window */
++	{0x0,	0xfc000000,	0x0,	0x1000000,	PEX2_TID}, /* PEX2_X1 window */
++	{0x0,	0xfa000000,	0x0,	0x1000000,	PEX0_TID}  /* PEX0_X4 window */
+ };
+ 
+ uintptr_t marvell_get_iob_reg_offs(int cp_index)
+@@ -103,12 +111,22 @@ int marvell_get_iob_max_win(void)
+ 	return MARVELL_IOB_MAX_WIN;
+ }
+ 
+-int marvell_get_iob_memory_map(struct iob_win **win, uint32_t *size)
++int marvell_get_iob_memory_map(struct iob_win **win, uint32_t *size, int cp_index)
+ {
+-	*win = iob_memory_map;
+-	*size = sizeof(iob_memory_map)/sizeof(struct iob_win);
+-
+-	return 0;
++	switch (cp_index) {
++	case 0:
++		*win = iob_memory_map_cp0;
++		*size = sizeof(iob_memory_map_cp0)/sizeof(struct iob_win);
++		return 0;
++	case 1:
++		*win = iob_memory_map_cp1;
++		*size = sizeof(iob_memory_map_cp1)/sizeof(struct iob_win);
++		return 0;
++	default:
++		*size = 0;
++		*win = 0;
++		return 1;
++	}
+ }
+ 
+ /*******************************************************************************
+diff --git a/plat/marvell/a8k/apn806/board/marvell_plat_config.c b/plat/marvell/a8k/apn806/board/marvell_plat_config.c
+index 69034ef..3036a50 100644
+--- a/plat/marvell/a8k/apn806/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/apn806/board/marvell_plat_config.c
+@@ -79,7 +79,7 @@ int marvell_get_iob_max_win(void)
+ 	return MARVELL_IOB_MAX_WIN;
+ }
+ 
+-int marvell_get_iob_memory_map(struct iob_win **win, uint32_t *size)
++int marvell_get_iob_memory_map(struct iob_win **win, uint32_t *size, int cp_index)
+ {
+ 	*win = iob_memory_map;
+ 	*size = sizeof(iob_memory_map)/sizeof(struct iob_win);
+-- 
+1.9.1
+

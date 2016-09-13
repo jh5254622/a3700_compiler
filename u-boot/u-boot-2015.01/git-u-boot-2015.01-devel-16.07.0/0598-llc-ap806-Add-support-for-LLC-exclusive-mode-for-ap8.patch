@@ -1,0 +1,112 @@
+From ff87ff9850ee5275bab3fe4d3bd32cb64e0d1672 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 3 Dec 2015 13:12:44 +0200
+Subject: [PATCH 0598/1240] llc: ap806: Add support for LLC exclusive mode for
+ ap806-a0
+
+	- Add configuration option to support LLC exclusive mode.
+	- Add required L2 ACTLR configuration when working in LLC exclusive
+	  mode.
+
+Change-Id: Icbe3e16bba622d8077070244aeecd8e0c7a6d2c2
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25894
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/Kconfig     | 10 ++++++++++
+ arch/arm/cpu/armv8/armada8k/cache_llc.c | 15 +++++++++++++--
+ arch/arm/cpu/armv8/armada8k/psci.S      | 11 +++++++++++
+ 3 files changed, 34 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/Kconfig b/arch/arm/cpu/armv8/armada8k/Kconfig
+index de51744..ae76a3d 100644
+--- a/arch/arm/cpu/armv8/armada8k/Kconfig
++++ b/arch/arm/cpu/armv8/armada8k/Kconfig
+@@ -35,6 +35,16 @@ config MVEBU_LLC_ENABLE
+ 	help
+ 	  Enable LLC in PSCI code
+ 
++config MVEBU_LLC_EXCLUSIVE_EN
++	depends on MVEBU_LLC_ENABLE
++	bool "LLC Exclusive mode"
++	default n
++	help
++	  Enable LLC in exclusive mode.
++	  When Set
++	  1. Upon a Read hit, the CL is evicted from the LLC
++	  2. Read Allocate directive is ignored (i.e. no Linefilll done into LLC as a result of a read that misses)
++
+ config MVEBU_CCU
+ 	bool "CCU address decoding driver"
+ 	default n
+diff --git a/arch/arm/cpu/armv8/armada8k/cache_llc.c b/arch/arm/cpu/armv8/armada8k/cache_llc.c
+index 7c27f0f..cceeb41 100644
+--- a/arch/arm/cpu/armv8/armada8k/cache_llc.c
++++ b/arch/arm/cpu/armv8/armada8k/cache_llc.c
+@@ -27,7 +27,8 @@
+ #define L2X0_CLEAN_INV_WAY             0x7FC
+ 
+ #define LLC_CTRL_EN	                1
+-#define LLC_WAY_MASK				0xFFFFFFFF
++#define LLC_EXCLUSIVE_EN		0x100
++#define LLC_WAY_MASK			0xFFFFFFFF
+ 
+ /* insert all LLC function to secure section - part of the PSCI FW */
+ void llc_cache_sync(void) __attribute__ ((section (".secure_text")));
+@@ -74,8 +75,18 @@ void llc_disable(void)
+ 
+ void llc_enable(void)
+ {
++	u32 val;
++
++	asm volatile("dsb sy");
+ 	llc_inv_all();
+-	__raw_writel(LLC_CTRL_EN, MVEBU_LLC_BASE + LLC_CTRL);
++	asm volatile("dsb sy");
++
++	val = LLC_CTRL_EN;
++#ifdef CONFIG_MVEBU_LLC_EXCLUSIVE_EN
++	val |= LLC_EXCLUSIVE_EN;
++#endif
++	__raw_writel(val, MVEBU_LLC_BASE + LLC_CTRL);
++	asm volatile("dsb sy");
+ }
+ 
+ 
+diff --git a/arch/arm/cpu/armv8/armada8k/psci.S b/arch/arm/cpu/armv8/armada8k/psci.S
+index bd7070e..7f9cb3b 100644
+--- a/arch/arm/cpu/armv8/armada8k/psci.S
++++ b/arch/arm/cpu/armv8/armada8k/psci.S
+@@ -55,10 +55,20 @@ enable_affinity:
+ 	msr S3_1_c15_c2_1, x0
+ 	ret
+ 
++l2_setup:
++
++#ifdef CONFIG_MVEBU_LLC_EXCLUSIVE_EN
++	mrs x5, s3_1_c15_c0_0 /* L2 Aux Ctrl */
++	orr x5, x5, #(1 << 14) /* Enable UniqueClean evictions with data */
++	msr s3_1_c15_c0_0, x5 /* L2 Aux Ctrl */
++#endif
++	ret
++
+ .globl	psci_arch_init
+ psci_arch_init:
+ 	add     x29, x30, 0 /* keep return address */
+ 	bl	enable_affinity
++	bl	l2_setup
+ 	bl	psci_build_stack
+ #ifdef CONFIG_MVEBU_LLC_ENABLE
+ 	bl	llc_enable
+@@ -172,6 +182,7 @@ _armada8k_cpu_entry:
+ 
+ 	bl	enable_affinity
+ 
++	bl	l2_setup
+ 	isb
+ 
+ 	/*
+-- 
+1.9.1
+

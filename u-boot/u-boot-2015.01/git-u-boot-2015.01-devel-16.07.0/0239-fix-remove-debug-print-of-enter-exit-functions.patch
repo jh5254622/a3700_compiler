@@ -1,0 +1,30 @@
+From 2341a046c5bd230a77423a29f3676b0400d0dd9c Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 8 Jul 2015 11:35:53 +0300
+Subject: [PATCH 0239/1240] fix: remove debug print of enter/exit functions
+
+Change-Id: If00a00fadc0fe5a20ec0d8b44d6763fbfa42a66e
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/21128
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ include/configs/mvebu-common.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 48d016e..63a1f0b 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -28,7 +28,7 @@
+ /* #define DEBUG */
+ #define CONFIG_BOOTSTAGE
+ #define CONFIG_BOOTSTAGE_REPORT
+-#define CONFIG_MVEBU_DEBUG_FUNC_IN_OUT
++/* #define CONFIG_MVEBU_DEBUG_FUNC_IN_OUT */
+ /* #define CONFIG_MV_DEBUG_PUTS */
+ 
+ #define CONFIG_SYS_GENERIC_BOARD
+-- 
+1.9.1
+

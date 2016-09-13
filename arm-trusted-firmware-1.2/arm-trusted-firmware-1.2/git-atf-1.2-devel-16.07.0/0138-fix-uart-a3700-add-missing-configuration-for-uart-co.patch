@@ -1,0 +1,94 @@
+From bb9bcba7b471b188dae19a215c82c3ebeb298cd7 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Fri, 15 Apr 2016 16:08:10 +0800
+Subject: [PATCH 138/239] fix: uart: a3700: add missing configuration for uart
+ console
+
+- This patch is to implement the full initialization
+  procedure for Armada3700 UART console, which includes
+  RX/TX FIFO reset, set the default baud rate to 115200
+  set non parity and 1 stop-bit.
+
+Change-Id: I84dcfd4a3c1e0f86b3adc186389c1a95b0c6086d
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29053
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/marvell/uart/a3700_console.S | 41 +++++++++++++++++++++++++++++++-----
+ drivers/marvell/uart/a3700_console.h |  4 ++++
+ 2 files changed, 40 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/marvell/uart/a3700_console.S b/drivers/marvell/uart/a3700_console.S
+index 31f1ca5..09e58dc 100644
+--- a/drivers/marvell/uart/a3700_console.S
++++ b/drivers/marvell/uart/a3700_console.S
+@@ -50,16 +50,47 @@
+ 	 * -----------------------------------------------
+ 	 */
+ func console_core_init
++	/* Check the input base address */
++	cbz	x0, init_fail
++	/* Check baud rate and uart clock for sanity */
++	cbz	w1, init_fail
++	cbz	w2, init_fail
+ 
+ 	/* Program the baudrate */
+ 	/* Divisor =  Uart clock / (16 * baudrate) */
+-	/* Todo:
+-		1. set 115200KBps fixed Baud rate
+-		2. reset FIFOs
+-		3. No Parity, 1 Stop
+-	*/
++	lsl	w2, w2, #4
++	udiv	w2, w1, w2
++	and	w2, w2, #0x3ff
+ 
++	ldr	w3, [x0, #UART_BAUD_REG]
++	bic	w3, w3, 0x3ff
++	orr	w3, w3, w2
++	str	w3, [x0, #UART_BAUD_REG]/* set baud rate divisor */
++
++	/* Set UART to default 16X scheme */
++	mov	w3, #0
++	str	w3, [x0, #UART_POSSR_REG]
++
++	/* Reset FIFO */
++	mov	w3, #UART_CTRL_RXFIFO_RESET
++	orr	w3, w3, #UART_CTRL_TXFIFO_RESET
++	str	w3, [x0, #UART_CTRL_REG]
++
++	/* Delay */
++	mov	w2, #2000
++1:
++	sub     w2, w2, #1
++	cmp	w2, #0
++	b.ne	1b
++
++	/* No Parity, 1 Stop */
++	mov	w3, #0
++	str	w3, [x0, #UART_CTRL_REG]
++
++	mov	w0, #1
++	ret
+ init_fail:
++	mov	w0, #0
+ 	ret
+ endfunc console_core_init
+ 
+diff --git a/drivers/marvell/uart/a3700_console.h b/drivers/marvell/uart/a3700_console.h
+index 0960891..df4ab8b 100644
+--- a/drivers/marvell/uart/a3700_console.h
++++ b/drivers/marvell/uart/a3700_console.h
+@@ -70,4 +70,8 @@
+ /* Line Status Register bits */
+ #define UARTLSR_TXFIFOFULL	(1 << 11)	/* Tx Fifo Full */
+ 
++/* UART Control Register bits */
++#define UART_CTRL_RXFIFO_RESET	(1 << 14)
++#define UART_CTRL_TXFIFO_RESET	(1 << 15)
++
+ #endif	/* __A3700_CONSOLE_H__ */
+-- 
+1.9.1
+

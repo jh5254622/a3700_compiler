@@ -1,0 +1,291 @@
+From 34cb55d9c2a32efe74d13382805dcb847b000791 Mon Sep 17 00:00:00 2001
+From: Jing Hua <jinghua@marvell.com>
+Date: Wed, 11 Nov 2015 13:58:47 +0800
+Subject: [PATCH 0514/1240] fix: xhci: fix xhci mainline compile issue in
+ Aarch64
+
+	In mainline xhci driver, uint_32 is used hold pointer, which would
+	cause a compilation error in Aarch64.
+	To fix this, change uint_32 to uintprt_t, which compiles both in Aarch32
+	and Aarch64.
+
+Change-Id: Idaf14e69e65d56203864432db98ceccc555f23a0
+Signed-off-by: Jing Hua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24728
+Reviewed-by: Hezi Shahmoon <hezi@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ common/usb_storage.c         |  6 +++---
+ drivers/usb/host/xhci-mem.c  | 20 ++++++++++----------
+ drivers/usb/host/xhci-ring.c | 30 +++++++++++++++---------------
+ drivers/usb/host/xhci.c      | 10 +++++-----
+ drivers/usb/host/xhci.h      |  4 ++--
+ 5 files changed, 35 insertions(+), 35 deletions(-)
+
+diff --git a/common/usb_storage.c b/common/usb_storage.c
+index 1411737..9bb5783 100644
+--- a/common/usb_storage.c
++++ b/common/usb_storage.c
+@@ -336,8 +336,8 @@ static int us_one_transfer(struct us_data *us, int pipe, char *buf, int length)
+ 		/* set up the transfer loop */
+ 		do {
+ 			/* transfer the data */
+-			debug("Bulk xfer 0x%x(%d) try #%d\n",
+-			      (unsigned int)buf, this_xfer, 11 - maxtry);
++			debug("Bulk xfer 0x%lx(%d) try #%d\n",
++			      (uintptr_t)buf, this_xfer, 11 - maxtry);
+ 			result = usb_bulk_msg(us->pusb_dev, pipe, buf,
+ 					      this_xfer, &partial,
+ 					      USB_CNTL_TIMEOUT * 5);
+@@ -603,7 +603,7 @@ static int usb_stor_CBI_get_status(ccb *srb, struct us_data *us)
+ 			(void *) &us->ip_data, us->irqmaxp, us->irqinterval);
+ 	timeout = 1000;
+ 	while (timeout--) {
+-		if ((volatile int *) us->ip_wanted == NULL)
++		if ((volatile int *)(unsigned long)(us->ip_wanted) == NULL)
+ 			break;
+ 		mdelay(10);
+ 	}
+diff --git a/drivers/usb/host/xhci-mem.c b/drivers/usb/host/xhci-mem.c
+index 89908e8..10f11cd 100644
+--- a/drivers/usb/host/xhci-mem.c
++++ b/drivers/usb/host/xhci-mem.c
+@@ -31,7 +31,7 @@
+  * @param len	the length of the cache line to be flushed
+  * @return none
+  */
+-void xhci_flush_cache(uint32_t addr, u32 len)
++void xhci_flush_cache(uintptr_t addr, u32 len)
+ {
+ 	BUG_ON((void *)addr == NULL || len == 0);
+ 
+@@ -46,7 +46,7 @@ void xhci_flush_cache(uint32_t addr, u32 len)
+  * @param len	the length of the cache line to be invalidated
+  * @return none
+  */
+-void xhci_inval_cache(uint32_t addr, u32 len)
++void xhci_inval_cache(uintptr_t addr, u32 len)
+ {
+ 	BUG_ON((void *)addr == NULL || len == 0);
+ 
+@@ -175,7 +175,7 @@ static void *xhci_malloc(unsigned int size)
+ 	BUG_ON(!ptr);
+ 	memset(ptr, '\0', size);
+ 
+-	xhci_flush_cache((uint32_t)ptr, size);
++	xhci_flush_cache((uintptr_t)ptr, size);
+ 
+ 	return ptr;
+ }
+@@ -400,8 +400,8 @@ int xhci_alloc_virt_device(struct usb_device *udev)
+ 	/* Point to output device context in dcbaa. */
+ 	ctrl->dcbaa->dev_context_ptrs[slot_id] = byte_64;
+ 
+-	xhci_flush_cache((uint32_t)&ctrl->dcbaa->dev_context_ptrs[slot_id],
+-							sizeof(__le64));
++	xhci_flush_cache((uintptr_t)&ctrl->dcbaa->dev_context_ptrs[slot_id],
++			 sizeof(__le64));
+ 	return 0;
+ }
+ 
+@@ -478,8 +478,8 @@ int xhci_mem_init(struct xhci_ctrl *ctrl, struct xhci_hccr *hccr,
+ 		entry->rsvd = 0;
+ 		seg = seg->next;
+ 	}
+-	xhci_flush_cache((uint32_t)ctrl->erst.entries,
+-			ERST_NUM_SEGS * sizeof(struct xhci_erst_entry));
++	xhci_flush_cache((uintptr_t)ctrl->erst.entries,
++			 ERST_NUM_SEGS * sizeof(struct xhci_erst_entry));
+ 
+ 	deq = (unsigned long)ctrl->event_ring->dequeue;
+ 
+@@ -496,7 +496,7 @@ int xhci_mem_init(struct xhci_ctrl *ctrl, struct xhci_hccr *hccr,
+ 	/* this is the event ring segment table pointer */
+ 	val_64 = xhci_readq(&ctrl->ir_set->erst_base);
+ 	val_64 &= ERST_PTR_MASK;
+-	val_64 |= ((u32)(ctrl->erst.entries) & ~ERST_PTR_MASK);
++	val_64 |= ((uintptr_t)(ctrl->erst.entries) & ~ERST_PTR_MASK);
+ 
+ 	xhci_writeq(&ctrl->ir_set->erst_base, val_64);
+ 
+@@ -715,6 +715,6 @@ void xhci_setup_addressable_virt_dev(struct usb_device *udev)
+ 
+ 	/* Steps 7 and 8 were done in xhci_alloc_virt_device() */
+ 
+-	xhci_flush_cache((uint32_t)ep0_ctx, sizeof(struct xhci_ep_ctx));
+-	xhci_flush_cache((uint32_t)slot_ctx, sizeof(struct xhci_slot_ctx));
++	xhci_flush_cache((uintptr_t)ep0_ctx, sizeof(struct xhci_ep_ctx));
++	xhci_flush_cache((uintptr_t)slot_ctx, sizeof(struct xhci_slot_ctx));
+ }
+diff --git a/drivers/usb/host/xhci-ring.c b/drivers/usb/host/xhci-ring.c
+index b5aade9..f3759d4 100644
+--- a/drivers/usb/host/xhci-ring.c
++++ b/drivers/usb/host/xhci-ring.c
+@@ -122,8 +122,8 @@ static void inc_enq(struct xhci_ctrl *ctrl, struct xhci_ring *ring,
+ 			next->link.control |= cpu_to_le32(chain);
+ 
+ 			next->link.control ^= cpu_to_le32(TRB_CYCLE);
+-			xhci_flush_cache((uint32_t)next,
+-						sizeof(union xhci_trb));
++			xhci_flush_cache((uintptr_t)next,
++					 sizeof(union xhci_trb));
+ 		}
+ 		/* Toggle the cycle bit after the last ring segment. */
+ 		if (last_trb_on_last_seg(ctrl, ring,
+@@ -191,7 +191,7 @@ static struct xhci_generic_trb *queue_trb(struct xhci_ctrl *ctrl,
+ 	for (i = 0; i < 4; i++)
+ 		trb->field[i] = cpu_to_le32(trb_fields[i]);
+ 
+-	xhci_flush_cache((uint32_t)trb, sizeof(struct xhci_generic_trb));
++	xhci_flush_cache((uintptr_t)trb, sizeof(struct xhci_generic_trb));
+ 
+ 	inc_enq(ctrl, ring, more_trbs_coming);
+ 
+@@ -244,7 +244,7 @@ static int prepare_ring(struct xhci_ctrl *ctrl, struct xhci_ring *ep_ring,
+ 
+ 		next->link.control ^= cpu_to_le32(TRB_CYCLE);
+ 
+-		xhci_flush_cache((uint32_t)next, sizeof(union xhci_trb));
++		xhci_flush_cache((uintptr_t)next, sizeof(union xhci_trb));
+ 
+ 		/* Toggle the cycle bit after the last ring segment. */
+ 		if (last_trb_on_last_seg(ctrl, ep_ring,
+@@ -364,7 +364,7 @@ static void giveback_first_trb(struct usb_device *udev, int ep_index,
+ 	else
+ 		start_trb->field[3] &= cpu_to_le32(~TRB_CYCLE);
+ 
+-	xhci_flush_cache((uint32_t)start_trb, sizeof(struct xhci_generic_trb));
++	xhci_flush_cache((uintptr_t)start_trb, sizeof(struct xhci_generic_trb));
+ 
+ 	/* Ringing EP doorbell here */
+ 	xhci_writel(&ctrl->dba->doorbell[udev->slot_id],
+@@ -403,8 +403,8 @@ static int event_ready(struct xhci_ctrl *ctrl)
+ {
+ 	union xhci_trb *event;
+ 
+-	xhci_inval_cache((uint32_t)ctrl->event_ring->dequeue,
+-					sizeof(union xhci_trb));
++	xhci_inval_cache((uintptr_t)ctrl->event_ring->dequeue,
++			 sizeof(union xhci_trb));
+ 
+ 	event = ctrl->event_ring->dequeue;
+ 
+@@ -576,8 +576,8 @@ int xhci_bulk_tx(struct usb_device *udev, unsigned long pipe,
+ 	ep_index = usb_pipe_ep_index(pipe);
+ 	virt_dev = ctrl->devs[slot_id];
+ 
+-	xhci_inval_cache((uint32_t)virt_dev->out_ctx->bytes,
+-					virt_dev->out_ctx->size);
++	xhci_inval_cache((uintptr_t)virt_dev->out_ctx->bytes,
++			 virt_dev->out_ctx->size);
+ 
+ 	ep_ctx = xhci_get_ep_ctx(ctrl, virt_dev->out_ctx, ep_index);
+ 
+@@ -644,7 +644,7 @@ int xhci_bulk_tx(struct usb_device *udev, unsigned long pipe,
+ 	first_trb = true;
+ 
+ 	/* flush the buffer before use */
+-	xhci_flush_cache((uint32_t)buffer, length);
++	xhci_flush_cache((uintptr_t)buffer, length);
+ 
+ 	/* Queue the first TRB, even if it's zero-length */
+ 	do {
+@@ -722,7 +722,7 @@ int xhci_bulk_tx(struct usb_device *udev, unsigned long pipe,
+ 
+ 	record_transfer_result(udev, event, length);
+ 	xhci_acknowledge_event(ctrl);
+-	xhci_inval_cache((uint32_t)buffer, length);
++	xhci_inval_cache((uintptr_t)buffer, length);
+ 
+ 	return (udev->status != USB_ST_NOT_PROC) ? 0 : -1;
+ }
+@@ -776,8 +776,8 @@ int xhci_ctrl_tx(struct usb_device *udev, unsigned long pipe,
+ 			return ret;
+ 	}
+ 
+-	xhci_inval_cache((uint32_t)virt_dev->out_ctx->bytes,
+-				virt_dev->out_ctx->size);
++	xhci_inval_cache((uintptr_t)virt_dev->out_ctx->bytes,
++			 virt_dev->out_ctx->size);
+ 
+ 	struct xhci_ep_ctx *ep_ctx = NULL;
+ 	ep_ctx = xhci_get_ep_ctx(ctrl, virt_dev->out_ctx, ep_index);
+@@ -874,7 +874,7 @@ int xhci_ctrl_tx(struct usb_device *udev, unsigned long pipe,
+ 		trb_fields[2] = length_field;
+ 		trb_fields[3] = field | ep_ring->cycle_state;
+ 
+-		xhci_flush_cache((uint32_t)buffer, length);
++		xhci_flush_cache((uintptr_t)buffer, length);
+ 		queue_trb(ctrl, ep_ring, true, trb_fields);
+ 	}
+ 
+@@ -915,7 +915,7 @@ int xhci_ctrl_tx(struct usb_device *udev, unsigned long pipe,
+ 
+ 	/* Invalidate buffer to make it available to usb-core */
+ 	if (length > 0)
+-		xhci_inval_cache((uint32_t)buffer, length);
++		xhci_inval_cache((uintptr_t)buffer, length);
+ 
+ 	if (GET_COMP_CODE(le32_to_cpu(event->trans_event.transfer_len))
+ 			== COMP_SHORT_TX) {
+diff --git a/drivers/usb/host/xhci.c b/drivers/usb/host/xhci.c
+index 87f2972..f8b5ce4 100644
+--- a/drivers/usb/host/xhci.c
++++ b/drivers/usb/host/xhci.c
+@@ -256,7 +256,7 @@ static int xhci_configure_endpoints(struct usb_device *udev, bool ctx_change)
+ 	virt_dev = ctrl->devs[udev->slot_id];
+ 	in_ctx = virt_dev->in_ctx;
+ 
+-	xhci_flush_cache((uint32_t)in_ctx->bytes, in_ctx->size);
++	xhci_flush_cache((uintptr_t)in_ctx->bytes, in_ctx->size);
+ 	xhci_queue_command(ctrl, in_ctx->bytes, udev->slot_id, 0,
+ 			   ctx_change ? TRB_EVAL_CONTEXT : TRB_CONFIG_EP);
+ 	event = xhci_wait_for_event(ctrl, TRB_COMPLETION);
+@@ -325,7 +325,7 @@ static int xhci_set_configuration(struct usb_device *udev)
+ 			max_ep_flag = ep_flag;
+ 	}
+ 
+-	xhci_inval_cache((uint32_t)out_ctx->bytes, out_ctx->size);
++	xhci_inval_cache((uintptr_t)out_ctx->bytes, out_ctx->size);
+ 
+ 	/* slot context */
+ 	xhci_slot_copy(ctrl, in_ctx, out_ctx);
+@@ -442,8 +442,8 @@ static int xhci_address_device(struct usb_device *udev)
+ 		 */
+ 		return ret;
+ 
+-	xhci_inval_cache((uint32_t)virt_dev->out_ctx->bytes,
+-				virt_dev->out_ctx->size);
++	xhci_inval_cache((uintptr_t)virt_dev->out_ctx->bytes,
++			 virt_dev->out_ctx->size);
+ 	slot_ctx = xhci_get_slot_ctx(ctrl, virt_dev->out_ctx);
+ 
+ 	debug("xHC internal address is: %d\n",
+@@ -525,7 +525,7 @@ int xhci_check_maxpacket(struct usb_device *udev)
+ 	ifdesc = &udev->config.if_desc[0];
+ 
+ 	out_ctx = ctrl->devs[slot_id]->out_ctx;
+-	xhci_inval_cache((uint32_t)out_ctx->bytes, out_ctx->size);
++	xhci_inval_cache((uintptr_t)out_ctx->bytes, out_ctx->size);
+ 
+ 	ep_ctx = xhci_get_ep_ctx(ctrl, out_ctx, ep_index);
+ 	hw_max_packet_size = MAX_PACKET_DECODED(le32_to_cpu(ep_ctx->ep_info2));
+diff --git a/drivers/usb/host/xhci.h b/drivers/usb/host/xhci.h
+index 6685ed2..e395d48 100644
+--- a/drivers/usb/host/xhci.h
++++ b/drivers/usb/host/xhci.h
+@@ -1242,8 +1242,8 @@ int xhci_bulk_tx(struct usb_device *udev, unsigned long pipe,
+ int xhci_ctrl_tx(struct usb_device *udev, unsigned long pipe,
+ 		 struct devrequest *req, int length, void *buffer);
+ int xhci_check_maxpacket(struct usb_device *udev);
+-void xhci_flush_cache(uint32_t addr, u32 type_len);
+-void xhci_inval_cache(uint32_t addr, u32 type_len);
++void xhci_flush_cache(uintptr_t addr, u32 type_len);
++void xhci_inval_cache(uintptr_t addr, u32 type_len);
+ void xhci_cleanup(struct xhci_ctrl *ctrl);
+ struct xhci_ring *xhci_ring_alloc(unsigned int num_segs, bool link_trbs);
+ int xhci_alloc_virt_device(struct usb_device *udev);
+-- 
+1.9.1
+

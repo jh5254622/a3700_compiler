@@ -1,0 +1,222 @@
+From b9994cf15ad9151a5b640315f8a6b5f124de11d6 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Thu, 19 Nov 2015 20:33:53 +0200
+Subject: [PATCH 0520/1240] spl: add support for passing information from spl
+ to u-boot
+
+	- Save information from spl in addrress 0x4000000,
+	  and read this information into a u-boot struct.
+
+Change-Id: If78b0aad4fce91bee8a0a855b54589b321456f58
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25069
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Kconfig             | 10 +++++
+ arch/arm/cpu/mvebu-common/Makefile            |  1 +
+ arch/arm/cpu/mvebu-common/system_info.c       | 62 +++++++++++++++++++++++++++
+ arch/arm/include/asm/arch-mvebu/system_info.h | 38 ++++++++++++++++
+ arch/arm/include/asm/global_data.h            |  7 +++
+ board/mvebu/common/init.c                     |  6 +++
+ 6 files changed, 124 insertions(+)
+ create mode 100644 arch/arm/cpu/mvebu-common/system_info.c
+ create mode 100644 arch/arm/include/asm/arch-mvebu/system_info.h
+
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index b17bb44..99a09a6 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -121,6 +121,16 @@ config MVEBU_TOOLS_SUPPORT
+ 	  for different tools function for
+ 	  U-Boot/SPL code
+ 
++config MVEBU_SYS_INFO
++	bool "System info transmitted to u-boot"
++	default y
++	help
++	  Choose this option to add support
++	  for system information in u-boot.
++	  If you want to transfer information
++	  from spl to u-boot, you need to choose
++	  this option.
++
+ if MVEBU_TOOLS_SUPPORT
+ source "arch/arm/cpu/mvebu-common/tools/Kconfig"
+ endif
+diff --git a/arch/arm/cpu/mvebu-common/Makefile b/arch/arm/cpu/mvebu-common/Makefile
+index 68cebb1..aea9f97 100644
+--- a/arch/arm/cpu/mvebu-common/Makefile
++++ b/arch/arm/cpu/mvebu-common/Makefile
+@@ -17,6 +17,7 @@
+ #
+ 
+ obj-y += soc-init.o
++obj-$(CONFIG_MVEBU_SYS_INFO) += system_info.o
+ obj-y += misc.o
+ obj-$(CONFIG_MVEBU_MPP_BUS) += mpp-bus.o
+ obj-y += fdt.o
+diff --git a/arch/arm/cpu/mvebu-common/system_info.c b/arch/arm/cpu/mvebu-common/system_info.c
+new file mode 100644
+index 0000000..9c0217c
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/system_info.c
+@@ -0,0 +1,62 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <malloc.h>
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch-mvebu/system_info.h>
++
++struct sys_info *sys_info_in_ptr = (struct sys_info *)SYSTEM_INFO_ADDRESS;
++#ifdef CONFIG_SPL_BUILD
++/* skip index 0 because this index in dedicated to array system-info size*/
++int sys_info_size = 1;
++
++void set_info(enum sys_info_type field, unsigned int value)
++{
++	if (sys_info_size == 1)
++		sys_info_in_ptr[ARRAY_SIZE].field_id = ARRAY_SIZE;
++	sys_info_in_ptr[sys_info_size].field_id = field;
++	sys_info_in_ptr[sys_info_size].value = value;
++	sys_info_in_ptr[ARRAY_SIZE].value = ++sys_info_size;
++}
++
++#else /*for U-Boot */
++DECLARE_GLOBAL_DATA_PTR;
++
++int get_info(enum sys_info_type field)
++{
++	int i;
++	for (i = 1; i < sys_info_in_ptr[ARRAY_SIZE].value; i++)
++		if (gd->arch.local_sys_info[i].field_id == field)
++			return gd->arch.local_sys_info[i].value;
++	return -1;
++}
++
++void sys_info_init(void)
++{
++	int i;
++
++	if (sys_info_in_ptr[ARRAY_SIZE].field_id != ARRAY_SIZE)
++		sys_info_in_ptr[ARRAY_SIZE].value = 1;
++
++	for (i = 1; i < sys_info_in_ptr[ARRAY_SIZE].value ; i++) {
++		gd->arch.local_sys_info[i].field_id = sys_info_in_ptr[i].field_id;
++		gd->arch.local_sys_info[i].value = sys_info_in_ptr[i].value;
++	}
++}
++#endif
+diff --git a/arch/arm/include/asm/arch-mvebu/system_info.h b/arch/arm/include/asm/arch-mvebu/system_info.h
+new file mode 100644
+index 0000000..2aae346
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/system_info.h
+@@ -0,0 +1,38 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _SYSTEM_INFO_H_
++#define _SYSTEM_INFO_H_
++
++#define SYSTEM_INFO_ADDRESS	0x4000000
++
++enum sys_info_type {
++	ARRAY_SIZE,
++	MAX_OPTION,
++};
++
++struct sys_info {
++	enum sys_info_type field_id;
++	unsigned int value;
++};
++
++int get_info(enum sys_info_type field);
++void set_info(enum sys_info_type field, unsigned int value);
++void sys_info_init(void);
++
++#endif /* _SYSTEM_INFO_H_ */
+diff --git a/arch/arm/include/asm/global_data.h b/arch/arm/include/asm/global_data.h
+index 74682f6..151aa1b 100644
+--- a/arch/arm/include/asm/global_data.h
++++ b/arch/arm/include/asm/global_data.h
+@@ -8,6 +8,10 @@
+ #ifndef	__ASM_GBL_DATA_H
+ #define __ASM_GBL_DATA_H
+ 
++#ifdef CONFIG_MVEBU_SYS_INFO
++#include <asm/arch-mvebu/system_info.h>
++#endif
++
+ #ifdef CONFIG_OMAP
+ #include <asm/omap_boot.h>
+ #endif
+@@ -56,6 +60,9 @@ struct arch_global_data {
+ 	void *soc_family;
+ 	void *board_family;
+ 	void *reg_base;
++#ifdef CONFIG_MVEBU_SYS_INFO
++	struct sys_info local_sys_info[MAX_OPTION];
++#endif
+ #ifdef CONFIG_ENV_IS_IN_BOOTDEV
+ 	struct env_func_ptr env_func;
+ #endif
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index b29f4ea..69a9bc9 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -26,6 +26,7 @@
+ #include <asm/arch-mvebu/soc.h>
+ #include <asm/arch-mvebu/pinctl.h>
+ #include <asm/arch-mvebu/mpp.h>
++#include <asm/arch-mvebu/system_info.h>
+ #include "board.h"
+ #ifdef CONFIG_DEVEL_BOARD
+ #include "devel-board.h"
+@@ -52,6 +53,11 @@ int soc_early_init_f(void)
+ int board_early_init_f(void)
+ {
+ 	soc_early_init_f();
++#ifdef CONFIG_MVEBU_SYS_INFO
++/* Call this function to transfer data from address 0x4000000
++   into a global struct, before code relocation. */
++	sys_info_init();
++#endif
+ 	return 0;
+ }
+ #endif
+-- 
+1.9.1
+

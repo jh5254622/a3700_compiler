@@ -1,0 +1,30 @@
+From c5b38abedab020f24ba79571eea89ec9cbb0294f Mon Sep 17 00:00:00 2001
+From: Ahmad Abbas <ahmada@marvell.com>
+Date: Wed, 2 Mar 2016 12:35:50 +0200
+Subject: [PATCH 0919/1240] menuconfig : mvebu: menuconfig clean up - mvebu
+ commands
+
+added a dependency to mvebu commands to CONFIG_MVEBU
+
+Change-Id: Ibe34a6c9720aa2d699e83dbb31aed068f8e046e1
+Signed-off-by: Ahmad Abbas <ahmada@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27984
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ common/mvebu/Kconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/common/mvebu/Kconfig b/common/mvebu/Kconfig
+index fd6929c..4b907e2 100644
+--- a/common/mvebu/Kconfig
++++ b/common/mvebu/Kconfig
+@@ -1,4 +1,5 @@
+ menu "MVEBU commands"
++depends on MVEBU
+ 
+ config CMD_MVEBU_MISC
+ 	bool "map, remap, units, ir"
+-- 
+1.9.1
+

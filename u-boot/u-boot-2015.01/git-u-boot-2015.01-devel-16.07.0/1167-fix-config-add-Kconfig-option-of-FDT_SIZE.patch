@@ -1,0 +1,304 @@
+From bfb8e5f9715926a13f392da1f8c90d8d90752fa0 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Wed, 25 May 2016 16:27:11 +0300
+Subject: [PATCH 1167/1240] fix: config: add Kconfig option of FDT_SIZE
+
+MVEBU_FDT_SIZE was configured in .h config files, and couldn't be
+used in Makefiles, so in Makefile the value was duplicated hardcoded.
+
+to avoid conflict issues between both configurations, this patch sets
+this parameter as Kconfig field instead.
+- set original values for all SoCs so this patch has no actual effect.
+
+Change-Id: I60159e8e9a87d5e24774be56b7d570a7f3fb5a2f
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29996
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/Makefile                        |  2 +-
+ board/mvebu/common/cfg_eeprom.c              | 30 ++++++++++++++--------------
+ board/mvebu/common/cfg_eeprom.h              |  4 ++--
+ board/mvebu/common/fdt_config.c              |  6 +++---
+ configs/mvebu_armada3700_defconfig           |  1 +
+ configs/mvebu_armada3700_palladium_defconfig |  1 +
+ configs/mvebu_armada38x_defconfig            |  1 +
+ dts/Kconfig                                  |  7 +++++++
+ include/configs/armada3700.h                 |  2 --
+ include/configs/armada38x.h                  |  2 --
+ include/configs/armada8k.h                   |  1 -
+ 11 files changed, 31 insertions(+), 26 deletions(-)
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index 33fe3da..d1fe065 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -97,7 +97,7 @@ targets += $(dtb-y)
+ # alignment fdt file to 7K in Armada3700 and to 12k in Armada8k. this is helpful to support multi fdt.
+ # This alignment allows selecting DT files easily by skipping over a predefined DT size.
+ ifdef CONFIG_TARGET_ARMADA_8K
+-DTC_FLAGS += -R 4 -S 0x3000
++DTC_FLAGS += -R 4 -S $(CONFIG_FDT_SIZE)
+ else
+ DTC_FLAGS += -R 4 -S 0x1C00
+ endif #CONFIG_TARGET_ARMADA_8K
+diff --git a/board/mvebu/common/cfg_eeprom.c b/board/mvebu/common/cfg_eeprom.c
+index 086ff9d..b5bfcf3 100644
+--- a/board/mvebu/common/cfg_eeprom.c
++++ b/board/mvebu/common/cfg_eeprom.c
+@@ -30,12 +30,12 @@ struct board_config_struct *board_cfg = &(board_config_val.board_config);
+ struct config_types_info config_types_info[] = MV_EEPROM_CONFIG_INFO;
+ /* this array is used as temporary fdt, in order to enable to make changes
+  on the fdt_blob without changing the fdt in the local struct */
+-uint8_t fdt_blob_temp[MVEBU_FDT_SIZE];
++uint8_t fdt_blob_temp[CONFIG_FDT_SIZE];
+ int eeprom_initialized = -1;
+ int g_board_id = -1;
+ #ifdef CONFIG_TARGET_ARMADA_8K
+ /* this array is used a buffer to zip and unzip the fdt blob */
+-uint8_t fdt_zip_buffer[MVEBU_FDT_SIZE];
++uint8_t fdt_zip_buffer[CONFIG_FDT_SIZE];
+ #endif
+ 
+ static char hw_info_param_list[][HW_INFO_MAX_NAME_LEN] = {
+@@ -107,7 +107,7 @@ int cfg_eeprom_zip_and_unzip(unsigned long size, void *source_fdt, bool zip_flag
+ 			return -1;
+ 		}
+ 	}
+-	if (new_size > MVEBU_FDT_SIZE) {
++	if (new_size > CONFIG_FDT_SIZE) {
+ 		error("Unexpected size of zip file = %lu\n", new_size);
+ 		return -1;
+ 	}
+@@ -132,7 +132,7 @@ int cfg_eeprom_unzip_fdt(unsigned long size, void *source_fdt)
+ int cfg_eeprom_zip_fdt(unsigned long size, void *source_fdt)
+ {
+ 	/* return the orignal size of the fdt blob */
+-	return MVEBU_FDT_SIZE;
++	return CONFIG_FDT_SIZE;
+ }
+ 
+ int cfg_eeprom_unzip_fdt(unsigned long size, void *source_fdt)
+@@ -156,10 +156,10 @@ bool cfg_eeprom_upload_fdt_from_flash(u8 fdt_config_id)
+ 	for (i = 0; fdt_check_header(fdt_blob) == 0; i++) {
+ 		if ((u8)fdtdec_get_int(fdt_blob, 0, "fdt_config_id", -1) == fdt_config_id &&
+ 		    (u8)fdtdec_get_int(fdt_blob, 0, "board_id", -1) == cfg_eeprom_get_board_id()) {
+-			memcpy((void *)board_config_val.fdt_blob, fdt_blob, MVEBU_FDT_SIZE);
++			memcpy((void *)board_config_val.fdt_blob, fdt_blob, CONFIG_FDT_SIZE);
+ 			return true;
+ 		}
+-		fdt_blob += MVEBU_FDT_SIZE;
++		fdt_blob += CONFIG_FDT_SIZE;
+ 	}
+ 	return false;
+ }
+@@ -179,7 +179,7 @@ bool cfg_eeprom_upload_fdt_from_eeprom(uint8_t *fdt_blob)
+ 			 fdt_blob_temp, fdt_blob_size);
+ 
+ 		/* decompress fdt */
+-		decompressed_size = cfg_eeprom_unzip_fdt(MVEBU_FDT_SIZE, (void *)fdt_blob_temp);
++		decompressed_size = cfg_eeprom_unzip_fdt(CONFIG_FDT_SIZE, (void *)fdt_blob_temp);
+ 
+ 		if (decompressed_size == -1)
+ 			return false;
+@@ -189,7 +189,7 @@ bool cfg_eeprom_upload_fdt_from_eeprom(uint8_t *fdt_blob)
+ 			debug("FDT in EEPROM is invalid and didn't loaded to RAM\n");
+ 			return false;
+ 		}
+-		memcpy((void *)fdt_blob, fdt_blob_temp, MVEBU_FDT_SIZE);
++		memcpy((void *)fdt_blob, fdt_blob_temp, CONFIG_FDT_SIZE);
+ 	} else {
+ 		debug("FDT in EEPROM is invalid and didn't loaded to RAM\n");
+ 		return false;
+@@ -239,12 +239,12 @@ void cfg_eeprom_save(uint8_t *fdt_blob, int write_forced_fdt)
+ 	if (board_config_val.board_config.fdt_cfg_en == 1 || write_forced_fdt) {
+ 		/* back up the fdt that is in the local struct, and restore it at the end of this function */
+ 		if (fdt_blob != board_config_val.fdt_blob) {
+-			memcpy((void *)fdt_blob_temp, (void *)board_config_val.fdt_blob, MVEBU_FDT_SIZE);
+-			memcpy((void *)board_config_val.fdt_blob, (void *)fdt_blob, MVEBU_FDT_SIZE);
++			memcpy((void *)fdt_blob_temp, (void *)board_config_val.fdt_blob, CONFIG_FDT_SIZE);
++			memcpy((void *)board_config_val.fdt_blob, (void *)fdt_blob, CONFIG_FDT_SIZE);
+ 		}
+ 
+ 		/* compress fdt */
+-		compressed_size = cfg_eeprom_zip_fdt(MVEBU_FDT_SIZE, (void *)board_config_val.fdt_blob);
++		compressed_size = cfg_eeprom_zip_fdt(CONFIG_FDT_SIZE, (void *)board_config_val.fdt_blob);
+ 
+ 		if (compressed_size == -1)
+ 			return;
+@@ -262,15 +262,15 @@ void cfg_eeprom_save(uint8_t *fdt_blob, int write_forced_fdt)
+ 		/* decompress fdt - After saving the fdt, the compressed file is in the struct,
+ 		   therefore need to return to the state before saving the FDT. to let the user
+ 		   continue work without resetting his board. */
+-		decompressed_size = cfg_eeprom_unzip_fdt(MVEBU_FDT_SIZE, (void *)board_config_val.fdt_blob);
++		decompressed_size = cfg_eeprom_unzip_fdt(CONFIG_FDT_SIZE, (void *)board_config_val.fdt_blob);
+ 
+ 		if (decompressed_size == -1)
+ 			return;
+ 
+ 		/* restore the fdt from local struct after it was written*/
+ 		if (fdt_blob != board_config_val.fdt_blob) {
+-			memcpy((void *)fdt_blob, (void *)board_config_val.fdt_blob, MVEBU_FDT_SIZE);
+-			memcpy((void *)board_config_val.fdt_blob, (void *)fdt_blob_temp, MVEBU_FDT_SIZE);
++			memcpy((void *)fdt_blob, (void *)board_config_val.fdt_blob, CONFIG_FDT_SIZE);
++			memcpy((void *)board_config_val.fdt_blob, (void *)fdt_blob_temp, CONFIG_FDT_SIZE);
+ 		}
+ 
+ 	} else {
+@@ -591,7 +591,7 @@ int cfg_eeprom_init(void)
+ 							   (uint32_t)eeprom_buffer.length - 4);
+ 
+ 		/* decompress fdt */
+-		decompressed_size = cfg_eeprom_unzip_fdt(MVEBU_FDT_SIZE, (void *)eeprom_buffer.fdt_blob);
++		decompressed_size = cfg_eeprom_unzip_fdt(CONFIG_FDT_SIZE, (void *)eeprom_buffer.fdt_blob);
+ 
+ 		if (decompressed_size == -1)
+ 			return -1;
+diff --git a/board/mvebu/common/cfg_eeprom.h b/board/mvebu/common/cfg_eeprom.h
+index 17e0e77..069aa5d 100644
+--- a/board/mvebu/common/cfg_eeprom.h
++++ b/board/mvebu/common/cfg_eeprom.h
+@@ -57,7 +57,7 @@ struct eeprom_struct {
+ 	u16 length;
+ 	struct manufacturing_information_struct man_info;
+ 	struct board_config_struct board_config;
+-	u8 fdt_blob[MVEBU_FDT_SIZE];
++	u8 fdt_blob[CONFIG_FDT_SIZE];
+ };
+ 
+ struct config_types_info {
+@@ -115,7 +115,7 @@ struct hw_info_data_struct {
+ 				 0x03,					     /* active fdt selection = default */ \
+ 				 0x00,					     /* validation counter = 0 */	  \
+ 				{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },/* reserve_board_cgf */		  \
+-				{[0 ... (MVEBU_FDT_SIZE - 1)] = 1}	     /* fdt file */			  \
++				{[0 ... (CONFIG_FDT_SIZE - 1)] = 1}	     /* fdt file */			  \
+ }
+ 
+ #define MV_MAX_FDT_CONFIGURATION	MV_MARVELL_BOARD_NUM * 8
+diff --git a/board/mvebu/common/fdt_config.c b/board/mvebu/common/fdt_config.c
+index 661bcfb..0c59776 100644
+--- a/board/mvebu/common/fdt_config.c
++++ b/board/mvebu/common/fdt_config.c
+@@ -39,7 +39,7 @@ int fdt_create_list(void)
+ 	int fdt_config_id;
+ 	char *fdt_model;
+ 	void *fdt_blob_temp = __dtb_dt_begin;
+-	uint8_t fdt_blob[MVEBU_FDT_SIZE];
++	uint8_t fdt_blob[CONFIG_FDT_SIZE];
+ 
+ 	fdt_list_size = 1;
+ 
+@@ -60,7 +60,7 @@ int fdt_create_list(void)
+ 			fdt_list_of_configs[fdt_list_size].fdt_config_id = fdt_config_id;
+ 			fdt_list_size++;
+ 		}
+-		fdt_blob_temp += MVEBU_FDT_SIZE;
++		fdt_blob_temp += CONFIG_FDT_SIZE;
+ 	}
+ 	return 0;
+ }
+@@ -89,7 +89,7 @@ int fdt_cfg_set_select(const char *selected_index)
+ {
+ 	int i, index_int, index_exist = 0;
+ 	struct eeprom_struct *p_board_config;
+-	uint8_t fdt_blob[MVEBU_FDT_SIZE];
++	uint8_t fdt_blob[CONFIG_FDT_SIZE];
+ 
+ 	if (fdt_list_size == -1) {
+ 		fdt_create_list();
+diff --git a/configs/mvebu_armada3700_defconfig b/configs/mvebu_armada3700_defconfig
+index e66189c..b0c0fab 100644
+--- a/configs/mvebu_armada3700_defconfig
++++ b/configs/mvebu_armada3700_defconfig
+@@ -27,6 +27,7 @@ CONFIG_CMD_MVEBU_HW_INFO=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-3700-db"
++CONFIG_FDT_SIZE=0x1C00
+ CONFIG_DM=y
+ CONFIG_MVEBU_ADVK_PCIE=y
+ CONFIG_MV_INCLUDE_SATA=y
+diff --git a/configs/mvebu_armada3700_palladium_defconfig b/configs/mvebu_armada3700_palladium_defconfig
+index c1ee8d6..b9b8d44 100644
+--- a/configs/mvebu_armada3700_palladium_defconfig
++++ b/configs/mvebu_armada3700_palladium_defconfig
+@@ -21,6 +21,7 @@ CONFIG_CMD_PING=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-3700-palladium"
++CONFIG_FDT_SIZE=0x1C00
+ CONFIG_MVEBU_ADVK_PCIE=y
+ CONFIG_MV_INCLUDE_SATA=y
+ CONFIG_SCSI_AHCI_PLAT=y
+diff --git a/configs/mvebu_armada38x_defconfig b/configs/mvebu_armada38x_defconfig
+index 62137ab..5ccebf2 100644
+--- a/configs/mvebu_armada38x_defconfig
++++ b/configs/mvebu_armada38x_defconfig
+@@ -29,6 +29,7 @@ CONFIG_CMD_MVEBU_TSEN=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-385-db"
++CONFIG_FDT_SIZE=0x1C00
+ CONFIG_MVEBU_PCI=y
+ CONFIG_MVEBU_NAND=y
+ CONFIG_NAND_PXA3XX=y
+diff --git a/dts/Kconfig b/dts/Kconfig
+index ca5bd6f..7b50b1b 100644
+--- a/dts/Kconfig
++++ b/dts/Kconfig
+@@ -44,6 +44,13 @@ config OF_HOSTFILE
+ 
+ endchoice
+ 
++config FDT_SIZE
++	hex "Device Tree size and alignment size (hex)"
++	default 0x3000
++	help
++	  This field limit the maximum size for a single device tree.
++	  value is also the alignment size for smaller files.
++
+ config DEFAULT_DEVICE_TREE
+ 	string "Default Device Tree for DT control"
+ 	help
+diff --git a/include/configs/armada3700.h b/include/configs/armada3700.h
+index 23ade41..3d183b6 100644
+--- a/include/configs/armada3700.h
++++ b/include/configs/armada3700.h
+@@ -45,8 +45,6 @@
+ #define MV_INCLUDE_PEX
+ */
+ 
+-#define MVEBU_FDT_SIZE 0x1C00
+-
+ /* Plaform */
+ #define CONFIG_MARVELL
+ 
+diff --git a/include/configs/armada38x.h b/include/configs/armada38x.h
+index 7b472ef..d6a7308 100644
+--- a/include/configs/armada38x.h
++++ b/include/configs/armada38x.h
+@@ -51,8 +51,6 @@
+ #define MV_DDR_64BIT
+ #define MV_BOOTROM
+ 
+-#define MVEBU_FDT_SIZE 0x1C00
+-
+ /* Plaform */
+ #define CONFIG_MARVELL
+ 
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index bfdd274..887f514 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -39,7 +39,6 @@
+ #define MV_INCLUDE_PEX
+ */
+ #define CONFIG_GZIP_COMPRESSED
+-#define MVEBU_FDT_SIZE 0x3000
+ 
+ #undef CONFIG_GICV3
+ #define CONFIG_GICV2
+-- 
+1.9.1
+

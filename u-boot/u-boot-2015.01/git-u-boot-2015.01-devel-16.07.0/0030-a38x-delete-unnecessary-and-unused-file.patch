@@ -1,0 +1,62 @@
+From 44da4dd53bdefa85111d2e25f595a7a72cfa40d8 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 29 Apr 2014 20:38:44 +0300
+Subject: [PATCH 0030/1240] a38x: delete unnecessary and unused file
+
+Change-Id: I7c3721a8e5aaa48d4461cd3983ce87411df61b86
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/7767
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ board/mvebu/armada38x/costumer-info.c | 38 -----------------------------------
+ 1 file changed, 38 deletions(-)
+ delete mode 100644 board/mvebu/armada38x/costumer-info.c
+
+diff --git a/board/mvebu/armada38x/costumer-info.c b/board/mvebu/armada38x/costumer-info.c
+deleted file mode 100644
+index d7d5560..0000000
+--- a/board/mvebu/armada38x/costumer-info.c
++++ /dev/null
+@@ -1,38 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
+- * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
+- *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
+- * ***************************************************************************
+- */
+-
+-#include <common.h>
+-#include <linux/compiler.h>
+-#include <asm/arch-mvebu/unit-info.h>
+-#include "board-info.h"
+-
+-struct mvebu_board_config db_a38x_config = {
+-	.sar_cnt = 2,
+-	.active_sar = {BOOT_SRC_SAR, CPUS_NUM_SAR},
+-	.cfg_cnt = 2,
+-	.active_cfg = {BOARD_ID_CFG, SERDES_0_CFG}
+-};
+-
+-struct mvebu_board_info a38x_db_info = {
+-	.name = "DB-88F6820-BP",
+-	.id = ARMADA_38X_DB_ID,
+-	.configurable = 1,
+-	.config_data = &db_a38x_config,
+-};
+-
+-- 
+1.9.1
+

@@ -1,0 +1,76 @@
+From dc1a8e84b15ec06a4ef0b72c566818e5cf4586cd Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 18 May 2016 14:09:32 +0300
+Subject: [PATCH 1151/1240] usb: added GPIO VBUS support using device tree
+ property
+
+Add support for GPIO VBUS using device-tree property
+For Armada-70x0 add property "gpio-vbus" for USB node to enable VBUS on GPIO #12
+
+Change-Id: I020b667644696ff7b3c01d7b6a9a98465a360be7
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29796
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/usb/host/xhci-mvebu.c | 17 +++++++++++++++++
+ include/fdtdec.h              |  1 +
+ 2 files changed, 18 insertions(+)
+
+diff --git a/drivers/usb/host/xhci-mvebu.c b/drivers/usb/host/xhci-mvebu.c
+index 11e09c3..8e78a3a 100644
+--- a/drivers/usb/host/xhci-mvebu.c
++++ b/drivers/usb/host/xhci-mvebu.c
+@@ -18,6 +18,7 @@
+ #include <common.h>
+ #include <asm/arch-mvebu/soc.h>
+ #include <fdtdec.h>
++#include <asm/gpio.h>
+ #include <asm/arch-mvebu/fdt.h>
+ 
+ #ifdef CONFIG_USB_XHCI
+@@ -37,6 +38,9 @@ int xhci_hcd_init(int index, struct xhci_hccr **hccr, struct xhci_hcor **hcor)
+ 	int node_list[CONFIG_SYS_USB_XHCI_MAX_ROOT_PORTS], node;
+ 	int i, count;
+ 	unsigned long usb3_reg_base;
++#ifdef CONFIG_MVEBU_GPIO
++	struct fdt_gpio_state gpio;
++#endif
+ 
+ 	/* Enable USB VBUS
+ 	 * will be updated according to Device tree, and will be triggered
+@@ -69,6 +73,19 @@ int xhci_hcd_init(int index, struct xhci_hccr **hccr, struct xhci_hcor **hcor)
+ 		*hcor = (struct xhci_hcor *)((unsigned long) *hccr
+ 					+ HC_LENGTH(xhci_readl(&(*hccr)->cr_capbase)));
+ 
++#ifdef CONFIG_MVEBU_GPIO
++		fdtdec_decode_gpio(gd->fdt_blob, node, "gpio-vbus", &gpio);
++		fdtdec_setup_gpio(&gpio);
++		if (fdt_gpio_isvalid(&gpio)) {
++			if (gpio.flags & FDT_GPIO_ACTIVE_LOW)
++				gpio_direction_output(gpio.gpio, FDT_GPIO_ACTIVE_LOW);
++			else if (gpio.flags & FDT_GPIO_ACTIVE_HIGH)
++				gpio_direction_output(gpio.gpio, FDT_GPIO_ACTIVE_HIGH);
++			else
++				error("Error: GPIO flag is wrong\n");
++		}
++#endif
++
+ 		debug("mvebu-xhci: init hccr %lx and hcor %lx hc_length %ld\n",
+ 		      (uintptr_t)*hccr, (uintptr_t)*hcor,
+ 			(uintptr_t)HC_LENGTH(xhci_readl(&(*hccr)->cr_capbase)));
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 5757fa7..3b78edc 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -173,6 +173,7 @@ enum fdt_compat_id {
+ enum {
+ 	FDT_GPIO_NONE = -1U,	/* an invalid GPIO used to end our list */
+ 
++	FDT_GPIO_ACTIVE_HIGH = 0,
+ 	FDT_GPIO_ACTIVE_LOW = 1 << 0,	/* input is active low (else high) */
+ };
+ 
+-- 
+1.9.1
+

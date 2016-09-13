@@ -1,0 +1,151 @@
+From d702e311732ec581841fafe713b002d3add3b121 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 10 Jun 2015 15:28:03 +0300
+Subject: [PATCH 0195/1240] sample at reset: remove all sar instance from board
+ structs
+
+Change-Id: Ic46bc22db3def08675f83b4fd557b56988b4efe0
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20120
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ board/mvebu/armada38x/board-info.c |  4 ----
+ board/mvebu/armada8k/board-info.c  |  5 -----
+ board/mvebu/armadalp/board-info.c  |  5 -----
+ board/mvebu/common/board.h         |  1 -
+ board/mvebu/common/devel-board.c   | 22 ----------------------
+ board/mvebu/common/sar.c           |  4 ++++
+ 6 files changed, 4 insertions(+), 37 deletions(-)
+
+diff --git a/board/mvebu/armada38x/board-info.c b/board/mvebu/armada38x/board-info.c
+index 9733f07..a0ed9a6 100644
+--- a/board/mvebu/armada38x/board-info.c
++++ b/board/mvebu/armada38x/board-info.c
+@@ -24,9 +24,6 @@
+ 
+ #define SATR_EEPROM0_ADDR	0x22
+ 
+-/* Define general SAR information */
+-struct sar_data a38x_sar;
+-
+ /* Define all board configuration variables */
+ /* Assuming their location is equal on all boards */
+ struct cfg_var a38x_cfg_lookup[MAX_CFG] = {
+@@ -61,7 +58,6 @@ struct mvebu_board_family a38x_board_family = {
+ 	.default_id = ARMADA_38X_DB_ID,
+ 	.board_cnt = MAX_BOARD_ID,
+ 	.boards_info = a38x_board_lookup,
+-	.sar = &a38x_sar,
+ 	.cfg = &a38x_cfg,
+ };
+ 
+diff --git a/board/mvebu/armada8k/board-info.c b/board/mvebu/armada8k/board-info.c
+index c06db04..e46bcf9 100644
+--- a/board/mvebu/armada8k/board-info.c
++++ b/board/mvebu/armada8k/board-info.c
+@@ -24,10 +24,6 @@
+ 
+ #define SATR_EEPROM0_ADDR	0x22
+ 
+-/* Define all SAR variables available for SOC */
+-/* Define general SAR information */
+-struct sar_data a8k_sar;
+-
+ /* Define all board configuration variables */
+ /* Assuming their location is equal on all boards */
+ struct cfg_var a8k_cfg_lookup[MAX_CFG] = {
+@@ -65,7 +61,6 @@ struct mvebu_board_family a8k_board_family = {
+ 	.default_id = ARMADA_8021_DB_ID,
+ 	.board_cnt = MAX_BOARD_ID,
+ 	.boards_info = a8k_board_lookup,
+-	.sar = &a8k_sar,
+ 	.cfg = &a8k_cfg,
+ };
+ 
+diff --git a/board/mvebu/armadalp/board-info.c b/board/mvebu/armadalp/board-info.c
+index afc296c..7518f17 100644
+--- a/board/mvebu/armadalp/board-info.c
++++ b/board/mvebu/armadalp/board-info.c
+@@ -23,10 +23,6 @@
+ 
+ #define SATR_EEPROM0_ADDR	0x22
+ 
+-/* Define all SAR variables available for SOC */
+-/* Define general SAR information */
+-struct sar_data armadalp_sar;
+-
+ /* Define all board configuration variables */
+ /* Assuming their location is equal on all boards */
+ struct cfg_var armadalp_cfg_lookup[MAX_CFG] = {
+@@ -61,7 +57,6 @@ struct mvebu_board_family armadalp_board_family = {
+ 	.default_id = ARMADA_LP_DB0_ID,
+ 	.board_cnt = MAX_BOARD_ID,
+ 	.boards_info = armadalp_board_lookup,
+-	.sar = &armadalp_sar,
+ 	.cfg = &armadalp_cfg,
+ };
+ 
+diff --git a/board/mvebu/common/board.h b/board/mvebu/common/board.h
+index 857823b..571ed6b 100644
+--- a/board/mvebu/common/board.h
++++ b/board/mvebu/common/board.h
+@@ -92,7 +92,6 @@ struct mvebu_board_family {
+ 	struct mvebu_board_info **boards_info;
+ 
+ 	/* Only for development boards */
+-	struct sar_data *sar;
+ 	struct cfg_data *cfg;
+ };
+ 
+diff --git a/board/mvebu/common/devel-board.c b/board/mvebu/common/devel-board.c
+index 812bb50..3c3fe27 100644
+--- a/board/mvebu/common/devel-board.c
++++ b/board/mvebu/common/devel-board.c
+@@ -52,28 +52,6 @@ int mvebu_devel_board_init(struct mvebu_board_family *brd_fam)
+ 	return 0;
+ }
+ 
+-struct sar_data *board_get_sar(void)
+-{
+-	struct mvebu_board_family *brd_fam = get_board_family();
+-
+-	if (brd_fam->curr_board->configurable &&
+-	    brd_fam->curr_board->config_data->sar_cnt)
+-		return brd_fam->sar;
+-	else
+-		return NULL;
+-}
+-
+-struct sar_var *board_get_sar_table(void)
+-{
+-	struct mvebu_board_family *brd_fam = get_board_family();
+-
+-	if (brd_fam->curr_board->configurable &&
+-	    brd_fam->curr_board->config_data->sar_cnt)
+-		return brd_fam->sar->sar_lookup;
+-	else
+-		return NULL;
+-}
+-
+ struct cfg_data *board_get_cfg(void)
+ {
+ 	struct mvebu_board_family *brd_fam = get_board_family();
+diff --git a/board/mvebu/common/sar.c b/board/mvebu/common/sar.c
+index a9e4dc7..0d0ad6b 100644
+--- a/board/mvebu/common/sar.c
++++ b/board/mvebu/common/sar.c
+@@ -33,6 +33,10 @@
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
++struct sar_data sar_board;
++#define board_get_sar() (&sar_board)
++#define board_get_sar_table() (sar_board.sar_lookup)
++
+ #define I2C_DUMMY_BASE ((int)0x3000000)
+ 
+ /* I2C interface commands */
+-- 
+1.9.1
+

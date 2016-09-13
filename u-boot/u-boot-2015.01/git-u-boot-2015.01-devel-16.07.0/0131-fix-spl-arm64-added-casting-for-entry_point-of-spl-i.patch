@@ -1,0 +1,34 @@
+From d6360805e9997bc4b32a984617566ab21cc4553a Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 5 Mar 2015 18:06:41 +0200
+Subject: [PATCH 0131/1240] fix: spl: arm64: added casting for entry_point of
+ spl image
+
+	- Compilation Error happened when compiling SPL for arm64
+	- This patch added casting for integer using uintptr_t
+
+Change-Id: I74b1659e9db61a51ded5bea264e50d4fb39eb977
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17271
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ common/spl/spl.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/common/spl/spl.c b/common/spl/spl.c
+index 1826c47..ad59145 100644
+--- a/common/spl/spl.c
++++ b/common/spl/spl.c
+@@ -113,7 +113,7 @@ __weak void __noreturn jump_to_image_no_args(struct spl_image_info *spl_image)
+ 	typedef void __noreturn (*image_entry_noargs_t)(void);
+ 
+ 	image_entry_noargs_t image_entry =
+-			(image_entry_noargs_t) spl_image->entry_point;
++			(image_entry_noargs_t) ((uintptr_t)spl_image->entry_point);
+ 
+ 	debug("image entry point: 0x%X\n", spl_image->entry_point);
+ 	image_entry();
+-- 
+1.9.1
+

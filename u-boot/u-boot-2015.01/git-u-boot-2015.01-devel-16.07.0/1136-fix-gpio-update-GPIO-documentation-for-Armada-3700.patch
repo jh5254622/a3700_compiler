@@ -1,0 +1,45 @@
+From 9c6a19bc4abd3929fe35d09ed98187b0f6cf8cbf Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 18 May 2016 09:49:25 +0300
+Subject: [PATCH 1136/1240] fix: gpio: update GPIO documentation for
+ Armada-3700
+
+Change-Id: Ib7a0d98a550df010112415f05bf68e1ceda6838d
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29790
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/cpu/armv8/armada3700/gpio.c         | 2 +-
+ arch/arm/include/asm/arch-mvebu/mvebu_gpio.h | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada3700/gpio.c b/arch/arm/cpu/armv8/armada3700/gpio.c
+index 7e84aff..ea2111b 100644
+--- a/arch/arm/cpu/armv8/armada3700/gpio.c
++++ b/arch/arm/cpu/armv8/armada3700/gpio.c
+@@ -28,7 +28,7 @@ DECLARE_GLOBAL_DATA_PTR;
+ /* GPIO Controller registers for a single bank */
+ struct mvebu_gpio_regs {
+ 	u32 gpdr[MVEBU_GPIO_MAX_PORTS];		/* Pin Direction Registers of GPIO ports */
+-	u32 reserved0[2];
++	u32 reserved0[2];			/* Reserved for Pin Latch Registers of GPIO ports */
+ 	u32 gpir[MVEBU_GPIO_MAX_PORTS];		/* Pin input Level Registers of GPIO ports */
+ 	u32 gpor[MVEBU_GPIO_MAX_PORTS];		/* Pin output Level Registers of GPIO ports */
+ };
+diff --git a/arch/arm/include/asm/arch-mvebu/mvebu_gpio.h b/arch/arm/include/asm/arch-mvebu/mvebu_gpio.h
+index 9bb5677..a8ef36c 100644
+--- a/arch/arm/include/asm/arch-mvebu/mvebu_gpio.h
++++ b/arch/arm/include/asm/arch-mvebu/mvebu_gpio.h
+@@ -25,7 +25,7 @@
+  *
+  *
+  * @gpio: gpio global id
+- * @param label	User label for this GPIO
++ * @param label User label for this GPIO
+  * @return 0 if ok, others on failure
+  */
+ int mvebu_soc_gpio_request(unsigned gpio, const char *label);
+-- 
+1.9.1
+

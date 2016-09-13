@@ -1,0 +1,79 @@
+From 6d853bae87822f12fb95fd9bc44cc1882eec7fe1 Mon Sep 17 00:00:00 2001
+From: zachary <zhangzg@marvell.com>
+Date: Tue, 22 Mar 2016 22:11:06 +0800
+Subject: [PATCH 1026/1240] fix: phy: a3700: rename armadalp to a3700 for marco
+ and dtsi file
+
+- rename marco COMPAT_COMPHY_ARMADA_LP to COMPAT_COMPHY_ARMADA_3700
+  in fdtdec.c/h and comphy_core.c file
+- rename comphy-armadalp to comphy-armada-3700 in fdtdec.c and
+  armada-3700.dtsi file
+
+Change-Id: I49456946f3dfb534d052ebdf2670ad8a255cf8b8
+Signed-off-by: zachary <zhangzg@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28429
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hua Jing <jinghua@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/dts/armada-3700.dtsi | 2 +-
+ drivers/phy/comphy_core.c     | 2 +-
+ include/fdtdec.h              | 2 +-
+ lib/fdtdec.c                  | 2 +-
+ 4 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/dts/armada-3700.dtsi b/arch/arm/dts/armada-3700.dtsi
+index 44aa1a5..2a78e8b 100644
+--- a/arch/arm/dts/armada-3700.dtsi
++++ b/arch/arm/dts/armada-3700.dtsi
+@@ -100,7 +100,7 @@
+ 				status = "disabled";
+ 			};
+ 			comphy {
+-				compatible = "marvell,mvebu-comphy", "marvell,comphy-armadalp";
++				compatible = "marvell,mvebu-comphy", "marvell,comphy-armada-3700";
+ 				mux-bitcount = <1>;
+ 				max-lanes = <2>;
+ 				reg-comphy = <0x18300 0x28>;
+diff --git a/drivers/phy/comphy_core.c b/drivers/phy/comphy_core.c
+index bb06ae5..943a860 100644
+--- a/drivers/phy/comphy_core.c
++++ b/drivers/phy/comphy_core.c
+@@ -37,7 +37,7 @@ struct chip_serdes_phy_config chip_config[] = {
+ 	 .ptr_comphy_chip_init = comphy_cp110_init },
+ #endif
+ #ifdef CONFIG_TARGET_ARMADA_3700
+-	{.compat = COMPAT_COMPHY_ARMADA_LP,
++	{.compat = COMPAT_COMPHY_ARMADA_3700,
+ 	 .ptr_comphy_chip_init = comphy_a3700_init },
+ #endif
+ 	{.compat = COMPAT_UNKNOWN}
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 168e856..237a1c3 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -147,7 +147,7 @@ enum fdt_compat_id {
+ 	COMPAT_COMPHY_ARMADA_38X,
+ 	COMPAT_COMPHY_AP806,
+ 	COMPAT_COMPHY_CP110,
+-	COMPAT_COMPHY_ARMADA_LP,
++	COMPAT_COMPHY_ARMADA_3700,
+ 	COMPAT_MVEBU_THERMAL_SENSOR,
+ 	COMPAT_MVEBU_THERMAL_SENSOR_V2,
+ 	COMPAT_MVEBU_FLC,
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 28dadd4..6b110f2 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -109,7 +109,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(COMPHY_ARMADA_38X, "marvell,comphy-armada38x"),
+ 	COMPAT(COMPAT_COMPHY_AP806, "marvell,comphy-ap806"),
+ 	COMPAT(COMPAT_COMPHY_CP110, "marvell,comphy-cp110"),
+-	COMPAT(COMPAT_COMPHY_ARMADA_LP, "marvell,comphy-armadalp"),
++	COMPAT(COMPAT_COMPHY_ARMADA_3700, "marvell,comphy-armada-3700"),
+ 	COMPAT(MVEBU_THERMAL_SENSOR, "marvell,thermal-sensor"),
+ 	COMPAT(MVEBU_THERMAL_SENSOR_V2, "marvell,thermal-sensor-v2"),
+ 	COMPAT(MVEBU_FLC, "marvell,mvebu-flc"),
+-- 
+1.9.1
+

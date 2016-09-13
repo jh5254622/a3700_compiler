@@ -1,0 +1,39 @@
+From 37cea9456cb5b35793308f703e2e1806cb75000a Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 13 Apr 2016 14:06:47 +0300
+Subject: [PATCH 110/239] mv_ddr: ap806: fix a70x0 customer compilation issue
+
+Change-Id: Ic3b895638a4bd2c69eea700a93e71d52f0e38dc3
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28991
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+index e820c68..5debee7 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+@@ -676,7 +676,7 @@ int mv_ddr_mc_static_config(void)
+ #endif /* CONFIG_MV_DDR_STATIC_MC */
+ 
+ #ifdef CONFIG_PHY_STATIC
+-#if defined(a70x0)
++#if defined(a70x0) || defined(a70x0_cust)
+ static int mv_ddr_apn806_phy_static_config(u32 if_id, u32 subphys_num, enum hws_ddr_phy subphy_type)
+ {
+ #if 0
+@@ -729,7 +729,7 @@ static void mk6_phy_init(void)
+ 
+ void mv_ddr_phy_static_config(void)
+ {
+-#if defined(a70x0)
++#if defined(a70x0) || defined(a70x0_cust)
+ 	/* TODO: Need to use variable for subphys number */
+ 	mv_ddr_apn806_phy_static_config(0, 4, DDR_PHY_DATA);
+ 	mv_ddr_apn806_phy_static_config(0, 3, DDR_PHY_CONTROL);
+-- 
+1.9.1
+

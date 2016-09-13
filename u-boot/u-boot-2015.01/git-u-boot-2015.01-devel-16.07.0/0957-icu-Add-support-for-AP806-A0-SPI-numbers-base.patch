@@ -1,0 +1,37 @@
+From 7c3aabef236954c0062475c8303fc54fd184db3a Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Thu, 17 Mar 2016 11:05:12 +0200
+Subject: [PATCH 0957/1240] icu: Add support for AP806-A0 SPI numbers base
+
+In AP806-A0, companion device SPI interrupts are mapped to GICP_SETSPI_NSR
+value 0-64, while in Z1 these where mapped to value 64 and above.
+
+Change-Id: Ifb0c7c2679908bc05fd2eaf7098354b0d883f108
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28317
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/soc-init.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index 1d95c08..f5664ae 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -100,7 +100,11 @@ int mvebu_soc_init()
+ 
+ #ifdef CONFIG_MVEBU_ICU
+ 	/* Temporary initialization in u-boot */
++#ifdef CONFIG_AP806_Z_SUPPORT
+ 	icu_init(0xF2000000, 64, 0);
++#else
++	icu_init(0xF2000000, 0, 0);
++#endif /* CONFIG_AP806_Z_SUPPORT */
+ #endif
+ 
+ 	mvebu_thermal_sensor_probe();
+-- 
+1.9.1
+

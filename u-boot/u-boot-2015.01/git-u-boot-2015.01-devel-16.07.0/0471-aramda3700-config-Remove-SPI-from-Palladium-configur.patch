@@ -1,0 +1,42 @@
+From 7ed5481daed2ebee2727935f661ebd819b836174 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Sun, 8 Nov 2015 17:14:15 +0200
+Subject: [PATCH 0471/1240] aramda3700: config: Remove SPI from Palladium
+ configuration
+
+- Remove SPI support from Palladium build default configuration
+  for speeding up the boot process.
+
+Change-Id: Ifb1b972e6b31d02b2b7275545307ad1c4f802a23
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24659
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ configs/mvebu_armadalp_palladium_defconfig | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/configs/mvebu_armadalp_palladium_defconfig b/configs/mvebu_armadalp_palladium_defconfig
+index 3343b78..2e6772c 100644
+--- a/configs/mvebu_armadalp_palladium_defconfig
++++ b/configs/mvebu_armadalp_palladium_defconfig
+@@ -2,7 +2,6 @@ CONFIG_SPL=y
+ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_ARMADA_LP=y
+-CONFIG_MVEBU_SPI=y
+ CONFIG_MVNETA=y
+ CONFIG_MV_INCLUDE_SATA=y
+ CONFIG_SCSI_AHCI_PLAT=y
+@@ -17,7 +16,6 @@ CONFIG_I2C_MV_PAD_REG=n
+ +S:CONFIG_MVEBU_MBUS_SPL_ONLY=y
+ CONFIG_MVEBU_ADVK_PCIE=y
+ CONFIG_CMD_BDI=y
+-CONFIG_CMD_SPI=y
+ CONFIG_CMD_BOOTD=y
+ CONFIG_CMD_RUN=y
+ CONFIG_CMD_EDITENV=y
+-- 
+1.9.1
+

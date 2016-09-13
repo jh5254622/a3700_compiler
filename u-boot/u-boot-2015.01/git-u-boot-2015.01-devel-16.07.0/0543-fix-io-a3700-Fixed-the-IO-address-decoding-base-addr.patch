@@ -1,0 +1,43 @@
+From 539c4b646eb583ba4ba859ef7de405cc2e29944c Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Sun, 29 Nov 2015 11:46:20 +0200
+Subject: [PATCH 0543/1240] fix: io: a3700: Fixed the IO address decoding base
+ address
+
+- Add base address 0xD0000000 to address decoding windows
+  manipulation macros.
+
+Change-Id: I04af6fa78b41893568fd893d8034d94229b3551c
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25358
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armadalp/mvebu_io_addr_dec.c | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armadalp/mvebu_io_addr_dec.c b/arch/arm/cpu/armv8/armadalp/mvebu_io_addr_dec.c
+index 2f8fd43..b1a0c5b 100644
+--- a/arch/arm/cpu/armv8/armadalp/mvebu_io_addr_dec.c
++++ b/arch/arm/cpu/armv8/armadalp/mvebu_io_addr_dec.c
+@@ -44,9 +44,9 @@ struct io_dec_fdt_info {
+ #define IO_UNIT_NUM_MAX		(14)
+ struct io_dec_fdt_info __attribute__((section(".data")))io_dec_fdt_arr[IO_UNIT_NUM_MAX];
+ 
+-#define MVEBU_DEC_WIN_CTRL_REG(base, win, off)	(base + (win * off))
+-#define MVEBU_DEC_WIN_BASE_REG(base, win, off)	(base + (win * off) + 0x4)
+-#define MVEBU_DEC_WIN_REMAP_REG(base, win, off)	(base + (win * off) + 0x8)
++#define MVEBU_DEC_WIN_CTRL_REG(base, win, off)	(MVEBU_REGS_BASE + base + (win * off))
++#define MVEBU_DEC_WIN_BASE_REG(base, win, off)	(MVEBU_REGS_BASE + base + (win * off) + 0x4)
++#define MVEBU_DEC_WIN_REMAP_REG(base, win, off)	(MVEBU_REGS_BASE + base + (win * off) + 0x8)
+ 
+ #define MVEBU_DEC_WIN_CTRL_SIZE_OFF	(16)
+ #define MVEBU_DEC_WIN_CTRL_ATTR_OFF	(8)
+@@ -175,4 +175,3 @@ int init_a3700_io_addr_dec(void)
+ 	debug_exit();
+ 	return ret;
+ }
+-
+-- 
+1.9.1
+

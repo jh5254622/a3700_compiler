@@ -1,0 +1,30 @@
+From 64d3c11ce4f2e90ff43ff81b0e0bb59e20a4c4fb Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Tue, 1 Sep 2015 16:49:43 +0300
+Subject: [PATCH 0392/1240] dst: apn806: i2c: set support-256-offset for
+ apn-806.dtsi
+
+Change-Id: Ie54afa863d1af2ce3ff58eb5228faa8c2a705162
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23356
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/apn-806.dtsi | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm/dts/apn-806.dtsi b/arch/arm/dts/apn-806.dtsi
+index ae1bfca..16cd017 100644
+--- a/arch/arm/dts/apn-806.dtsi
++++ b/arch/arm/dts/apn-806.dtsi
+@@ -50,6 +50,7 @@
+ 				compatible = "marvell,mvebu-i2c";
+ 				reg = <0x511000 0x4>;
+ 				clock = <&tclk>;
++				support-256-offset;
+ 				status = "okay";
+ 			};
+ 
+-- 
+1.9.1
+

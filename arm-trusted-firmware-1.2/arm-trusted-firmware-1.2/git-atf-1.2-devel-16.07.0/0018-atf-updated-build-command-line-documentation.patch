@@ -1,0 +1,34 @@
+From fbbaafa779c586d83729e6232ccd698c78ec08c0 Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Thu, 18 Feb 2016 15:30:53 +0200
+Subject: [PATCH 018/239] atf: updated build command line documentation
+
+Change-Id: Idab2075e63d8a49c1a9934a711a7bffd916ba78d
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27635
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ docs/marvell/build.txt | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/docs/marvell/build.txt b/docs/marvell/build.txt
+index c8f8451..233fcaf 100644
+--- a/docs/marvell/build.txt
++++ b/docs/marvell/build.txt
+@@ -51,7 +51,11 @@ Build Instruction:
+ 						BL memory map or not. It should be set to 0.
+ 
+ 	For eample: in order to build and image in release mode with log level up to warnings run:
+-	# make DEBUG=0 USE_COHERENT_MEM=0 LOG_LEVEL=30 PLAT=mvebu all fip
++	# make DEBUG=1 USE_COHERENT_MEM=0 LOG_LEVEL=20 PLAT=<MARVELL_PLATFORM> all fip
++
++	Supported MARVELL_PLATFORM are:
++		apn806
++		a7040_rz
+ 
+ Build output:
+ -------------
+-- 
+1.9.1
+

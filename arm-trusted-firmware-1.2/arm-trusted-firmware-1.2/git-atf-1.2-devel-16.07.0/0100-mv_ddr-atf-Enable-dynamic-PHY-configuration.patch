@@ -1,0 +1,33 @@
+From 805474b354a702f2d6482f726285853320bf18b8 Mon Sep 17 00:00:00 2001
+From: Victor Axelrod <victora@marvell.com>
+Date: Mon, 11 Apr 2016 14:20:45 +0300
+Subject: [PATCH 100/239] mv_ddr: atf: Enable dynamic PHY configuration
+
+Following this patch, the Armada70x0 will execute adaptive PHY
+calibration using Marvell's DDR training algorithm
+
+Change-Id: I508b0fa540ecd1ee5f6ebb47ba671690d1fdec2c
+Signed-off-by: Victor Axelrod <victora@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28919
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/marvell/mv_ddr/Makefile b/drivers/marvell/mv_ddr/Makefile
+index e2f93ee..a9bf994 100644
+--- a/drivers/marvell/mv_ddr/Makefile
++++ b/drivers/marvell/mv_ddr/Makefile
+@@ -225,7 +225,7 @@ endif
+ CFLAGS = -Wall -Werror -Os -ffreestanding -mlittle-endian -g -gdwarf-2
+ CFLAGS += -march=armv8-a -fpie $(INCLUDE) -D$(PLATFORM)
+ 
+-CFLAGS += -DMV_DDR_ATF -DCONFIG_APN806 -DCONFIG_MC_STATIC -DCONFIG_PHY_STATIC
++CFLAGS += -DMV_DDR_ATF -DCONFIG_APN806 -DCONFIG_MC_STATIC
+ 
+ ifeq ($(MV_DDR4),y)
+ CFLAGS += -DCONFIG_DDR4
+-- 
+1.9.1
+

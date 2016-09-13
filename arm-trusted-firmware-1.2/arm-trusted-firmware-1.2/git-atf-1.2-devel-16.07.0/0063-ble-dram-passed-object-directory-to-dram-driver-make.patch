@@ -1,0 +1,37 @@
+From f391095d84fe724f497566c1638c77ab7e703c31 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Tue, 15 Mar 2016 09:40:52 +0200
+Subject: [PATCH 063/239] ble: dram: passed object directory to dram driver
+ makefile
+
+Change-Id: I2873774a0c8de5030e7dba8fdab8b445497b55e3
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28244
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ ble/ble.mk | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/ble/ble.mk b/ble/ble.mk
+index 6b76636..d1375e3 100644
+--- a/ble/ble.mk
++++ b/ble/ble.mk
+@@ -29,7 +29,7 @@
+ #
+ 
+ DRAM_ROOT		=	drivers/marvell/dram
+-DRAM_LIB		= 	$(DRAM_ROOT)/dramlib.a
++DRAM_LIB		= 	$(CURDIR)/$(BUILD_PLAT)/ble/dramlib.a
+ BLE_LIBS		= 	$(DRAM_LIB)
+ 
+ BLE_SOURCES		+= 	ble/ble_main.c
+@@ -38,4 +38,4 @@ PLAT_INCLUDES		+= 	-I$(DRAM_ROOT)
+ BLE_LINKERFILE		:=	ble/ble.ld.S
+ 
+ $(DRAM_LIB):
+-	@make -C $(DRAM_ROOT) --no-print-directory PLATFORM=$(PLAT)
++	@make -C $(DRAM_ROOT) --no-print-directory PLATFORM=$(PLAT) OBJ_DIR=$(CURDIR)/$(BUILD_PLAT)/ble
+-- 
+1.9.1
+

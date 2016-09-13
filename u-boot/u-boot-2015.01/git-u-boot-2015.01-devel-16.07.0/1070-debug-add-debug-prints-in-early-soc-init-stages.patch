@@ -1,0 +1,342 @@
+From 24ec09d9da7729dc1ca65a8440b0a5abddeddb0b Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Wed, 20 Apr 2016 11:05:41 +0300
+Subject: [PATCH 1070/1240] debug: add debug prints in early soc init stages
+
+Change-Id: I8221f86e2282188a77944dd98c1d22f8a16c99d8
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29285
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/soc.c  | 15 ++++++++++++---
+ board/mvebu/common/init.c          |  8 +++++++-
+ common/mvebu/env_bootdev.c         |  7 ++++++-
+ drivers/misc/mvebu_sar/ap806_sar.c |  5 +++++
+ drivers/misc/mvebu_sar/chip_sar.c  |  3 +++
+ drivers/misc/mvebu_sar/cp110_sar.c | 11 +++++++++--
+ 6 files changed, 42 insertions(+), 7 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/soc.c b/arch/arm/cpu/armv8/armada8k/soc.c
+index 42ecf3e..bf25480 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc.c
++++ b/arch/arm/cpu/armv8/armada8k/soc.c
+@@ -16,7 +16,7 @@
+  * ***************************************************************************
+  */
+ 
+-#define DEBUG
++/* #define DEBUG */
+ 
+ #include <common.h>
+ #include <asm/io.h>
+@@ -30,6 +30,7 @@
+ #include <netdev.h>
+ #include <mvebu_chip_sar.h>
+ #include <fdt_support.h>
++#include <asm/arch-mvebu/mvebu.h>
+ 
+ #define RFU_GLOBAL_SW_RST		(MVEBU_RFU_BASE + 0x84)
+ #define RFU_SW_RESET_OFFSET		0
+@@ -42,7 +43,7 @@ int soc_early_init_f(void)
+ #ifdef CONFIG_XENON_MMC
+ 	u32 reg;
+ #endif
+-
++	debug_enter();
+ #ifdef CONFIG_MVEBU_CHIP_SAR
+ 	/* Sample at reset register init */
+ 	mvebu_sar_init(gd->fdt_blob);
+@@ -58,6 +59,7 @@ int soc_early_init_f(void)
+ 	writel(reg, EMMC_PHY_IO_CTRL);
+ #endif
+ 
++	debug_exit();
+ 	return 0;
+ }
+ 
+@@ -108,6 +110,7 @@ int cpu_eth_init(bd_t *bis)
+ 
+ int dram_init(void)
+ {
++	debug_enter();
+ #ifdef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+ 	gd->ram_size = CONFIG_DDR_OVER_PCI_SIZE;
+ #elif defined(CONFIG_PALLADIUM)
+@@ -124,7 +127,7 @@ int dram_init(void)
+ 	if (gd->ram_size == 0)
+ 		error("DRAM size equal 0, check DRAM configuration\n");
+ #endif
+-
++	debug_exit();
+ 	return 0;
+ }
+ 
+@@ -155,10 +158,12 @@ void dram_init_banksize(void)
+ 
+ void reset_cpu(ulong ignored)
+ {
++	debug_enter();
+ 	u32 reg;
+ 	reg = readl(RFU_GLOBAL_SW_RST);
+ 	reg &= ~(1 << RFU_SW_RESET_OFFSET);
+ 	writel(reg, RFU_GLOBAL_SW_RST);
++	debug_exit();
+ }
+ 
+ void print_soc_specific_info(void)
+@@ -199,6 +204,7 @@ void board_usb_vbus_init(void)
+ ************************************************************************/
+ bool mvebu_is_in_recovery_mode(void)
+ {
++	debug_enter();
+ #ifdef CONFIG_SPL_BUILD
+ 	bool	recovery = 0;
+ 	/* UART RX pin numbers and their MPP functions */
+@@ -231,16 +237,19 @@ bool mvebu_is_in_recovery_mode(void)
+ #else
+ 	return get_info(RECOVERY_MODE);
+ #endif
++	debug_exit();
+ }
+ 
+ #ifdef CONFIG_LAST_STAGE_INIT
+ int last_stage_init(void)
+ {
++	debug_enter();
+ #ifdef CONFIG_MULTI_DT_FILE
+ 	uint8_t *fdt_blob;
+ 	fdt_blob = cfg_eeprom_get_fdt();
+ 	set_working_fdt_addr(fdt_blob);
+ #endif
++	debug_exit();
+ 	return 0;
+ }
+ #endif
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index 13ed8a1..beb1174 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -57,6 +57,7 @@ int soc_early_init_f(void)
+ /* Do very basic stuff like board and soc detection */
+ int board_early_init_f(void)
+ {
++	debug_enter();
+ #ifdef CONFIG_BOARD_CONFIG_EEPROM
+ 	/* set default FDT to work with:
+ 	 ** - customer/regular mode: point to the defined FDT by CONFIG_DEFAULT_DEVICE_TREE.
+@@ -93,6 +94,7 @@ int board_early_init_f(void)
+ 	  */
+ 	init_mbus();
+ #endif
++	debug_exit();
+ 	return 0;
+ }
+ #endif
+@@ -149,6 +151,7 @@ int mvebu_print_info(void)
+ 
+ int mvebu_board_init(void)
+ {
++	debug_enter();
+ 	debug("Initializing board\n");
+ 
+ #ifdef CONFIG_MVEBU_MPP_BUS
+@@ -157,12 +160,14 @@ int mvebu_board_init(void)
+ #ifdef CONFIG_DEVEL_BOARD
+ 	mvebu_devel_board_init();
+ #endif
++	debug_exit();
+ 	return 0;
+ }
+ 
+ 
+ int board_init(void)
+ {
++	debug_enter();
+ 	mvebu_print_info();
+ 
+ 	mvebu_soc_init();
+@@ -170,7 +175,8 @@ int board_init(void)
+ 	mvebu_board_init();
+ 
+ 	mvebu_io_init();
+-	
++
++	debug_exit();
+ 	return 0;
+ }
+ 
+diff --git a/common/mvebu/env_bootdev.c b/common/mvebu/env_bootdev.c
+index 9a41ef7..fd55f5d 100644
+--- a/common/mvebu/env_bootdev.c
++++ b/common/mvebu/env_bootdev.c
+@@ -15,10 +15,11 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+-
++/* #define DEBUG */
+ #include <common.h>
+ #include <environment.h>
+ #include <mvebu_chip_sar.h>
++#include <asm/arch-mvebu/mvebu.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+@@ -36,6 +37,7 @@ int env_init(void)
+ {
+ 	struct sar_val sar;
+ 
++	debug_enter();
+ 	mvebu_sar_value_get(SAR_BOOT_SRC, &sar);
+ 	/* Use ifdef as a temporary solution till we add sample-at-reset
+ 	** logic. */
+@@ -54,6 +56,7 @@ int env_init(void)
+ 		error("Sample at reset boot source type %x is not supported\n", sar.bootsrc.type);
+ 	}
+ 
++	debug_exit();
+ 	return gd->arch.env_func.init_env();
+ }
+ 
+@@ -61,6 +64,7 @@ void env_relocate_spec(void)
+ {
+ 	struct sar_val sar;
+ 
++	debug_enter();
+ 	mvebu_sar_value_get(SAR_BOOT_SRC, &sar);
+ 	/* env_init is called again here because of the
+ 	 * address relocation, the addreses need to be corrected
+@@ -85,6 +89,7 @@ void env_relocate_spec(void)
+ 		error("Sample at reset boot source type %x is not supported\n", sar.bootsrc.type);
+ 	}
+ 
++	debug_exit();
+ 	gd->arch.env_func.reloc_env();
+ }
+ 
+diff --git a/drivers/misc/mvebu_sar/ap806_sar.c b/drivers/misc/mvebu_sar/ap806_sar.c
+index e772c9c..41e7418 100644
+--- a/drivers/misc/mvebu_sar/ap806_sar.c
++++ b/drivers/misc/mvebu_sar/ap806_sar.c
+@@ -24,6 +24,7 @@
+ #include <asm/arch-mvebu/fdt.h>
+ #include <asm/arch-mvebu/clock.h>
+ #include <mvebu_chip_sar.h>
++#include <asm/arch-mvebu/mvebu.h>
+ 
+ #include "chip_sar.h"
+ 
+@@ -220,6 +221,8 @@ int ap806_sar_init(const void *blob, int node)
+ 	int ret, i;
+ 	struct sar_chip_info info;
+ 
++	debug_enter();
++
+ 	u32 sar_list[] = {
+ 		SAR_CPU_FREQ,
+ 		SAR_DDR_FREQ,
+@@ -245,6 +248,8 @@ int ap806_sar_init(const void *blob, int node)
+ 		}
+ 	}
+ 
++	debug_exit();
++
+ 	return 0;
+ }
+ 
+diff --git a/drivers/misc/mvebu_sar/chip_sar.c b/drivers/misc/mvebu_sar/chip_sar.c
+index c84627f..1355b4e 100644
+--- a/drivers/misc/mvebu_sar/chip_sar.c
++++ b/drivers/misc/mvebu_sar/chip_sar.c
+@@ -23,6 +23,7 @@
+ #include <libfdt.h>
+ #include <asm/arch-mvebu/fdt.h>
+ #include "chip_sar.h"
++#include <asm/arch-mvebu/mvebu.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+@@ -132,6 +133,7 @@ int mvebu_sar_value_get(enum mvebu_sar_opts opt, struct sar_val *val)
+ {
+ 	u32 idx;
+ 	struct sar_chip_info *chip_ptr;
++	debug_enter();
+ 	if (soc_sar_info[opt]) {
+ 		idx = CHIP_ID_TO_INDEX(soc_sar_info[opt]);
+ 		chip_ptr = &sar_chip_info[idx];
+@@ -139,6 +141,7 @@ int mvebu_sar_value_get(enum mvebu_sar_opts opt, struct sar_val *val)
+ 	}
+ 
+ 	error("SAR - No chip registered on sar %d.\n", opt);
++	debug_exit();
+ 	return -ENODEV;
+ }
+ 
+diff --git a/drivers/misc/mvebu_sar/cp110_sar.c b/drivers/misc/mvebu_sar/cp110_sar.c
+index a7cf81f..9d5830f 100644
+--- a/drivers/misc/mvebu_sar/cp110_sar.c
++++ b/drivers/misc/mvebu_sar/cp110_sar.c
+@@ -24,6 +24,7 @@
+ #include <asm/arch-mvebu/fdt.h>
+ #include <asm/arch-mvebu/clock.h>
+ #include <mvebu_chip_sar.h>
++#include <asm/arch-mvebu/mvebu.h>
+ 
+ #include "chip_sar.h"
+ 
+@@ -75,7 +76,7 @@ int cp110_sar_bootsrc_get(enum mvebu_sar_opts sar_opt, struct sar_val *val)
+ {
+ 	u32 reg, mode;
+ 	int i;
+-
++	debug_enter();
+ 	reg = readl(sar_base);
+ 	mode = (reg & SAR1_RST_BOOT_MODE_AP_CP0_MASK) >> SAR1_RST_BOOT_MODE_AP_CP0_OFFSET;
+ 
+@@ -95,7 +96,7 @@ int cp110_sar_bootsrc_get(enum mvebu_sar_opts sar_opt, struct sar_val *val)
+ 		error("Bad CP110 sample at reset mode (%d).\n", mode);
+ 		return -EINVAL;
+ 	}
+-
++	debug_exit();
+ 	return 0;
+ }
+ 
+@@ -103,6 +104,7 @@ int cp110_sar_value_get(enum mvebu_sar_opts sar_opt, struct sar_val *val)
+ {
+ 	u32 reg, mode;
+ 
++	debug_enter();
+ 	reg = readl(sar_base);
+ 
+ 	switch (sar_opt) {
+@@ -122,6 +124,7 @@ int cp110_sar_value_get(enum mvebu_sar_opts sar_opt, struct sar_val *val)
+ 		error("AP806-SAR: Unsupported SAR option %d.\n", sar_opt);
+ 		return -EINVAL;
+ 	}
++	debug_exit();
+ 	return 0;
+ }
+ 
+@@ -148,6 +151,8 @@ int cp110_sar_init(const void *blob, int node)
+ 	int ret, i;
+ 	struct sar_chip_info info;
+ 
++	debug_enter();
++
+ 	u32 sar_list[] = {
+ 		SAR_CP_PCIE0_CLK,
+ 		SAR_CP_PCIE1_CLK,
+@@ -173,6 +178,8 @@ int cp110_sar_init(const void *blob, int node)
+ 		}
+ 	}
+ 
++	debug_exit();
++
+ 	return 0;
+ }
+ 
+-- 
+1.9.1
+

@@ -1,0 +1,99 @@
+From 4f8833730b0777253a20a9e6dc413a7cdf11e8a3 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 5 Aug 2014 22:18:08 +0300
+Subject: [PATCH 0052/1240] a38x: spi: enable spi for a38x SoC
+
+Change-Id: Ifcbd66603fe46767637019f09be3ec46e2ca33e1
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/9865
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/include/asm/arch-armada38x/regs-base.h |  1 +
+ include/configs/armada38x.h                     |  2 +-
+ include/configs/mvebu-common.h                  | 14 +++++++++-----
+ 3 files changed, 11 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/include/asm/arch-armada38x/regs-base.h b/arch/arm/include/asm/arch-armada38x/regs-base.h
+index 5e987ae..8900b96 100644
+--- a/arch/arm/include/asm/arch-armada38x/regs-base.h
++++ b/arch/arm/include/asm/arch-armada38x/regs-base.h
+@@ -27,6 +27,7 @@
+ 
+ #define MVEBU_UART_BASE(x)	(MVEBU_REGS_BASE + 0x12000 + (0x100 * x))
+ #define MVEBU_GLOBAL_TIMER_BASE	(MVEBU_REGS_BASE + 0x20300)
++#define MVEBU_SPI_REGS_BASE(x)	(MVEBU_REGS_BASE + 0x10600 + (x * 0x80))
+ 
+ #define MVEBU_MISC_REGS_BASE	(MVEBU_REGS_BASE + 0x18200)
+ #define MVEBU_DEVICE_ID_REG	(MVEBU_MISC_REGS_BASE + 0x38)
+diff --git a/include/configs/armada38x.h b/include/configs/armada38x.h
+index 678f234..24d2bb5 100644
+--- a/include/configs/armada38x.h
++++ b/include/configs/armada38x.h
+@@ -48,6 +48,7 @@
+ 
+ /* Enable IO drivers */
+ #define MV_INCLUDE_UART
++#define CONFIG_MVEBU_SPI
+ /*
+ #define MV_INCLUDE_SDIO
+ #define MV_INCLUDE_INTEG_SATA
+@@ -55,7 +56,6 @@
+ 
+ #define MV_INCLUDE_RCVR
+ #define MV_INCLUDE_NAND
+-#define MV_INCLUDE_SPI
+ #define MV_INCLUDE_XOR
+ #define MV_INCLUDE_SATA
+ #define MV_INCLUDE_USB
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index e900113..fb616d3 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -138,7 +138,7 @@
+ 
+ 
+ /* No flash setup */
+-#if !defined(MV_INCLUDE_NOR) && !defined(MV_INCLUDE_NAND) && !defined(MV_INCLUDE_SPI)
++#if !defined(MV_INCLUDE_NOR) && !defined(MV_INCLUDE_NAND) && !defined(MV_SPI_BOOT)
+ 	#undef CONFIG_CMD_FLASH
+ 	#undef CONFIG_CMD_IMLS
+ 	#define CONFIG_ENV_IS_NOWHERE
+@@ -386,11 +386,11 @@
+ #endif /* MV_INCLUDE_NAND */
+ 
+ /* SPI Flash */
+-#ifdef MV_INCLUDE_SPI
+-	#define CONFIG_MVEBU_SPI
++#ifdef CONFIG_MVEBU_SPI
+ 	#define CONFIG_CMD_SPI
+ 	#define CONFIG_CMD_SF
+ 	#define CONFIG_SPI_FLASH
++	#define CONFIG_SPI_FLASH_WINBOND
+ 	#define CONFIG_SPI_FLASH_STMICRO
+ 	#define CONFIG_SPI_FLASH_MACRONIX
+ 	#define CONFIG_ENV_SPI_MAX_HZ           10000000        /*Max 50Mhz- will sattle on SPI bus max 41.5Mhz */
+@@ -416,7 +416,6 @@
+ 	#elif defined(MV_SEC_256K)
+ 	#define CONFIG_ENV_SECT_SIZE            0x40000
+ 	#endif
+-
+ 	#define CONFIG_ENV_SIZE		CONFIG_ENV_SECT_SIZE    /* environment takes one sector */
+ 	#define CONFIG_ENV_OFFSET	0x100000    /* (1MB For Image) environment starts here  */
+ 	#define CONFIG_ENV_ADDR		CONFIG_ENV_OFFSET
+@@ -472,6 +471,11 @@
+ 	#define CONFIG_SYS_MONITOR_BASE		(0 + CONFIG_ENV_SECT_SIZE)
+ 	#define CONFIG_SYS_MONITOR_END		(CONFIG_SYS_MONITOR_BASE + CONFIG_SYS_MONITOR_LEN)
+ 	#endif /* MV_NOR_BOOT */
+-#endif /* MV_INCLUDE_NOR */
++#else /* MV_INCLUDE_NOR */
++	#define CONFIG_SYS_NO_FLASH
++	#undef CONFIG_CMD_FLASH
++	#undef CONFIG_CMD_IMLS
++#endif
++
+ 
+ #endif /* _MVEBU_COMMON_H_ */
+-- 
+1.9.1
+

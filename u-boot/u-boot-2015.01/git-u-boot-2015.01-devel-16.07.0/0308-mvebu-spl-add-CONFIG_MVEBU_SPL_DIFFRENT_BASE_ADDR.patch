@@ -1,0 +1,54 @@
+From 92a3a9cfe63c361a81a5a1ddabcf4af341d5e636 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Wed, 5 Aug 2015 09:42:35 +0300
+Subject: [PATCH 0308/1240] mvebu: spl: add CONFIG_MVEBU_SPL_DIFFRENT_BASE_ADDR
+
+If CONFIG_MVEBU_SPL_DIFFRENT_BASE_ADDR is defined,
+use different registers base address for SPL stage.
+
+Change-Id: I774a7add466001aca076a0b63c3e57eca3e2ea6b
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22525
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Kconfig | 8 ++++++++
+ arch/arm/cpu/mvebu-common/fdt.c   | 2 +-
+ 2 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index 163f9d4..8c85f52 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -23,6 +23,14 @@ config MVEBU_SECURE_BOOT
+ 	  boot flow algorithm described in details
+ 	  in appropriate device specification.
+ 
++config MVEBU_SPL_DIFFRENT_BASE_ADDR
++	bool "Use SPL different registers base address"
++	depends on MVEBU
++	default n
++	help
++	  Choose this option to enable setting of a different
++	  registers base address at the SPL stage.
++
+ menu "IO support"
+ 
+ config MVEBU_NAND
+diff --git a/arch/arm/cpu/mvebu-common/fdt.c b/arch/arm/cpu/mvebu-common/fdt.c
+index d39e915..9b93fa4 100644
+--- a/arch/arm/cpu/mvebu-common/fdt.c
++++ b/arch/arm/cpu/mvebu-common/fdt.c
+@@ -43,7 +43,7 @@ void *fdt_get_regs_base(void)
+ 		return gd->arch.reg_base;
+ 
+ 	node = fdt_node_offset_by_compatible(gd->fdt_blob, -1, "marvell,internal-regs");
+-#ifdef CONFIG_SPL_BUILD
++#if defined(CONFIG_MVEBU_SPL_DIFFRENT_BASE_ADDR) && defined(CONFIG_SPL_BUILD)
+ 	gd->arch.reg_base = (void *)((uintptr_t)fdtdec_get_addr(gd->fdt_blob, node, "reg-spl"));
+ #else
+ 	gd->arch.reg_base = (void *)((uintptr_t)fdtdec_get_addr(gd->fdt_blob, node, "reg"));
+-- 
+1.9.1
+

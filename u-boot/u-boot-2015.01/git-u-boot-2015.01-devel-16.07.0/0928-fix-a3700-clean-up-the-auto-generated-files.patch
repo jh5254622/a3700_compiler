@@ -1,0 +1,50 @@
+From 8ea2f88921adc5299a8bccc674f85ef9db49b61a Mon Sep 17 00:00:00 2001
+From: Wilson Ding <dingwei@marvell.com>
+Date: Tue, 1 Mar 2016 19:16:55 +0800
+Subject: [PATCH 0928/1240] fix: a3700: clean up the auto-generated files
+
+Add the following targets in make clean/distclean:
+- clean up the temporary file and folder for armada3700
+  u-boot build (uart-images/, TIM_UBOOT_NON_TRUSTED.bin,
+  TIM_UBOOT_TRUSTED.bin)
+- clean up the tar ball for the uart images
+  (uart-images.tgz)
+
+Change-Id: Ia3a416be322946468f5d94523cafe2e93db6b6fb
+Signed-off-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27959
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ Makefile | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index ce55233..bb0d37a 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1394,6 +1394,9 @@ CLEAN_DIRS  += $(MODVERDIR) \
+ CLEAN_FILES += include/bmp_logo.h include/bmp_logo_data.h \
+ 	       u-boot* MLO* SPL System.map
+ 
++MARVELL_CLEAN_DIRS  += uart-images
++MARVELL_CLEAN_FILES += uart-images.tgz TIM_UBOOT*
++
+ # Directories & files removed with 'make mrproper'
+ MRPROPER_DIRS  += include/config include/generated spl tpl \
+ 		  .tmp_objdiff
+@@ -1402,8 +1405,8 @@ MRPROPER_FILES += .config .config.old include/autoconf.mk* include/config.h \
+ 
+ # clean - Delete most, but leave enough to build external modules
+ #
+-clean: rm-dirs  := $(CLEAN_DIRS)
+-clean: rm-files := $(CLEAN_FILES)
++clean: rm-dirs  := $(CLEAN_DIRS) $(MARVELL_CLEAN_DIRS)
++clean: rm-files := $(CLEAN_FILES) $(MARVELL_CLEAN_FILES)
+ 
+ clean-dirs	:= $(foreach f,$(u-boot-alldirs),$(if $(wildcard $(srctree)/$f/Makefile),$f))
+ 
+-- 
+1.9.1
+

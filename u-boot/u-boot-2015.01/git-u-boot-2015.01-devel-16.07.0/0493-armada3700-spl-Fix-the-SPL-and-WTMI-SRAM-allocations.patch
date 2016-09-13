@@ -1,0 +1,139 @@
+From d8f08d2b40cd76b95ded12b265eaa78fefc4e6ed Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Thu, 12 Nov 2015 12:03:10 +0200
+Subject: [PATCH 0493/1240] armada3700: spl: Fix the SPL and WTMI SRAM
+ allocations
+
+- The A3700 SRAM is 128K total and not 196K as in older SoCs
+- The SPL code size is reduced to 64K
+- The WTMI is placed after the SPL code + SPL data (64K + 16K)
+- The dummy WTMI binary rebuilt according to new memory
+  allocation and renamed to wtmi.dummy
+
+Change-Id: I26ba8f483ecab349eed08615f76179918963c2ee
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24802
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ include/configs/armadalp.h | 13 ++++++++++---
+ tools/wtp/u-boot-ntim.txt  |  8 ++++----
+ tools/wtp/wtmi.bin         |  1 -
+ tools/wtp/wtmi.dummy       |  1 +
+ tools/wtp/wtmi/wtmi.dis    |  4 ++--
+ tools/wtp/wtmi/wtmi.ld     |  2 +-
+ 6 files changed, 18 insertions(+), 11 deletions(-)
+ delete mode 100644 tools/wtp/wtmi.bin
+ create mode 100644 tools/wtp/wtmi.dummy
+
+diff --git a/include/configs/armadalp.h b/include/configs/armadalp.h
+index 84205a9..1398982 100644
+--- a/include/configs/armadalp.h
++++ b/include/configs/armadalp.h
+@@ -58,15 +58,22 @@
+ #ifdef CONFIG_SPL_BUILD
+ /* SPL */
+ /* Defines for SPL */
+-/*#define CONFIG_SPL_TEXT_BASE		0xF0000000 - CM3 SRAM, 0x01000000 - DRAM */
++/*#define CONFIG_SPL_TEXT_BASE	0xF0000000 - CM3 SRAM, 0x01000000 - DRAM */
++/* SRAM is 128K in total:      0xF0000000 - 0xF001FFFF
++   SPL code occupies addresses 0xF0000000 - 0xF000FFFF
++   SPL data can use addresses  0xF0010000 - 0xF0014000
++   WTMI starts at address      0xF00140F0
++   CM3 BootROM uses adresses   0xF0016000 - 0xF001FFFF
++   CM3 mapping for SRAM is     0x1FFF0000 - 0x20010000
++ */
+ #define CONFIG_SPL_TEXT_BASE		0xF0000000
+-#define CONFIG_SPL_MAX_SIZE		0x00020000	/* 128K */
++#define CONFIG_SPL_MAX_SIZE		0x00010000	/* 64K */
+ 
+ #ifndef __ASSEMBLY__
+ extern char __end_of_spl[];
+ #endif /* __ASSEMBLY__ */
+ #define CONFIG_SYS_SPL_MALLOC_START	((ulong)__end_of_spl)
+-#define CONFIG_SYS_SPL_MALLOC_SIZE	(0x4000)
++#define CONFIG_SYS_SPL_MALLOC_SIZE	(0x4000)	/* 16K */
+ #endif /* CONFIG_SPL_BUILD */
+ #define CONFIG_SPL_LDSCRIPT		"arch/arm/cpu/mvebu-common/u-boot-armv8-spl.lds"
+ 
+diff --git a/tools/wtp/u-boot-ntim.txt b/tools/wtp/u-boot-ntim.txt
+index 15a52e8..654728c 100644
+--- a/tools/wtp/u-boot-ntim.txt
++++ b/tools/wtp/u-boot-ntim.txt
+@@ -17,7 +17,7 @@ Image Size To CRC in bytes: 0x00000000
+ Partition Number:           0x00000000
+ Image Filename: TIM_UBOOT_NON_TRUSTED.bin
+ 
+-Image ID:                   0x4F424d49				; OBMI
++Image ID:                   0x4F424d49				; OBMI - 64K code + 16K data
+ Next Image ID:              0x57544d49				; WTMI next
+ Flash Entry Address:        0x00004000				; OBMI flash addr
+ Load Address:               0x1FFF0000				; OBMI RAM addr
+@@ -28,10 +28,10 @@ Image Filename: spl/u-boot-spl.bin
+ Image ID:                   0x57544d49				; WTMI
+ Next Image ID:              0x4F534C4F				; OSLO next
+ Flash Entry Address:        0x00024000				; WTMI flash addr
+-Load Address:               0x200100F0				; WTMI RAM addr
++Load Address:               0x200040F0				; WTMI RAM addr
+ Image Size To CRC in bytes: 0x00000000
+ Partition Number:           0x00000000
+-Image Filename: tools/wtp/wtmi.bin
++Image Filename: tools/wtp/wtmi.dummy
+ 
+ Image ID:                   0x4F534C4F				; OSLO
+ Next Image ID:              0xFFFFFFFF				; NONE
+@@ -50,7 +50,7 @@ Reserved Data:
+ 0x00000000	; Core_ID: 0 - AP0, 1 - AP1, 2 - CM3
+ 0xF0000000	; PC address for Core_ID above
+ 0x00000002	; Core_ID: 0 - AP0, 1 - AP1, 2 - CM3
+-0x200100F0	; PC address for Core_ID above
++0x200040F0	; PC address for Core_ID above
+ 0x5465726D	;Term
+ 0x00000008	; Size of this package in bytes
+ 
+diff --git a/tools/wtp/wtmi.bin b/tools/wtp/wtmi.bin
+deleted file mode 100644
+index b0e6286..0000000
+--- a/tools/wtp/wtmi.bin
++++ /dev/null
+@@ -1 +0,0 @@
+-þç
+\ No newline at end of file
+diff --git a/tools/wtp/wtmi.dummy b/tools/wtp/wtmi.dummy
+new file mode 100644
+index 0000000..b0e6286
+--- /dev/null
++++ b/tools/wtp/wtmi.dummy
+@@ -0,0 +1 @@
++þç
+\ No newline at end of file
+diff --git a/tools/wtp/wtmi/wtmi.dis b/tools/wtp/wtmi/wtmi.dis
+index ed143a0..bc0cd54 100644
+--- a/tools/wtp/wtmi/wtmi.dis
++++ b/tools/wtp/wtmi/wtmi.dis
+@@ -4,8 +4,8 @@ wtmi.elf:     file format elf32-littlearm
+ 
+ Disassembly of section .ro:
+ 
+-200100f0 <_Reset>:
+-200100f0:	e7fe      	b.n	200100f0 <_Reset>
++200040f0 <_Reset>:
++200040f0:	e7fe      	b.n	200040f0 <_Reset>
+ 
+ Disassembly of section .ARM.attributes:
+ 
+diff --git a/tools/wtp/wtmi/wtmi.ld b/tools/wtp/wtmi/wtmi.ld
+index d7ed99b..d2ad6d3 100644
+--- a/tools/wtp/wtmi/wtmi.ld
++++ b/tools/wtp/wtmi/wtmi.ld
+@@ -1,6 +1,6 @@
+ SECTIONS
+ {
+-  . = 0x200100F0;
++  . = 0x200040F0;
+   .ro : {
+     wtmi.o (.text)
+     *(.text)
+-- 
+1.9.1
+

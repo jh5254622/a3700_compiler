@@ -1,0 +1,33 @@
+From 94097b4229fbe084d80edbf7a7674154bb8b08dd Mon Sep 17 00:00:00 2001
+From: Ofir Fedida <ofedida@marvell.com>
+Date: Wed, 25 May 2016 16:41:45 +0300
+Subject: [PATCH 175/239] mv_ddr: apn806: Add compilation support for a80x0
+ flavors
+
+Add changes in make file to support a80x0 and a80x0_cust
+
+Change-Id: I19a122f12e7cdc74aa0c67839ffdd84bc8a9e5fa
+Signed-off-by: Ofir Fedida <ofedida@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29990
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/marvell/mv_ddr/Makefile b/drivers/marvell/mv_ddr/Makefile
+index 59a60ea..4ac7b8c 100644
+--- a/drivers/marvell/mv_ddr/Makefile
++++ b/drivers/marvell/mv_ddr/Makefile
+@@ -230,7 +230,7 @@ CFLAGS += -march=armv8-a -fpie $(INCLUDE) -D$(PLATFORM)
+ 
+ CFLAGS += -DMV_DDR_ATF -DCONFIG_APN806 -DCONFIG_MC_STATIC
+ 
+-ifneq ($(PLAT),$(filter $(PLAT),a70x0 a70x0_cust))
++ifneq ($(PLAT),$(filter $(PLAT),a70x0 a70x0_cust a80x0 a80x0_cust))
+ CFLAGS += -DCONFIG_PHY_STATIC
+ endif
+ 
+-- 
+1.9.1
+

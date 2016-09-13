@@ -1,0 +1,60 @@
+From 59d930059528bbad2603b40dddfdf2d7c55cf144 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Tue, 19 Jan 2016 11:00:45 +0200
+Subject: [PATCH 0711/1240] ddr: Add DDR frequency parameter to the driver
+ config
+
+- Add DDR frequency parameter to the driver
+  configuration structure
+- The parameter is going to be used in MK6 driver code
+  for supporting more than one DDR static initialization
+  frequencies (current A8K driver code is using single
+  frequency only).
+
+Change-Id: I7b486a84e307156d2057df25c75400f99f5fb549
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26874
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/include/asm/arch-mvebu/ddr.h | 1 +
+ drivers/ddr/mvebu_ddr.c               | 3 +++
+ 2 files changed, 4 insertions(+)
+
+diff --git a/arch/arm/include/asm/arch-mvebu/ddr.h b/arch/arm/include/asm/arch-mvebu/ddr.h
+index fbc5270..3abee89 100644
+--- a/arch/arm/include/asm/arch-mvebu/ddr.h
++++ b/arch/arm/include/asm/arch-mvebu/ddr.h
+@@ -34,6 +34,7 @@ struct mvebu_dram_config {
+ 	u32 cs_count;
+ 	u32 bus_width;
+ 	u32 size_mb;
++	u32 freq_mhz;
+ };
+ void mvebu_dram_init(const void *blob);
+ void mvebu_dram_mac_init(struct mvebu_dram_config *dram_config);
+diff --git a/drivers/ddr/mvebu_ddr.c b/drivers/ddr/mvebu_ddr.c
+index 3546bae..fd112ca 100644
+--- a/drivers/ddr/mvebu_ddr.c
++++ b/drivers/ddr/mvebu_ddr.c
+@@ -22,6 +22,7 @@
+ #include <asm/arch-mvebu/ddr.h>
+ #include <asm/arch-mvebu/mvebu.h>
+ #include <asm/arch-mvebu/fdt.h>
++#include <asm/arch-mvebu/clock.h>
+ 
+ #ifdef CONFIG_MVEBU_DYNAMIC_SUPPORT
+ #include <mvHwsDdrMckTraining.h>
+@@ -96,6 +97,8 @@ void mvebu_dram_init(const void *blob)
+ 		return;
+ 	}
+ 
++	config->freq_mhz = soc_ddr_clk_get() / MHz;
++
+ #ifdef CONFIG_MVEBU_STATIC_SUPPORT
+ 	static_dram_init(config);
+ #elif CONFIG_MVEBU_DYNAMIC_SUPPORT
+-- 
+1.9.1
+

@@ -1,0 +1,39 @@
+From 44a8b6d00f4221b0c0d8fd8d0d827a41bacde570 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 27 Aug 2015 15:16:04 +0300
+Subject: [PATCH 0372/1240] a8k: bootcmd: changed bootcmd to use ramfs
+
+Change-Id: I4d0347f237dc17c6166af0d2298e3e190af378f8
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23245
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/armada8k.h | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index ad16e12..368abee 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -107,14 +107,15 @@ extern char __end_of_spl[];
+ #define CONFIG_BOOTCOMMAND		"booti $kernel_addr $ramfs_addr $fdt_addr"
+ 
+ #else /* Real SOC settings */
+-#define CONFIG_BOOTARGS		"console=ttyS0,115200 earlycon=uart8250,mmio32,0xf0512000 root=/dev/nfs rw"
++#define CONFIG_BOOTARGS		"console=ttyS0,115200 earlycon=uart8250,mmio32,0xf0512000 root=/dev/ram0 rw"
+ 
+ #define CONFIG_EXTRA_ENV_SETTINGS	"kernel_addr=0x2000000\0"	\
+ 					"fdt_addr=0x1000000\0"		\
+ 					"fdt_high=0xa0000000\0"		\
++					"ramfs_addr=0x3000000\0"	\
+ 					"initrd_high=0xffffffffffffffff\0"
+ 
+-#define CONFIG_BOOTCOMMAND		"booti $kernel_addr - $fdt_addr"
++#define CONFIG_BOOTCOMMAND		"booti $kernel_addr $ramfs_addr $fdt_addr"
+ 
+ #endif /*CONFIG_PALLADIUM*/
+ 
+-- 
+1.9.1
+

@@ -1,0 +1,92 @@
+From 03e26b702a90db9ad52ae001489576627b0f984c Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 10 Jun 2015 14:09:46 +0300
+Subject: [PATCH 0215/1240] sample at reset: update command to use i2c
+ write/read commands
+
+- update command to use i2c write/read commands instead of dummy
+  commands
+
+Change-Id: I2af94ae19892914cc9a97f3f17ad74146f298477
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20070
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ board/mvebu/common/sar.c | 33 ++++-----------------------------
+ 1 file changed, 4 insertions(+), 29 deletions(-)
+
+diff --git a/board/mvebu/common/sar.c b/board/mvebu/common/sar.c
+index 0d0ad6b..679948d 100644
+--- a/board/mvebu/common/sar.c
++++ b/board/mvebu/common/sar.c
+@@ -17,43 +17,20 @@
+  * ***************************************************************************
+  */
+ 
+-#define DEBUG
+-
+ #include <common.h>
+ #include <errno.h>
+ #include <asm/io.h>
+-#include <asm/bitops.h>
+-#include <linux/compiler.h>
++#include <i2c.h>
++#include <fdtdec.h>
+ #include "devel-board.h"
+ #include "sar.h"
+ 
+-#include <fdtdec.h>
+-#include <asm/arch-mvebu/fdt.h>
+-#include <malloc.h>
+-
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+ struct sar_data sar_board;
+ #define board_get_sar() (&sar_board)
+ #define board_get_sar_table() (sar_board.sar_lookup)
+ 
+-#define I2C_DUMMY_BASE ((int)0x3000000)
+-
+-/* I2C interface commands */
+-static int i2c_write_dummy(uchar chip, uint addr, int alen, uchar *buffer, int len)
+-{
+-	uintptr_t reg = (uintptr_t)(I2C_DUMMY_BASE) + chip;
+-	writeb(*buffer, reg);
+-	return 0;
+-}
+-
+-static int i2c_read_dummy(uchar chip, uint addr, int alen, uchar *buffer, int len)
+-{
+-	uintptr_t reg = (uintptr_t)(I2C_DUMMY_BASE) + chip;
+-	(*buffer) = (uchar)readb(reg);
+-	return 0;
+-}
+-
+ static int sar_read_reg(u32 *reg)
+ {
+ 	uchar byte = 0;
+@@ -64,8 +41,7 @@ static int sar_read_reg(u32 *reg)
+ 	u8  reg_mask = (1 << reg_width) - 1;
+ 
+ 	for (chip = 0; chip  < sar->chip_count; chip++) {
+-		/*ret = i2c_read(var->chip_addr, var->reg_offset, 1, &byte, 1);*/
+-		ret = i2c_read_dummy(sar->chip_addr[chip], 0, 1, &byte, 1);
++		ret = i2c_read(sar->chip_addr[chip], 0, 1, &byte, 1);
+ 		if (ret) {
+ 			printf("Error: %s: Failed reading from chip 0x%x\n",
+ 			       __func__, sar->chip_addr[chip]);
+@@ -88,9 +64,8 @@ int sar_write_reg(u32 sar_reg)
+ 	u8  reg_mask = (1 << reg_width) - 1;
+ 
+ 	for (chip = 0; chip  < sar->chip_count; chip++) {
+-		/*ret = i2c_write(uchar chip, uint addr, int alen, uchar *buffer, int len)*/
+ 		byte = (sar_reg >> (chip * reg_width)) & reg_mask;
+-		ret = i2c_write_dummy(sar->chip_addr[chip], 0, 1, &byte, 1);
++		ret = i2c_write(sar->chip_addr[chip], 0, 1, &byte, 1);
+ 		if (ret) {
+ 			printf("Error: %s: Failed writing to chip 0x%x\n",
+ 			       __func__, sar->chip_addr[chip]);
+-- 
+1.9.1
+

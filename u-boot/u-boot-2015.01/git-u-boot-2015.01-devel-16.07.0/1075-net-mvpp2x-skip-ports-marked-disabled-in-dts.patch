@@ -1,0 +1,44 @@
+From eaca88c0d152e41912b6b1bdaa764af5172b7b8a Mon Sep 17 00:00:00 2001
+From: Anton <antone@marvell.com>
+Date: Mon, 4 Apr 2016 19:11:54 -0700
+Subject: [PATCH 1075/1240] net: mvpp2x: skip ports marked disabled in dts
+
+Check the port entity "status" property in dts
+and skip if disabled.
+This allows:
+- Keeping port definitions in a dts that cannot
+enable the port due to resource conflict
+(e.g. egiga0 on comphy lane2 also used by PCIe0).
+Just mark the port disabled.
+- Keeping common egigaN port numbers that won't
+shift when a port is being enabled/disabled.
+- Avoid having the first port egiga0 (m.b. disabled)
+automatically assigned to ethact variable.
+
+Change-Id: Ia1c56bf7b84607d1a2d6fd302d9d02e272b3d77c
+Signed-off-by: Anton <antone@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28778
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/net/mv_pp2x.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/drivers/net/mv_pp2x.c b/drivers/net/mv_pp2x.c
+index 703b842..e94ea1b 100644
+--- a/drivers/net/mv_pp2x.c
++++ b/drivers/net/mv_pp2x.c
+@@ -3892,6 +3892,10 @@ int mv_pp2x_initialize(bd_t *bis)
+ 	fdt_for_each_subnode(gd->fdt_blob, port_node, node) {
+ 		port_id = (uintptr_t)fdtdec_get_int(gd->fdt_blob,
+ 				port_node, "port-id", 0);
++		if (!fdtdec_get_is_enabled(gd->fdt_blob, port_node)) {
++			printf("Skipping disabled port egiga%d\n", port_id);
++			continue;
++		}
+ 		err = mv_pp2x_dts_port_param_set(port_node, &dev_param[port_id]);
+ 		if (err) {
+ 			printf("Failed to set port parameters\n");
+-- 
+1.9.1
+

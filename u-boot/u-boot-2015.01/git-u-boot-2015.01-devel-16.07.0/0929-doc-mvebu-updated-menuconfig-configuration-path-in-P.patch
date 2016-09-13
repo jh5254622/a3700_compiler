@@ -1,0 +1,34 @@
+From ae0e107f0919f18236e980cfe775421f9225faf0 Mon Sep 17 00:00:00 2001
+From: Ahmad Abbas <ahmada@marvell.com>
+Date: Sun, 6 Mar 2016 12:32:38 +0200
+Subject: [PATCH 0929/1240] doc: mvebu: updated menuconfig configuration path
+ in PG
+
+updated the path to "Support MVEBU development boards" in the porting
+guide since it was changed in menuconfig clean up task.
+
+Change-Id: I25ea795396650997f187c74b7c68a1381df76c56
+Signed-off-by: Ahmad Abbas <ahmada@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28047
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Gina Tadmore <gina@marvell.com>
+---
+ doc/mvebu/porting_guide.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/doc/mvebu/porting_guide.txt b/doc/mvebu/porting_guide.txt
+index dc06e29..3c15365 100644
+--- a/doc/mvebu/porting_guide.txt
++++ b/doc/mvebu/porting_guide.txt
+@@ -48,7 +48,7 @@ Customer board porting procedure
+ 		>> make menuconfig
+ 			o Disable CONFIG_DEVEL_BOARD to disable Marvell Development board specific features (reduces size and
+ 			unneeded code).
+-				-> ARM architecture -> MVEBU Board Support -> Unselect "Support MVEBU development boards"
++				-> Marvell Platform Options -> Board Options -> Unselect "Support MVEBU development boards"
+ 			o Update device tree file name:
+ 				-> Device Tree Control -> Default Device Tree for DT control -> "armada-7040-rz1-my_board"
+ 			o Save and exit
+-- 
+1.9.1
+

@@ -1,0 +1,130 @@
+From 8b0d0919a4b2caa200cee87b6e7f7b96e2499807 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 3 Nov 2015 14:28:38 +0200
+Subject: [PATCH 0460/1240] env-vars: Set bootcmd to support NFS, HDD and ramfs
+ boot
+
+	- Change bootcmd to be more modular
+	- Enable boot of ramfs without bootcmd changes
+	- Ability to change specific boot parameters without editing of
+	  complex env variables.
+
+Change-Id: I1280a0820fe901753e3cc1322b306adc9f5b86cc
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24543
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/armada8k.h     | 21 +++------------------
+ include/configs/mvebu-common.h | 35 +++++++++++++++++++++++------------
+ 2 files changed, 26 insertions(+), 30 deletions(-)
+
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index 84100ad..09238b9 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -80,9 +80,6 @@ extern char __end_of_spl[];
+  * Add here all config values that differ
+  * from the generic value in mvebu-common.h
+  */
+-#undef CONFIG_EXTRA_ENV_SETTINGS
+-#undef CONFIG_BOOTARGS
+-#undef CONFIG_BOOTCOMMAND
+ 
+ /* Emulation specific setting */
+ #ifdef CONFIG_PALLADIUM
+@@ -93,32 +90,20 @@ extern char __end_of_spl[];
+ #undef CONFIG_BAUDRATE
+ #define CONFIG_BAUDRATE                 24000
+ 
++#undef CONFIG_BOOTARGS
+ #define CONFIG_BOOTARGS		"console=ttyS0,24000 earlycon=uart8250,mmio32,0xf0512000 " \
+ 				"mem=128M init=/bin/sh root=/dev/ram0 rw"
+ 
++#undef CONFIG_EXTRA_ENV_SETTINGS
+ #define CONFIG_EXTRA_ENV_SETTINGS	"kernel_addr=0x180000\0"	\
+ 					"fdt_addr=0x1000000\0"		\
+ 					"ramfs_addr=0x3000000\0"	\
+ 					"fdt_high=0xa0000000\0"		\
+ 					"initrd_high=0xffffffffffffffff\0"
+ 
++#undef CONFIG_BOOTCOMMAND
+ #define CONFIG_BOOTCOMMAND		"booti $kernel_addr $ramfs_addr $fdt_addr"
+ 
+-#else /* Real SOC settings */
+-#define CONFIG_BOOTARGS		"console=ttyS0,115200 earlycon=uart8250,mmio32,0xf0512000 root=/dev/ram0 rw"
+-
+-#define CONFIG_EXTRA_ENV_SETTINGS	"kernel_addr=0x2000000\0"		\
+-					"fdt_addr=0x1000000\0"			\
+-					"fdt_high=0xffffffffffffffff\0"		\
+-					"ramfs_addr=0x3000000\0"		\
+-					"initrd_high=0xffffffffffffffff\0"	\
+-					"image_name=Image\0"			\
+-					"ramfs_name=u_rootfs.ext2.gz\0"		\
+-					"fdt_file=armada-apn806-db.dtb\0"
+-
+-#define CONFIG_BOOTCOMMAND		"tftp $kernel_addr $image_name; tftp $ramfs_addr $ramfs_name;"\
+-					"tftp $fdt_addr $fdt_file; booti $kernel_addr $ramfs_addr $fdt_addr"
+-
+ #endif /*CONFIG_PALLADIUM*/
+ 
+ 
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 8d2bfae..0281b0d 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -121,18 +121,28 @@
+ #define CONFIG_SYS_BARGSIZE             CONFIG_SYS_CBSIZE       /* Boot Argument Buffer Size */
+ #define CONFIG_BOOTDELAY                3
+ #define CONFIG_ROOTPATH                 "/srv/nfs/"             /* Default Dir for NFS */
+-#define CONFIG_EXTRA_ENV_SETTINGS	"kernel_addr=0x200000\0"	\
++#define CONFIG_EXTRA_ENV_SETTINGS	"kernel_addr=0x2000000\0"	\
+ 					"initrd_addr=0xa00000\0"	\
+ 					"initrd_size=0x2000000\0"	\
+-					"fdt_addr=0x100000\0"		\
+-					"fdt_high=0xa0000000\0"
+-
+-#define CONFIG_BOOTARGS			"console=ttyS0,115200 earlyprintk root=/dev/ram0"
+-#define CONFIG_BOOTCOMMAND		"bootm $kernel_addr - $fdt_addr"
+-
+-/* Marvell specific env*/
+-#define MV_BOOTARGS_END			":10.4.50.254:255.255.255.0:Marvell:eth0:none"
+-#define MV_BOOTARGS_END_SWITCH		":::Marvell:eth0:none"
++					"fdt_addr=0x1000000\0"		\
++					"loadaddr=0x2000000\0"		\
++					"fdt_high=0xffffffffffffffff\0"	\
++					"hostname=marvell\0"		\
++					"ramfs_name=-\0"		\
++					"fdt_name=fdt.dtb\0"		\
++					"netdev=eth0\0"			\
++					"image_name=Image\0"		\
++					"get_ramfs=if test \"${ramfs_name}\" != \"-\"; then tftp $ramfs_addr "	\
++					"$ramfs_name; else setenv ramfs_addr -;fi\0"				\
++					"get_images=tftp $kernel_addr $image_name; tftp $fdt_addr $fdt_name; "	\
++						"run get_ramfs\0"						\
++					"console=console=ttyS0,115200\0"					\
++					"root=root=/dev/nfs rw\0"						\
++					"set_bootargs=setenv bootargs $console $root "				\
++						"ip=$ipaddr:$serverip:$gatewayip:$netmask:$hostname:$netdev:none "\
++						"nfsroot=$serverip:$rootpath $extra_params"
++
++#define CONFIG_BOOTCOMMAND		"run get_images; run set_bootargs; booti $kernel_addr $ramfs_addr $fdt_addr"
+ 
+ /* U-Boot Commands */
+ /* #define CONFIG_BOOTP_MASK       (CONFIG_BOOTP_DEFAULT | CONFIG_BOOTP_BOOTFILESIZE) */
+@@ -312,9 +322,10 @@
+ /* Add network parameters when network command is enabled */
+ #ifdef CONFIG_CMD_NET
+ 	/* Environment */
+-	#define CONFIG_IPADDR           10.4.50.154
+-	#define CONFIG_SERVERIP         10.4.50.3
++	#define CONFIG_IPADDR			/* In order to cause an error if not set */
++	#define CONFIG_SERVERIP			/* In order to cause an error if not set */
+ 	#define CONFIG_NETMASK          255.255.255.0
++	#define CONFIG_GATEWAYIP	10.4.50.254
+ 	#define CONFIG_ETHADDR          00:00:00:00:51:81
+ 	#define ENV_ETH_PRIME           "e1000#0"
+ #endif /* CONFIG_CMD_NET */
+-- 
+1.9.1
+

@@ -1,0 +1,138 @@
+From 5d8f4be378b09e5e32b8fa70ac2244ac43265ffc Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 16 Nov 2015 13:43:15 +0200
+Subject: [PATCH 0500/1240] dts: cp110: added CP-110 device tree
+
+Change-Id: I7d004c0e8a043ec56698b95a9f46185a49248c1e
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24897
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/dts/cp110-master.dtsi | 37 +++++++++++++++++++++++++++++++++++++
+ arch/arm/dts/cp110-slave.dtsi  | 36 ++++++++++++++++++++++++++++++++++++
+ arch/arm/dts/cp110.dtsi        | 25 +++++++++++++++++++++++++
+ 3 files changed, 98 insertions(+)
+ create mode 100644 arch/arm/dts/cp110-master.dtsi
+ create mode 100644 arch/arm/dts/cp110-slave.dtsi
+ create mode 100644 arch/arm/dts/cp110.dtsi
+
+diff --git a/arch/arm/dts/cp110-master.dtsi b/arch/arm/dts/cp110-master.dtsi
+new file mode 100644
+index 0000000..2b00474
+--- /dev/null
++++ b/arch/arm/dts/cp110-master.dtsi
+@@ -0,0 +1,37 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/ {
++
++	model = "Marvell Armada CPN-110 Master";
++
++	cp110-master {
++		compatible = "marvell,armada-cpn110-master";
++		#address-cells = <1>;
++		#size-cells = <1>;
++
++		internal-regs {
++			compatible = "marvell,internal-regs";
++			ranges = <0x0000 0xf2000000 0x1000000>;
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			#include "cp110.dtsi"
++		};
++	};
++};
+diff --git a/arch/arm/dts/cp110-slave.dtsi b/arch/arm/dts/cp110-slave.dtsi
+new file mode 100644
+index 0000000..4da4cde
+--- /dev/null
++++ b/arch/arm/dts/cp110-slave.dtsi
+@@ -0,0 +1,36 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/ {
++	model = "Marvell Armada CPN-110 Slave";
++
++	cp110-slave {
++		compatible = "marvell,armada-cpn110-slave";
++		#address-cells = <1>;
++		#size-cells = <1>;
++
++		internal-regs {
++			compatible = "marvell,internal-regs";
++			ranges = <0x0000 0xf4000000 0x1000000>;
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			#include "cp110.dtsi"
++		};
++	};
++};
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+new file mode 100644
+index 0000000..87dbfa6
+--- /dev/null
++++ b/arch/arm/dts/cp110.dtsi
+@@ -0,0 +1,25 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++map-iob {
++	compatible = "marvell,mvebu-iob";
++	reg = <0x190000 0x50>;
++	max-win = <24>;
++	windows = <0x0 0xf8000000 0x0 0x1000000 0x2 /* PEX1_X1 window */
++		0x0 0xf9000000 0x0 0x1000000 0x5 /* NAND window */>;
++};
+-- 
+1.9.1
+

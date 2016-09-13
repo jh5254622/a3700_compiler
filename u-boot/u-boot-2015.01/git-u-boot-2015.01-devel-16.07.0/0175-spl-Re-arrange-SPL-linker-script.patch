@@ -1,0 +1,163 @@
+From f7710fc0556ebed967a1b815f43f96c0c0c7b044 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Mon, 23 Mar 2015 10:45:30 +0200
+Subject: [PATCH 0175/1240] spl: Re-arrange SPL linker-script
+
+	Rearrange SPL linker-script as a preparation for future support
+	for appending Binary blob to SPL.
+	Removed SPL_BSS_START_ADDR, and concatinated the .bss to the
+	.text section.
+	Added new section .__end_of_spl, to mark the end of the SPL blob.
+	Changed SYS_SPL_MALLOC_START to be calculated out of __end_of_spl
+	and not as a fixed base & size.
+
+Change-Id: Id02aee994b28e3d98db804ed24b574a08a32d1cc
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17875
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/u-boot-armv7-spl.lds | 12 ++++--------
+ arch/arm/cpu/mvebu-common/u-boot-armv8-spl.lds | 12 ++++--------
+ arch/arm/lib/sections.c                        |  1 +
+ include/configs/armada38x.h                    | 11 ++++++-----
+ include/configs/armada8k.h                     | 11 ++++++-----
+ 5 files changed, 21 insertions(+), 26 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/u-boot-armv7-spl.lds b/arch/arm/cpu/mvebu-common/u-boot-armv7-spl.lds
+index 4ab0178..9d801d5 100644
+--- a/arch/arm/cpu/mvebu-common/u-boot-armv7-spl.lds
++++ b/arch/arm/cpu/mvebu-common/u-boot-armv7-spl.lds
+@@ -18,8 +18,6 @@
+ 
+ MEMORY { .sram : ORIGIN = CONFIG_SPL_TEXT_BASE, \
+ 		LENGTH = CONFIG_SPL_MAX_SIZE }
+-MEMORY { .sdram : ORIGIN = CONFIG_SPL_BSS_START_ADDR, \
+-		LENGTH = CONFIG_SPL_BSS_MAX_SIZE }
+ 
+ OUTPUT_FORMAT("elf32-littlearm", "elf32-littlearm", "elf32-littlearm")
+ OUTPUT_ARCH(arm)
+@@ -48,11 +46,6 @@ SECTIONS
+ 	. = ALIGN(4);
+ 	__image_copy_end = .;
+ 
+-	.end :
+-	{
+-		*(.__end)
+-	} >.sram
+-
+ 	.bss :
+ 	{
+ 		. = ALIGN(4);
+@@ -60,5 +53,8 @@ SECTIONS
+ 		*(.bss*)
+ 		. = ALIGN(4);
+ 		__bss_end = .;
+-	} >.sdram
++	} >.sram
++
++	. = ALIGN(4);
++	__end_of_spl = .;
+ }
+diff --git a/arch/arm/cpu/mvebu-common/u-boot-armv8-spl.lds b/arch/arm/cpu/mvebu-common/u-boot-armv8-spl.lds
+index 21862ac..e14d0f6 100644
+--- a/arch/arm/cpu/mvebu-common/u-boot-armv8-spl.lds
++++ b/arch/arm/cpu/mvebu-common/u-boot-armv8-spl.lds
+@@ -18,8 +18,6 @@
+ 
+ MEMORY { .sram : ORIGIN = CONFIG_SPL_TEXT_BASE, \
+ 		LENGTH = CONFIG_SPL_MAX_SIZE }
+-MEMORY { .sdram : ORIGIN = CONFIG_SPL_BSS_START_ADDR, \
+-		LENGTH = CONFIG_SPL_BSS_MAX_SIZE }
+ 
+ OUTPUT_FORMAT("elf64-littleaarch64", "elf64-littleaarch64", "elf64-littleaarch64")
+ OUTPUT_ARCH(aarch64)
+@@ -48,11 +46,6 @@ SECTIONS
+ 	. = ALIGN(4);
+ 	__image_copy_end = .;
+ 
+-	.end :
+-	{
+-		*(.__end)
+-	} >.sram
+-
+ 	.bss :
+ 	{
+ 		. = ALIGN(4);
+@@ -60,5 +53,8 @@ SECTIONS
+ 		*(.bss*)
+ 		. = ALIGN(4);
+ 		__bss_end = .;
+-	} >.sdram
++	} >.sram
++
++	. = ALIGN(4);
++	__end_of_spl = .;
+ }
+diff --git a/arch/arm/lib/sections.c b/arch/arm/lib/sections.c
+index a1205c3..4f52b6d 100644
+--- a/arch/arm/lib/sections.c
++++ b/arch/arm/lib/sections.c
+@@ -28,3 +28,4 @@ char __rel_dyn_end[0] __attribute__((section(".__rel_dyn_end")));
+ char __secure_start[0] __attribute__((section(".__secure_start")));
+ char __secure_end[0] __attribute__((section(".__secure_end")));
+ char _end[0] __attribute__((section(".__end")));
++char __end_of_spl[0] __attribute__((section(".__end_of_spl")));
+diff --git a/include/configs/armada38x.h b/include/configs/armada38x.h
+index aa38003..ee598a2 100644
+--- a/include/configs/armada38x.h
++++ b/include/configs/armada38x.h
+@@ -102,16 +102,17 @@
+ #define CONFIG_SYS_DRAM_BANKS           1
+ 
+ /* SPL */
++#ifdef CONFIG_SPL_BUILD
+ /* Defines for SPL */
+ #define CONFIG_SPL_TEXT_BASE		0x40000040
+ #define CONFIG_SPL_MAX_SIZE		(0x1ffc0)
+ 
+-#define CONFIG_SPL_BSS_START_ADDR	(0x40020000)
+-#define CONFIG_SPL_BSS_MAX_SIZE		(0x8000)
+-
+-#define CONFIG_SYS_SPL_MALLOC_START	(CONFIG_SPL_BSS_START_ADDR + \
+-					 CONFIG_SPL_BSS_MAX_SIZE)
++#ifndef __ASSEMBLY__
++extern char __end_of_spl[];
++#endif /* __ASSEMBLY__ */
++#define CONFIG_SYS_SPL_MALLOC_START	((ulong)__end_of_spl)
+ #define CONFIG_SYS_SPL_MALLOC_SIZE	(0x4000)
++#endif /* CONFIG_SPL_BUILD */
+ #define CONFIG_SPL_LDSCRIPT		"arch/arm/cpu/mvebu-common/u-boot-armv7-spl.lds"
+ 
+ /* Include AFTER since it is affected by defines above */
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index ea7ce52..6eec7f3 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -49,17 +49,18 @@
+ #define COUNTER_FREQUENCY	(48000)
+ #define CONFIG_MSS_FREQUENCY	(384000)
+ 
++#ifdef CONFIG_SPL_BUILD
+ /* SPL */
+ /* Defines for SPL */
+ #define CONFIG_SPL_TEXT_BASE		0xFFE1C048
+ #define CONFIG_SPL_MAX_SIZE		(0x1ffc0)
+ 
+-#define CONFIG_SPL_BSS_START_ADDR	(CONFIG_SPL_TEXT_BASE + 0x20000)
+-#define CONFIG_SPL_BSS_MAX_SIZE		(0x8000)
+-
+-#define CONFIG_SYS_SPL_MALLOC_START	(CONFIG_SPL_BSS_START_ADDR + \
+-					 CONFIG_SPL_BSS_MAX_SIZE)
++#ifndef __ASSEMBLY__
++extern char __end_of_spl[];
++#endif /* __ASSEMBLY__ */
++#define CONFIG_SYS_SPL_MALLOC_START	((ulong)__end_of_spl)
+ #define CONFIG_SYS_SPL_MALLOC_SIZE	(0x4000)
++#endif /* CONFIG_SPL_BUILD */
+ #define CONFIG_SPL_LDSCRIPT		"arch/arm/cpu/mvebu-common/u-boot-armv8-spl.lds"
+ 
+ /*
+-- 
+1.9.1
+

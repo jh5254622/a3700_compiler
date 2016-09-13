@@ -1,0 +1,58 @@
+From 2e6fc79ae07d05152bcd7af54449fdfffccaf4f2 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 3 Feb 2016 18:49:18 +0200
+Subject: [PATCH 0795/1240] fix: dts: 7040rz: fixed SATA DTS setup for CP-110
+
+- Both SATA ports are part of the same SATA IP so
+  they should be represented by a single device tree entry
+  also enabled SATA for DOP board
+
+Change-Id: Ieb2d1e3e403ee79299dbf39556739600c3fa359f
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27193
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/armada-7040-rz-db_dop.dts | 4 ++--
+ arch/arm/dts/cp110.dtsi                | 9 ++-------
+ 2 files changed, 4 insertions(+), 9 deletions(-)
+
+diff --git a/arch/arm/dts/armada-7040-rz-db_dop.dts b/arch/arm/dts/armada-7040-rz-db_dop.dts
+index 81fb2f1..1d0e17a 100644
+--- a/arch/arm/dts/armada-7040-rz-db_dop.dts
++++ b/arch/arm/dts/armada-7040-rz-db_dop.dts
+@@ -66,8 +66,8 @@
+ 			usb3@510000 {
+ 				status = "disabled";
+ 			};
+-			sata@550000 {
+-				status = "disabled";
++			sata@540000 {
++				status = "okay";
+ 			};
+ 			mmc@780000 {
+ 				status = "disabled";
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index 9fab28a..dd7410e 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -56,14 +56,9 @@ i2c@701100 { /* i2c1 */
+ 	clock = <&tclk>;
+ 	status = "disabled";
+ };
+-sata@550000 { /* SATA0 */
++sata@540000 {
+ 	compatible = "marvell,mvebu-sata";
+-	reg = <550000 0x1000>;
+-	status = "disabled";
+-};
+-sata@560000 { /* SATA1 */
+-	compatible = "marvell,mvebu-sata";
+-	reg = <560000 0x1000>;
++	reg = <0x540000 0x30000>;
+ 	status = "disabled";
+ };
+ mmc@780000 {
+-- 
+1.9.1
+

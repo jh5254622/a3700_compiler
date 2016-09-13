@@ -1,0 +1,30 @@
+From 31ff1c65a7ddef8f3e1eb721bed8b8cf825eeb64 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 14 Jan 2015 18:42:25 +0200
+Subject: [PATCH 0099/1240] fix: config: disable MVEBU config by default and
+ enable it for MVEBU vendor
+
+Change-Id: I3321b9c3ef201fc949e5dd357993da775ab02667
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/16000
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Kconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index be2e5f7..5cbe89c 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -4,6 +4,7 @@ source "arch/arm/cpu/armv7/armada38x/Kconfig"
+ 
+ config MVEBU
+ 	bool "Support MVEBU devices"
++	depends on $SYS_VENDOR="mvebu"
+ 	default y
+ 
+ menu "IO support"
+-- 
+1.9.1
+

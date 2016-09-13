@@ -1,0 +1,41 @@
+From dac635fbda055d95f4f3908f330ab73886080c0e Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Thu, 30 Jun 2016 01:28:21 +0800
+Subject: [PATCH 1236/1240] doc: a3700: Add DB board info in db-setup.txt
+
+add description of new Armada3700 DB board with DDR4
+to armada-3700-db-setup.txt
+
+Change-Id: I85d57233dc87d8528fd729ecdd3ea4a8594bf518
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30837
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-by: Gina Tadmore <gina@marvell.com>
+Tested-by: Wilson Ding <dingwei@marvell.com>
+---
+ doc/mvebu/a3700/armada-3700-db-setup.txt | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/doc/mvebu/a3700/armada-3700-db-setup.txt b/doc/mvebu/a3700/armada-3700-db-setup.txt
+index f7eba5c..a35e5bf 100644
+--- a/doc/mvebu/a3700/armada-3700-db-setup.txt
++++ b/doc/mvebu/a3700/armada-3700-db-setup.txt
+@@ -1,10 +1,14 @@
+ Armada3700-DB development board setup:
+ --------------------------------------
+ 
+-The Armada3700-DB Development Board (DB) is a configurable board designed to test several
++The Armada3700 Development Board (DB) is a configurable board designed to test several
+ combinations of SOC configurations. U-BOOT supports a predefined set of those configurations
+ via different device tree files.
+ 
++There are two kinds of DB, DB-88F3720-DDR3-Modular and DB-88F3720-DDR4-Modular, the only
++difference is DDR type: one is DDR3, the other is DDR4. They are identical concerning the
++following Board Physical Setups.
++
+ This document describes the board modifications required to setup each configuration and the
+ interfaces supported (or disabled in each one).
+ 
+-- 
+1.9.1
+

@@ -1,0 +1,75 @@
+From dd1655814b8987dad6792cafefa6280eb8313868 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 9 Mar 2016 14:51:34 +0200
+Subject: [PATCH 045/239] amb: open amb bridge for IP configuration
+
+This is neccessary for accessing the comphy and SMI registers
+
+Change-Id: I9abb5d561f88f630e1d4864a0cf4c5f5458ccc3d
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28146
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ plat/marvell/a8k/a7040_rz/cp110_setup.c | 20 ++++++++++++++++++++
+ plat/marvell/a8k/a7040_rz/plat_def.h    |  1 +
+ 2 files changed, 21 insertions(+)
+
+diff --git a/plat/marvell/a8k/a7040_rz/cp110_setup.c b/plat/marvell/a8k/a7040_rz/cp110_setup.c
+index 2fa2a88..e066c29 100644
+--- a/plat/marvell/a8k/a7040_rz/cp110_setup.c
++++ b/plat/marvell/a8k/a7040_rz/cp110_setup.c
+@@ -52,6 +52,12 @@
+ #define MVEBU_AXI_ATTR_AWDOMAIN_OFFSET		28
+ #define MVEBU_AXI_ATTR_AWDOMAIN_MASK		(0x3 << MVEBU_AXI_ATTR_AWDOMAIN_OFFSET)
+ 
++/* AXI to MBUS bridge registers */
++#define MVEBU_AMB_IP_BRIDGE_WIN_REG(win)	(MVEBU_AMB_IP_BASE + (win * 0x8))
++#define MVEBU_AMB_IP_BRIDGE_WIN_EN_OFFSET	0
++#define MVEBU_AMB_IP_BRIDGE_WIN_EN_MASK		(0x1 << MVEBU_AMB_IP_BRIDGE_WIN_EN_OFFSET)
++#define MVEBU_AMB_IP_BRIDGE_WIN_SIZE_OFFSET	16
++#define MVEBU_AMB_IP_BRIDGE_WIN_SIZE_MASK	(0xffff << MVEBU_AMB_IP_BRIDGE_WIN_SIZE_OFFSET)
+ 
+ enum axi_attr {
+ 	AXI_ADUNIT_ATTR = 0,
+@@ -106,6 +112,17 @@ void cp110_axi_attr_init(void)
+ 	return;
+ }
+ 
++void amb_bridge_init(void)
++{
++	uint32_t reg;
++
++	/* Open AMB bridge Window to Access COMPHY/MDIO registers */
++	reg = mmio_read_32(MVEBU_AMB_IP_BRIDGE_WIN_REG(0));
++	reg &= ~(MVEBU_AMB_IP_BRIDGE_WIN_SIZE_MASK | MVEBU_AMB_IP_BRIDGE_WIN_EN_MASK);
++	reg |= (0x7ff << MVEBU_AMB_IP_BRIDGE_WIN_SIZE_OFFSET | 0x1 << MVEBU_AMB_IP_BRIDGE_WIN_EN_OFFSET);
++	mmio_write_32(MVEBU_AMB_IP_BRIDGE_WIN_REG(0), reg);
++}
++
+ void cp110_init(void)
+ {
+ 	/* configure IOB windows */
+@@ -113,4 +130,7 @@ void cp110_init(void)
+ 
+ 	/* configure axi */
+ 	cp110_axi_attr_init();
++
++	/* Open AMB bridge for comphy */
++	amb_bridge_init();
+ }
+diff --git a/plat/marvell/a8k/a7040_rz/plat_def.h b/plat/marvell/a8k/a7040_rz/plat_def.h
+index 8347899..af76cea 100644
+--- a/plat/marvell/a8k/a7040_rz/plat_def.h
++++ b/plat/marvell/a8k/a7040_rz/plat_def.h
+@@ -47,6 +47,7 @@
+ #define MVEBU_RFU_BASE			(MVEBU_REGS_BASE + 0x6F0000)
+ #define MVEBU_CCU_BASE			(MVEBU_REGS_BASE + 0x4000)
+ #define MVEBU_IOB_BASE			(MVEBU_CP0_REGS_BASE + 0x190000)
++#define MVEBU_AMB_IP_BASE		(MVEBU_CP0_REGS_BASE + 0x13ff00)
+ 
+ /*******************************************************************************
+  * MVEBU memory map related constants
+-- 
+1.9.1
+

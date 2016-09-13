@@ -1,0 +1,35 @@
+From 039a03be2a2b425eeb747bdb62c0c6e870ee1486 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 3 Sep 2015 10:26:44 +0300
+Subject: [PATCH 0402/1240] e1000: fix 64bit bug causing infinite scan loop
+
+the stop condition assumes the return value is signed
+while it is unsigned causing the driver to scan idefinetly
+the patch forces the compare to use sign
+
+Change-Id: Iffb6cffe891a629aef1996d79381a30cc1cf93c6
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23401
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ drivers/net/e1000.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/e1000.c b/drivers/net/e1000.c
+index f5078f2..e5d86f8 100644
+--- a/drivers/net/e1000.c
++++ b/drivers/net/e1000.c
+@@ -5339,7 +5339,7 @@ e1000_initialize(bd_t * bis)
+ 	DEBUGFUNC();
+ 
+ 	/* Find and probe all the matching PCI devices */
+-	for (i = 0; (devno = pci_find_devices(e1000_supported, i)) >= 0; i++) {
++	for (i = 0; (devno = pci_find_devices(e1000_supported, i)) != -1ul; i++) {
+ 		u32 val;
+ 
+ 		/*
+-- 
+1.9.1
+

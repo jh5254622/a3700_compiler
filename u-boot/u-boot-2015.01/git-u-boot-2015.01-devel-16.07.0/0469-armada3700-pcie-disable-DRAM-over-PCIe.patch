@@ -1,0 +1,35 @@
+From 078faa176b8c1e8c199f4a9e53cf22aef74b3e9c Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Tue, 3 Nov 2015 19:25:35 +0800
+Subject: [PATCH 0469/1240] armada3700: pcie: disable DRAM over PCIe
+
+Disable DRAM over PCIe feature since Aardvark PCIe driver
+for armada3700 does not support it yet.
+Otherwise there will be compilation issue since the MVEBU_PCI
+will be enabled by default once DRAM over PCIe is enabled, which
+conflicts to ADVK_PCI.
+To enable this feature once ADVK_PCI supports it.
+Change-Id: I79cd29b2d59c30e7c26414b4933176b00031ad7d
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24540
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ configs/mvebu_armadalp_defconfig | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index 9c34a9d..050509b 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -8,7 +8,6 @@ CONFIG_MVEBU_NETA_BYPASS_DEC_WIN=y
+ CONFIG_I2C_MV=y
+ CONFIG_I2C_MV_PAD_REG=n
+ +S:CONFIG_MVEBU_UART_ARLP=y
+-+S:CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT=y
+ +S:CONFIG_DEVEL_BOARD=y
+ CONFIG_CUSTOMER_BOARD=y
+ +S:CONFIG_SPL_DRIVERS_MISC_SUPPORT=y
+-- 
+1.9.1
+

@@ -1,0 +1,61 @@
+From 4f446f0f99021afeec0ceae83082c8c116902dfa Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Mon, 21 Mar 2016 09:46:42 +0200
+Subject: [PATCH 074/239] ble: initialize timer driver in order to enable delay
+ functionality
+
+this is required by dram driver
+
+Change-Id: I370c1f802dd8d5c85b549a8ce722e38d22bfb47c
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28386
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ ble/ble.mk     | 6 +++++-
+ ble/ble_main.c | 4 ++++
+ 2 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/ble/ble.mk b/ble/ble.mk
+index d1375e3..dfe2c87 100644
+--- a/ble/ble.mk
++++ b/ble/ble.mk
+@@ -31,8 +31,12 @@
+ DRAM_ROOT		=	drivers/marvell/dram
+ DRAM_LIB		= 	$(CURDIR)/$(BUILD_PLAT)/ble/dramlib.a
+ BLE_LIBS		= 	$(DRAM_LIB)
++PLAT_MARVELL		=	plat/marvell
++
++BLE_SOURCES		+= 	ble/ble_main.c				\
++				drivers/delay_timer/delay_timer.c	\
++				$(PLAT_MARVELL)/common/plat_delay_timer.c
+ 
+-BLE_SOURCES		+= 	ble/ble_main.c
+ PLAT_INCLUDES		+= 	-I$(DRAM_ROOT)
+ 
+ BLE_LINKERFILE		:=	ble/ble.ld.S
+diff --git a/ble/ble_main.c b/ble/ble_main.c
+index 13bad50..fb249d0 100644
+--- a/ble/ble_main.c
++++ b/ble/ble_main.c
+@@ -36,6 +36,7 @@
+ #include <console.h>
+ #include <platform_def.h>
+ #include <plat_marvell.h>
++#include <plat_private.h>
+ 
+ #define BR_FLAG_SILENT		0x1
+ 
+@@ -51,6 +52,9 @@ int  __attribute__ ((section(".entry"))) ble_main(int bootrom_flags)
+ 
+ 	NOTICE("Starting binary extension\n");
+ 
++	/* initiliaze time (for delay functionality) */
++	plat_delay_timer_init();
++
+ 	ble_plat_dram_setup();
+ 
+ 	return 0;
+-- 
+1.9.1
+

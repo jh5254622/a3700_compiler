@@ -1,0 +1,98 @@
+From 980ab069b4b2b98ebc30ceb580830837b10e1d43 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 18 Apr 2016 13:21:14 +0300
+Subject: [PATCH 131/239] cp110: stream-id: set unique stream ID to each
+ DMA-able device
+
+When transactions coming from I/O need to be translated by the
+system MMU (MMU-500), they are identified by a unique ID called
+Stream-ID.
+CP-110 enables setting the Stream-ID value for each device with
+DMA capabilities. Most devices are configure by the RFU but some
+have the Stream-ID configuration inside their device configuration
+space.
+This patch creates an initial Stream-ID map, allocating most of the
+space to the PCI bus to maximize support for SR-IOV.
+
+Change-Id: I5192210619dcf9f5048b59001211bb1ee151a32e
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29154
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ plat/marvell/a8k/a70x0/cp110_setup.c | 52 ++++++++++++++++++++++++++++++++++++
+ 1 file changed, 52 insertions(+)
+
+diff --git a/plat/marvell/a8k/a70x0/cp110_setup.c b/plat/marvell/a8k/a70x0/cp110_setup.c
+index 9485dd6..1eb9d80 100644
+--- a/plat/marvell/a8k/a70x0/cp110_setup.c
++++ b/plat/marvell/a8k/a70x0/cp110_setup.c
+@@ -83,6 +83,56 @@ enum axi_attr {
+ 	AXI_MAX_ATTR,
+ };
+ 
++/* Most stream IDS are configured centrally in the CP-110 RFU
++ * but some are configured inside the unit registers
++ */
++#define RFU_STREAM_ID_BASE	(0x450000)
++#define AUDIO_STREAM_ID_REG	(RFU_STREAM_ID_BASE + 0x0)
++#define TDM_STREAM_ID_REG	(RFU_STREAM_ID_BASE + 0x4)
++#define USB3D_STREAM_ID_REG	(RFU_STREAM_ID_BASE + 0x8)
++#define USB3H_0_STREAM_ID_REG	(RFU_STREAM_ID_BASE + 0xC)
++#define USB3H_1_STREAM_ID_REG	(RFU_STREAM_ID_BASE + 0x10)
++#define SATA_0_STREAM_ID_REG	(RFU_STREAM_ID_BASE + 0x14)
++#define SATA_1_STREAM_ID_REG	(RFU_STREAM_ID_BASE + 0x18)
++#define DBG_TRC_STREAM_ID_REG	(RFU_STREAM_ID_BASE + 0x24)
++#define SDIO_STREAM_ID_REG	(RFU_STREAM_ID_BASE + 0x28)
++#define DAP_STREAM_ID_REG	(RFU_STREAM_ID_BASE + 0x2C)
++
++#define CP_DMA_0_STREAM_ID_REG  (0x6B0010)
++#define CP_DMA_1_STREAM_ID_REG  (0x6D0010)
++
++/* We allocate IDs 0-127 for PCI since
++ * SR-IOV devices can generate many functions
++ * that need a unique Stream-ID.
++ */
++#define MAX_PCIE_STREAM_ID	(0x80)
++
++uintptr_t stream_id_reg[] = {
++	AUDIO_STREAM_ID_REG,
++	TDM_STREAM_ID_REG,
++	USB3D_STREAM_ID_REG,
++	USB3H_0_STREAM_ID_REG,
++	USB3H_1_STREAM_ID_REG,
++	SATA_0_STREAM_ID_REG,
++	SATA_1_STREAM_ID_REG,
++	DBG_TRC_STREAM_ID_REG,
++	SDIO_STREAM_ID_REG,
++	DAP_STREAM_ID_REG,
++	CP_DMA_0_STREAM_ID_REG,
++	CP_DMA_1_STREAM_ID_REG,
++	0
++};
++
++/* Set a unique stream id for all DMA capable devices */
++void cp110_stream_id_init(uintptr_t cp110_base)
++{
++	int i = 0;
++	uint32_t stream_id = MAX_PCIE_STREAM_ID;
++
++	while (stream_id_reg[i])
++		mmio_write_32(cp110_base + stream_id_reg[i++], stream_id++);
++}
++
+ void cp110_axi_attr_init(void)
+ {
+ 	uint32_t index, data;
+@@ -145,6 +195,8 @@ void cp110_init(void)
+ 	/* configure axi */
+ 	cp110_axi_attr_init();
+ 
++	cp110_stream_id_init(MVEBU_CP0_REGS_BASE);
++
+ 	/* Open AMB bridge for comphy */
+ 	amb_bridge_init();
+ }
+-- 
+1.9.1
+

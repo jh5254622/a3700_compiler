@@ -1,0 +1,123 @@
+From 4a15a4378e8917895ba14cec3d18c36f11f5c1e3 Mon Sep 17 00:00:00 2001
+From: Ken Ma <make@marvell.com>
+Date: Wed, 15 Jun 2016 17:41:53 +0800
+Subject: [PATCH 223/239] fix: makefile: a3700: remove ATF build dependency on
+ u-boot .config
+
+- The u-boot supplies the .config to Armada3700 ATF build for the
+  following options:
+  - clock preset(u-boot does not use it but spl uses it, when spl is
+		removed, this option should be removed from u-boot
+		after this patch)
+  - boot source(u-boot uses it, so we should set it to the same value
+		in atf and u-boot after this patch)
+- this patch remove this dependency by moving them in the ATF build
+  command, which introduces the following new options:
+  - SECURE: For a3700 only, trusted(=1)/non trusted(=0) in wtp, default
+    is non trusted.
+  - CLOCKSPRESET: For a3700 only, the clock tree configuration preset
+	including cpu and ddr frequency, default is CPU_800_DDR_800
+	CPU_600_DDR_600		- CPU at 600 MHz, DDR at 600 MHz
+	CPU_800_DDR_800		- CPU at 800 MHz, DDR at 800 MHz
+	CPU_1000_DDR_800	- CPU at 1000 MHz, DDR at 800 MHz
+  - BOOTDEV: For a3700 only, the flash boot device, default is SPINOR,
+	now a3700 only supports	SPINOR, SPINAND, EMMCNORM and SATA.
+	SPINOR		- SPI NOR flash boot
+	SPINAND		- SPI NAND flash boot
+	EMMCNORM	- eMMC Download Mode
+		Download boot loader or program code from eMMC flash
+		into CM3 or CA53
+		Requires full initialization and command sequence
+	EMMCALT		- eMMC Alternate Download Mode
+		Download boot loader or program code from eMMC flash
+		into CM3 or CA53
+		For cases when the eMMC Device is pre-programmed to
+		support eMMC Alternate Boot Mode.
+	SATA		- SATA device boot
+  - PARTNUM: For a3700 only, the boot partition number, default is 0
+  The completed build command of Armada3700 ATF should be as the
+  following:
+  make DEBUG=1 USE_COHERENT_MEM=0 LOG_LEVEL=20 SECURE=0
+  CLOCKSPRESET=CPU_600_DDR_600 BOOTDEV=SPINOR PARTNUM=0 PLAT=a3700_z
+  all fip
+
+Change-Id: Ifc080421e09d2a36a0b35008ff301a08c0b44d8e
+Signed-off-by: Ken Ma <make@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30476
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hua Jing <jinghua@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ Makefile              | 26 +++++---------------------
+ tools/wtp/buildtim.sh |  6 +++---
+ 2 files changed, 8 insertions(+), 24 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index e02302d..300644f 100644
+--- a/Makefile
++++ b/Makefile
+@@ -375,33 +375,17 @@ TIM2IMG			:= $(DOIMAGEPATH)/tim2img.pl
+ DOIMAGE_CFG		:= $(DOIMAGEPATH)/atf-ntim.txt
+ IMAGESPATH		:= $(DOIMAGEPATH)/untrusted
+ WTMI_IMG		:= $(DOIMAGEPATH)/wtmi/build/wtmi.bin
+-SECURE			:= 0
++SECURE			?= 0
+ TIM2IMGARGS		:= -i $(DOIMAGE_CFG)
+ BUILD_UART		:= uart-images
+ 
+ SRCPATH			:= $(dir $(BL33))
+-CONFIG_DEFAULT_DEVICE_TREE := $(shell grep "CONFIG_DEFAULT_DEVICE_TREE" -m 1 $(SRCPATH)/.config |cut -d"=" -f2)
+-CONFIG_MVEBU_SPI_BOOT	:= $(shell grep "CONFIG_MVEBU_SPI_BOOT" -m 1 $(SRCPATH)/.config |cut -d"=" -f2)
+-CONFIG_MVEBU_SPINAND_BOOT	:= $(shell grep "CONFIG_MVEBU_SPINAND_BOOT" -m 1 $(SRCPATH)/.config |cut -d"=" -f2)
+-CONFIG_MVEBU_MMC_BOOT	:= $(shell grep "CONFIG_MVEBU_MMC_BOOT" -m 1 $(SRCPATH)/.config |cut -d"=" -f2)
+-CONFIG_MVEBU_SATA_BOOT	:= $(shell grep "CONFIG_MVEBU_SATA_BOOT" -m 1 $(SRCPATH)/.config |cut -d"=" -f2)
+ 
+ CLOCKSPATH		:= $(DOIMAGEPATH)
+-CLOCKSPRESET		:= $(shell grep CONFIG_PRESET_ $(SRCPATH)/.config |grep =|cut -d"=" -f1|cut -c 8-)
+-
+-ifeq ($(CONFIG_MVEBU_SPI_BOOT),y)
+-BOOTDEV			:= SPINOR
+-PARTNUM			:= 0
+-else ifeq ($(CONFIG_MVEBU_SPINAND_BOOT),y)
+-BOOTDEV			:= SPINAND
+-PARTNUM			:= 0
+-else ifeq ($(CONFIG_MVEBU_MMC_BOOT),y)
+-BOOTDEV			:= EMMCNORM
+-PARTNUM			:= $(shell grep "CONFIG_SYS_MMC_ENV_PART" -m 1 $(SRCPATH)/.config |cut -d"=" -f2)
+-else ifeq ($(CONFIG_MVEBU_SATA_BOOT),y)
+-BOOTDEV			:= SATA
+-PARTNUM			:= 0
+-endif
++CLOCKSPRESET		?= CPU_800_DDR_800
++
++BOOTDEV			?= SPINOR
++PARTNUM			?= 0
+ 
+ TIM_IMAGE		:= $$(grep "Image Filename:" -m 1 $(DOIMAGE_CFG) | cut -c 17-)
+ TIMBLDARGS		:= $(SECURE) $(BOOTDEV) $(IMAGESPATH) $(CLOCKSPATH) $(CLOCKSPRESET) \
+diff --git a/tools/wtp/buildtim.sh b/tools/wtp/buildtim.sh
+index a77163a..76bd3c0 100755
+--- a/tools/wtp/buildtim.sh
++++ b/tools/wtp/buildtim.sh
+@@ -117,15 +117,15 @@ UART)
+ esac
+ 
+ case "$PRESET" in
+-PRESET_CPU_600_DDR_600)
++CPU_600_DDR_600)
+ 	CLOCKSFILE=$CLOCKSPATH/clocks-600-600.$FILEEXT
+ 	DDRFILE=$CLOCKSPATH/ddr-600.$FILEEXT
+ 	;;
+-PRESET_CPU_800_DDR_800)
++CPU_800_DDR_800)
+ 	CLOCKSFILE=$CLOCKSPATH/clocks-800-800.$FILEEXT
+ 	DDRFILE=$CLOCKSPATH/ddr-800.$FILEEXT
+ 	;;
+-PRESET_CPU_1000_DDR_800)
++CPU_1000_DDR_800)
+ 	CLOCKSFILE=$CLOCKSPATH/clocks-1000-800.$FILEEXT
+ 	DDRFILE=$CLOCKSPATH/ddr-800.$FILEEXT
+ 	;;
+-- 
+1.9.1
+

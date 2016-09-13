@@ -1,0 +1,30 @@
+From 4233199fc8fb591879d38d08db945ace30e45df0 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Thu, 17 Mar 2016 16:24:22 +0200
+Subject: [PATCH 071/239] mck6: Rename 7040_cust platform to 70x0_cust
+
+Change-Id: I589c27b6b01e7e2aa894454c0891546b2c43c447
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28332
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/marvell/dram/ddr_mckinley6.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/marvell/dram/ddr_mckinley6.c b/drivers/marvell/dram/ddr_mckinley6.c
+index 2322e4f..343e0d0 100644
+--- a/drivers/marvell/dram/ddr_mckinley6.c
++++ b/drivers/marvell/dram/ddr_mckinley6.c
+@@ -2028,7 +2028,7 @@ struct mk6_reg_data mk6_phy_setup[] = {
+ 	{ 0x8d0, 0x00000019},
+ 	{-1, -1},
+ };
+-#elif defined(a7040_cust) || defined(a70x0)
++#elif defined(a70x0_cust) || defined(a70x0)
+ /* The below definitions are needed in order to enable temporary compilation
+ ** of a7040_cust & a70x0 platforms, till the relevat ddr code for these platforms
+ ** is added
+-- 
+1.9.1
+

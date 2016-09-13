@@ -1,0 +1,83 @@
+From 160fe3fd017770c9650d750bc354b1193f5d966b Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 4 Feb 2016 09:47:59 +0200
+Subject: [PATCH 0826/1240] comphy: sata: ap806: reduce burst size to 64 byte
+
+This is required due to a bug in AP-806-Z Aurora unit
+
+Change-Id: I501e552e8d5d92329e55c9ac5c50fbf9301a5eb6
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27214
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/Kconfig    | 8 ++++++++
+ configs/mvebu_armada70x0_defconfig     | 1 +
+ configs/mvebu_armada70x0_dop_defconfig | 1 +
+ drivers/phy/comphy_cp110.c             | 9 +++++++++
+ 4 files changed, 19 insertions(+)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/Kconfig b/arch/arm/cpu/armv8/armada8k/Kconfig
+index ae76a3d..4c6f966 100644
+--- a/arch/arm/cpu/armv8/armada8k/Kconfig
++++ b/arch/arm/cpu/armv8/armada8k/Kconfig
+@@ -84,4 +84,12 @@ config MVEBU_FLC
+ 	  Memory Controller driver.
+ 	  This driver enable FLC and open the FLC windows.
+ 
++config AP806_Z_SUPPORT
++	bool "Enable support for AP-806-Z1 & Z2"
++	default n
++	help
++	  Choose this option to add support
++	  for Marvell's AP-806-Z1/Z2 devices
++	  This configurations controlls all sorts of fixes
++	  relevant only for the Z1 & Z2 stepping of AP-806
+ endif
+diff --git a/configs/mvebu_armada70x0_defconfig b/configs/mvebu_armada70x0_defconfig
+index aa75d02..9c510d4 100644
+--- a/configs/mvebu_armada70x0_defconfig
++++ b/configs/mvebu_armada70x0_defconfig
+@@ -6,6 +6,7 @@ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ CONFIG_MVEBU_CCU=y
+ CONFIG_MVEBU_IOB=y
+ CONFIG_MVEBU_RFU=y
+++S:CONFIG_AP806_Z_SUPPORT=y
+ CONFIG_MVEBU_MPP_BUS=y
+ +S:CONFIG_MVEBU_ROM_SILENCE_FLAG_SUPPORT=y
+ +S:CONFIG_DEVEL_BOARD=y
+diff --git a/configs/mvebu_armada70x0_dop_defconfig b/configs/mvebu_armada70x0_dop_defconfig
+index 35c16db..65cf873 100644
+--- a/configs/mvebu_armada70x0_dop_defconfig
++++ b/configs/mvebu_armada70x0_dop_defconfig
+@@ -2,6 +2,7 @@ CONFIG_SPL=y
+ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_ARMADA_8K=y
+++S:CONFIG_AP806_Z_SUPPORT=y
+ CONFIG_MVEBU_MPP_BUS=y
+ +S:CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT=y
+ +S:CONFIG_MVEBU_ROM_SILENCE_FLAG_SUPPORT=y
+diff --git a/drivers/phy/comphy_cp110.c b/drivers/phy/comphy_cp110.c
+index 0b3e1f2..95f70ef 100644
+--- a/drivers/phy/comphy_cp110.c
++++ b/drivers/phy/comphy_cp110.c
+@@ -435,6 +435,15 @@ static int comphy_sata_power_up(u32 lane, void __iomem *hpipe_base, void __iomem
+ 	/* Wait 10ms - Wait for comphy calibration done */
+ 	mdelay(10);
+ 
++#ifdef CONFIG_AP806_Z_SUPPORT
++	/* Reduce read & write burst size to 64 byte due to bug in
++	 * AP-806-Z Aurora 2 that prohibits writes larger than 64 byte */
++	writel(0x4, sata_base + SATA3_VENDOR_ADDRESS);
++	mask = 0x77;
++	data = 0x44; /* 4 = 64 bytes burst */
++	reg_set(sata_base + SATA3_VENDOR_DATA, data, mask);
++#endif
++
+ 	/* MBUS request size and interface select register */
+ 	reg_set(sata_base + SATA3_VENDOR_ADDRESS,
+ 		SATA_MBUS_SIZE_SELECT_REG << SATA3_VENDOR_ADDR_OFSSET, SATA3_VENDOR_ADDR_MASK);
+-- 
+1.9.1
+

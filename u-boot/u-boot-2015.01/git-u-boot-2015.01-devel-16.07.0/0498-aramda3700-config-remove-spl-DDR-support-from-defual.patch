@@ -1,0 +1,39 @@
+From d3035ba57ab8ac41cdb997fabe0e270a82e142f6 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Tue, 10 Nov 2015 16:28:57 +0200
+Subject: [PATCH 0498/1240] aramda3700: config: remove spl DDR support from
+ defualt configuration
+
+    - Remove spl DDR support from amramdalp and armadalp_palladium build default configuration.
+
+Change-Id: I12e3b0d470277010fb9cea906ef8637a843e71d2
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24717
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ configs/mvebu_armadalp_defconfig           | 1 +
+ configs/mvebu_armadalp_palladium_defconfig | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index d545e2a..826b185 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -32,3 +32,4 @@ CONFIG_CMD_PING=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-lp-db"
+ +S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+++S:# CONFIG_MVEBU_SPL_DDR_SUPPORT is not set
+diff --git a/configs/mvebu_armadalp_palladium_defconfig b/configs/mvebu_armadalp_palladium_defconfig
+index 31604a5..8d2f0f0 100644
+--- a/configs/mvebu_armadalp_palladium_defconfig
++++ b/configs/mvebu_armadalp_palladium_defconfig
+@@ -30,3 +30,4 @@ CONFIG_CMD_PING=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-lp-palladium"
+ +S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+++S:# CONFIG_MVEBU_SPL_DDR_SUPPORT is not set
+-- 
+1.9.1
+

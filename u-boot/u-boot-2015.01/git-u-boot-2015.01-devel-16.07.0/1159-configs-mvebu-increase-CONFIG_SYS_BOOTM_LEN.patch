@@ -1,0 +1,48 @@
+From d0dc72656917bf34c2eb880af13c3f81b879076a Mon Sep 17 00:00:00 2001
+From: Anton <antone@marvell.com>
+Date: Mon, 2 May 2016 23:56:35 -0700
+Subject: [PATCH 1159/1240] configs: mvebu: increase CONFIG_SYS_BOOTM_LEN
+
+Increase maximum gunzip output size with compressed kernel images:
+CONFIG_SYS_BOOTM_LEN
+Default in common/bootm.c is 8MB - too small for A8K Image (~13MB).
+When output size reaches this limit bootm fails with
+unclear message "inflate() returned -5:
+GUNZIP: uncompress, out-of-mem or overwrite error
+
+The configuration is common for all platforms that use
+mvebu-common.h: armada3700, armada38x, armada8k
+
+Change-Id: Id40654541658f917372133a30ec8b0305f7034d7
+Signed-off-by: Anton <antone@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29434
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ include/configs/mvebu-common.h | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 731e8fb..68d7a5b 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -104,6 +104,14 @@
+  * the maximum mapped by the Linux kernel during initialization.
+  */
+ #define CONFIG_SYS_BOOTMAPSZ	(16 << 20)	/* Initial Memory map for Linux */
++
++/*
++ * Increase maximum gunzip output size
++ * with compressed kernel images.
++ * Default in common/bootm.c is 8MB.
++ */
++#define CONFIG_SYS_BOOTM_LEN	(20 << 20)	/* max Image size */
++
+ #define CONFIG_CMDLINE_TAG              1	/* enable passing of ATAGs  */
+ #define CONFIG_CMDLINE_EDITING          1
+ #define CONFIG_INITRD_TAG               1       /* enable INITRD tag for ramdisk data */
+-- 
+1.9.1
+

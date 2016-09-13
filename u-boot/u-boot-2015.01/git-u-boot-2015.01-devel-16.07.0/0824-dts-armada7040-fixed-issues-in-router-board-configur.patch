@@ -1,0 +1,101 @@
+From 096eaa5ef9c19626618ae1b3605c0bd6ab3da45f Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 7 Feb 2016 10:14:28 +0200
+Subject: [PATCH 0824/1240] dts: armada7040: fixed issues in router board
+ configuration
+
+fixed the comphy mux configuration
+fixed the active units setup
+
+Change-Id: I0a7e38d1c099e5978066c3cb8c7a9f233ca7ef5d
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27259
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/armada-7040-rz-db_router.dts | 30 +++++++++++++++---------------
+ 1 file changed, 15 insertions(+), 15 deletions(-)
+
+diff --git a/arch/arm/dts/armada-7040-rz-db_router.dts b/arch/arm/dts/armada-7040-rz-db_router.dts
+index 63e66a9..ea00f58 100644
+--- a/arch/arm/dts/armada-7040-rz-db_router.dts
++++ b/arch/arm/dts/armada-7040-rz-db_router.dts
+@@ -34,7 +34,7 @@
+ 	ap-806 {
+ 		internal-regs {
+ 			spi0: spi@510600 {
+-				status = "okay";
++				status = "disabled";
+ 			};
+ 			i2c0: i2c@511000 {
+ 				status = "okay";
+@@ -43,17 +43,20 @@
+ 
+ 		pcie-controller {
+ 			pcie@1,0 {
+-				status = "okay";
++				status = "disabled";
+ 			};
+ 		};
+ 	};
+ 	cp110-master {
+ 		internal-regs {
+-			spi@700600 {
++			spi0@700600 {
++				status = "disabled";
++			};
++			spi1@700680 {
+ 				status = "okay";
+ 			};
+ 			i2c@701000 {
+-				status = "okay";
++				status = "disabled";
+ 			};
+ 			usb3@500000 {
+ 				status = "okay";
+@@ -61,11 +64,16 @@
+ 			usb3@510000 {
+ 				status = "okay";
+ 			};
+-			sata@550000 {
++			sata@540000 {
+ 				status = "okay";
+ 			};
+ 			mmc@780000 {
+-				status = "okay";
++				status = "disabled";
++			};
++			pcie-controller {
++				pcie@2,0 {
++					status = "okay";
++				};
+ 			};
+ 
+ 			pinctl@440000 {
+@@ -92,14 +100,6 @@
+ 			};
+ 
+ 			comphy {
+-				/* Serdes Configuration:
+-					Lane 0: SGMII2
+-					Lane 1: USB3-HOST0
+-					Lane 2: SGMII0
+-					Lane 3: SATA1
+-					Lane 4: USB3-HOST1
+-					Lane 5: PEX2x1
+-				*/
+ 				phy0 {
+ 					phy-type = <PHY_TYPE_SGMII2>;
+ 					phy-speed = <PHY_SPEED_1_25G>;
+@@ -121,7 +121,7 @@
+ 					phy-speed = <PHY_SPEED_5G>;
+ 				};
+ 				phy5 {
+-					phy-type = <PHY_TYPE_PEX2>;
++					phy-type = <PHY_TYPE_PEX1>;
+ 					phy-speed = <PHY_SPEED_5G>;
+ 				};
+ 			};
+-- 
+1.9.1
+

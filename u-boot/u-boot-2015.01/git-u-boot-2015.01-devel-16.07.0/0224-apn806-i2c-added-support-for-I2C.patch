@@ -1,0 +1,56 @@
+From 5d9a8be43dfaf4febfa7da5d0ab155aa42a25cea Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Fri, 26 Jun 2015 10:42:59 +0300
+Subject: [PATCH 0224/1240] apn806: i2c: added support for I2C
+
+Change-Id: Ic95b2c7461ec090b35f7c9c069e9b4f385e0fb35
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20510
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/dts/apn-806.dtsi        | 7 +++++++
+ configs/mvebu_armada8k_defconfig | 2 ++
+ 2 files changed, 9 insertions(+)
+
+diff --git a/arch/arm/dts/apn-806.dtsi b/arch/arm/dts/apn-806.dtsi
+index cd72f9e..7eb38f0 100644
+--- a/arch/arm/dts/apn-806.dtsi
++++ b/arch/arm/dts/apn-806.dtsi
+@@ -45,6 +45,13 @@
+ 				clock-frequency = <125000>;
+ 			};
+ 
++			i2c0: i2c@511000 {
++				compatible = "marvell,mvebu-i2c";
++				reg = <0x511000 0x4>;
++				clock = <&tclk>;
++				status = "okay";
++			};
++
+ 			spi0: spi@510600 {
+ 				compatible = "marvell,orion-spi";
+ 				reg = <0x510600 0x50>;
+diff --git a/configs/mvebu_armada8k_defconfig b/configs/mvebu_armada8k_defconfig
+index 3fa1e53..439ae6f 100644
+--- a/configs/mvebu_armada8k_defconfig
++++ b/configs/mvebu_armada8k_defconfig
+@@ -3,6 +3,7 @@ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_ARMADA_8K=y
+ CONFIG_MVEBU_MPP_BUS=y
++CONFIG_MVEBU_I2C=y
+ +S:CONFIG_MVEBU_MK6_SUPPORT=y
+ +S:CONFIG_DEVEL_BOARD=y
+ CONFIG_APN_806_DB=y
+@@ -11,6 +12,7 @@ CONFIG_CMD_RUN=y
+ CONFIG_CMD_EDITENV=y
+ CONFIG_CMD_SAVEENV=y
+ CONFIG_CMD_MEMORY=y
++CONFIG_CMD_I2C=y
+ CONFIG_CMD_TIME=y
+ CONFIG_CMD_MISC=y
+ CONFIG_CMD_TIMER=y
+-- 
+1.9.1
+

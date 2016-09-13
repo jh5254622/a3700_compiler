@@ -1,0 +1,465 @@
+From 1e5bbfc1a64f9f0a6ee032cca31c35640b5efe5a Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Mon, 16 May 2016 14:55:56 +0300
+Subject: [PATCH 161/239] config: a8k: support for 2nd CP internal register
+ usage
+
+- add index support for CP internal registers
+- update all existing usage of CP base, with index=0 (CP0)
+- when all cp110 interfaces will be supported by CP1,
+  cp110_init should be called twice, with CP index.
+
+Change-Id: Ic0c8f920e1d37c517919c006c8a7f6ea55823ffd
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29763
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/marvell/amb_adec.c                         |  4 +-
+ drivers/marvell/iob.c                              |  4 +-
+ include/drivers/marvell/amb_adec.h                 |  2 +-
+ include/drivers/marvell/iob.h                      |  2 +-
+ include/plat/marvell/a8k/a70x0/board/plat_config.h |  4 +-
+ .../a8k/a7040_rz/board/marvell_plat_config.c       |  8 +--
+ plat/marvell/a8k/a70x0/board/marvell_plat_config.c |  8 +--
+ plat/marvell/a8k/a70x0/cp110_setup.c               | 60 +++++++++++-----------
+ plat/marvell/a8k/a70x0/plat_bl31_setup.c           |  8 +--
+ plat/marvell/a8k/a70x0/plat_def.h                  | 10 ++--
+ .../a8k/a70x0_cust/board/marvell_plat_config.c     |  8 +--
+ plat/marvell/a8k/a80x0/board/marvell_plat_config.c |  8 +--
+ plat/marvell/a8k/a80x0/plat_def.h                  | 11 ++--
+ .../marvell/a8k/apn806/board/marvell_plat_config.c |  4 +-
+ 14 files changed, 72 insertions(+), 69 deletions(-)
+
+diff --git a/drivers/marvell/amb_adec.c b/drivers/marvell/amb_adec.c
+index dd36b0f..6c41cc9 100644
+--- a/drivers/marvell/amb_adec.c
++++ b/drivers/marvell/amb_adec.c
+@@ -86,7 +86,7 @@ static void dump_amb_adec(void)
+ }
+ #endif
+ 
+-int init_amb_adec(void)
++int init_amb_adec(int cp_index)
+ {
+ 	struct amb_win *win;
+ 	uint32_t win_id, win_reg;
+@@ -95,7 +95,7 @@ int init_amb_adec(void)
+ 	INFO("Initializing AXI to MBus Bridge Address decoding\n");
+ 
+ 	/* Get the base address of the AMB address decoding */
+-	amb_base = marvell_get_amb_reg_offs();
++	amb_base = marvell_get_amb_reg_offs(cp_index);
+ 
+ 	/* Get the array of the windows and its size */
+ 	marvell_get_amb_memory_map(&win, &win_count);
+diff --git a/drivers/marvell/iob.c b/drivers/marvell/iob.c
+index 40413dc..49b37f9 100644
+--- a/drivers/marvell/iob.c
++++ b/drivers/marvell/iob.c
+@@ -153,7 +153,7 @@ static void dump_iob(void)
+ }
+ #endif
+ 
+-int init_iob(void)
++int init_iob(int cp_index)
+ {
+ 	struct iob_win *win;
+ 	uint32_t win_id, win_reg;
+@@ -162,7 +162,7 @@ int init_iob(void)
+ 	INFO("Initializing IOB Address decoding\n");
+ 
+ 	/* Get the base address of the address decoding MBUS */
+-	iob_info->iob_base = marvell_get_iob_reg_offs();
++	iob_info->iob_base = marvell_get_iob_reg_offs(cp_index);
+ 
+ 	/* Get the maximum number of iob windows supported */
+ 	iob_info->max_win = marvell_get_iob_max_win();
+diff --git a/include/drivers/marvell/amb_adec.h b/include/drivers/marvell/amb_adec.h
+index b6709c4..23f5a7b 100644
+--- a/include/drivers/marvell/amb_adec.h
++++ b/include/drivers/marvell/amb_adec.h
+@@ -61,7 +61,7 @@ enum amb_attribute_ids {
+ 
+ #define AMB_MAX_WIN_ID		7
+ 
+-int init_amb_adec(void);
++int init_amb_adec(int cp_index);
+ 
+ #endif /* _AMB_ADEC_H_ */
+ 
+diff --git a/include/drivers/marvell/iob.h b/include/drivers/marvell/iob.h
+index 352486a..c8ac9b5 100644
+--- a/include/drivers/marvell/iob.h
++++ b/include/drivers/marvell/iob.h
+@@ -55,7 +55,7 @@ enum target_ids_iob {
+ 	IOB_MAX_TID
+ };
+ 
+-int init_iob(void);
++int init_iob(int cp_index);
+ 
+ #endif /* _IOB_H_ */
+ 
+diff --git a/include/plat/marvell/a8k/a70x0/board/plat_config.h b/include/plat/marvell/a8k/a70x0/board/plat_config.h
+index 1895db1..54e5176 100644
+--- a/include/plat/marvell/a8k/a70x0/board/plat_config.h
++++ b/include/plat/marvell/a8k/a70x0/board/plat_config.h
+@@ -40,9 +40,9 @@
+ #include <ccu.h>
+ 
+ 
+-uintptr_t marvell_get_amb_reg_offs(void);
++uintptr_t marvell_get_amb_reg_offs(int cp_index);
+ uintptr_t marvell_get_rfu_reg_offs(void);
+-uintptr_t marvell_get_iob_reg_offs(void);
++uintptr_t marvell_get_iob_reg_offs(int cp_index);
+ int marvell_get_iob_max_win(void);
+ uintptr_t marvell_get_ccu_reg_offs(void);
+ int marvell_get_ccu_max_win(void);
+diff --git a/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c b/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c
+index 5a80c59..d43b017 100644
+--- a/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c
+@@ -40,9 +40,9 @@
+  ******************************************************************************/
+ struct amb_win *amb_memory_map = NULL;
+ 
+-uintptr_t marvell_get_amb_reg_offs(void)
++uintptr_t marvell_get_amb_reg_offs(int cp_index)
+ {
+-	return MVEBU_AMB_ADEC_BASE;
++	return MVEBU_AMB_ADEC_BASE(cp_index);
+ }
+ 
+ int marvell_get_amb_memory_map(struct amb_win **win, uint32_t *size)
+@@ -90,9 +90,9 @@ struct iob_win iob_memory_map[] = {
+ 	{0x0,	0xf9000000,	0x0,	0x1000000,	NAND_TID}  /* NAND window */
+ };
+ 
+-uintptr_t marvell_get_iob_reg_offs(void)
++uintptr_t marvell_get_iob_reg_offs(int cp_index)
+ {
+-	return MVEBU_IOB_BASE;
++	return MVEBU_IOB_BASE(cp_index);
+ }
+ 
+ int marvell_get_iob_max_win(void)
+diff --git a/plat/marvell/a8k/a70x0/board/marvell_plat_config.c b/plat/marvell/a8k/a70x0/board/marvell_plat_config.c
+index 7c8e441..3da4340 100644
+--- a/plat/marvell/a8k/a70x0/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a70x0/board/marvell_plat_config.c
+@@ -40,9 +40,9 @@
+  ******************************************************************************/
+ struct amb_win *amb_memory_map = NULL;
+ 
+-uintptr_t marvell_get_amb_reg_offs(void)
++uintptr_t marvell_get_amb_reg_offs(int cp_index)
+ {
+-	return MVEBU_AMB_ADEC_BASE;
++	return MVEBU_AMB_ADEC_BASE(cp_index);
+ }
+ 
+ int marvell_get_amb_memory_map(struct amb_win **win, uint32_t *size)
+@@ -95,9 +95,9 @@ struct iob_win iob_memory_map[] = {
+ 	{0x0,	0xf9000000,	0x0,	0x1000000,	NAND_TID}  /* NAND window */
+ };
+ 
+-uintptr_t marvell_get_iob_reg_offs(void)
++uintptr_t marvell_get_iob_reg_offs(int cp_index)
+ {
+-	return MVEBU_IOB_BASE;
++	return MVEBU_IOB_BASE(cp_index);
+ }
+ 
+ int marvell_get_iob_max_win(void)
+diff --git a/plat/marvell/a8k/a70x0/cp110_setup.c b/plat/marvell/a8k/a70x0/cp110_setup.c
+index 9555212..f4a0960 100644
+--- a/plat/marvell/a8k/a70x0/cp110_setup.c
++++ b/plat/marvell/a8k/a70x0/cp110_setup.c
+@@ -43,8 +43,8 @@
+  */
+ 
+  /* Used for Units of CP-110 (e.g. USB device, USB Host, and etc) */
+-#define MVEBU_AXI_ATTR_BASE			(MVEBU_CP0_REGS_BASE + 0x441300)
+-#define MVEBU_AXI_ATTR_REG(index)		(MVEBU_AXI_ATTR_BASE + 0x4 * index)
++#define MVEBU_AXI_ATTR_BASE(cp_index)		(MVEBU_CP_REGS_BASE(cp_index) + 0x441300)
++#define MVEBU_AXI_ATTR_REG(cp_index, index)	(MVEBU_AXI_ATTR_BASE(cp_index) + 0x4 * index)
+ #define MVEBU_AXI_ATTR_ARCACHE_OFFSET		4
+ #define MVEBU_AXI_ATTR_ARCACHE_MASK		(0xF << MVEBU_AXI_ATTR_ARCACHE_OFFSET)
+ #define MVEBU_AXI_ATTR_ARDOMAIN_OFFSET		12
+@@ -55,17 +55,17 @@
+ #define MVEBU_AXI_ATTR_AWDOMAIN_MASK		(0x3 << MVEBU_AXI_ATTR_AWDOMAIN_OFFSET)
+ 
+ /* AXI Protection bits */
+-#define MVEBU_AXI_PROT_BASE			(MVEBU_CP0_REGS_BASE + 0x441200)
+-#define MVEBU_AXI_PROT_REG(index)		((index <= 6) ? (MVEBU_AXI_PROT_BASE + 0x4 * index) : \
+-							(MVEBU_AXI_PROT_BASE + 0x20 + 0x4 * (index - 7)))
++#define MVEBU_AXI_PROT_BASE(cp_index)		(MVEBU_CP_REGS_BASE(cp_index) + 0x441200)
++#define MVEBU_AXI_PROT_REG(cp_index, index)	((index <= 6) ? (MVEBU_AXI_PROT_BASE(cp_index) + 0x4 * index) : \
++						(MVEBU_AXI_PROT_BASE(cp_index) + 0x20 + 0x4 * (index - 7)))
+ #define MVEBU_AXI_PROT_REGS_NUM			(9)
+ 
+ /* AXI to MBUS bridge registers */
+-#define MVEBU_AMB_IP_BRIDGE_WIN_REG(win)	(MVEBU_AMB_IP_BASE + (win * 0x8))
+-#define MVEBU_AMB_IP_BRIDGE_WIN_EN_OFFSET	0
+-#define MVEBU_AMB_IP_BRIDGE_WIN_EN_MASK		(0x1 << MVEBU_AMB_IP_BRIDGE_WIN_EN_OFFSET)
+-#define MVEBU_AMB_IP_BRIDGE_WIN_SIZE_OFFSET	16
+-#define MVEBU_AMB_IP_BRIDGE_WIN_SIZE_MASK	(0xffff << MVEBU_AMB_IP_BRIDGE_WIN_SIZE_OFFSET)
++#define MVEBU_AMB_IP_BRIDGE_WIN_REG(cp_index, win)	(MVEBU_AMB_IP_BASE(cp_index) + (win * 0x8))
++#define MVEBU_AMB_IP_BRIDGE_WIN_EN_OFFSET		0
++#define MVEBU_AMB_IP_BRIDGE_WIN_EN_MASK			(0x1 << MVEBU_AMB_IP_BRIDGE_WIN_EN_OFFSET)
++#define MVEBU_AMB_IP_BRIDGE_WIN_SIZE_OFFSET		16
++#define MVEBU_AMB_IP_BRIDGE_WIN_SIZE_MASK		(0xffff << MVEBU_AMB_IP_BRIDGE_WIN_SIZE_OFFSET)
+ 
+ enum axi_attr {
+ 	AXI_ADUNIT_ATTR = 0,
+@@ -134,7 +134,7 @@ void cp110_stream_id_init(uintptr_t cp110_base)
+ 		mmio_write_32(cp110_base + stream_id_reg[i++], stream_id++);
+ }
+ 
+-void cp110_axi_attr_init(void)
++void cp110_axi_attr_init(int cp_index)
+ {
+ 	uint32_t index, data;
+ 
+@@ -153,7 +153,7 @@ void cp110_axi_attr_init(void)
+ 			/* Set Ax-Cache as cacheable, no allocate, modifiable, bufferable
+ 			 The values are different because Read & Write definition
+ 			 is different in Ax-Cache */
+-			data = mmio_read_32(MVEBU_AXI_ATTR_REG(index));
++			data = mmio_read_32(MVEBU_AXI_ATTR_REG(cp_index, index));
+ 			data &= ~MVEBU_AXI_ATTR_ARCACHE_MASK;
+ 			data |= 0xB << MVEBU_AXI_ATTR_ARCACHE_OFFSET;
+ 			data &= ~MVEBU_AXI_ATTR_AWCACHE_MASK;
+@@ -163,49 +163,49 @@ void cp110_axi_attr_init(void)
+ 			data |= 0x2 << MVEBU_AXI_ATTR_ARDOMAIN_OFFSET;
+ 			data &= ~MVEBU_AXI_ATTR_AWDOMAIN_MASK;
+ 			data |= 0x2 << MVEBU_AXI_ATTR_AWDOMAIN_OFFSET;
+-			mmio_write_32(MVEBU_AXI_ATTR_REG(index), data);
++			mmio_write_32(MVEBU_AXI_ATTR_REG(cp_index, index), data);
+ 		}
+ 	}
+ 
+ 	/* Set all IO's AXI attribute to non-secure access. */
+ 	for (index = 0; index < MVEBU_AXI_PROT_REGS_NUM; index++)
+-		mmio_write_32(MVEBU_AXI_PROT_REG(index), 0x3);
++		mmio_write_32(MVEBU_AXI_PROT_REG(cp_index, index), 0x3);
+ 
+ 	return;
+ }
+ 
+-void amb_bridge_init(void)
++void amb_bridge_init(int cp_index)
+ {
+ 	uint32_t reg;
+ 
+ 	/* Open AMB bridge Window to Access COMPHY/MDIO registers */
+-	reg = mmio_read_32(MVEBU_AMB_IP_BRIDGE_WIN_REG(0));
++	reg = mmio_read_32(MVEBU_AMB_IP_BRIDGE_WIN_REG(cp_index, 0));
+ 	reg &= ~(MVEBU_AMB_IP_BRIDGE_WIN_SIZE_MASK | MVEBU_AMB_IP_BRIDGE_WIN_EN_MASK);
+ 	reg |= (0x7ff << MVEBU_AMB_IP_BRIDGE_WIN_SIZE_OFFSET | 0x1 << MVEBU_AMB_IP_BRIDGE_WIN_EN_OFFSET);
+-	mmio_write_32(MVEBU_AMB_IP_BRIDGE_WIN_REG(0), reg);
++	mmio_write_32(MVEBU_AMB_IP_BRIDGE_WIN_REG(cp_index, 0), reg);
+ }
+ 
+ void cp110_init(void)
+ {
+-	/* configure AXI-MBUS windows */
+-	init_amb_adec();
++	/* configure AXI-MBUS windows for CP0*/
++	init_amb_adec(0);
+ 
+-	/* configure IOB windows */
+-	init_iob();
++	/* configure IOB windows for CP0*/
++	init_iob(0);
+ 
+-	/* configure axi */
+-	cp110_axi_attr_init();
++	/* configure axi for CP0*/
++	cp110_axi_attr_init(0);
+ 
+-	/* configure icu */
++	/* configure icu for CP0 */
+ #ifdef PLAT_MARVELL_APN_806_Z
+-	icu_init(MVEBU_CP0_REGS_BASE, 64, 0);
++	icu_init(MVEBU_CP_REGS_BASE(0), 64, 0);
+ #else
+-	icu_init(MVEBU_CP0_REGS_BASE, 0, 0);
++	icu_init(MVEBU_CP_REGS_BASE(0), 0, 0);
+ #endif /* PLAT_MARVELL_APN_806_Z */
+ 
+-	/* configure stream id */
+-	cp110_stream_id_init(MVEBU_CP0_REGS_BASE);
++	/* configure stream id for CP0 */
++	cp110_stream_id_init(MVEBU_CP_REGS_BASE(0));
+ 
+-	/* Open AMB bridge for comphy */
+-	amb_bridge_init();
++	/* Open AMB bridge for comphy for CP0*/
++	amb_bridge_init(0);
+ }
+diff --git a/plat/marvell/a8k/a70x0/plat_bl31_setup.c b/plat/marvell/a8k/a70x0/plat_bl31_setup.c
+index 1845148..a28fafe 100644
+--- a/plat/marvell/a8k/a70x0/plat_bl31_setup.c
++++ b/plat/marvell/a8k/a70x0/plat_bl31_setup.c
+@@ -41,10 +41,10 @@ void marvell_bl31_mpp_init(void)
+ {
+ 	uint32_t reg;
+ 
+-	/* Enable CP I2C MPPs (MPP: 37-38)
+-	 * U-Boot rely on proper MPP settings for I2C EEPROM usage */
+-	reg = mmio_read_32(MVEBU_CP_MPP_REGS(4));
+-	mmio_write_32(MVEBU_CP_MPP_REGS(4), reg | 0x2200000);
++	/* Enable CP0 I2C MPPs (MPP: 37-38)
++	 * U-Boot rely on proper MPP settings for I2C EEPROM usage (only for CP0) */
++	reg = mmio_read_32(MVEBU_CP_MPP_REGS(0, 4));
++	mmio_write_32(MVEBU_CP_MPP_REGS(0, 4), reg | 0x2200000);
+ }
+ 
+ /* This function overruns the same function in marvell_bl31_setup.c */
+diff --git a/plat/marvell/a8k/a70x0/plat_def.h b/plat/marvell/a8k/a70x0/plat_def.h
+index bf5ec2e..3d1610a 100644
+--- a/plat/marvell/a8k/a70x0/plat_def.h
++++ b/plat/marvell/a8k/a70x0/plat_def.h
+@@ -39,6 +39,7 @@
+ 
+ 
+ #define MVEBU_PRIMARY_CPU		0x0
++#define CP_COUNT			1	/* A70x0 has single CP0 */
+ 
+ #if PALLADIUM
+ #define COUNTER_FREQUENCY		48000
+@@ -48,16 +49,17 @@
+ 
+ #define MVEBU_REGS_BASE			0xF0000000
+ #define MVEBU_CP0_REGS_BASE		0xF2000000
++#define MVEBU_CP_REGS_BASE(cp_index)	(0xF2000000 + cp_index * 0x2000000)
+ #define MVEBU_RFU_BASE			(MVEBU_REGS_BASE + 0x6F0000)
+ #define MVEBU_CCU_BASE			(MVEBU_REGS_BASE + 0x4000)
+ #define MVEBU_LLC_BASE			(MVEBU_REGS_BASE + 0x8000)
+-#define MVEBU_IOB_BASE			(MVEBU_CP0_REGS_BASE + 0x190000)
++#define MVEBU_IOB_BASE(cp_index)	(MVEBU_CP_REGS_BASE(cp_index) + 0x190000)
+ #define MVEBU_DRAM_MAC_BASE		(MVEBU_REGS_BASE + 0x20000)
+ #define MVEBU_DRAM_PHY_BASE		(MVEBU_REGS_BASE + 0x20000)
+-#define MVEBU_AMB_IP_BASE		(MVEBU_CP0_REGS_BASE + 0x13ff00)
+-#define MVEBU_AMB_ADEC_BASE		(MVEBU_CP0_REGS_BASE + 0x70ff00)
++#define MVEBU_AMB_IP_BASE(cp_index)	(MVEBU_CP_REGS_BASE(cp_index) + 0x13ff00)
++#define MVEBU_AMB_ADEC_BASE(cp_index)	(MVEBU_CP_REGS_BASE(cp_index) + 0x70ff00)
+ #define MVEBU_SMMU_BASE			(MVEBU_REGS_BASE + 0x100000)
+-#define MVEBU_CP_MPP_REGS(n)		(MVEBU_CP0_REGS_BASE + 0x440000 + ((n) << 2))
++#define MVEBU_CP_MPP_REGS(cp_index, n)	(MVEBU_CP_REGS_BASE(cp_index) + 0x440000 + ((n) << 2))
+ 
+ /*******************************************************************************
+  * MVEBU memory map related constants
+diff --git a/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c b/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c
+index b2d6593..93127e7 100644
+--- a/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a70x0_cust/board/marvell_plat_config.c
+@@ -42,9 +42,9 @@ struct amb_win amb_memory_map[] = {
+ 	{0xf900,	AMB_DEV_CS0_ID},
+ };
+ 
+-uintptr_t marvell_get_amb_reg_offs(void)
++uintptr_t marvell_get_amb_reg_offs(int cp_index)
+ {
+-	return MVEBU_AMB_ADEC_BASE;
++	return MVEBU_AMB_ADEC_BASE(cp_index);
+ }
+ 
+ int marvell_get_amb_memory_map(struct amb_win **win, uint32_t *size)
+@@ -96,9 +96,9 @@ struct iob_win iob_memory_map[] = {
+ 	{0x0,	0xf9000000,	0x0,	0x1000000,	NAND_TID}  /* NAND window */
+ };
+ 
+-uintptr_t marvell_get_iob_reg_offs(void)
++uintptr_t marvell_get_iob_reg_offs(int cp_index)
+ {
+-	return MVEBU_IOB_BASE;
++	return MVEBU_IOB_BASE(cp_index);
+ }
+ 
+ int marvell_get_iob_max_win(void)
+diff --git a/plat/marvell/a8k/a80x0/board/marvell_plat_config.c b/plat/marvell/a8k/a80x0/board/marvell_plat_config.c
+index d266af2..12d2a26 100644
+--- a/plat/marvell/a8k/a80x0/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a80x0/board/marvell_plat_config.c
+@@ -40,9 +40,9 @@
+  ******************************************************************************/
+ struct amb_win *amb_memory_map = NULL;
+ 
+-uintptr_t marvell_get_amb_reg_offs(void)
++uintptr_t marvell_get_amb_reg_offs(int cp_index)
+ {
+-	return MVEBU_AMB_ADEC_BASE;
++	return MVEBU_AMB_ADEC_BASE(cp_index);
+ }
+ 
+ int marvell_get_amb_memory_map(struct amb_win **win, uint32_t *size)
+@@ -94,9 +94,9 @@ struct iob_win iob_memory_map[] = {
+ 	{0x0,	0xf9000000,	0x0,	0x1000000,	NAND_TID}  /* NAND window */
+ };
+ 
+-uintptr_t marvell_get_iob_reg_offs(void)
++uintptr_t marvell_get_iob_reg_offs(int cp_index)
+ {
+-	return MVEBU_IOB_BASE;
++	return MVEBU_IOB_BASE(cp_index);
+ }
+ 
+ int marvell_get_iob_max_win(void)
+diff --git a/plat/marvell/a8k/a80x0/plat_def.h b/plat/marvell/a8k/a80x0/plat_def.h
+index bf5ec2e..6f6671c 100644
+--- a/plat/marvell/a8k/a80x0/plat_def.h
++++ b/plat/marvell/a8k/a80x0/plat_def.h
+@@ -39,6 +39,7 @@
+ 
+ 
+ #define MVEBU_PRIMARY_CPU		0x0
++#define CP_COUNT			2	/* A80x0 has both CP0 & CP1 */
+ 
+ #if PALLADIUM
+ #define COUNTER_FREQUENCY		48000
+@@ -47,17 +48,17 @@
+ #endif
+ 
+ #define MVEBU_REGS_BASE			0xF0000000
+-#define MVEBU_CP0_REGS_BASE		0xF2000000
++#define MVEBU_CP_REGS_BASE(cp_index)	(0xF2000000 + cp_index * 0x2000000)
+ #define MVEBU_RFU_BASE			(MVEBU_REGS_BASE + 0x6F0000)
+ #define MVEBU_CCU_BASE			(MVEBU_REGS_BASE + 0x4000)
+ #define MVEBU_LLC_BASE			(MVEBU_REGS_BASE + 0x8000)
+-#define MVEBU_IOB_BASE			(MVEBU_CP0_REGS_BASE + 0x190000)
++#define MVEBU_IOB_BASE(cp_index)	(MVEBU_CP_REGS_BASE(cp_index) + 0x190000)
+ #define MVEBU_DRAM_MAC_BASE		(MVEBU_REGS_BASE + 0x20000)
+ #define MVEBU_DRAM_PHY_BASE		(MVEBU_REGS_BASE + 0x20000)
+-#define MVEBU_AMB_IP_BASE		(MVEBU_CP0_REGS_BASE + 0x13ff00)
+-#define MVEBU_AMB_ADEC_BASE		(MVEBU_CP0_REGS_BASE + 0x70ff00)
++#define MVEBU_AMB_IP_BASE(cp_index)	(MVEBU_CP_REGS_BASE(cp_index) + 0x13ff00)
++#define MVEBU_AMB_ADEC_BASE(cp_index)	(MVEBU_CP_REGS_BASE(cp_index) + 0x70ff00)
+ #define MVEBU_SMMU_BASE			(MVEBU_REGS_BASE + 0x100000)
+-#define MVEBU_CP_MPP_REGS(n)		(MVEBU_CP0_REGS_BASE + 0x440000 + ((n) << 2))
++#define MVEBU_CP_MPP_REGS(cp_index, n)	(MVEBU_CP_REGS_BASE(cp_index) + 0x440000 + ((n) << 2))
+ 
+ /*******************************************************************************
+  * MVEBU memory map related constants
+diff --git a/plat/marvell/a8k/apn806/board/marvell_plat_config.c b/plat/marvell/a8k/apn806/board/marvell_plat_config.c
+index 34bab5c..3b1e8d2 100644
+--- a/plat/marvell/a8k/apn806/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/apn806/board/marvell_plat_config.c
+@@ -70,9 +70,9 @@ struct iob_win iob_memory_map[] = {
+ 	{0x0,	0xf9000000,	0x0,	0x1000000,	NAND_TID}  /* NAND window */
+ };
+ 
+-uintptr_t marvell_get_iob_reg_offs(void)
++uintptr_t marvell_get_iob_reg_offs(int cp_index)
+ {
+-	return MVEBU_IOB_BASE;
++	return MVEBU_IOB_BASE(0);
+ }
+ 
+ int marvell_get_iob_max_win(void)
+-- 
+1.9.1
+

@@ -1,0 +1,46 @@
+From f857e87e81aca09ad2dbc54bbfa3ba7b404b6dab Mon Sep 17 00:00:00 2001
+From: Jing Hua <jinghua@marvell.com>
+Date: Tue, 14 Apr 2015 19:20:39 +0800
+Subject: [PATCH 0177/1240] fix: arlp: mmp: remove MPP entries for Armada LP
+ boards
+
+	Armada LP does not use MPP driver, so mpp_regs value was removed
+	from db0_armadalp_info and db1_armadalp_info.
+
+Change-Id: I653a2e73b88fc412af367f2d277f24365aa58d02
+Signed-off-by: Jing Hua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/18262
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ board/mvebu/armadalp/db0-armadalp-info.c | 1 -
+ board/mvebu/armadalp/db1-armadalp-info.c | 1 -
+ 2 files changed, 2 deletions(-)
+
+diff --git a/board/mvebu/armadalp/db0-armadalp-info.c b/board/mvebu/armadalp/db0-armadalp-info.c
+index 4afa3a1..d1264f8 100644
+--- a/board/mvebu/armadalp/db0-armadalp-info.c
++++ b/board/mvebu/armadalp/db0-armadalp-info.c
+@@ -31,7 +31,6 @@ struct mvebu_board_config db0_armadalp_config = {
+ struct mvebu_board_info db0_armadalp_info = {
+ 	.name = "DB0-MV-ARMADALP",
+ 	.id = ARMADA_LP_DB0_ID,
+-	.mpp_regs = {0x11111111, 0x00100001},
+ 	.configurable = 1,
+ 	.config_data = &db0_armadalp_config,
+ };
+diff --git a/board/mvebu/armadalp/db1-armadalp-info.c b/board/mvebu/armadalp/db1-armadalp-info.c
+index 1bb6e6a..fb30eb3 100644
+--- a/board/mvebu/armadalp/db1-armadalp-info.c
++++ b/board/mvebu/armadalp/db1-armadalp-info.c
+@@ -31,7 +31,6 @@ struct mvebu_board_config db1_armadalp_config = {
+ struct mvebu_board_info db1_armadalp_info = {
+ 	.name = "DB1-MV-ARMADALP",
+ 	.id = ARMADA_LP_DB1_ID,
+-	.mpp_regs = {0x11111111, 0x00100001},
+ 	.configurable = 1,
+ 	.config_data = &db1_armadalp_config,
+ };
+-- 
+1.9.1
+

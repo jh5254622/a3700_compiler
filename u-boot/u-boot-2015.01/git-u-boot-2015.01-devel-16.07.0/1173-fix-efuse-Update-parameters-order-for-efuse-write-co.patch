@@ -1,0 +1,32 @@
+From c1f999f81bd76b7986000a2d56b98c2f8d67d86a Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Sun, 29 May 2016 15:01:49 +0300
+Subject: [PATCH 1173/1240] fix: efuse: Update parameters order for efuse write
+ command
+
+- Fix the wrong order of parameters in help display of efuse
+  "write" command - efuse ID should be ahead of value.
+
+Change-Id: Iec79a33524a0f1f63f3946e1d2c5a966af1097e4
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30103
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ common/mvebu/cmd_efuse.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/common/mvebu/cmd_efuse.c b/common/mvebu/cmd_efuse.c
+index 978a7bf..b7989b8 100644
+--- a/common/mvebu/cmd_efuse.c
++++ b/common/mvebu/cmd_efuse.c
+@@ -141,5 +141,5 @@ U_BOOT_CMD(
+ 	"\tlist         - Display all supported eFuse entry ids\n"
+ 	"\tdump         - Dump all supported eFuse entries\n"
+ 	"\tread id      - Read eFuse entry \"id\"\n"
+-	"\twrite val id - Write \"val\" to eFuse entry \"id\"\n"
++	"\twrite id val - Write \"val\" to eFuse entry \"id\"\n"
+ );
+-- 
+1.9.1
+

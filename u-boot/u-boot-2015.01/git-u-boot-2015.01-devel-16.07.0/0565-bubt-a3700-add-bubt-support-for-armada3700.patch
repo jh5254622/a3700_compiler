@@ -1,0 +1,87 @@
+From dd17c20a11808e7f9f52733cf91b85481d623f66 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Tue, 24 Nov 2015 15:05:55 -0800
+Subject: [PATCH 0565/1240] bubt: a3700: add bubt support for armada3700
+
+	1. add BUBT define into armada3700 defconfig
+	2. bypass image check in bubt command for armada3700,
+	   since image of armada3700 is not like A8K or A38X
+	   there is no mvebu header at the beginning, so the
+	   way image is checked for A8K and A38X is not suitalbe
+	   for Armada3700.
+	   Also the boot image is designed by storage team,
+	   and the structure is in file /u-boot/tools/wtp/u-boot-ntim.txt.
+	   there is no checksum or magic number, and I am not familiar with
+	   how boot rom checks the image. I will ask the boot rom designer
+	   for relevant information, but I do not think we could make it
+	   before the ES drop. So here just bypassing image check, and after
+	   ES drop, image check will be supported in another patch.
+
+	3. has already created a JIRA bug for this issue, SYSTEMSW-2060.
+
+Change-Id: I0ac64767869cc09da851dc6224b945b7db02bf7a
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25244
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+(cherry picked from commit 0fa9e6ca7aad43d966b8e20e46483625c497cc83)
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25452
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ common/mvebu/cmd_bubt.c          | 19 ++++++++++++++++++-
+ configs/mvebu_armadalp_defconfig |  1 +
+ 2 files changed, 19 insertions(+), 1 deletion(-)
+
+diff --git a/common/mvebu/cmd_bubt.c b/common/mvebu/cmd_bubt.c
+index 94973a6..4667f90 100644
+--- a/common/mvebu/cmd_bubt.c
++++ b/common/mvebu/cmd_bubt.c
+@@ -318,7 +318,7 @@ static int check_image_header(void)
+ 
+ 	return 0;
+ }
+-#else /* A38x */
++#elif defined(CONFIG_TARGET_ARMADA_38X) /* A38x */
+ u8 do_checksum8(void *start, u32 len, u8 csum)
+ {
+ 	register u8 sum = csum;
+@@ -360,6 +360,23 @@ static int check_image_header(void)
+ 
+ 	return 0;
+ }
++#elif defined(CONFIG_TARGET_ARMADA_LP) /* ArmadaLP */
++static int check_image_header(void)
++{
++	/* Armada3700 has different Image, without mvebu
++	  * header at begining.
++	  * BootRom will also do the image check, if something
++	  * is not right, CM3 would not run the image.
++	  */
++	/* printf("Image checksum...OK!\n"); */
++	return 0;
++}
++#else
++static int check_image_header(void)
++{
++	printf("bubt cmd does not support this device !\n");
++	return -ENOEXEC;
++}
+ #endif
+ 
+ static int bubt_verify(int image_size)
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index 88f08f7..0539f19 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -32,6 +32,7 @@ CONFIG_CMD_MEMORY=y
+ CONFIG_CMD_USB=y
+ CONFIG_CMD_NET=y
+ CONFIG_CMD_PING=y
++CONFIG_CMD_MVEBU_BUBT=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-lp-db"
+-- 
+1.9.1
+

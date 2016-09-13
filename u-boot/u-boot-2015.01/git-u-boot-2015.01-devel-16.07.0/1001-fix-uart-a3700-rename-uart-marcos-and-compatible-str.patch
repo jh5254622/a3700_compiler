@@ -1,0 +1,161 @@
+From d2139c570aa18dbef5f318a0536affcb583d1fff Mon Sep 17 00:00:00 2001
+From: zachary <zhangzg@marvell.com>
+Date: Tue, 22 Mar 2016 01:01:07 +0800
+Subject: [PATCH 1001/1240] fix: uart: a3700: rename uart marcos and compatible
+ string
+
+- rename config options: CONFIG_MVEBU_UART_ARLP to CONFIG_MVEBU_A3700_UART in
+  config files and head files.
+- rename compatible string: aramdalp-uart to armada-3700-uart in fdt.
+
+Change-Id: Ibf3aeb7c4c5432945e78dbc1d46a28ea2b75ae9c
+Signed-off-by: zachary <zhangzg@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28395
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/armada-3700.dtsi                    | 2 +-
+ configs/mvebu_armada3700_defconfig               | 2 +-
+ configs/mvebu_armada3700_palladium_defconfig     | 2 +-
+ doc/device-tree-bindings/serial/mvebu-serial.txt | 8 ++++----
+ drivers/serial/Kconfig                           | 6 +++---
+ drivers/serial/Makefile                          | 2 +-
+ include/configs/mvebu-common.h                   | 4 ++--
+ lib/fdtdec.c                                     | 2 +-
+ 8 files changed, 14 insertions(+), 14 deletions(-)
+
+diff --git a/arch/arm/dts/armada-3700.dtsi b/arch/arm/dts/armada-3700.dtsi
+index 8135eea..c8507dd 100644
+--- a/arch/arm/dts/armada-3700.dtsi
++++ b/arch/arm/dts/armada-3700.dtsi
+@@ -27,7 +27,7 @@
+ 			ranges = <0x0000 0xd0000000 0x2000000>;
+ 
+ 			serial: serial@12000 {
+-				compatible = "marvell,armadalp-uart";
++				compatible = "marvell,armada-3700-uart";
+ 				reg = <0x12000 0x20>;
+ 				clock_frequency = <25804800>;
+ 				baudrate = <115200>;
+diff --git a/configs/mvebu_armada3700_defconfig b/configs/mvebu_armada3700_defconfig
+index 89a77ff..da76dd9 100644
+--- a/configs/mvebu_armada3700_defconfig
++++ b/configs/mvebu_armada3700_defconfig
+@@ -6,7 +6,7 @@ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_MVEBU_A3700_MISC_INIT=y
+ +S:CONFIG_MVEBU_A3700_CLOCK=y
+ CONFIG_MVEBU_MPP_BUS=y
+-+S:CONFIG_MVEBU_UART_ARLP=y
+++S:CONFIG_MVEBU_A3700_UART=y
+ CONFIG_XENON_MMC=y
+ +S:CONFIG_DEVEL_BOARD=y
+ CONFIG_CMD_BDI=y
+diff --git a/configs/mvebu_armada3700_palladium_defconfig b/configs/mvebu_armada3700_palladium_defconfig
+index f1be796..c1ee8d6 100644
+--- a/configs/mvebu_armada3700_palladium_defconfig
++++ b/configs/mvebu_armada3700_palladium_defconfig
+@@ -6,7 +6,7 @@ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_MVEBU_A3700_IO_ADDR_DEC=y
+ +S:CONFIG_MVEBU_A3700_MISC_INIT=y
+ +S:CONFIG_MVEBU_A3700_CLOCK=y
+-+S:CONFIG_MVEBU_UART_ARLP=y
+++S:CONFIG_MVEBU_A3700_UART=y
+ CONFIG_XENON_MMC=y
+ +S:CONFIG_DEVEL_BOARD=y
+ +S:# CONFIG_MULTI_DT_FILE is not set
+diff --git a/doc/device-tree-bindings/serial/mvebu-serial.txt b/doc/device-tree-bindings/serial/mvebu-serial.txt
+index 356afe9..2ff57df 100644
+--- a/doc/device-tree-bindings/serial/mvebu-serial.txt
++++ b/doc/device-tree-bindings/serial/mvebu-serial.txt
+@@ -1,11 +1,11 @@
+-Marvell ArmadaLP UART bindings
++Marvell Armada3700 UART bindings
+ ==============================
+ 
+-UART driver for Marvell ArmadaLP SoCs.
++UART driver for Marvell Armada3700 SoCs.
+ 
+ Mandatory properties:
+ SoC specific:
+-	- compatible: Should be "marvell,armadalp-uart".
++	- compatible: Should be "marvell,armada-3700-uart".
+ 	- reg: The base address of the UART unit.
+ 	- clock_frequency: Input clock frequency of UART unit.
+ Board specific:
+@@ -13,7 +13,7 @@ Board specific:
+ 
+ Example for armadaLP UART-0 node:
+ 	serial: serial@12000 {
+-		compatible = "marvell,armadalp-uart";
++		compatible = "marvell,armada-3700-uart";
+ 		reg = <0x12000 0x20>;
+ 		clock_frequency = <4800>;
+ 		baudrate = <115200>;
+diff --git a/drivers/serial/Kconfig b/drivers/serial/Kconfig
+index 3fc25fb..b74f318 100644
+--- a/drivers/serial/Kconfig
++++ b/drivers/serial/Kconfig
+@@ -21,12 +21,12 @@ config UNIPHIER_SERIAL
+ 	help
+ 	  Support for the on-chip UARTs on the Panasonic UniPhier platform.
+ 
+-config MVEBU_UART_ARLP
+-	bool "UART support for ArmadaLP"
++config MVEBU_A3700_UART
++	bool "UART support for Armada3700"
+ 	default n
+ 	help
+ 	  Choose this option to add support
+-	  for UART driver on ArmadaLP, which
++	  for UART driver on Armada3700, which
+ 	  is not using COM1 NS16550 driver.
+ 	  And base address is configured in FDT file.
+ 
+diff --git a/drivers/serial/Makefile b/drivers/serial/Makefile
+index 666e691..f55699d 100644
+--- a/drivers/serial/Makefile
++++ b/drivers/serial/Makefile
+@@ -44,7 +44,7 @@ obj-$(CONFIG_TEGRA_SERIAL) += serial_tegra.o
+ obj-$(CONFIG_UNIPHIER_SERIAL) += serial_uniphier.o
+ obj-$(CONFIG_OMAP_SERIAL) += serial_omap.o
+ obj-$(CONFIG_X86_SERIAL) += serial_x86.o
+-obj-$(CONFIG_MVEBU_UART_ARLP) += serial_mvebu.o
++obj-$(CONFIG_MVEBU_A3700_UART) += serial_mvebu.o
+ ifndef CONFIG_SPL_BUILD
+ obj-$(CONFIG_USB_TTY) += usbtty.o
+ endif
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 39e4472..e06c6f6 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -275,11 +275,11 @@
+ 	#define CONFIG_DEFAULT_CONSOLE		"console=ttyS0,115200"
+ #endif /* CONFIG_SYS_NS16550 */
+ 
+-#ifdef CONFIG_MVEBU_UART_ARLP
++#ifdef CONFIG_MVEBU_A3700_UART
+ 	#define CONFIG_DEFAULT_CONSOLE		"console=ttyMV0,115200 earlycon=ar3700_uart,0xd0012000"
+ #endif
+ 
+-#if defined(CONFIG_SYS_NS16550) || defined(CONFIG_MVEBU_UART_ARLP)
++#if defined(CONFIG_SYS_NS16550) || defined(CONFIG_MVEBU_A3700_UART)
+ #define CONFIG_BAUDRATE		115200
+ #endif
+ 
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 86bdfeb..09005c4 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -85,7 +85,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(AMS_AS3722, "ams,as3722"),
+ 	COMPAT(MVEBU_SPI, "marvell,orion-spi"),
+ 	COMPAT(MVEBU_A3700_SPI, "marvell,armada-3700-spi"),
+-	COMPAT(MVEBU_UART, "marvell,armadalp-uart"),
++	COMPAT(MVEBU_UART, "marvell,armada-3700-uart"),
+ 	COMPAT(MVEBU_NETA, "marvell,armadalp-neta"),
+ 	COMPAT(MVEBU_PP2, "marvell,armada-a8k-pp2"),
+ 	COMPAT(MVEBU_TCLOCK, "marvell,tclk"),
+-- 
+1.9.1
+

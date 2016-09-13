@@ -1,0 +1,37 @@
+From a75baadcdec0fc2d654c14b9e6dbd4647e4ad18d Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Thu, 19 May 2016 14:04:11 +0300
+Subject: [PATCH 164/239] icu: 80x0: configure icu for CP1
+
+CP0: interrupt 0..63 mapped to ID 64..127 in AP
+CP1: interrupt 64..127 mapped to ID 288..351 in AP
+
+Change-Id: I4977062eafc46b6f5edeadb2afb692f2432e6c14
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29859
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ plat/marvell/a8k/a70x0/cp110_setup.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/plat/marvell/a8k/a70x0/cp110_setup.c b/plat/marvell/a8k/a70x0/cp110_setup.c
+index dca9c76..7fffdf4 100644
+--- a/plat/marvell/a8k/a70x0/cp110_setup.c
++++ b/plat/marvell/a8k/a70x0/cp110_setup.c
+@@ -202,7 +202,11 @@ void cp110_init(void)
+ #ifdef PLAT_MARVELL_APN_806_Z
+ 	icu_init(MVEBU_CP_REGS_BASE(0), 64, 0);
+ #else
+-	icu_init(MVEBU_CP_REGS_BASE(0), 0, 0);
++	/* ICU - Interrupt Consolidation unit
++	 * CP0: interrupt 0..63 mapped to ID 64..127 in AP
++	 * CP1: interrupt 64..127 mapped to ID 288..351 in AP */
++	 for (cp_index = 0; cp_index < CP_COUNT; cp_index++)
++		icu_init(MVEBU_CP_REGS_BASE(cp_index), 0, cp_index * 64);
+ #endif /* PLAT_MARVELL_APN_806_Z */
+ 
+ 	/* configure stream id for CP0 */
+-- 
+1.9.1
+

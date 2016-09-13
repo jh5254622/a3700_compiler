@@ -1,0 +1,152 @@
+From 6d51970ff308d04a85ab90a77fb961fe1630b69a Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 8 May 2016 19:41:10 +0300
+Subject: [PATCH 1094/1240] fix: comphy: fix wrong name of COMPHY registers
+
+update the name 2 registers due wrong name
+offset 0x604 ==> Lane Configuration 1
+0ffset 0x60c ==> Lane Status 1
+
+Change-Id: I8dd4e8225ef629c3c91dbcd7d66f70b52c4b4e48
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29617
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/include/asm/arch-mvebu/comphy_hpipe.h | 18 +++++++++---------
+ drivers/phy/comphy_a38x.c                      |  2 +-
+ drivers/phy/comphy_ap806_z1.c                  | 12 ++++++------
+ drivers/phy/comphy_cp110.c                     | 18 +++++++++---------
+ 4 files changed, 25 insertions(+), 25 deletions(-)
+
+diff --git a/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h b/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h
+index 45476fb..342d5c0 100644
+--- a/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h
++++ b/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h
+@@ -235,15 +235,15 @@
+ #define HPIPE_DFE_CTRL_28_PIPE4_OFFSET		7
+ #define HPIPE_DFE_CTRL_28_PIPE4_MASK		(0x1 << HPIPE_DFE_CTRL_28_PIPE4_OFFSET)
+ 
+-#define HPIPE_LANE_CONFIG0_REG			0x604
+-#define HPIPE_LANE_CONFIG0_MAX_PLL_OFFSET	9
+-#define HPIPE_LANE_CONFIG0_MAX_PLL_MASK		(0x1 << HPIPE_LANE_CONFIG0_MAX_PLL_OFFSET)
+-#define HPIPE_LANE_CONFIG0_GEN2_PLL_OFFSET	10
+-#define HPIPE_LANE_CONFIG0_GEN2_PLL_MASK	(0x1 << HPIPE_LANE_CONFIG0_GEN2_PLL_OFFSET)
+-
+-#define HPIPE_LANE_STATUS0_REG			0x60C
+-#define HPIPE_LANE_STATUS0_PCLK_EN_OFFSET	0
+-#define HPIPE_LANE_STATUS0_PCLK_EN_MASK		(0x1 << HPIPE_LANE_STATUS0_PCLK_EN_OFFSET)
++#define HPIPE_LANE_CONFIG1_REG			0x604
++#define HPIPE_LANE_CONFIG1_MAX_PLL_OFFSET	9
++#define HPIPE_LANE_CONFIG1_MAX_PLL_MASK		(0x1 << HPIPE_LANE_CONFIG1_MAX_PLL_OFFSET)
++#define HPIPE_LANE_CONFIG1_GEN2_PLL_OFFSET	10
++#define HPIPE_LANE_CONFIG1_GEN2_PLL_MASK	(0x1 << HPIPE_LANE_CONFIG1_GEN2_PLL_OFFSET)
++
++#define HPIPE_LANE_STATUS1_REG			0x60C
++#define HPIPE_LANE_STATUS1_PCLK_EN_OFFSET	0
++#define HPIPE_LANE_STATUS1_PCLK_EN_MASK		(0x1 << HPIPE_LANE_STATUS1_PCLK_EN_OFFSET)
+ 
+ #define HPIPE_LANE_CFG4_REG                     0x620
+ #define HPIPE_LANE_CFG4_DFE_CTRL_OFFSET		0
+diff --git a/drivers/phy/comphy_a38x.c b/drivers/phy/comphy_a38x.c
+index 921a71f..fb02923 100644
+--- a/drivers/phy/comphy_a38x.c
++++ b/drivers/phy/comphy_a38x.c
+@@ -103,7 +103,7 @@ static int comphy_pcie_power_up(u32 pex_index, void __iomem *comphy_addr, void _
+ 	udelay(20000);
+ 
+ 	debug_exit();
+-	return readl(hpipe_addr + HPIPE_LANE_STATUS0_REG) & 0x1;
++	return readl(hpipe_addr + HPIPE_LANE_STATUS1_REG) & 0x1;
+ }
+ 
+ int comphy_a38x_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy_map *serdes_map)
+diff --git a/drivers/phy/comphy_ap806_z1.c b/drivers/phy/comphy_ap806_z1.c
+index 2a995c9..3f89422 100644
+--- a/drivers/phy/comphy_ap806_z1.c
++++ b/drivers/phy/comphy_ap806_z1.c
+@@ -46,10 +46,10 @@ static void comphy_pcie_release_soft_reset(void __iomem *hpipe_addr)
+ 	/* Set MAX PLL Calibration */
+ 	reg_set(hpipe_addr + HPIPE_KVCO_CALIB_CTRL_REG,
+ 		0x1 << HPIPE_KVCO_CALIB_CTRL_MAX_PLL_OFFSET, HPIPE_KVCO_CALIB_CTRL_MAX_PLL_MASK);
+-	reg_set(hpipe_addr + HPIPE_LANE_CONFIG0_REG,
+-		0x1 << HPIPE_LANE_CONFIG0_MAX_PLL_OFFSET, HPIPE_LANE_CONFIG0_MAX_PLL_MASK);
+-	reg_set(hpipe_addr + HPIPE_LANE_CONFIG0_REG,
+-		0x1 << HPIPE_LANE_CONFIG0_GEN2_PLL_OFFSET, HPIPE_LANE_CONFIG0_GEN2_PLL_MASK);
++	reg_set(hpipe_addr + HPIPE_LANE_CONFIG1_REG,
++		0x1 << HPIPE_LANE_CONFIG1_MAX_PLL_OFFSET, HPIPE_LANE_CONFIG1_MAX_PLL_MASK);
++	reg_set(hpipe_addr + HPIPE_LANE_CONFIG1_REG,
++		0x1 << HPIPE_LANE_CONFIG1_GEN2_PLL_OFFSET, HPIPE_LANE_CONFIG1_GEN2_PLL_MASK);
+ 
+ 	/* DFE reset sequence */
+ 	reg_set(hpipe_addr + HPIPE_PWR_CTR_REG,
+@@ -142,7 +142,7 @@ static int comphy_pcie_power_up(u32 lane, u32 pcie_by4, void __iomem *hpipe_addr
+ 
+ 	debug_exit();
+ 	/* Return the status of the PLL */
+-	return readl(hpipe_addr + HPIPE_LANE_STATUS0_REG) & HPIPE_LANE_STATUS0_PCLK_EN_MASK;
++	return readl(hpipe_addr + HPIPE_LANE_STATUS1_REG) & HPIPE_LANE_STATUS1_PCLK_EN_MASK;
+ }
+ 
+ int comphy_ap806_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy_map *serdes_map)
+@@ -209,7 +209,7 @@ int comphy_ap806_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy
+ 		udelay(20000);
+ 		for (lane = 0; lane < 4; lane++) {
+ 			ret = readl(HPIPE_ADDR(hpipe_base_addr, lane) +
+-				   HPIPE_LANE_STATUS0_REG) & HPIPE_LANE_STATUS0_PCLK_EN_MASK;
++				   HPIPE_LANE_STATUS1_REG) & HPIPE_LANE_STATUS1_PCLK_EN_MASK;
+ 			if (ret == 0)
+ 				error("PLL is not locked - Failed to initialize lane %d\n", lane);
+ 		}
+diff --git a/drivers/phy/comphy_cp110.c b/drivers/phy/comphy_cp110.c
+index 42ae70d..a8ff1b8 100644
+--- a/drivers/phy/comphy_cp110.c
++++ b/drivers/phy/comphy_cp110.c
+@@ -398,13 +398,13 @@ static int comphy_pcie_power_up(u32 lane, u32 pcie_width, bool clk_src, void __i
+ 		debug("stage: Check PLL\n");
+ 		/* Read lane status */
+ 		for (i = start_lane; i < end_lane; i++) {
+-			addr = HPIPE_ADDR(hpipe_base, i) + HPIPE_LANE_STATUS0_REG;
+-			data = HPIPE_LANE_STATUS0_PCLK_EN_MASK;
++			addr = HPIPE_ADDR(hpipe_base, i) + HPIPE_LANE_STATUS1_REG;
++			data = HPIPE_LANE_STATUS1_PCLK_EN_MASK;
+ 			mask = data;
+ 			data = polling_with_timeout(addr, data, mask, 15000);
+ 			if (data != 0) {
+-				debug("Read from reg = %p - value = 0x%x\n", hpipe_addr + HPIPE_LANE_STATUS0_REG, data);
+-				error("HPIPE_LANE_STATUS0_PCLK_EN_MASK is 0\n");
++				debug("Read from reg = %p - value = 0x%x\n", hpipe_addr + HPIPE_LANE_STATUS1_REG, data);
++				error("HPIPE_LANE_STATUS1_PCLK_EN_MASK is 0\n");
+ 				ret = 0;
+ 			}
+ 		}
+@@ -506,13 +506,13 @@ static int comphy_usb3_power_up(u32 lane, void __iomem *hpipe_base, void __iomem
+ 	/* wait 15ms - for comphy calibration done */
+ 	debug("stage: Check PLL\n");
+ 	/* Read lane status */
+-	addr = hpipe_addr + HPIPE_LANE_STATUS0_REG;
+-	data = HPIPE_LANE_STATUS0_PCLK_EN_MASK;
++	addr = hpipe_addr + HPIPE_LANE_STATUS1_REG;
++	data = HPIPE_LANE_STATUS1_PCLK_EN_MASK;
+ 	mask = data;
+ 	data = polling_with_timeout(addr, data, mask, 15000);
+ 	if (data != 0) {
+-		debug("Read from reg = %p - value = 0x%x\n", hpipe_addr + HPIPE_LANE_STATUS0_REG, data);
+-		error("HPIPE_LANE_STATUS0_PCLK_EN_MASK is 0\n");
++		debug("Read from reg = %p - value = 0x%x\n", hpipe_addr + HPIPE_LANE_STATUS1_REG, data);
++		error("HPIPE_LANE_STATUS1_PCLK_EN_MASK is 0\n");
+ 		ret = 0;
+ 	}
+ 
+@@ -656,7 +656,7 @@ static int comphy_sata_power_up(u32 lane, void __iomem *hpipe_base, void __iomem
+ 	mask = data;
+ 	data = polling_with_timeout(addr, data, mask, 15000);
+ 	if (data != 0) {
+-		debug("Read from reg = %p - value = 0x%x\n", hpipe_addr + HPIPE_LANE_STATUS0_REG, data);
++		debug("Read from reg = %p - value = 0x%x\n", hpipe_addr + HPIPE_LANE_STATUS1_REG, data);
+ 		error("SD_EXTERNAL_STATUS0_PLL_TX is %d, SD_EXTERNAL_STATUS0_PLL_RX is %d\n",
+ 				(data & SD_EXTERNAL_STATUS0_PLL_TX_MASK),
+ 				(data & SD_EXTERNAL_STATUS0_PLL_RX_MASK));
+-- 
+1.9.1
+

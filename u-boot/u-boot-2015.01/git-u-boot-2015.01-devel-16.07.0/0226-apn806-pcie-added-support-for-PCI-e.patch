@@ -1,0 +1,52 @@
+From fcd65ca56529a761f127ac63f8c17d27f7170f33 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Fri, 26 Jun 2015 10:54:48 +0300
+Subject: [PATCH 0226/1240] apn806: pcie: added support for PCI-e
+
+Change-Id: I78fb3e2661465f55f6f892b8b89c68f2abe0098c
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20512
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/apn-806.dtsi        | 11 +++++++++++
+ configs/mvebu_armada8k_defconfig |  1 +
+ 2 files changed, 12 insertions(+)
+
+diff --git a/arch/arm/dts/apn-806.dtsi b/arch/arm/dts/apn-806.dtsi
+index 6504203..4180e1f 100644
+--- a/arch/arm/dts/apn-806.dtsi
++++ b/arch/arm/dts/apn-806.dtsi
+@@ -83,6 +83,17 @@
+ 					0xffe00000 0x100000 0x03 /* PCI-REG window 64Kb for PCIe-reg*/>;
+ 			};
+ 		};
++		pcie-controller {
++			#address-cells = <1>;
++			#size-cells = <1>;
++			compatible = "marvell,mvebu-pcie";
++
++			pcie@1,0 {
++				reg = <0xffe00000 0x2000>;
++				mem = <0xfe000000 0x1f00000>;
++				status = "okay";
++			};
++		};
+ 	};
+ 	/* This should go only into devel boards */
+ 	mpp-buses {
+diff --git a/configs/mvebu_armada8k_defconfig b/configs/mvebu_armada8k_defconfig
+index 2c6ab0d..b6b8343 100644
+--- a/configs/mvebu_armada8k_defconfig
++++ b/configs/mvebu_armada8k_defconfig
+@@ -12,6 +12,7 @@ CONFIG_CMD_RUN=y
+ CONFIG_CMD_EDITENV=y
+ CONFIG_CMD_SAVEENV=y
+ CONFIG_CMD_MEMORY=y
++CONFIG_CMD_PCI=y
+ CONFIG_CMD_I2C=y
+ CONFIG_CMD_TIME=y
+ CONFIG_CMD_MISC=y
+-- 
+1.9.1
+

@@ -1,0 +1,51 @@
+From 9233f5826fd8e83fc8622894fadfa974d72b284b Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 20 Mar 2013 14:52:24 +0200
+Subject: [PATCH 0059/1240] fix: pcie: Fixed PCI switch configuration in
+ drivers code
+
+	The PCI switch secondary and subordinate bus numbers
+	are badly configured by the u-boot stack. The stack
+	assumes that the first bus no is 0. This patch sets
+	the values based on the actuall first bus no
+
+Change-Id: Ib2c106d828357d60e7305038c1bc4819ada8807d
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/11266
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/pci/pci_auto.c | 9 +++------
+ 1 file changed, 3 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/pci/pci_auto.c b/drivers/pci/pci_auto.c
+index 44470fa..43ff97a 100644
+--- a/drivers/pci/pci_auto.c
++++ b/drivers/pci/pci_auto.c
+@@ -202,10 +202,8 @@ void pciauto_prescan_setup_bridge(struct pci_controller *hose,
+ 	pci_hose_read_config_word(hose, dev, PCI_COMMAND, &cmdstat);
+ 
+ 	/* Configure bus number registers */
+-	pci_hose_write_config_byte(hose, dev, PCI_PRIMARY_BUS,
+-				   PCI_BUS(dev) - hose->first_busno);
+-	pci_hose_write_config_byte(hose, dev, PCI_SECONDARY_BUS,
+-				   sub_bus - hose->first_busno);
++	pci_hose_write_config_byte(hose, dev, PCI_PRIMARY_BUS, PCI_BUS(dev));
++	pci_hose_write_config_byte(hose, dev, PCI_SECONDARY_BUS, sub_bus);
+ 	pci_hose_write_config_byte(hose, dev, PCI_SUBORDINATE_BUS, 0xff);
+ 
+ 	if (pci_mem) {
+@@ -259,8 +257,7 @@ void pciauto_postscan_setup_bridge(struct pci_controller *hose,
+ 	struct pci_region *pci_io = hose->pci_io;
+ 
+ 	/* Configure bus number registers */
+-	pci_hose_write_config_byte(hose, dev, PCI_SUBORDINATE_BUS,
+-				   sub_bus - hose->first_busno);
++	pci_hose_write_config_byte(hose, dev, PCI_SUBORDINATE_BUS, sub_bus);
+ 
+ 	if (pci_mem) {
+ 		/* Round memory allocator to 1MB boundary */
+-- 
+1.9.1
+

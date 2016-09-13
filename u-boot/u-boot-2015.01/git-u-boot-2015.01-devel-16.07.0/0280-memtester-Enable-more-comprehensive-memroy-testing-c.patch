@@ -1,0 +1,36 @@
+From 6724d6abce1c4d0c7331bd889f65927614f35a9c Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Mon, 27 Jul 2015 09:21:27 +0300
+Subject: [PATCH 0280/1240] memtester: Enable more comprehensive memroy testing
+ command
+
+	Enable CONFIG_SYS_ALT_MEMTEST
+
+Change-Id: Ia12f55157842c36f6970a062abdb7d6bc43938e1
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22185
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/mvebu-common.h | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 1c64603..19fd802 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -139,6 +139,11 @@
+ #define CONFIG_CMD_BOOTI
+ #endif
+ 
++/* Memory commands / tests. */
++#ifdef CONFIG_CMD_MEMTEST
++#define CONFIG_SYS_ALT_MEMTEST	/* More comprehensive mtest algorithm */
++#endif
++
+ /* Flash env setup */
+ #if !defined(MV_INCLUDE_NOR) && !defined(CONFIG_MVEBU_NAND_BOOT) && !defined(CONFIG_MVEBU_SPI_BOOT)
+ 	#undef CONFIG_CMD_FLASH
+-- 
+1.9.1
+

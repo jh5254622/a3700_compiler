@@ -1,0 +1,188 @@
+From 2392be42201283c2b61554c358cdfd5087a95d41 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 2 Feb 2016 10:01:01 +0200
+Subject: [PATCH 0761/1240] a7040: add support for DRAM over PCIe for
+ Armada-7040RZ board
+
+Change-Id: Ida5411bea012d76e10b1731b8f15be614652e84d
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27120
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/Makefile                  |   1 +
+ arch/arm/dts/armada-7040-rz-db_dop.dts | 103 +++++++++++++++++++++++++++++++++
+ configs/mvebu_armada70x0_dop_defconfig |  39 +++++++++++++
+ 3 files changed, 143 insertions(+)
+ create mode 100644 arch/arm/dts/armada-7040-rz-db_dop.dts
+ create mode 100644 configs/mvebu_armada70x0_dop_defconfig
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index ba46b6c..efe286c 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -70,6 +70,7 @@ dtb-$(CONFIG_PALLADIUM) += apn-806-pd.dtb \
+ dtb-$(CONFIG_DEVEL_BOARD) += apn-806-db.dtb \
+ 			     apn-806-db-dop.dtb \
+ 			     armada-80x0-db.dtb \
++			     armada-7040-rz-db_dop.dtb \
+ 			     armada-7040-rz-db_nand.dtb \
+ 			     armada-7040-rz-db_router.dtb \
+ 			     armada-7040-rz-db_all_pci.dtb \
+diff --git a/arch/arm/dts/armada-7040-rz-db_dop.dts b/arch/arm/dts/armada-7040-rz-db_dop.dts
+new file mode 100644
+index 0000000..d14c533
+--- /dev/null
++++ b/arch/arm/dts/armada-7040-rz-db_dop.dts
+@@ -0,0 +1,103 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/dts-v1/;
++
++#include "armada-70x0.dtsi" /* include SoC device tree */
++
++/ {
++	model = "DB-ARMADA-7040R-Z1 (DOP)";
++	compatible = "marvell,armada-70x0-db", "marvell,armada-70x0";
++	fdt_config_id = <1>;
++	board_id = <0x11>;
++
++	memory {
++		device_type = "memory";
++		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
++	};
++	ap-806 {
++		internal-regs {
++			spi0: spi@510600 {
++				status = "disabled";
++			};
++			i2c0: i2c@511000 {
++				status = "disabled";
++			};
++		};
++		pcie-controller {
++			pcie@1,0 {
++				reg = <0x50000000 0x2000>;
++				mem = <0x40000000 0x40000000>;
++				status = "okay";
++			};
++		};
++
++	};
++	cp110-master {
++		internal-regs {
++			spi0@700600 {
++				status = "disabled";
++			};
++			spi1@700680 {
++				status = "okay";
++			};
++			i2c@701000 {
++				status = "disabled";
++			};
++			usb3@500000 {
++				status = "disabled";
++			};
++			usb3@510000 {
++				status = "disabled";
++			};
++			sata@550000 {
++				status = "disabled";
++			};
++			mmc@780000 {
++				status = "disabled";
++			};
++
++			pinctl@440000 {
++					/* MPP Bus:
++					   TDM	 [0-12]
++					   SPI   [13-16]
++					   SATA1 [28]
++					   UART0 [29-30]
++					   SMI	 [32,34]
++					   SATA0 [36]
++					   I2C	 [37-38]
++					   UART1 [40-41]
++					   XSMI	 [42-43]
++					   SD	 [56-62]
++					*/
++					/*   0   1   2   3   4   5   6   7   8   9 */
++				pin-func = < 4   4   4   4   4   4   4   4   4   4
++					     4   4   0   3   3   3   3   0   0   0
++					     0   0   0   0   0   0   0   0   9   0xA
++					     0xA 0   7   0   7   0   6   2   2   0
++					     7   7   8   8   0   0   0   0   0   0
++					     0 	 0   0   0   0   0   0xE 0xE 0xE 0xE
++					     0xE 0xE 0xE 0>;
++			};
++			comphy {
++				status = "disabled";
++			};
++
++		};
++	};
++};
+diff --git a/configs/mvebu_armada70x0_dop_defconfig b/configs/mvebu_armada70x0_dop_defconfig
+new file mode 100644
+index 0000000..b05aaaf
+--- /dev/null
++++ b/configs/mvebu_armada70x0_dop_defconfig
+@@ -0,0 +1,39 @@
++CONFIG_SPL=y
++CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+++S:CONFIG_ARM=y
+++S:CONFIG_TARGET_ARMADA_8K=y
++CONFIG_MVEBU_MPP_BUS=y
+++S:CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT=y
+++S:CONFIG_MVEBU_ROM_SILENCE_FLAG_SUPPORT=y
+++S:CONFIG_MVEBU_SPL_SAR_DUMP=y
+++S:CONFIG_DEVEL_BOARD=y
+++S:# CONFIG_MULTI_DT_FILE is not set
++CONFIG_CMD_BOOTD=y
++CONFIG_CMD_RUN=y
++CONFIG_CMD_EDITENV=y
++CONFIG_CMD_SAVEENV=y
++CONFIG_CMD_MEMORY=y
++CONFIG_CMD_MEMTEST=y
++CONFIG_CMD_LOADB=y
++CONFIG_CMD_ECHO=y
++CONFIG_CMD_NET=y
++CONFIG_CMD_PING=y
++CONFIG_CMD_TIME=y
++CONFIG_CMD_MISC=y
++CONFIG_CMD_TIMER=y
++CONFIG_CMD_MVEBU_SAR=y
++CONFIG_CMD_MVEBU_MPP=y
++CONFIG_CMD_MVEBU_BUBT=y
++CONFIG_CMD_MVEBU_TSEN=y
+++S:CONFIG_OF_CONTROL=y
+++S:CONFIG_OF_EMBED=y
+++S:CONFIG_DEFAULT_DEVICE_TREE="armada-7040-rz-db_dop"
++CONFIG_ENC28J60=y
+++S:CONFIG_SYS_NS16550=y
++CONFIG_MVEBU_I2C=y
++CONFIG_MVEBU_SPI=y
++CONFIG_MVEBU_PINCTL=y
+++S:CONFIG_MVEBU_COMPHY_SUPPORT=y
++CONFIG_MVEBU_THERMAL_SENSOR=y
++CONFIG_MVEBU_THERMAL_SENSOR_28NM_V2=y
++# CONFIG_MVEBU_SPL_DDR_SUPPORT is not set
+-- 
+1.9.1
+

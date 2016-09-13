@@ -1,0 +1,34 @@
+From 10734630a5008f854cd651fef7db2e2a4abb51f2 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 4 Feb 2016 13:53:48 +0200
+Subject: [PATCH 0802/1240] icu: sata: merged both sata ports to single
+ interrupt
+
+The linux SATA driver accepts a single interrupt per
+multi-port SATA device and not interrupt per port
+
+Change-Id: I8c4faa34fc05e974c7973ad5a40b4247e7ef8f37
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27228
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/misc/mvebu_icu.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/misc/mvebu_icu.c b/drivers/misc/mvebu_icu.c
+index 22fae7c..06bcae8 100644
+--- a/drivers/misc/mvebu_icu.c
++++ b/drivers/misc/mvebu_icu.c
+@@ -113,7 +113,7 @@ static struct icu_irq irq_map_ns_multi[NS_MULTI_IRQS] = {
+ 	{105, 29, 0}, /* USB3 Host-1 irq */
+ 	{106, 30, 0}, /* USB3 Host-0 irq */
+ 	{107, 31, 0}, /* SATA Host-1 irq */
+-	{109, 32, 0}, /* SATA Host-0 irq */
++	{109, 31, 0}, /* SATA Host-0 irq */
+ 	{126, 33, 0}, /* PTP irq */
+ 	{127, 34, 0}, /* GOP-3 irq */
+ 	{128, 35, 0}, /* GOP-2 irq */
+-- 
+1.9.1
+

@@ -1,0 +1,28 @@
+From d94f5e4d052e5eeae9acad0869ba86c248f2b24e Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Sun, 30 Aug 2015 15:12:13 +0300
+Subject: [PATCH 19/66] filesystem: Remove bin2hex from post build script
+
+	This is not longer needed, as bin2hex is performed at the target PXP server.
+
+Change-Id: I01b19b216a0b8522dfd856c0df2c46f8201e5df8
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23311
+---
+ board/marvell/scripts/filesystem-post-script.sh | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/board/marvell/scripts/filesystem-post-script.sh b/board/marvell/scripts/filesystem-post-script.sh
+index 981b9fb..0b63e22 100755
+--- a/board/marvell/scripts/filesystem-post-script.sh
++++ b/board/marvell/scripts/filesystem-post-script.sh
+@@ -4,6 +4,4 @@ export CROSS_COMPILE=output/host/usr/bin/aarch64-linux-gnu-
+ for f in `ls output/images/rootfs.ext*`; do
+ 	./board/marvell/scripts/mkimage -O linux -T ramdisk -A arm64 -C none -n "Ramdisk" -d $f $(dirname $f)/u_$(basename $f)
+ done
+-echo -n "bin2hex..."
+-./board/marvell/scripts/bin2phex.pl -i $1/u_rootfs.ext2 -o $1/u_rootfs_ext2.hex -b 0x3000000
+ echo "Done."
+-- 
+1.9.1
+

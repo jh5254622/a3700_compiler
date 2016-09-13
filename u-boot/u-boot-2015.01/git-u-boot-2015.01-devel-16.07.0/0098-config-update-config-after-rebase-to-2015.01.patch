@@ -1,0 +1,341 @@
+From 722cf7722e103dde3247129759e2f39ef146a543 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 13 Jan 2015 18:05:04 +0200
+Subject: [PATCH 0098/1240] config: update config after rebase to 2015.01
+
+	- move IO's to be SOC config and not board config
+
+Change-Id: Ifdb4a2eb73cb6a1f654f86f030373886de6f7fc0
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/15980
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/Kconfig                     |  3 +-
+ arch/arm/cpu/armv7/Makefile          |  1 +
+ arch/arm/cpu/armv7/armada38x/Kconfig | 23 ++++++++++++++
+ arch/arm/cpu/armv8/Makefile          |  1 +
+ arch/arm/cpu/armv8/armada8k/Kconfig  | 27 ++++++++++++++++
+ arch/arm/cpu/mvebu-common/Kconfig    | 60 ++++++++++++++++++++++++++++++++++++
+ board/mvebu/armada38x/Kconfig        | 23 --------------
+ board/mvebu/armada8k/Kconfig         | 27 ----------------
+ board/mvebu/common/Kconfig           | 56 ---------------------------------
+ include/configs/mvebu-common.h       |  3 --
+ 10 files changed, 114 insertions(+), 110 deletions(-)
+ create mode 100644 arch/arm/cpu/armv7/armada38x/Kconfig
+ create mode 100644 arch/arm/cpu/armv8/armada8k/Kconfig
+ create mode 100644 arch/arm/cpu/mvebu-common/Kconfig
+ delete mode 100644 board/mvebu/armada38x/Kconfig
+ delete mode 100644 board/mvebu/armada8k/Kconfig
+ delete mode 100644 board/mvebu/common/Kconfig
+
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index dfbeb3a..5e5a00f 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -845,6 +845,8 @@ source "arch/arm/cpu/armv7/zynq/Kconfig"
+ 
+ source "arch/arm/cpu/armv7/Kconfig"
+ 
++source "arch/arm/cpu/mvebu-common/Kconfig"
++
+ source "board/aristainetos/Kconfig"
+ source "board/BuR/kwb/Kconfig"
+ source "board/BuR/tseries/Kconfig"
+@@ -938,7 +940,6 @@ source "board/logicpd/imx27lite/Kconfig"
+ source "board/logicpd/imx31_litekit/Kconfig"
+ source "board/maxbcm/Kconfig"
+ source "board/mpl/vcma9/Kconfig"
+-source "board/mvebu/common/Kconfig"
+ source "board/olimex/mx23_olinuxino/Kconfig"
+ source "board/palmld/Kconfig"
+ source "board/palmtc/Kconfig"
+diff --git a/arch/arm/cpu/armv7/Makefile b/arch/arm/cpu/armv7/Makefile
+index 409e6f5..1a9793a 100644
+--- a/arch/arm/cpu/armv7/Makefile
++++ b/arch/arm/cpu/armv7/Makefile
+@@ -40,6 +40,7 @@ endif
+ 
+ obj-$(if $(filter am33xx,$(SOC)),y) += am33xx/
+ obj-$(if $(filter armada-xp,$(SOC)),y) += armada-xp/
++obj-$(if $(filter armada38x,$(SOC)),y) += armada38x/
+ obj-$(CONFIG_AT91FAMILY) += at91/
+ obj-$(if $(filter bcm281xx,$(SOC)),y) += bcm281xx/
+ obj-$(if $(filter bcmcygnus,$(SOC)),y) += bcmcygnus/
+diff --git a/arch/arm/cpu/armv7/armada38x/Kconfig b/arch/arm/cpu/armv7/armada38x/Kconfig
+new file mode 100644
+index 0000000..07c8a61
+--- /dev/null
++++ b/arch/arm/cpu/armv7/armada38x/Kconfig
+@@ -0,0 +1,23 @@
++if TARGET_ARMADA_38X
++
++config SYS_CPU
++	string
++	default "armv7"
++
++config SYS_BOARD
++	string
++	default "armada38x"
++
++config SYS_VENDOR
++	string
++	default "mvebu"
++
++config SYS_SOC
++	string
++	default "armada38x"
++
++config SYS_CONFIG_NAME
++	string
++	default "armada38x"
++
++endif
+diff --git a/arch/arm/cpu/armv8/Makefile b/arch/arm/cpu/armv8/Makefile
+index 0c10223..7e93f55 100644
+--- a/arch/arm/cpu/armv8/Makefile
++++ b/arch/arm/cpu/armv8/Makefile
+@@ -16,3 +16,4 @@ obj-y	+= tlb.o
+ obj-y	+= transition.o
+ 
+ obj-$(CONFIG_FSL_LSCH3) += fsl-lsch3/
++obj-$(if $(filter armada8k,$(SOC)),y) += armada8k/
+diff --git a/arch/arm/cpu/armv8/armada8k/Kconfig b/arch/arm/cpu/armv8/armada8k/Kconfig
+new file mode 100644
+index 0000000..9792366
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armada8k/Kconfig
+@@ -0,0 +1,27 @@
++if TARGET_ARMADA_8K
++
++config SYS_CPU
++	string
++	default "armv8"
++
++config SYS_BOARD
++	string
++	default "armada8k"
++
++config SYS_VENDOR
++	string
++	default "mvebu"
++
++config SYS_SOC
++	string
++	default "armada8k"
++
++config SYS_CONFIG_NAME
++	string
++	default "armada8k"
++
++config PALLADIUM
++	bool "Support palladium emulation"
++	default y
++endif
++
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+new file mode 100644
+index 0000000..be2e5f7
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -0,0 +1,60 @@
++
++source "arch/arm/cpu/armv8/armada8k/Kconfig"
++source "arch/arm/cpu/armv7/armada38x/Kconfig"
++
++config MVEBU
++	bool "Support MVEBU devices"
++	default y
++
++menu "IO support"
++
++config MVEBU_NAND
++	bool "NAND flash support"
++	default n
++
++config MVEBU_SPI
++	bool "SPI flash support"
++	default n
++
++config MVEBU_PCI
++	bool "PCIE support"
++	default n
++
++config MVEBU_UART
++	bool "UART support"
++	default n
++	help
++	  Choose this option to add support
++	  for UART driver, using COM1 NS16550
++	  driver.
++	  base address is configured under MVEBU_UART_BASE
++
++config MVEBU_I2C
++	bool "I2C support"
++	default n
++	help
++	  Choose this option to add support
++	  for I2C driver, using Marvell mvebu_i2c.c
++	  driver.
++	  base address is configured under MVEBU_I2C_BASE
++
++endmenu
++
++
++choice
++	prompt "Flash for environment and image"
++	default MVEBU_SPI_BOOT
++
++config MVEBU_NAND_BOOT
++	bool "NAND flash boot"
++	depends on MVEBU_NAND
++
++config MVEBU_SPI_BOOT
++	bool "SPI flash boot"
++	depends on MVEBU_SPI
++
++config MVEBU_NOR_BOOT
++	bool "NOR flash boot"
++	depends on MVEBU_NOR
++
++endchoice
+diff --git a/board/mvebu/armada38x/Kconfig b/board/mvebu/armada38x/Kconfig
+deleted file mode 100644
+index 07c8a61..0000000
+--- a/board/mvebu/armada38x/Kconfig
++++ /dev/null
+@@ -1,23 +0,0 @@
+-if TARGET_ARMADA_38X
+-
+-config SYS_CPU
+-	string
+-	default "armv7"
+-
+-config SYS_BOARD
+-	string
+-	default "armada38x"
+-
+-config SYS_VENDOR
+-	string
+-	default "mvebu"
+-
+-config SYS_SOC
+-	string
+-	default "armada38x"
+-
+-config SYS_CONFIG_NAME
+-	string
+-	default "armada38x"
+-
+-endif
+diff --git a/board/mvebu/armada8k/Kconfig b/board/mvebu/armada8k/Kconfig
+deleted file mode 100644
+index 9792366..0000000
+--- a/board/mvebu/armada8k/Kconfig
++++ /dev/null
+@@ -1,27 +0,0 @@
+-if TARGET_ARMADA_8K
+-
+-config SYS_CPU
+-	string
+-	default "armv8"
+-
+-config SYS_BOARD
+-	string
+-	default "armada8k"
+-
+-config SYS_VENDOR
+-	string
+-	default "mvebu"
+-
+-config SYS_SOC
+-	string
+-	default "armada8k"
+-
+-config SYS_CONFIG_NAME
+-	string
+-	default "armada8k"
+-
+-config PALLADIUM
+-	bool "Support palladium emulation"
+-	default y
+-endif
+-
+diff --git a/board/mvebu/common/Kconfig b/board/mvebu/common/Kconfig
+deleted file mode 100644
+index d776fe5..0000000
+--- a/board/mvebu/common/Kconfig
++++ /dev/null
+@@ -1,56 +0,0 @@
+-
+-source "board/mvebu/armada8k/Kconfig"
+-source "board/mvebu/armada38x/Kconfig"
+-
+-menu "IO support"
+-
+-config MVEBU_NAND
+-	bool "NAND flash support"
+-	default n
+-
+-config MVEBU_SPI
+-	bool "SPI flash support"
+-	default n
+-
+-config MVEBU_PCI
+-	bool "PCIE support"
+-	default n
+-
+-config MVEBU_UART
+-	bool "UART support"
+-	default n
+-	help
+-	  Choose this option to add support
+-	  for UART driver, using COM1 NS16550
+-	  driver.
+-	  base address is configured under MVEBU_UART_BASE
+-
+-config MVEBU_I2C
+-	bool "I2C support"
+-	default n
+-	help
+-	  Choose this option to add support
+-	  for I2C driver, using Marvell mvebu_i2c.c
+-	  driver.
+-	  base address is configured under MVEBU_I2C_BASE
+-
+-endmenu
+-
+-
+-choice
+-	prompt "Flash for environment and image"
+-	default MVEBU_SPI_BOOT
+-
+-config MVEBU_NAND_BOOT
+-	bool "NAND flash boot"
+-	depends on MVEBU_NAND
+-
+-config MVEBU_SPI_BOOT
+-	bool "SPI flash boot"
+-	depends on MVEBU_SPI
+-
+-config MVEBU_NOR_BOOT
+-	bool "NOR flash boot"
+-	depends on MVEBU_NOR
+-
+-endchoice
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 1d7321a..881415a 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -23,9 +23,6 @@
+ #include <asm/arch/regs-base.h>
+ #include <config_cmd_default.h>
+ 
+-/* High Level Configuration Options */
+-#define CONFIG_MVEBU	/* an mvebu generic machine */
+-
+ /* Temp */
+ #define CONFIG_ADEC
+ 
+-- 
+1.9.1
+

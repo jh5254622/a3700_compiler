@@ -1,0 +1,135 @@
+From cafcd596a0078efd2c29458adde39c307c296ce3 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 27 Aug 2015 01:24:07 +0300
+Subject: [PATCH 0364/1240] fix: pcie: ap806: fixed DDR over PCIe addresses
+
+- Fixed DDR over PCIe addresses
+- Enable DDR over PCIe for AP-806
+
+Change-Id: I06a1538ddb2b74c439e8bbb7baa742bf943aa3b4
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23238
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Neta Zur Hershkovits <neta@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/dram_over_pci.c | 11 ++++-------
+ arch/arm/dts/apn-806.dtsi                 |  4 ++--
+ configs/mvebu_apn806_defconfig            |  6 ++----
+ include/configs/mvebu-common.h            |  4 ++++
+ 4 files changed, 12 insertions(+), 13 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/dram_over_pci.c b/arch/arm/cpu/mvebu-common/dram_over_pci.c
+index 609ae34..dbb69b0 100644
+--- a/arch/arm/cpu/mvebu-common/dram_over_pci.c
++++ b/arch/arm/cpu/mvebu-common/dram_over_pci.c
+@@ -24,6 +24,7 @@
+ /* mapping addresses */
+ #define DRAM_OFFSET				0
+ #define PCI_CONFIGURATION_OFFSET		0x50000000
++#define PCI_DEVICE_CONFIG_SPACE			0xF1000000
+ #define DRAM_WIN_SIZE				0x80000000
+ 
+ /* BARs offset */
+@@ -124,20 +125,16 @@ void dram_over_pci_init(const void *fdt_blob)
+ 	/* wait until the PCIE card finish */
+ 	udelay(PCI_DEVICE_INIT_DELAY);
+ 	comphy_init(fdt_blob);
+-	udelay(PCI_DEVICE_INIT_DELAY);
+ 
+ 	pci_init();
+ 
+-	/* set PCIE bars,
+-	   bar 0 configuration address = 0x50000000
++	/* set device PCIE bars:
++	   bar 0 configuration space = 0xf1000000
+ 	   bar 1  address = 0x0 - dram address */
+ 	hose = pci_bus_to_hose(0);
+-	hose->write_dword(hose, 0, BAR0_LOW_ADDR_OFFSET,
+-					  PCI_CONFIGURATION_OFFSET);
++	hose->write_dword(hose, 0, BAR0_LOW_ADDR_OFFSET, PCI_DEVICE_CONFIG_SPACE);
+ 	hose->write_dword(hose, 0, BAR0_HIGH_ADDR_OFFSET, 0);
+ 
+ 	hose->write_dword(hose, 0, BAR1_LOW_ADDR_OFFSET, DRAM_OFFSET);
+ 	hose->write_dword(hose, 0, BAR1_HIGH_ADDR_OFFSET, 0);
+-
+-	udelay(PCI_DEVICE_INIT_DELAY);
+ }
+diff --git a/arch/arm/dts/apn-806.dtsi b/arch/arm/dts/apn-806.dtsi
+index 6a8add1..49a9108 100644
+--- a/arch/arm/dts/apn-806.dtsi
++++ b/arch/arm/dts/apn-806.dtsi
+@@ -115,8 +115,8 @@
+ 			compatible = "marvell,mvebu-pcie";
+ 
+ 			pcie@1,0 {
+-				reg = <0xffe00000 0x2000>;
+-				mem = <0xfe000000 0x1f00000>;
++				reg = <0x50000000 0x2000>;
++				mem = <0x0 0x10000000>;
+ 				status = "okay";
+ 			};
+ 		};
+diff --git a/configs/mvebu_apn806_defconfig b/configs/mvebu_apn806_defconfig
+index 3559a44..de12ac4 100644
+--- a/configs/mvebu_apn806_defconfig
++++ b/configs/mvebu_apn806_defconfig
+@@ -4,10 +4,10 @@ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_TARGET_ARMADA_8K=y
+ # CONFIG_PALLADIUM is not set
+ CONFIG_MVEBU_SPI=y
+-CONFIG_MVEBU_PCI=y
+ CONFIG_MVEBU_MPP_BUS=y
+ CONFIG_MVEBU_I2C=y
+-CONFIG_MVEBU_SPL_SAR_DUMP=y
+++S:CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT=y
+++S:CONFIG_MVEBU_SPL_SAR_DUMP=y
+ +S:CONFIG_DEVEL_BOARD=y
+ CONFIG_CUSTOMER_BOARD=y
+ CONFIG_CMD_BOOTD=y
+@@ -28,8 +28,6 @@ CONFIG_CMD_MVEBU_BUBT=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="apn-806-db"
+-CONFIG_MVEBU_CCU=y
+-CONFIG_MVEBU_RFU=y
+ +S:CONFIG_SYS_NS16550=y
+ CONFIG_MVEBU_PINCTL=y
+ +S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 64bcce8..2a66e2b 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -281,12 +281,14 @@
+ 	#define CONFIG_PCI_PNP  /* Enable plug-and-play */
+ 	/*#define CONFIG_MVEBU_PCI_EP*/ /* Set PCI host as end point */
+ 
++#ifndef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+ 	/* Enable PCIE NIC for devel boards */
+ 	#ifdef CONFIG_DEVEL_BOARD
+ 		#define CONFIG_EEPRO100
+ 		#define CONFIG_E1000
+ 		#define CONFIG_MVEBU_NET
+ 	#endif
++#endif
+ 
+ #endif /* CONFIG_MVEBU_PCI */
+ 
+@@ -311,6 +313,7 @@
+ #endif /* CONFIG_MVEBU_NET */
+ 
+ /* SATA AHCI over PCIe */
++#ifndef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+ #if defined(CONFIG_DEVEL_BOARD) && (defined(CONFIG_MVEBU_PCI) || defined(CONFIG_MVEBU_DW_PCIE))
+ 
+ 	#define CONFIG_CMD_SCSI
+@@ -343,6 +346,7 @@
+ 	/* Add support for Magni 9215 and Magni 9235 */
+ 	#define CONFIG_SCSI_DEV_LIST		{ 0x1B4B, 0x9215 }, { 0x1B4B, 0x9235 }, { 0, 0 }
+ #endif
++#endif
+ 
+ /* NAND */
+ #ifdef CONFIG_MVEBU_NAND
+-- 
+1.9.1
+

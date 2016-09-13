@@ -1,0 +1,51 @@
+From 8a9e6a39a6eb2704279f697436478ccff09ef03f Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Wed, 13 Jan 2016 11:28:28 +0200
+Subject: [PATCH 0677/1240] fix: a3700: psci: Add system reset function to PSCI
+
+- Add call to warm reset system in Armada LP PSCI
+- Fixes JIRA SYSTEMSW-2101
+
+Change-Id: I01cd75cf8261fe912d11680cad4d7609eb315203
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26755
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+---
+ arch/arm/cpu/armv8/armadalp/psci.S | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/arch/arm/cpu/armv8/armadalp/psci.S b/arch/arm/cpu/armv8/armadalp/psci.S
+index 7528b07..4c59cfa 100644
+--- a/arch/arm/cpu/armv8/armadalp/psci.S
++++ b/arch/arm/cpu/armv8/armadalp/psci.S
+@@ -29,6 +29,9 @@
+ #define MVEBU_CPU_1_RESET_VECTOR 0x14044
+ #define MVEBU_CPU_1_RESET_REG 0xD00C
+ #define MVEBU_CPU_1_RESET_BIT 31
++#define MVEBU_NB_REGS_BASE 0x13000
++#define MVEBU_WARM_RESET_REG 0x840
++#define MVEBU_WARM_RESET_MAGIC 0x1D1E
+ 
+ /*
+   * Now there is only very limited support for PSCI feature.
+@@ -80,6 +83,15 @@ psci_build_stack:
+ 
+ 	ret
+ 
++.globl	psci_0_2_system_reset
++psci_0_2_system_reset:
++	mov	x0, #(MVEBU_REGS_BASE)
++	add	x3, x0, #(MVEBU_NB_REGS_BASE)
++	add	x3, x3, #(MVEBU_WARM_RESET_REG)
++	mov	w0, #(MVEBU_WARM_RESET_MAGIC)
++	str	w0, [x3]
++	ret
++
+ 	/* x1 = target CPU */
+ 	/* x2 = target PC */
+ .globl	psci_0_2_cpu_on_64
+-- 
+1.9.1
+

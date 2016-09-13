@@ -1,0 +1,80 @@
+From df7ef55c354bb78e84b6096eb3ec7ea573f4f368 Mon Sep 17 00:00:00 2001
+From: Ken Ma <make@marvell.com>
+Date: Wed, 6 Apr 2016 22:24:48 +0800
+Subject: [PATCH 147/239] mpp: a3700: add mpp initialization
+
+Add mpp initialization in atf bl31, now we only enable i2c1's mpp
+so that later we can switch to uart boot mode by i2c for the recovery
+hack in atf
+
+Change-Id: I96bdbf27089ea3328c38345ee3d92a2b698bf72f
+Signed-off-by: Ken Ma <make@marvell.com>
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28901
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ plat/marvell/a3700/a3700_z/plat_bl31_setup.c | 15 +++++++++++++++
+ plat/marvell/a3700/a3700_z/plat_def.h        | 10 ++++++++++
+ 2 files changed, 25 insertions(+)
+
+diff --git a/plat/marvell/a3700/a3700_z/plat_bl31_setup.c b/plat/marvell/a3700/a3700_z/plat_bl31_setup.c
+index 268b093..254011e 100644
+--- a/plat/marvell/a3700/a3700_z/plat_bl31_setup.c
++++ b/plat/marvell/a3700/a3700_z/plat_bl31_setup.c
+@@ -33,6 +33,7 @@
+ */
+ #include <plat_marvell.h>
+ #include <sys_info.h>
++#include <mmio.h>
+ 
+ /* This function passes hard coded DRAM in ATF to sys info */
+ static void pass_dram_sys_info(void)
+@@ -45,6 +46,17 @@ static void pass_dram_sys_info(void)
+ 	set_info(DRAM_CS0_SIZE, MARVELL_DRAM1_SIZE >> 20);
+ }
+ 
++/* This routine does MPP initialization */
++static void marvell_bl31_mpp_init(void)
++{
++	uint32_t reg_val;
++
++	/* Enable I2C1 MPP */
++	reg_val = mmio_read_32(MVEBU_GPIO_NB_SEL_REG);
++	reg_val = reg_val & (~(1 << MVEBU_GPIO_TW1_GPIO_EN_OFF));
++	mmio_write_32(MVEBU_GPIO_NB_SEL_REG, reg_val);
++}
++
+ /* This function overruns the same function in marvell_bl31_setup.c */
+ void bl31_plat_arch_setup(void)
+ {
+@@ -52,4 +64,7 @@ void bl31_plat_arch_setup(void)
+ 
+ 	/* Pass DRAM size value so that u-boot could get it later */
+ 	pass_dram_sys_info();
++
++	/* MPP init */
++	marvell_bl31_mpp_init();
+ }
+diff --git a/plat/marvell/a3700/a3700_z/plat_def.h b/plat/marvell/a3700/a3700_z/plat_def.h
+index 644844d..9781e46 100644
+--- a/plat/marvell/a3700/a3700_z/plat_def.h
++++ b/plat/marvell/a3700/a3700_z/plat_def.h
+@@ -67,4 +67,14 @@
+ #define MVEBU_GICR_BASE			0x1D40000
+ #define MVEBU_GICC_BASE			0x1D80000
+ 
++/*******************************************************************************
++ * GPIO registers related constants
++ ******************************************************************************/
++/* north bridge GPIO register base address */
++#define MVEBU_GPIO_NB_REG_BASE			(MVEBU_REGS_BASE + 0x13800)
++/* north Bridge GPIO selection regsiter */
++#define MVEBU_GPIO_NB_SEL_REG			(MVEBU_GPIO_NB_REG_BASE + 0x30)
++/* I2C1 GPIO Enable bit offset */
++#define MVEBU_GPIO_TW1_GPIO_EN_OFF		(10)
++
+ #endif /* __MVEBU_DEF_H__ */
+-- 
+1.9.1
+

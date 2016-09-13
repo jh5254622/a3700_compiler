@@ -1,0 +1,83 @@
+From cd3d5bb918464b870dbdfa6f321fb2e3b4f5c163 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Mon, 18 Apr 2016 22:42:47 +0800
+Subject: [PATCH 136/239] a3700: add Armada-3700 specific BL31 setup routine
+
+- This routine is dedicated for Armada-3700 BL31 setup,
+  which overruns the BL31 setup routine defined in marvell
+  common files. Most of the Armada-3700 initialization
+  will be added in this routine later.
+
+Change-Id: I20d7af2c74cb2816768391da196350c1eaa1bb11
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29173
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ plat/marvell/a3700/a3700_z/plat_bl31_setup.c | 41 ++++++++++++++++++++++++++++
+ plat/marvell/a3700/a3700_z/platform.mk       |  1 +
+ 2 files changed, 42 insertions(+)
+ create mode 100644 plat/marvell/a3700/a3700_z/plat_bl31_setup.c
+
+diff --git a/plat/marvell/a3700/a3700_z/plat_bl31_setup.c b/plat/marvell/a3700/a3700_z/plat_bl31_setup.c
+new file mode 100644
+index 0000000..fa54e37
+--- /dev/null
++++ b/plat/marvell/a3700/a3700_z/plat_bl31_setup.c
+@@ -0,0 +1,41 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2016 Marvell International Ltd.
++* ***************************************************************************
++*
++* Redistribution and use in source and binary forms, with or without
++* modification, are permitted provided that the following conditions are met:
++*
++* Redistributions of source code must retain the above copyright notice, this
++* list of conditions and the following disclaimer.
++*
++* Redistributions in binary form must reproduce the above copyright notice,
++* this list of conditions and the following disclaimer in the documentation
++* and/or other materials provided with the distribution.
++*
++* Neither the name of Marvell nor the names of its contributors may be used
++* to endorse or promote products derived from this software without specific
++* prior written permission.
++*
++* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
++* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++* POSSIBILITY OF SUCH DAMAGE.
++*
++***************************************************************************
++*/
++
++#include <plat_marvell.h>
++
++/* This function overruns the same function in marvell_bl31_setup.c */
++void bl31_plat_arch_setup(void)
++{
++	marvell_bl31_plat_arch_setup();
++}
+diff --git a/plat/marvell/a3700/a3700_z/platform.mk b/plat/marvell/a3700/a3700_z/platform.mk
+index 6ff2874..86d4f7e 100644
+--- a/plat/marvell/a3700/a3700_z/platform.mk
++++ b/plat/marvell/a3700/a3700_z/platform.mk
+@@ -71,6 +71,7 @@ BL31_SOURCES		+=	lib/cpus/aarch64/cortex_a53.S		\
+ 				$(PLAT_SRC_BASE)/aarch64/plat_psci.S	\
+ 				$(PLAT_SRC_BASE)/plat_pm.c		\
+ 				$(PLAT_SRC_BASE)/plat_topology.c	\
++				$(PLAT_SRC_BASE)/plat_bl31_setup.c	\
+ 				plat/marvell/common/marvell_gicv3.c	\
+ 				${MARVELL_GIC_SOURCES}
+ 
+-- 
+1.9.1
+

@@ -1,0 +1,43 @@
+From f40850182ea9aba225337cfc195c10cb01b28dba Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 17 Jun 2015 15:15:21 +0300
+Subject: [PATCH 0201/1240] cmd: enabled SatR, config, and mpp commands for
+ devel boards only
+
+Change-Id: Ie4f174df51393de04a95fefeacc85cfd9ac9650e
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20249
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ common/mvebu/Kconfig | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/common/mvebu/Kconfig b/common/mvebu/Kconfig
+index 8184c3d..4621d32 100644
+--- a/common/mvebu/Kconfig
++++ b/common/mvebu/Kconfig
+@@ -11,17 +11,20 @@ config CMD_MVEBU_MISC
+ 
+ config CMD_MVEBU_SAR
+ 	bool "SatR"
++	depends on DEVEL_BOARD
+ 	default n
+ 	help
+ 	  SatR - Modify SOC's sample at reset (SAR) values
+ 
+ config CMD_MVEBU_CONFIG
+ 	bool "config"
++	depends on DEVEL_BOARD
+ 	default n
+ 	help
+ 	  config - Modify SOC and board configuration
+ 
+ config CMD_MVEBU_MPP
++	depends on (DEVEL_BOARD && MVEBU_MPP_BUS)
+ 	bool "mpp, mppbus"
+ 	default n
+ 	help
+-- 
+1.9.1
+

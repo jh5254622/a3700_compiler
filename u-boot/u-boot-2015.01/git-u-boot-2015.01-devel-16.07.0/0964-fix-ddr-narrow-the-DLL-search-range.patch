@@ -1,0 +1,49 @@
+From 69b3f66f41fedd4e25574528b2aa0c701ebfe869 Mon Sep 17 00:00:00 2001
+From: Wilson Ding <dingwei@marvell.com>
+Date: Thu, 18 Feb 2016 20:35:06 +0800
+Subject: [PATCH 0964/1240] fix: ddr: narrow the DLL search range
+
+- Currently the DLL tuning  is using "set and try" method,
+  which set the DLL to a arbitrate value and try to w/r DDR.
+  The w/r test was performed with CPU w/r. It could have
+  potential risk that a set of DLL values get CPU w/r pass,
+  but fail the DMA test, and cause trouble later during
+  program execution.
+
+- This patch is to narrow the the DLL search range avoiding
+  the DLL tune algorithm locks on the wrong value.
+
+- TODO:
+  The design team suggest the following to improve the bug
+  by the following two approach.
+  a) Use DMA for large memory w/r test
+  b) Re-initialize the DDR when it lock on narrow pass win-
+     down.
+
+Change-Id: I94769229d31bd2a69410ec9d1a6fb5e7da70a5e4
+Signed-off-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27641
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/ddr/ddr_mckinley6.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/ddr/ddr_mckinley6.h b/drivers/ddr/ddr_mckinley6.h
+index 18921e3..a418f31 100644
+--- a/drivers/ddr/ddr_mckinley6.h
++++ b/drivers/ddr/ddr_mckinley6.h
+@@ -42,8 +42,8 @@
+ #define DRAM_INIT_TIMEOUT		1000
+ 
+ /* DLL Tune definitions */
+-#define DLL_PHSEL_START			0x00
+-#define DLL_PHSEL_END			0x3F
++#define DLL_PHSEL_START			0x06
++#define DLL_PHSEL_END			0x30
+ #define DLL_PHSEL_STEP			0x1
+ #define DLL_RST_TIMER_VAL		0x10
+ #define DLL_RESET_WAIT_US		100
+-- 
+1.9.1
+

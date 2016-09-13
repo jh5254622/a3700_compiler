@@ -1,0 +1,68 @@
+From f612539354ea6268e56e309efe3211b8c492bf11 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Wed, 30 Mar 2016 21:35:29 +0800
+Subject: [PATCH 1164/1240] dts: a3700: add PM DT node
+
+This patch adds PM DT node, which is used to support
+DVFS till now.
+
+Change-Id: I61a885e4f70bc9209c081676825ac078a0242391
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28655
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+---
+ arch/arm/dts/armada-3700-customer0.dts | 3 +++
+ arch/arm/dts/armada-3700-db.dts        | 3 +++
+ arch/arm/dts/armada-3700.dtsi          | 6 ++++++
+ 3 files changed, 12 insertions(+)
+
+diff --git a/arch/arm/dts/armada-3700-customer0.dts b/arch/arm/dts/armada-3700-customer0.dts
+index 6d423fb..2d135ed 100644
+--- a/arch/arm/dts/armada-3700-customer0.dts
++++ b/arch/arm/dts/armada-3700-customer0.dts
+@@ -23,6 +23,9 @@
+ 			spi0: spi@10600 {
+ 				status = "okay";
+ 			};
++			pm@14000 {
++				status = "okay";
++			};
+ 			neta0: neta@30000 {
+ 				status = "okay";
+ 				phy_addr = <0x1>;
+diff --git a/arch/arm/dts/armada-3700-db.dts b/arch/arm/dts/armada-3700-db.dts
+index 6e071dd..d4f352d 100644
+--- a/arch/arm/dts/armada-3700-db.dts
++++ b/arch/arm/dts/armada-3700-db.dts
+@@ -44,6 +44,9 @@
+ 				output-enable-gpio = <&gpio0 ARMADA_3700_GPIO(BANK_0, 60) GPIO_ACTIVE_HIGH>;
+ 				status = "okay";
+ 			};
++			pm@14000 {
++				status = "okay";
++			};
+ 			neta0: neta@30000 {
+ 				status = "okay";
+ 				phy_addr = <0x0>;
+diff --git a/arch/arm/dts/armada-3700.dtsi b/arch/arm/dts/armada-3700.dtsi
+index b01322c..6a90f23 100644
+--- a/arch/arm/dts/armada-3700.dtsi
++++ b/arch/arm/dts/armada-3700.dtsi
+@@ -45,6 +45,12 @@
+ 				max-func = <1>;
+ 			};
+ 
++			pm@14000 {
++				compatible = "marvell,armada-3700-pm";
++				reg = <0x14000 0x100>;
++				status = "disabled";
++			};
++
+ 			pinctl1: pinctl@18830 { /* south bridge */
+ 				compatible = "marvell,mvebu-pinctl";
+ 				bank-name ="armada-3700-sb";
+-- 
+1.9.1
+

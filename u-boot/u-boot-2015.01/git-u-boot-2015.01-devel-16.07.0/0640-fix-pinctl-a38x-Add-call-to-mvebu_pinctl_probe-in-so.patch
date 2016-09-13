@@ -1,0 +1,39 @@
+From 85b1337f4d401742875ff89019f34d9bd911739e Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Wed, 6 Jan 2016 13:31:22 +0200
+Subject: [PATCH 0640/1240] fix: pinctl: a38x: Add call to mvebu_pinctl_probe
+ in soc_early_init_f
+
+Change-Id: Ib93f0b5aef7057beda3d52a625b357f5c422bd3b
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26576
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv7/armada38x/soc-init.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/arch/arm/cpu/armv7/armada38x/soc-init.c b/arch/arm/cpu/armv7/armada38x/soc-init.c
+index 3ce63f5..d961eaf 100644
+--- a/arch/arm/cpu/armv7/armada38x/soc-init.c
++++ b/arch/arm/cpu/armv7/armada38x/soc-init.c
+@@ -22,6 +22,7 @@
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/soc.h>
+ #include <asm/arch-mvebu/mpp.h>
++#include <asm/arch-mvebu/pinctl.h>
+ #include <asm/arch-armada38x/armada38x.h>
+ 
+ #define MBUS_SDRAM_WIN_ENABLE			0x1
+@@ -47,6 +48,8 @@ int a38x_configure_mpp(void)
+ int soc_early_init_f(void)
+ {
+ 	a38x_configure_mpp();
++
++	mvebu_pinctl_probe();
+ 	return 0;
+ }
+ 
+-- 
+1.9.1
+

@@ -1,0 +1,159 @@
+From d5205aa824868a6ef5b41d8f13fa6100824b9116 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 3 May 2016 14:00:55 +0300
+Subject: [PATCH 141/239] llc: Enable L2 write evict when LLC is enabled in
+ exclusive mode
+
+- Call psci_arch_setup instead of affinity_setup.
+- Remove psci stack setup for first CPU.
+
+Change-Id: Idbc3c0d9ca4d2e156cbb91897230efc0e424fbb6
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29443
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/marvell/cache_llc.c                      | 10 ++++++++++
+ include/drivers/marvell/cache_llc.h              |  1 +
+ include/plat/marvell/a3700/common/plat_marvell.h |  1 +
+ include/plat/marvell/a8k/common/plat_marvell.h   |  1 +
+ plat/marvell/a3700/a3700_z/aarch64/plat_psci.S   |  1 -
+ plat/marvell/a8k/a70x0/aarch64/plat_psci.S       | 19 +++++++++++++++----
+ plat/marvell/common/marvell_bl31_setup.c         |  4 +---
+ 7 files changed, 29 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/marvell/cache_llc.c b/drivers/marvell/cache_llc.c
+index 05df902..cb5eed3 100644
+--- a/drivers/marvell/cache_llc.c
++++ b/drivers/marvell/cache_llc.c
+@@ -77,6 +77,16 @@ void llc_enable(int excl_mode)
+ 	__asm__ volatile("dsb sy");
+ }
+ 
++int llc_is_exclusive(void)
++{
++	uint32_t reg;
++
++	reg = mmio_read_32(MVEBU_LLC_BASE + LLC_CTRL);
++
++	if ((reg & (LLC_CTRL_EN | LLC_EXCLUSIVE_EN)) == (LLC_CTRL_EN | LLC_EXCLUSIVE_EN))
++		return 1;
++	return 0;
++}
+ 
+ void llc_save(void)
+ {
+diff --git a/include/drivers/marvell/cache_llc.h b/include/drivers/marvell/cache_llc.h
+index 584e007..2c8d65d 100644
+--- a/include/drivers/marvell/cache_llc.h
++++ b/include/drivers/marvell/cache_llc.h
+@@ -25,6 +25,7 @@ void llc_clean_all(void);
+ void llc_inv_all(void);
+ void llc_disable(void);
+ void llc_enable(int excl_mode);
++int llc_is_exclusive(void);
+ void llc_save(void);
+ void llc_resume(void);
+ 
+diff --git a/include/plat/marvell/a3700/common/plat_marvell.h b/include/plat/marvell/a3700/common/plat_marvell.h
+index cc53038..f594b9d 100644
+--- a/include/plat/marvell/a3700/common/plat_marvell.h
++++ b/include/plat/marvell/a3700/common/plat_marvell.h
+@@ -113,6 +113,7 @@ void plat_marvell_gic_init(void);
+ /*
+  * PSCI functionality
+  */
++void psci_arch_init(void);
+ void psci_0_2_cpu_on_64(u_register_t mpidr);
+ void psci_0_2_system_reset(void);
+ void psci_save_cpu_entrypoint(uintptr_t entrypoint);
+diff --git a/include/plat/marvell/a8k/common/plat_marvell.h b/include/plat/marvell/a8k/common/plat_marvell.h
+index 5db9908..9e8c4ea 100644
+--- a/include/plat/marvell/a8k/common/plat_marvell.h
++++ b/include/plat/marvell/a8k/common/plat_marvell.h
+@@ -117,6 +117,7 @@ void plat_marvell_gic_init(void);
+ /*
+  * PSCI functionality
+  */
++void psci_arch_init(void);
+ void psci_0_2_cpu_on_64(u_register_t mpidr);
+ void psci_0_2_system_reset(void);
+ void psci_save_cpu_entrypoint(uintptr_t entrypoint);
+diff --git a/plat/marvell/a3700/a3700_z/aarch64/plat_psci.S b/plat/marvell/a3700/a3700_z/aarch64/plat_psci.S
+index d19b02d..78b4a0a 100644
+--- a/plat/marvell/a3700/a3700_z/aarch64/plat_psci.S
++++ b/plat/marvell/a3700/a3700_z/aarch64/plat_psci.S
+@@ -152,7 +152,6 @@ enable_affinity:
+ psci_arch_init:
+ 	add	x29, x30, 0 /* keep return address */
+ 	bl	enable_affinity
+-	bl	psci_build_stack
+ 	ret	x29
+ 
+ /******************************************************************************/
+diff --git a/plat/marvell/a8k/a70x0/aarch64/plat_psci.S b/plat/marvell/a8k/a70x0/aarch64/plat_psci.S
+index 072bc4e..23e2db5 100644
+--- a/plat/marvell/a8k/a70x0/aarch64/plat_psci.S
++++ b/plat/marvell/a8k/a70x0/aarch64/plat_psci.S
+@@ -119,6 +119,8 @@ _armada8k_cpu_entry:
+ 
+ 	bl	psci_build_stack
+ 
++	bl	l2_setup
++
+ 	bl	gicv2_pcpu_distif_init
+ 
+ 	bl	gicv2_cpuif_enable
+@@ -178,14 +180,23 @@ enable_affinity:
+ 	msr S3_1_c15_c2_1, x0
+ 	ret
+ 
++l2_setup:
++	stp     x29, x30, [sp,#-16]!
++	bl llc_is_exclusive
++	cmp w0, #1
++	bne 1f
++        mrs x5, s3_1_c15_c0_0 /* L2 Aux Ctrl */
++        orr x5, x5, #(1 << 14) /* Enable UniqueClean evictions with data */
++        msr s3_1_c15_c0_0, x5 /* L2 Aux Ctrl */
++1:
++	ldp     x29, x30, [sp],#16
++        ret
++
+ .globl	psci_arch_init
+ psci_arch_init:
+ 	add	x29, x30, 0 /* keep return address */
+ 	bl	enable_affinity
+-	bl	psci_build_stack
+-#ifdef CONFIG_MVEBU_LLC_ENABLE
+-	bl	llc_enable
+-#endif
++	bl	l2_setup
+ 	ret	x29
+ 
+ psci_build_stack:
+diff --git a/plat/marvell/common/marvell_bl31_setup.c b/plat/marvell/common/marvell_bl31_setup.c
+index 6761176..b85a0c1 100644
+--- a/plat/marvell/common/marvell_bl31_setup.c
++++ b/plat/marvell/common/marvell_bl31_setup.c
+@@ -111,8 +111,6 @@ static entry_point_info_t bl33_image_ep_info;
+ #pragma weak bl31_plat_get_next_image_ep_info
+ #pragma weak plat_get_syscnt_freq
+ 
+-extern void enable_affinity(void);
+-
+ /*******************************************************************************
+  * Return a pointer to the 'entry_point_info' structure of the next image for the
+  * security state specified. BL33 corresponds to the non-secure image type
+@@ -232,7 +230,7 @@ void marvell_bl31_platform_setup(void)
+ 	plat_marvell_gic_driver_init();
+ 	plat_marvell_gic_init();
+ 
+-	enable_affinity();
++	psci_arch_init();
+ }
+ 
+ /*******************************************************************************
+-- 
+1.9.1
+

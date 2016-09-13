@@ -1,0 +1,38 @@
+From 91738ebcde8c9ea8bd2c4f4adf7166a6048e350c Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Tue, 2 Feb 2016 14:36:54 +0200
+Subject: [PATCH 004/239] atf: a8k: bl3: align psci code to 64KB
+
+this solves a8k jump address limitation.
+linux jump address (when performing cpu_on) must be
+aligned to 64KB (since the register omits the lower 16 bits).
+therefore, the jump address is replaced with this psci
+handler which is aligned to 64KB
+
+Change-Id: I75457a536280f30e1b710198df008a7bfd24f702
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27132
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ bl31/bl31.ld.S | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/bl31/bl31.ld.S b/bl31/bl31.ld.S
+index dc6e7a4..8e1ca3c 100644
+--- a/bl31/bl31.ld.S
++++ b/bl31/bl31.ld.S
+@@ -184,5 +184,11 @@ SECTIONS
+         __COHERENT_RAM_END_UNALIGNED__ - __COHERENT_RAM_START__;
+ #endif
+ 
++#ifdef PLAT_MARVELL_7040_RZ1
++    /* Note: this section must be aligned to 64K (for Mavell A8K platform) */
++    secure_scetion : ALIGN(0x10000) {
++        *(._secure.text)
++    } >RAM
++#endif
+     ASSERT(. <= BL31_LIMIT, "BL31 image has exceeded its limit.")
+ }
+-- 
+1.9.1
+

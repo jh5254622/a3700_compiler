@@ -1,0 +1,28 @@
+From d7d4ecd9b2c5123ecd4c2fcb0e3ffc015a462c2f Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Thu, 18 Feb 2016 11:28:20 +0200
+Subject: [PATCH 0870/1240] doc: mvebu: update the setup files name in user
+ guide
+
+Change-Id: Ia42c68e42604b0f1ed34a82475d8cb14192e2403
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27633
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ doc/mvebu/user_guide.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/doc/mvebu/user_guide.txt b/doc/mvebu/user_guide.txt
+index 1abfa77..974cd7c 100644
+--- a/doc/mvebu/user_guide.txt
++++ b/doc/mvebu/user_guide.txt
+@@ -36,4 +36,4 @@ Table of contents:
+ 
+ 6. Board options:
+    List of board options of development board.
+-   doc/mvebu/board/<board_name>.txt
++   doc/mvebu/<soc_name>/<board_name>-setup.txt
+-- 
+1.9.1
+

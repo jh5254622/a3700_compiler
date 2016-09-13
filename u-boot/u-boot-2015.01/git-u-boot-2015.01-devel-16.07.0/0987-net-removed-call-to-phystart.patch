@@ -1,0 +1,32 @@
+From faa79c9684af3c9408d775b62420852922dc707e Mon Sep 17 00:00:00 2001
+From: Stefan Chulski <stefanc@marvell.com>
+Date: Mon, 28 Mar 2016 12:18:45 +0300
+Subject: [PATCH 0987/1240] net: removed call to phystart
+
+- network driver doesn't need to call phystart
+  because it is done before
+
+Change-Id: Ic0a25a5f0e5d2c055d8f46aad1a95a4cdb7a846f
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28591
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/net/mv_pp2x.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/drivers/net/mv_pp2x.c b/drivers/net/mv_pp2x.c
+index e29b446..8f06f8e 100644
+--- a/drivers/net/mv_pp2x.c
++++ b/drivers/net/mv_pp2x.c
+@@ -4675,8 +4675,6 @@ int mv_pp2x_phylib_init(struct eth_device *dev, int phyid, int gop_index)
+ 		return -ENODEV;
+ 	}
+ 	phy_config(phydev);
+-	phy_startup(phydev);
+-	return 1;
+ #elif defined(CONFIG_MII) || defined(CONFIG_CMD_MII)
+ 			miiphy_register(dev->name, bus->read, bus->write);
+ 			/* Set phy address of the port */
+-- 
+1.9.1
+

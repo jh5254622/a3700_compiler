@@ -1,0 +1,40 @@
+From bae1852450b587570562ef528d783148926d56d9 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Wed, 3 Feb 2016 21:19:11 +0200
+Subject: [PATCH 0819/1240] clock: nand: Calculate NAND clock according to HW
+ configuration
+
+Change-Id: I0d4ee73616eea3aa0c22291b65b134b99bd0ab4c
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27207
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/clock.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/clock.c b/arch/arm/cpu/armv8/armada8k/clock.c
+index 970d1a6..2db9adc 100644
+--- a/arch/arm/cpu/armv8/armada8k/clock.c
++++ b/arch/arm/cpu/armv8/armada8k/clock.c
+@@ -62,9 +62,16 @@ u32 soc_tclk_get(void)
+ 
+ 
+ #ifdef CONFIG_NAND_PXA3XX
++#define NAND_FLASH_CLK_CTRL (MVEBU_CP0_REGS_BASE + 0x440700)
++#define NF_CLOCK_SEL_MASK	(0x1)
+ unsigned long mvebu_get_nand_clock(void)
+ {
+-	return 0;
++	u32 reg;
++	reg = readl(NAND_FLASH_CLK_CTRL);
++	if (reg & NF_CLOCK_SEL_MASK)
++		return 400 * MHz;
++	else
++		return 250 * MHz;
+ }
+ #endif
+ 
+-- 
+1.9.1
+

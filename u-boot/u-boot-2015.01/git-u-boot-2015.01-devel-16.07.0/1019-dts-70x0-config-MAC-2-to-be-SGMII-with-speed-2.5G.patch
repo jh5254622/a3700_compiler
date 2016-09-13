@@ -1,0 +1,111 @@
+From 422a6853de7dd797f6e9fe01ee6a98661997b064 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 6 Apr 2016 18:34:13 +0300
+Subject: [PATCH 1019/1240] dts: 70x0: config MAC#2 to be SGMII with speed 2.5G
+
+- update the port of MAC#2 to be connected to SGMII2(lane-0)
+  with speed 2.5G
+- Update the MPPs of RGMII to be on TDM (default configuration)
+
+Change-Id: I7bb75eb35f12104cfab7a6f9ada70fa75c658e21
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28841
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Stefan Chulski <stefanc@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/armada-70x0-customer0.dts | 11 ++++++-----
+ arch/arm/dts/armada-70x0-db_router.dts | 11 ++++++-----
+ 2 files changed, 12 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/dts/armada-70x0-customer0.dts b/arch/arm/dts/armada-70x0-customer0.dts
+index dfbea08..554523c 100644
+--- a/arch/arm/dts/armada-70x0-customer0.dts
++++ b/arch/arm/dts/armada-70x0-customer0.dts
+@@ -86,7 +86,7 @@
+ 
+ 			pinctl@440000 {
+ 					/* MPP Bus:
+-					   RGMII0[0-11]
++					   TDM	 [0-12]
+ 					   SPI   [13-16]
+ 					   SATA1 [28]
+ 					   UART0 [29-30]
+@@ -98,8 +98,8 @@
+ 					   SD	 [56-62]
+ 					*/
+ 					/*   0   1   2   3   4   5   6   7   8   9 */
+-				pin-func = < 3   3   3   3   3   3   3   3   3   3
+-					     3   3   0   3   3   3   3   0   0   0
++				pin-func = < 4   4   4   4   4   4   4   4   4   4
++					     4   4   0   3   3   3   3   0   0   0
+ 					     0   0   0   0   0   0   0   0   9   0xA
+ 					     0xA 0   7   0   7   7   7   2   2   0
+ 					     0   0   0   0   1   1   1   1   1   1
+@@ -110,7 +110,7 @@
+ 			comphy {
+ 				phy0 {
+ 					phy-type = <PHY_TYPE_SGMII2>;
+-					phy-speed = <PHY_SPEED_1_25G>;
++					phy-speed = <PHY_SPEED_3_125G>;
+ 				};
+ 				phy1 {
+ 					phy-type = <PHY_TYPE_USB3_HOST0>;
+@@ -149,8 +149,9 @@
+ 					status = "okay";
+ 				};
+ 				mac2 {
+-					phy-mode = "rgmii"; /* rgmii-0 */
++					phy-mode = "sgmii"; /* lane-0 */
+ 					phy = <&phy2>;
++					phy-speed = <2500>;
+ 					status = "okay";
+ 				};
+ 				mac3 {
+diff --git a/arch/arm/dts/armada-70x0-db_router.dts b/arch/arm/dts/armada-70x0-db_router.dts
+index d7d2b55..d453d0b 100644
+--- a/arch/arm/dts/armada-70x0-db_router.dts
++++ b/arch/arm/dts/armada-70x0-db_router.dts
+@@ -87,7 +87,7 @@
+ 
+ 			pinctl@440000 {
+ 					/* MPP Bus:
+-					   RGMII0[0-11]
++					   TDM	 [0-12]
+ 					   SPI   [13-16]
+ 					   SATA1 [28]
+ 					   UART0 [29-30]
+@@ -99,8 +99,8 @@
+ 					   SD	 [56-62]
+ 					*/
+ 					/*   0   1   2   3   4   5   6   7   8   9 */
+-				pin-func = < 3   3   3   3   3   3   3   3   3   3
+-					     3   3   0   3   3   3   3   0   0   0
++				pin-func = < 4   4   4   4   4   4   4   4   4   4
++					     4   4   0   3   3   3   3   0   0   0
+ 					     0   0   0   0   0   0   0   0   9   0xA
+ 					     0xA 0   7   0   7   7   7   2   2   0
+ 					     0   0   0   0   1   1   1   1   1   1
+@@ -111,7 +111,7 @@
+ 			comphy {
+ 				phy0 {
+ 					phy-type = <PHY_TYPE_SGMII2>;
+-					phy-speed = <PHY_SPEED_1_25G>;
++					phy-speed = <PHY_SPEED_3_125G>;
+ 				};
+ 				phy1 {
+ 					phy-type = <PHY_TYPE_USB3_HOST0>;
+@@ -150,8 +150,9 @@
+ 					status = "okay";
+ 				};
+ 				mac2 {
+-					phy-mode = "rgmii"; /* rgmii-0 */
++					phy-mode = "sgmii"; /* lane-0 */
+ 					phy = <&phy2>;
++					phy-speed = <2500>;
+ 					status = "okay";
+ 				};
+ 				mac3 {
+-- 
+1.9.1
+

@@ -1,0 +1,44 @@
+From 4c663cd365f357381e39be57b60d39cf04bbe00e Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Mon, 1 Feb 2016 20:26:59 +0800
+Subject: [PATCH 0762/1240] fix: dts: a3700: add ddr-mac node to
+ armada-lp-customer0.dts
+
+Change-Id: I78f704196eb0d7bb9d2f6d18c9d1813c419ca0a2
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27095
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/armada-lp-customer0.dts | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/arch/arm/dts/armada-lp-customer0.dts b/arch/arm/dts/armada-lp-customer0.dts
+index 46176ca..edec422 100644
+--- a/arch/arm/dts/armada-lp-customer0.dts
++++ b/arch/arm/dts/armada-lp-customer0.dts
+@@ -2,6 +2,7 @@
+ /dts-v1/;
+ 
+ #include "armada-lp.dtsi"
++#include <dt-bindings/ddr/ddr_data.h>
+ 
+ / {
+ 	model = "DB-88F37XX-Customer0";
+@@ -13,6 +14,13 @@
+ 		};
+ 
+ 		internal-regs {
++			ddr-mac {
++				cs_count = <1>;
++				bus_width = <DDR_BUS_WIDTH_16>;
++				cs0 {
++					size = <0x00000000 0x10000000>;
++				};
++			};
+ 			serial: serial@12000 {
+ 				status = "okay";
+ 			};
+-- 
+1.9.1
+

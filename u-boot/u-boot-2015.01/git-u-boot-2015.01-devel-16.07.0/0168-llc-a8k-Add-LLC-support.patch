@@ -1,0 +1,152 @@
+From 6604cc5366accdc2f27414a607133986a60d48db Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Sun, 29 Mar 2015 14:42:14 +0300
+Subject: [PATCH 0168/1240] llc: a8k: Add LLC support
+
+Add LLC support to PSCI - set the LLC functions to the secure section
+Add LLC enable to the PSCI init code.
+
+Change-Id: I6ddfa047bcd420b536422ef8611640c1efc258c2
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17902
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/Makefile           |  1 +
+ arch/arm/cpu/armv8/armada8k/cache_llc.c        | 90 ++++++++++++++++++++++++++
+ arch/arm/cpu/armv8/armada8k/psci.S             |  1 +
+ arch/arm/include/asm/arch-armada8k/regs-base.h |  1 +
+ 4 files changed, 93 insertions(+)
+ create mode 100644 arch/arm/cpu/armv8/armada8k/cache_llc.c
+
+diff --git a/arch/arm/cpu/armv8/armada8k/Makefile b/arch/arm/cpu/armv8/armada8k/Makefile
+index 4c6cf31..993245b 100644
+--- a/arch/arm/cpu/armv8/armada8k/Makefile
++++ b/arch/arm/cpu/armv8/armada8k/Makefile
+@@ -21,3 +21,4 @@ obj-y += soc-init.o
+ obj-y += tables.o
+ obj-y += clock.o
+ obj-$(CONFIG_ARMV8_PSCI)	+= psci.o
++obj-$(CONFIG_ARMV8_PSCI)	+= cache_llc.o
+diff --git a/arch/arm/cpu/armv8/armada8k/cache_llc.c b/arch/arm/cpu/armv8/armada8k/cache_llc.c
+new file mode 100644
+index 0000000..824fffd
+--- /dev/null
++++ b/arch/arm/cpu/armv8/armada8k/cache_llc.c
+@@ -0,0 +1,90 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2015 Marvell International Ltd.
++* ***************************************************************************
++* This program is free software: you can redistribute it and/or modify it
++* under the terms of the GNU General Public License as published by the Free
++* Software Foundation, either version 2 of the License, or any later version.
++*
++* This program is distributed in the hope that it will be useful,
++* but WITHOUT ANY WARRANTY; without even the implied warranty of
++* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++* GNU General Public License for more details.
++*
++* You should have received a copy of the GNU General Public License
++* along with this program.  If not, see <http://www.gnu.org/licenses/>.
++* ***************************************************************************
++*/
++
++#include <asm/io.h>
++#include <common.h>
++#include <asm/arch-armada8k/regs-base.h>
++
++#define LLC_CTRL                       0x100
++#define LLC_CACHE_SYNC                 0x700
++#define L2X0_INV_WAY                    0x77C
++#define L2X0_CLEAN_WAY                 0x7BC
++#define L2X0_CLEAN_INV_WAY             0x7FC
++
++#define LLC_CTRL_EN	                1
++#define LLC_WAY_MASK				0xFFFFFFFF
++
++/* insert all LLC function to secure section - part of the PSCI FW */
++void llc_cache_sync(void) __attribute__ ((section (".secure_text")));
++void llc_flush_all(void) __attribute__ ((section (".secure_text")));
++void llc_clean_all(void) __attribute__ ((section (".secure_text")));
++void llc_inv_all(void) __attribute__ ((section (".secure_text")));
++void llc_disable(void) __attribute__ ((section (".secure_text")));
++void llc_enable(void) __attribute__ ((section (".secure_text")));
++void llc_save(void) __attribute__ ((section (".secure_text")));
++void llc_resume(void) __attribute__ ((section (".secure_text")));
++
++void llc_cache_sync(void)
++{
++	__raw_writel(0, MVEBU_LLC_BASE + LLC_CACHE_SYNC);
++	/* Atumic write no need to wait */
++}
++
++void llc_flush_all(void)
++{
++	__raw_writel(LLC_WAY_MASK, MVEBU_LLC_BASE + L2X0_CLEAN_INV_WAY);
++	llc_cache_sync();
++}
++
++void llc_clean_all(void)
++{
++	__raw_writel(LLC_WAY_MASK, MVEBU_LLC_BASE + L2X0_CLEAN_WAY);
++	llc_cache_sync();
++}
++
++void llc_inv_all(void)
++{
++	/* Invalidating when L2 is enabled is a nono */
++	BUG_ON(readl(MVEBU_LLC_BASE + LLC_CTRL) & LLC_CTRL_EN);
++	__raw_writel(LLC_WAY_MASK, MVEBU_LLC_BASE + L2X0_INV_WAY);
++	llc_cache_sync();
++}
++
++void llc_disable(void)
++{
++	llc_flush_all();
++	__raw_writel(0, MVEBU_LLC_BASE + LLC_CTRL);
++	asm volatile("dsb st");
++}
++
++void llc_enable(void)
++{
++	llc_inv_all();
++	__raw_writel(LLC_CTRL_EN, MVEBU_LLC_BASE + LLC_CTRL);
++}
++
++
++void llc_save(void)
++{
++	/* TBD */
++}
++
++void llc_resume(void)
++{
++	/* TBD */
++}
+diff --git a/arch/arm/cpu/armv8/armada8k/psci.S b/arch/arm/cpu/armv8/armada8k/psci.S
+index b765851..186e28f 100644
+--- a/arch/arm/cpu/armv8/armada8k/psci.S
++++ b/arch/arm/cpu/armv8/armada8k/psci.S
+@@ -55,6 +55,7 @@ psci_arch_init:
+ 	add     x29, x30, 0 /* keep return address */
+ 	bl	enable_affinity
+ 	bl	psci_build_stack
++	bl	llc_enable
+ 	ret	x29
+ 
+ psci_build_stack:
+diff --git a/arch/arm/include/asm/arch-armada8k/regs-base.h b/arch/arm/include/asm/arch-armada8k/regs-base.h
+index 81ce747..d18d921 100644
+--- a/arch/arm/include/asm/arch-armada8k/regs-base.h
++++ b/arch/arm/include/asm/arch-armada8k/regs-base.h
+@@ -44,5 +44,6 @@
+ #define MVEBU_GENERIC_TIMER_BASE	(MVEBU_REGS_BASE + 0x581000)
+ #define MVEBU_MSS_BASE	            (MVEBU_REGS_BASE + 0x580000)
+ 
++#define MVEBU_LLC_BASE		(MVEBU_REGS_BASE + 0x8000)
+ 
+ #endif	/* _REGS_BASE_H_ */
+-- 
+1.9.1
+

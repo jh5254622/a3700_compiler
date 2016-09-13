@@ -1,0 +1,247 @@
+From 0434d1df8d8eeb08d8f35d6af9e3bd179ed76818 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 13 Mar 2016 10:11:52 +0200
+Subject: [PATCH 0934/1240] fix: a7040: move board configuration from DTSI
+ information
+
+- Customer DTS is not need to include develop information
+
+Change-Id: I1fbfaf64d0f83e37979f22d118a94565d07759f5
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28182
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/armada-7040-rz-db_all_pci.dts    | 14 +++++++++++++-
+ arch/arm/dts/armada-7040-rz-db_kr.dts         | 13 ++++++++++++-
+ arch/arm/dts/armada-7040-rz-db_nand.dts       | 13 ++++++++++++-
+ arch/arm/dts/armada-7040-rz-db_rgmii_only.dts | 13 ++++++++++++-
+ arch/arm/dts/armada-7040-rz-db_router.dts     | 13 ++++++++++++-
+ arch/arm/dts/armada-7040-rz-db_rxaui.dts      | 14 +++++++++++++-
+ arch/arm/dts/armada-7040-rz-db_rxaui_pci.dts  | 13 ++++++++++++-
+ arch/arm/dts/armada-70x0-dev-info.dtsi        | 18 ------------------
+ 8 files changed, 86 insertions(+), 25 deletions(-)
+
+diff --git a/arch/arm/dts/armada-7040-rz-db_all_pci.dts b/arch/arm/dts/armada-7040-rz-db_all_pci.dts
+index df63140..5dce2f3 100644
+--- a/arch/arm/dts/armada-7040-rz-db_all_pci.dts
++++ b/arch/arm/dts/armada-7040-rz-db_all_pci.dts
+@@ -31,6 +31,7 @@
+ 		device_type = "memory";
+ 		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
+ 	};
++
+ 	ap-806 {
+ 		internal-regs {
+ 			spi0: spi@510600 {
+@@ -39,8 +40,19 @@
+ 			i2c0: i2c@511000 {
+ 				status = "okay";
+ 			};
++			ddr-mac {
++				cs_count = <1>;
++				bus_width = <DDR_BUS_WIDTH_32>;
++				cs0 { /* 4GiB */
++					size = <0x00000001 0x00000000>;
++				};
++			};
++			pinctl@6F008C {
++					  /* 0 1 2 3 4 5 6 7 8 9 */
++				pin-func = < 1 1 1 1 1 1 1 1 1 0
++					     0 0 0 1 0 0>;
++			};
+ 		};
+-
+ 		pcie-controller {
+ 			pcie@1,0 {
+ 				status = "disabled";
+diff --git a/arch/arm/dts/armada-7040-rz-db_kr.dts b/arch/arm/dts/armada-7040-rz-db_kr.dts
+index 44ed45b..dbea962 100644
+--- a/arch/arm/dts/armada-7040-rz-db_kr.dts
++++ b/arch/arm/dts/armada-7040-rz-db_kr.dts
+@@ -39,8 +39,19 @@
+ 			i2c0: i2c@511000 {
+ 				status = "okay";
+ 			};
++			ddr-mac {
++				cs_count = <1>;
++				bus_width = <DDR_BUS_WIDTH_32>;
++				cs0 { /* 4GiB */
++					size = <0x00000001 0x00000000>;
++				};
++			};
++			pinctl@6F008C {
++					  /* 0 1 2 3 4 5 6 7 8 9 */
++				pin-func = < 1 1 1 1 1 1 1 1 1 0
++					     0 0 0 1 0 0>;
++			};
+ 		};
+-
+ 		pcie-controller {
+ 			pcie@1,0 {
+ 				status = "disabled";
+diff --git a/arch/arm/dts/armada-7040-rz-db_nand.dts b/arch/arm/dts/armada-7040-rz-db_nand.dts
+index 05cf30b..0f7ea5c 100644
+--- a/arch/arm/dts/armada-7040-rz-db_nand.dts
++++ b/arch/arm/dts/armada-7040-rz-db_nand.dts
+@@ -39,8 +39,19 @@
+ 			i2c0: i2c@511000 {
+ 				status = "okay";
+ 			};
++			ddr-mac {
++				cs_count = <1>;
++				bus_width = <DDR_BUS_WIDTH_32>;
++				cs0 { /* 4GiB */
++					size = <0x00000001 0x00000000>;
++				};
++			};
++			pinctl@6F008C {
++					  /* 0 1 2 3 4 5 6 7 8 9 */
++				pin-func = < 1 1 1 1 1 1 1 1 1 0
++					     0 0 0 1 0 0>;
++			};
+ 		};
+-
+ 		pcie-controller {
+ 			pcie@1,0 {
+ 				status = "disabled";
+diff --git a/arch/arm/dts/armada-7040-rz-db_rgmii_only.dts b/arch/arm/dts/armada-7040-rz-db_rgmii_only.dts
+index aca69af..e4a8082 100644
+--- a/arch/arm/dts/armada-7040-rz-db_rgmii_only.dts
++++ b/arch/arm/dts/armada-7040-rz-db_rgmii_only.dts
+@@ -39,8 +39,19 @@
+ 			i2c0: i2c@511000 {
+ 				status = "okay";
+ 			};
++			ddr-mac {
++				cs_count = <1>;
++				bus_width = <DDR_BUS_WIDTH_32>;
++				cs0 { /* 4GiB */
++					size = <0x00000001 0x00000000>;
++				};
++			};
++			pinctl@6F008C {
++					  /* 0 1 2 3 4 5 6 7 8 9 */
++				pin-func = < 1 1 1 1 1 1 1 1 1 0
++					     0 0 0 1 0 0>;
++			};
+ 		};
+-
+ 		pcie-controller {
+ 			pcie@1,0 {
+ 				status = "disabled";
+diff --git a/arch/arm/dts/armada-7040-rz-db_router.dts b/arch/arm/dts/armada-7040-rz-db_router.dts
+index 5cac774..6bee43f 100644
+--- a/arch/arm/dts/armada-7040-rz-db_router.dts
++++ b/arch/arm/dts/armada-7040-rz-db_router.dts
+@@ -39,8 +39,19 @@
+ 			i2c0: i2c@511000 {
+ 				status = "okay";
+ 			};
++			ddr-mac {
++				cs_count = <1>;
++				bus_width = <DDR_BUS_WIDTH_32>;
++				cs0 { /* 4GiB */
++					size = <0x00000001 0x00000000>;
++				};
++			};
++			pinctl@6F008C {
++					  /* 0 1 2 3 4 5 6 7 8 9 */
++				pin-func = < 1 1 1 1 1 1 1 1 1 0
++					     0 0 0 1 0 0>;
++			};
+ 		};
+-
+ 		pcie-controller {
+ 			pcie@1,0 {
+ 				status = "disabled";
+diff --git a/arch/arm/dts/armada-7040-rz-db_rxaui.dts b/arch/arm/dts/armada-7040-rz-db_rxaui.dts
+index 27dd02d..213990c 100644
+--- a/arch/arm/dts/armada-7040-rz-db_rxaui.dts
++++ b/arch/arm/dts/armada-7040-rz-db_rxaui.dts
+@@ -31,6 +31,7 @@
+ 		device_type = "memory";
+ 		reg = <0x00000000 0x10000000 0 0>; /* 256 MB */
+ 	};
++
+ 	ap-806 {
+ 		internal-regs {
+ 			spi0: spi@510600 {
+@@ -39,8 +40,19 @@
+ 			i2c0: i2c@511000 {
+ 				status = "okay";
+ 			};
++			ddr-mac {
++				cs_count = <1>;
++				bus_width = <DDR_BUS_WIDTH_32>;
++				cs0 { /* 4GiB */
++					size = <0x00000001 0x00000000>;
++				};
++			};
++			pinctl@6F008C {
++					  /* 0 1 2 3 4 5 6 7 8 9 */
++				pin-func = < 1 1 1 1 1 1 1 1 1 0
++					     0 0 0 1 0 0>;
++			};
+ 		};
+-
+ 		pcie-controller {
+ 			pcie@1,0 {
+ 				status = "disabled";
+diff --git a/arch/arm/dts/armada-7040-rz-db_rxaui_pci.dts b/arch/arm/dts/armada-7040-rz-db_rxaui_pci.dts
+index 4621fae..38adcac 100644
+--- a/arch/arm/dts/armada-7040-rz-db_rxaui_pci.dts
++++ b/arch/arm/dts/armada-7040-rz-db_rxaui_pci.dts
+@@ -39,8 +39,19 @@
+ 			i2c0: i2c@511000 {
+ 				status = "okay";
+ 			};
++			ddr-mac {
++				cs_count = <1>;
++				bus_width = <DDR_BUS_WIDTH_32>;
++				cs0 { /* 4GiB */
++					size = <0x00000001 0x00000000>;
++				};
++			};
++			pinctl@6F008C {
++					  /* 0 1 2 3 4 5 6 7 8 9 */
++				pin-func = < 1 1 1 1 1 1 1 1 1 0
++					     0 0 0 1 0 0>;
++			};
+ 		};
+-
+ 		pcie-controller {
+ 			pcie@1,0 {
+ 				status = "disabled";
+diff --git a/arch/arm/dts/armada-70x0-dev-info.dtsi b/arch/arm/dts/armada-70x0-dev-info.dtsi
+index fdd6da7..54c42a8 100644
+--- a/arch/arm/dts/armada-70x0-dev-info.dtsi
++++ b/arch/arm/dts/armada-70x0-dev-info.dtsi
+@@ -22,24 +22,6 @@
+ 	/* This should go only into devel boards */
+ 	compatible = "marvell,cp110";
+ 
+-	ap-806 {
+-		internal-regs {
+-
+-			ddr-mac {
+-				cs_count = <1>;
+-				bus_width = <DDR_BUS_WIDTH_32>;
+-				cs0 { /* 4GiB */
+-					size = <0x00000001 0x00000000>;
+-				};
+-			};
+-			pinctl@6F008C {
+-					  /* 0 1 2 3 4 5 6 7 8 9 */
+-				pin-func = < 1 1 1 1 1 1 1 1 1 0
+-					     0 0 0 1 0 0>;
+-			};
+-		};
+-	};
+-
+ 	sar {
+ 		compatible = "marvell,sample-at-reset";
+ 		#address-cells = <1>;
+-- 
+1.9.1
+

@@ -1,0 +1,896 @@
+From 22b4040525c60eb1bbccc04e2a20f9488b17b281 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 29 Jul 2014 16:25:19 +0300
+Subject: [PATCH 0047/1240] a38x: mbus: add support for address decoding
+
+	- update table of A38x SoC
+	- add mbus address decoding init function
+	- add mbus address decoding dump function
+	- split between ccu/mbus structs
+
+Change-Id: Ic0b948e81cc930a08a33d47bd46339a9a8331420
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/9704
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv7/armada38x/soc-init.c          |   6 +
+ arch/arm/cpu/armv7/armada38x/tables.c            |  13 +-
+ arch/arm/cpu/armv8/armada8k/tables.c             |   1 -
+ arch/arm/cpu/mvebu-common/Makefile               |   6 +-
+ arch/arm/cpu/mvebu-common/adec.c                 | 102 ----------------
+ arch/arm/cpu/mvebu-common/adec_ccu.c             | 102 ++++++++++++++++
+ arch/arm/cpu/mvebu-common/adec_mbus.c            | 144 +++++++++++++++++++++++
+ arch/arm/cpu/mvebu-common/soc-init.c             |  23 +---
+ arch/arm/include/asm/arch-armada38x/memory-map.h |  36 ++++++
+ arch/arm/include/asm/arch-armada38x/regs-base.h  |   4 +-
+ arch/arm/include/asm/arch-armada8k/memory-map.h  |  21 ++++
+ arch/arm/include/asm/arch-armada8k/regs-base.h   |   4 +-
+ arch/arm/include/asm/arch-mvebu/adec.h           |  47 ++------
+ arch/arm/include/asm/arch-mvebu/adec_ccu.h       |  63 ++++++++++
+ arch/arm/include/asm/arch-mvebu/adec_mbus.h      | 115 ++++++++++++++++++
+ arch/arm/include/asm/arch-mvebu/soc.h            |   1 -
+ 16 files changed, 518 insertions(+), 170 deletions(-)
+ delete mode 100644 arch/arm/cpu/mvebu-common/adec.c
+ create mode 100644 arch/arm/cpu/mvebu-common/adec_ccu.c
+ create mode 100644 arch/arm/cpu/mvebu-common/adec_mbus.c
+ create mode 100644 arch/arm/include/asm/arch-armada38x/memory-map.h
+ create mode 100644 arch/arm/include/asm/arch-armada8k/memory-map.h
+ create mode 100644 arch/arm/include/asm/arch-mvebu/adec_ccu.h
+ create mode 100644 arch/arm/include/asm/arch-mvebu/adec_mbus.h
+
+diff --git a/arch/arm/cpu/armv7/armada38x/soc-init.c b/arch/arm/cpu/armv7/armada38x/soc-init.c
+index bf51a42..85aaa73 100644
+--- a/arch/arm/cpu/armv7/armada38x/soc-init.c
++++ b/arch/arm/cpu/armv7/armada38x/soc-init.c
+@@ -25,6 +25,12 @@
+ #include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-armada38x/armada38x.h>
+ 
++int soc_early_init_f(void)
++{
++	/* write base address for the window of the internal register */
++	writel(MVEBU_REGS_BASE, MVEBU_REGS_BASE + MBUS_WIN_INTEREG_REG);
++	return 0;
++}
+ 
+ struct mvebu_soc_family *soc_init(void)
+ {
+diff --git a/arch/arm/cpu/armv7/armada38x/tables.c b/arch/arm/cpu/armv7/armada38x/tables.c
+index fbef846..7b376a3 100644
+--- a/arch/arm/cpu/armv7/armada38x/tables.c
++++ b/arch/arm/cpu/armv7/armada38x/tables.c
+@@ -19,16 +19,20 @@
+ 
+ #include <common.h>
+ #include <asm/io.h>
++#include <asm/arch/regs-base.h>
+ #include <asm/arch-mvebu/adec.h>
+ #include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/soc.h>
+ #include <asm/arch-mvebu/mpp.h>
+ 
+ struct adec_win memory_map[] = {
+-	{0x0,     0x40000000, DRAM_0_TID, 0},
+-	{0x40000000, 0x20000000, IO_0_TID, 0},
+-	/* Delimiter */
+-	{0x0, 0x0, INVALID_TID, 0}
++	/* target		base			size			attribute	remapped	enable */
++	{PEX_0_TARGET_ID,	PEX_MEM_BASE(0),	PEX_MEM_SIZE(0),	PCI_0_MEM_ATTR,	1,		1},
++	{PEX_1_3_TARGET_ID,	PEX_MEM_BASE(1),	PEX_MEM_SIZE(1),	PCI_1_MEM_ATTR,	0,		1},
++	{PEX_1_3_TARGET_ID,	PEX_MEM_BASE(2),	PEX_MEM_SIZE(2),	PCI_2_MEM_ATTR,	0,		1},
++	{PEX_1_3_TARGET_ID,	PEX_MEM_BASE(3),	PEX_MEM_SIZE(3),	PCI_3_MEM_ATTR,	1,		1},
++	{DEV_TARGET_ID,		NOR_CS_BASE,		NOR_CS_SIZE,		BOOT_CS_ATTR,	0,		1},
++	{TBL_TERM,		TBL_TERM,		TBL_TERM,		TBL_TERM,	TBL_TERM,	TBL_TERM},
+ };
+ 
+ /* List the maximum amount of units for all devices and boards */
+@@ -109,6 +113,5 @@ struct mvebu_soc_family a38x_family_info = {
+ 	.base_unit_info = base_unit_mask_table,
+ 	.soc_table = a38x_soc_info,
+ 	.mpp_desc  = (char **)a38x_mpp_desc,
+-	.adec_type = ADEC_MBUS,
+ 	.mpp_buses = a38x_mpp_buses,
+ };
+diff --git a/arch/arm/cpu/armv8/armada8k/tables.c b/arch/arm/cpu/armv8/armada8k/tables.c
+index 3281e2f..bb72e42 100644
+--- a/arch/arm/cpu/armv8/armada8k/tables.c
++++ b/arch/arm/cpu/armv8/armada8k/tables.c
+@@ -91,5 +91,4 @@ struct mvebu_soc_family a8k_family_info = {
+ 	.base_unit_info = base_unit_mask_table,
+ 	.soc_table = a8k_soc_info,
+ 	.mpp_desc  = (char **)a8k_mpp_desc,
+-	.adec_type = 0,
+ };
+diff --git a/arch/arm/cpu/mvebu-common/Makefile b/arch/arm/cpu/mvebu-common/Makefile
+index ce7f892..1f1f266 100644
+--- a/arch/arm/cpu/mvebu-common/Makefile
++++ b/arch/arm/cpu/mvebu-common/Makefile
+@@ -24,4 +24,8 @@ obj-y += mpp.o
+ obj-$(CONFIG_AURORA_TIMER) += timer_aurora.o
+ obj-$(CONFIG_GENERIC_TIMER) += generic_timer.o
+ obj-$(CONFIG_MVEBU_CA9) += platform.o
+-obj-$(CONFIG_ADEC) += adec.o
++ifeq "$(CONFIG_MVEBU_CA9)"  "y"
++obj-$(CONFIG_ADEC) += adec_mbus.o
++else
++obj-$(CONFIG_ADEC) += adec_ccu.o
++endif
+diff --git a/arch/arm/cpu/mvebu-common/adec.c b/arch/arm/cpu/mvebu-common/adec.c
+deleted file mode 100644
+index 2265c9e..0000000
+--- a/arch/arm/cpu/mvebu-common/adec.c
++++ /dev/null
+@@ -1,102 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
+- * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
+- *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
+- * ***************************************************************************
+- */
+-
+-/* #define DEBUG */
+-/* #define DEBUG_REG */
+-
+-#include <common.h>
+-#include <asm/system.h>
+-#include <asm/io.h>
+-#include <asm/arch/regs-base.h>
+-#include <asm/arch-mvebu/adec.h>
+-
+-void __iomem *ap_adec_base;
+-
+-static void adec_win_to_range(uintptr_t base_addr, uintptr_t win_size,
+-			u32 *alr, u32 *ahr)
+-{
+-	uintptr_t end = (base_addr + win_size - 1);
+-
+-	(*alr) = (u32)((base_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
+-	(*ahr) = (u32)((end >> ADDRESS_SHIFT) & ADDRESS_MASK);
+-}
+-
+-static void adec_enable_ap_win(struct adec_win *win, int win_id)
+-{
+-	u32 ccu_win_cr;
+-	u32 alr, ahr;
+-
+-	ccu_win_cr = WIN_ENABLE_BIT;
+-	ccu_win_cr |= (win->target_id & TARGET_ID_MASK) << TARGET_ID_OFFSET;
+-	ccu_win_cr |= (win->rar_enable & RAR_EN_MASK) << RAR_EN_OFFSET;
+-
+-	writel(ccu_win_cr, ap_adec_base + CCU_WIN_CR_OFFSET(win_id));
+-
+-	adec_win_to_range(win->base_addr, win->win_size, &alr, &ahr);
+-
+-	writel(alr, ap_adec_base + CCU_WIN_ALR_OFFSET(win_id));
+-	writel(ahr, ap_adec_base + CCU_WIN_AHR_OFFSET(win_id));
+-}
+-
+-void adec_dump(void)
+-{
+-	int win_id;
+-	u32 ccu_win_cr;
+-	u32 alr, ahr;
+-	u8 target_id;
+-	uintptr_t start, end;
+-
+-	printf("id target  start              end\n");
+-	printf("----------------------------------------------\n");
+-
+-	/* Dump all AP windows */
+-	for (win_id = 0; win_id < MAX_AP_WINDOWS; win_id++) {
+-		ccu_win_cr = readl(ap_adec_base + CCU_WIN_CR_OFFSET(win_id));
+-		if (ccu_win_cr & WIN_ENABLE_BIT) {
+-			target_id = (ccu_win_cr >> TARGET_ID_OFFSET) & TARGET_ID_MASK;
+-			alr = readl(ap_adec_base + CCU_WIN_ALR_OFFSET(win_id));
+-			ahr = readl(ap_adec_base + CCU_WIN_AHR_OFFSET(win_id));
+-			start = (uintptr_t)(alr << ADDRESS_SHIFT);
+-			end = (uintptr_t)((ahr + 0x10) << ADDRESS_SHIFT);
+-			printf("%02d %02d      0x%016lx 0x%016lx\n", win_id, target_id, start, end);
+-		}
+-	}
+-
+-	return;
+-}
+-
+-int adec_ap_init(struct adec_win *windows)
+-{
+-	int win_id;
+-
+-	debug("Initialzing AP ADEC unit\n");
+-	ap_adec_base = (void *)MVEBU_ADEC_AP_BASE;
+-
+-	for (win_id = 0; win_id < MAX_AP_WINDOWS; win_id++) {
+-		if (windows->target_id == INVALID_TID)
+-			break;
+-
+-		adec_enable_ap_win(windows, win_id);
+-		windows++;
+-	}
+-
+-	debug("Done AP ADEC init\n");
+-
+-	return 0;
+-}
+diff --git a/arch/arm/cpu/mvebu-common/adec_ccu.c b/arch/arm/cpu/mvebu-common/adec_ccu.c
+new file mode 100644
+index 0000000..1eefa6e
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/adec_ccu.c
+@@ -0,0 +1,102 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG */
++/* #define DEBUG_REG */
++
++#include <common.h>
++#include <asm/system.h>
++#include <asm/io.h>
++#include <asm/arch/regs-base.h>
++#include <asm/arch-mvebu/adec.h>
++
++void __iomem *ap_adec_base;
++
++static void adec_win_to_range(uintptr_t base_addr, uintptr_t win_size,
++			u32 *alr, u32 *ahr)
++{
++	uintptr_t end = (base_addr + win_size - 1);
++
++	(*alr) = (u32)((base_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
++	(*ahr) = (u32)((end >> ADDRESS_SHIFT) & ADDRESS_MASK);
++}
++
++static void adec_enable_ap_win(struct adec_win *win, int win_id)
++{
++	u32 ccu_win_cr;
++	u32 alr, ahr;
++
++	ccu_win_cr = WIN_ENABLE_BIT;
++	ccu_win_cr |= (win->target_id & TARGET_ID_MASK) << TARGET_ID_OFFSET;
++	ccu_win_cr |= (win->rar_enable & RAR_EN_MASK) << RAR_EN_OFFSET;
++
++	writel(ccu_win_cr, ap_adec_base + CCU_WIN_CR_OFFSET(win_id));
++
++	adec_win_to_range(win->base_addr, win->win_size, &alr, &ahr);
++
++	writel(alr, ap_adec_base + CCU_WIN_ALR_OFFSET(win_id));
++	writel(ahr, ap_adec_base + CCU_WIN_AHR_OFFSET(win_id));
++}
++
++void adec_dump(void)
++{
++	int win_id;
++	u32 ccu_win_cr;
++	u32 alr, ahr;
++	u8 target_id;
++	uintptr_t start, end;
++
++	printf("id target  start              end\n");
++	printf("----------------------------------------------\n");
++
++	/* Dump all AP windows */
++	for (win_id = 0; win_id < MAX_AP_WINDOWS; win_id++) {
++		ccu_win_cr = readl(ap_adec_base + CCU_WIN_CR_OFFSET(win_id));
++		if (ccu_win_cr & WIN_ENABLE_BIT) {
++			target_id = (ccu_win_cr >> TARGET_ID_OFFSET) & TARGET_ID_MASK;
++			alr = readl(ap_adec_base + CCU_WIN_ALR_OFFSET(win_id));
++			ahr = readl(ap_adec_base + CCU_WIN_AHR_OFFSET(win_id));
++			start = (uintptr_t)(alr << ADDRESS_SHIFT);
++			end = (uintptr_t)((ahr + 0x10) << ADDRESS_SHIFT);
++			printf("%02d %02d      0x%016lx 0x%016lx\n", win_id, target_id, start, end);
++		}
++	}
++
++	return;
++}
++
++int adec_init(struct adec_win *windows)
++{
++	int win_id;
++
++	debug("Initializing CCU ADEC unit for AP\n");
++	ap_adec_base = (void *)MVEBU_ADEC_BASE;
++
++	for (win_id = 0; win_id < MAX_AP_WINDOWS; win_id++) {
++		if (windows->target_id == INVALID_TID)
++			break;
++
++		adec_enable_ap_win(windows, win_id);
++		windows++;
++	}
++//TODO: add call initializing the windows of the CP
++	debug("Done AP ADEC init\n");
++
++	return 0;
++}
+diff --git a/arch/arm/cpu/mvebu-common/adec_mbus.c b/arch/arm/cpu/mvebu-common/adec_mbus.c
+new file mode 100644
+index 0000000..a45a76d
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/adec_mbus.c
+@@ -0,0 +1,144 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG */
++/* #define DEBUG_REG */
++
++#include <common.h>
++#include <asm/system.h>
++#include <asm/io.h>
++#include <asm/arch/regs-base.h>
++#include <asm/arch-mvebu/mvebu.h>
++#include <asm/arch-mvebu/adec.h>
++
++void __iomem *mbus_adec_base;
++
++static void adec_win_check(struct adec_win *win, u32 win_num)
++{
++	/* check if address is aligned to the size */
++	if(IS_NOT_ALIGN(win->base_addr, win->win_size)) {
++		win->base_addr = ALIGN_UP(win->base_addr, win->win_size);
++		error("\n**********\nwindow number %d: base address is not aligned with the window size. "\
++				"Align up the base address to 0x%lx\n**********",\
++				win_num, win->base_addr);
++	}
++	/* size parameter validity check */
++	if(IS_NOT_ALIGN(win->win_size, MBUS_CR_WIN_SIZE_ALIGNMENT)) {
++		win->win_size = ALIGN_UP(win->win_size, MBUS_CR_WIN_SIZE_ALIGNMENT);
++		error("\n**********\nwindow number %d: window size is not aligned to 0x%x. "\
++				"Align up the size to 0x%lx\n**********",
++				win_num, MBUS_CR_WIN_SIZE_ALIGNMENT, win->win_size);
++	}
++}
++
++static void adec_win_set(struct adec_win *win, u32 win_num)
++{
++	u32 base_reg, ctrl_reg, size_to_reg, remap_low;
++
++	base_reg = (win->base_addr & MBUS_BR_BASE_MASK);
++	size_to_reg = (win->win_size / MBUS_CR_WIN_SIZE_ALIGNMENT) - 1;
++
++	ctrl_reg = (size_to_reg << MBUS_CR_WIN_SIZE_OFFS);
++	ctrl_reg |= MBUS_CR_WIN_ENABLE;
++	ctrl_reg |= win->attribute << MBUS_CR_WIN_ATTR_OFFS;
++	ctrl_reg |= win->target << MBUS_CR_WIN_TARGET_OFFS;
++
++	writel(ctrl_reg, mbus_adec_base + MBUS_WIN_CTRL_REG(win_num));
++	writel(base_reg, mbus_adec_base + MBUS_WIN_BASE_REG(win_num));
++
++	if (win->remapped) {
++		remap_low = win->base_addr & MBUS_RLR_REMAP_LOW_MASK;
++		writel(remap_low, mbus_adec_base + MBUS_WIN_REMAP_LOW_REG(win_num));
++		writel(0x0, mbus_adec_base + MBUS_WIN_REMAP_HIGH_REG(win_num));
++	}
++	return;
++}
++
++void adec_dump(void)
++{
++	int win_id;
++	u32 mbus_win_cr, mbus_win_br;
++	u32 target_id, size, attribute;
++
++	printf("id    target    start       end         attribute\n");
++	printf("-------------------------------------------------\n");
++
++	/* Dump all AP windows */
++	for (win_id = 0; win_id < MAX_MBUS_WINS; win_id++) {
++		mbus_win_cr = readl(mbus_adec_base + MBUS_WIN_CTRL_REG(win_id));
++		if (mbus_win_cr & MBUS_CR_WIN_ENABLE) {
++			target_id = (mbus_win_cr & MBUS_CR_WIN_TARGET_MASK) >> MBUS_CR_WIN_TARGET_OFFS;
++			attribute = (mbus_win_cr & MBUS_CR_WIN_ATTR_MASK) >> MBUS_CR_WIN_ATTR_OFFS;
++			size = (mbus_win_cr & MBUS_CR_WIN_SIZE_MASK) >> MBUS_CR_WIN_SIZE_OFFS ;
++			mbus_win_br = readl(mbus_adec_base + MBUS_WIN_BASE_REG(win_id));
++			size = (size + 1) * MBUS_CR_WIN_SIZE_ALIGNMENT;
++			printf("%02d    0x%02x      0x%08x  0x%08x  0x%02x\n", win_id, target_id, mbus_win_br, mbus_win_br + size, attribute);
++		}
++	}
++	mbus_win_br = readl(mbus_adec_base + MBUS_WIN_INTEREG_REG);
++	printf("%02d    0x%02x      0x%08x  0x%08x  0x%02x\n", INTERNAL_REG_WIN_NUM, INVALID_TARGET_ID, mbus_win_br, mbus_win_br + MVEBU_REGS_SIZE, 0xFF);
++
++	return;
++}
++
++int adec_init(struct adec_win *windows)
++{
++	u32 win_id, index, mbus_win;
++
++	debug_enter();
++	debug("Initializing MBUS address decoding\n");
++	mbus_adec_base = (void *)MVEBU_ADEC_BASE;
++
++	/* disable all windows */
++	for (win_id = 0; windows[win_id].enabled != TBL_TERM; win_id++) {
++		mbus_win = readl(mbus_adec_base + MBUS_WIN_CTRL_REG(win_id));
++		mbus_win &= ~MBUS_CR_WIN_ENABLE;
++		writel(mbus_win, mbus_adec_base + MBUS_WIN_CTRL_REG(win_id));
++	}
++
++	/* enable the remapped windows first, the remap windows is at the first 8 windows */
++	for (index = 0, win_id = 0; windows[index].enabled != TBL_TERM; index++) {
++		if ((windows[index].win_size == 0) ||
++				(windows[index].enabled == 0) ||
++				(windows[index].remapped == 0))
++			continue;
++		adec_win_check(&windows[index], win_id);
++		debug("set window number %d: target id = %d, base = 0x%lx, size = 0x%lx, attribute = 0x%x, remapped\n",
++			win_id, windows[index].target, windows[index].base_addr, windows[index].win_size, windows[index].attribute);
++		adec_win_set(&windows[index], win_id);
++		win_id++;
++	}
++	/* enable the rest of the windows */
++	for (index = 0; windows[index].enabled != TBL_TERM; index++) {
++		if ((windows[index].win_size == 0) ||
++				(windows[index].enabled == 0) ||
++				(windows[index].remapped))
++			continue;
++		adec_win_check(&windows[index], win_id);
++		debug("set window number %d: target id = %d, base = 0x%lx, size = 0x%lx, attribute = 0x%x\n",
++			win_id, windows[index].target, windows[index].base_addr, windows[index].win_size, windows[index].attribute);
++		adec_win_set(&windows[index], win_id);
++		win_id++;
++	}
++
++	debug("Done MBUS address decoding initializing\n");
++	debug_exit();
++
++	return 0;
++}
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index abe818e..6cddeb4 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -81,23 +81,6 @@ static int update_soc_units(struct mvebu_soc_info *soc)
+ 	return 0;
+ }
+ 
+-static int soc_init_memory_map(struct mvebu_soc_info *soc)
+-{
+-#ifndef CONFIG_PALLADIUM
+-	struct mvebu_soc_family *soc_family = get_soc_family();
+-	struct adec_win *memory_map = soc->memory_map;
+-
+-	if (soc_family->adec_type == ADEC_CCU) {
+-		adec_ap_init(memory_map);
+-	} else if (soc_family->adec_type == ADEC_MBUS) {
+-		error("No MBUS support yet");
+-		return -EINVAL;
+-	}
+-#endif
+-
+-	return 0;
+-}
+-
+ int mvebu_soc_init()
+ {
+ 	struct mvebu_soc_info *soc;
+@@ -139,9 +122,9 @@ int mvebu_soc_init()
+ 	update_soc_units(soc);
+ 
+ 	/* Initialize physical memory map */
+-	ret = soc_init_memory_map(soc);
+-	if (ret)
+-		error("Failed to initialize memory map");
++#ifndef CONFIG_PALLADIUM
++	adec_init(soc->memory_map);
++#endif
+ 
+ 	/* Soc specific init */
+ 	ret = soc_late_init();
+diff --git a/arch/arm/include/asm/arch-armada38x/memory-map.h b/arch/arm/include/asm/arch-armada38x/memory-map.h
+new file mode 100644
+index 0000000..dcf9e1e
+--- /dev/null
++++ b/arch/arm/include/asm/arch-armada38x/memory-map.h
+@@ -0,0 +1,36 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++/* Memory Map */
++/* 0x00000000 - 0xE0000000 - DRAM */
++/* 0xE0000000 - 0xE2000000 - PCI-0 */
++/* 0xE2000000 - 0xE4000000 - PCI-1 */
++/* 0xE4000000 - 0xE6000000 - PCI-2 */
++/* 0xE6000000 - 0xE8000000 - PCI-3 */
++/* 0xF1000000 - 0xF1100000 - INTERNAL_REG */
++/* 0xFD000000 - 0xFD100000 - NOR_CS */
++
++#define MVEBU_REGS_BASE			(0xF1000000)
++#define MVEBU_REGS_SIZE			(0x100000)
++
++#define PEX_MEM_BASE(id)		(0xE0000000 + (id * 0x2000000))
++#define PEX_MEM_SIZE(id)		(0x2000000)
++
++#define NOR_CS_BASE				(0xfd000000)
++#define NOR_CS_SIZE				(0x1000000)
+diff --git a/arch/arm/include/asm/arch-armada38x/regs-base.h b/arch/arm/include/asm/arch-armada38x/regs-base.h
+index e18bb95..5e987ae 100644
+--- a/arch/arm/include/asm/arch-armada38x/regs-base.h
++++ b/arch/arm/include/asm/arch-armada38x/regs-base.h
+@@ -20,10 +20,10 @@
+ #ifndef _REGS_BASE_H_
+ #define _REGS_BASE_H_
+ 
+-#define MVEBU_REGS_BASE	(0xF1000000)
++#include <asm/arch/memory-map.h>
+ 
+ #define MPP_REGS_BASE		(MVEBU_REGS_BASE + 0x18000)
+-#define MVEBU_ADEC_AP_BASE	(MVEBU_REGS_BASE + 0x0)
++#define MVEBU_ADEC_BASE		(MVEBU_REGS_BASE + 0x20000)
+ 
+ #define MVEBU_UART_BASE(x)	(MVEBU_REGS_BASE + 0x12000 + (0x100 * x))
+ #define MVEBU_GLOBAL_TIMER_BASE	(MVEBU_REGS_BASE + 0x20300)
+diff --git a/arch/arm/include/asm/arch-armada8k/memory-map.h b/arch/arm/include/asm/arch-armada8k/memory-map.h
+new file mode 100644
+index 0000000..1ccc40d
+--- /dev/null
++++ b/arch/arm/include/asm/arch-armada8k/memory-map.h
+@@ -0,0 +1,21 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#define MVEBU_REGS_BASE	(0xF0000000)
++#define MVEBU_REGS_SIZE (0x100000)
+diff --git a/arch/arm/include/asm/arch-armada8k/regs-base.h b/arch/arm/include/asm/arch-armada8k/regs-base.h
+index 563cc63..c5ec267 100644
+--- a/arch/arm/include/asm/arch-armada8k/regs-base.h
++++ b/arch/arm/include/asm/arch-armada8k/regs-base.h
+@@ -20,12 +20,12 @@
+ #ifndef _REGS_BASE_H_
+ #define _REGS_BASE_H_
+ 
+-#define MVEBU_REGS_BASE	(0xF0000000)
++#include <asm/arch/memory-map.h>
+ 
+ #define MPP_REGS_BASE	(MVEBU_REGS_BASE + 0x1000)
+ 
+ /* List of register base for all units */
+-#define MVEBU_ADEC_AP_BASE (MVEBU_REGS_BASE + 0x0)
++#define MVEBU_ADEC_BASE 	(MVEBU_REGS_BASE + 0x0)
+ 
+ #define MVEBU_UART_BASE(x)	(MVEBU_REGS_BASE + 0x512000 + (0x100 * x))
+ #define MVEBU_MISC_REGS_BASE	(MVEBU_REGS_BASE + 0x18200)
+diff --git a/arch/arm/include/asm/arch-mvebu/adec.h b/arch/arm/include/asm/arch-mvebu/adec.h
+index e1bb695..7214d60 100644
+--- a/arch/arm/include/asm/arch-mvebu/adec.h
++++ b/arch/arm/include/asm/arch-mvebu/adec.h
+@@ -20,45 +20,20 @@
+ #ifndef _ADEC_H_
+ #define _ADEC_H_
+ 
+-#define RAR_EN_OFFSET		(13)
+-#define RAR_EN_MASK		(1)
+-#define TARGET_ID_OFFSET	(8)
+-#define TARGET_ID_MASK		(0x1F)
+-#define WIN_ENABLE_BIT		(0x1)
++#ifdef CONFIG_MVEBU_CA9
++#include <asm/arch-mvebu/adec_mbus.h>
++#else
++#include <asm/arch-mvebu/adec_ccu.h>
++#endif
+ 
+-#define ADDRESS_SHIFT		(20)
+-#define ADDRESS_MASK		(0xFFFFFFF0)
+-
+-#define MAX_AP_WINDOWS		(8)
+-#define MAX_CP_WINDOWS		(16)
+-
+-#define CCU_WIN_CR_OFFSET(win)	(0 + (12 * win))
+-#define CCU_WIN_ALR_OFFSET(win)	(4 + (12 * win))
+-#define CCU_WIN_AHR_OFFSET(win)	(8 + (12 * win))
+-
+-enum adec_types {
+-	ADEC_CCU	= 0,
+-	ADEC_MBUS	= 1
+-};
+-
+-enum adec_target_ids_ap {
+-	IO_0_TID    = 0x0,
+-	DRAM_0_TID  = 0x3,
+-	DRAM_1_TID  = 0x6,
+-	IO_1_TID    = 0x9,
+-	CFG_REG_TID = 0x10,
+-	INVALID_TID = 0x1F
+-};
+-
+-struct adec_win {
+-	uintptr_t base_addr;
+-	uintptr_t win_size;
+-	u8 target_id;
+-	bool rar_enable;
+-};
++/* Macro for testing alignment. Positive if number is NOT aligned */
++#define IS_NOT_ALIGN(number, align)	((number) & ((align) - 1))
+ 
++/* Macro for alignment up. For example, ALIGN_UP(0x0330, 0x20) = 0x0340 */
++#define ALIGN_UP(number, align) (((number) & ((align) - 1)) ? \
++		(((number) + (align)) & ~((align)-1)) : (number))
+ 
+ void adec_dump(void);
+-int adec_ap_init(struct adec_win *windows);
++int adec_init(struct adec_win *windows);
+ 
+ #endif /* _ADEC_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/adec_ccu.h b/arch/arm/include/asm/arch-mvebu/adec_ccu.h
+new file mode 100644
+index 0000000..142daff
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/adec_ccu.h
+@@ -0,0 +1,63 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++struct adec_win {
++	uintptr_t base_addr;
++	uintptr_t win_size;
++	u8 target_id;
++	void *attribute;
++	u8 rar_enable;
++};
++
++enum adec_target_ids_ap {
++	IO_0_TID    = 0x0,
++	DRAM_0_TID  = 0x3,
++	DRAM_1_TID  = 0x6,
++	IO_1_TID    = 0x9,
++	CFG_REG_TID = 0x10,
++	INVALID_TID = 0x1F
++};
++
++#define RAR_EN_OFFSET		(13)
++#define RAR_EN_MASK		(1)
++#define TARGET_ID_OFFSET	(8)
++#define TARGET_ID_MASK		(0x1F)
++#define WIN_ENABLE_BIT		(0x1)
++
++#define ADDRESS_SHIFT		(20)
++#define ADDRESS_MASK		(0xFFFFFFF0)
++
++#define MAX_AP_WINDOWS		(8)
++#define MAX_CP_WINDOWS		(16)
++
++//TODO: split this file to be scisific for a38x and a8k
++#define MAX_MBUS_WINDOWS	(21)
++#define MBUS_INTREG_WIN		(20)
++#define MAX_MBUS_REMAP_WINS	(8)
++
++#define MBUS_WIN_OFFSET(win)	((win < MAX_MBUS_REMAP_WINS) ? \
++				(win * 0x10) : (0x90 + (win-8)*0x08))
++#define TARGET_IS_DRAM(target)	(target == DRAM_0_TID) && (target == DRAM_1_TID)
++
++#define CCU_WIN_CR_OFFSET(win)	(0 + (12 * win))
++#define CCU_WIN_ALR_OFFSET(win)	(4 + (12 * win))
++#define CCU_WIN_AHR_OFFSET(win)	(8 + (12 * win))
++
++void adec_dump(void);
++int adec_init(struct adec_win *windows);
+diff --git a/arch/arm/include/asm/arch-mvebu/adec_mbus.h b/arch/arm/include/asm/arch-mvebu/adec_mbus.h
+new file mode 100644
+index 0000000..a5579af
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/adec_mbus.h
+@@ -0,0 +1,115 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++struct adec_win {
++	u32 target;
++	uintptr_t base_addr;
++	uintptr_t win_size;
++	u32 attribute;
++	u32 remapped;
++	u32 enabled;
++};
++
++enum mbus_target_id {
++	TBL_TERM		= -1,
++	DRAM_TARGET_ID		= 0,	/* Port 0 -> DRAM interface             */
++	DEV_TARGET_ID		= 1,	/* Port 1 -> Device port, BootROM, SPI  */
++	PEX_1_3_TARGET_ID	= 4,	/* Port 4 -> PCI Express 1 and 3        */
++	PEX_0_TARGET_ID		= 8,	/* Port 4 -> PCI Express 0 and 2        */
++	CRYPT_TARGET_ID		= 10,	/* Port 9 --> Crypto Engine SRAM        */
++	PNC_BM_TARGET_ID	= 12,	/* Port 12 -> PNC + BM Unit             */
++	INVALID_TARGET_ID	= 0xFF,
++	MAX_TARGETS_ID
++};
++
++enum mbus_attribute {
++	/* Memory chip select */
++	MEM_CS_0_ATTR		= 0x0E,
++	MEM_CS_1_ATTR		= 0x0D,
++	MEM_CS_2_ATTR		= 0x0B,
++	MEM_CS_3_ATTR		= 0x07,
++	CS_DEC_BY_ATTR		= 0x0F,
++	/* Device bus interface */
++	SPI0_CS0_ATTR		= 0x1E,
++	SPI0_CS1_ATTR		= 0x5E,
++	SPI0_CS2_ATTR		= 0x9E,
++	SPI0_CS3_ATTR		= 0xDE,
++	SPI1_CS0_ATTR		= 0x1A,
++	SPI1_CS1_ATTR		= 0x5A,
++	SPI1_CS2_ATTR		= 0x9A,
++	SPI1_CS3_ATTR		= 0xDA,
++	DEVICE_CS0_ATTR		= 0x3E,
++	DEVICE_CS1_ATTR		= 0x3D,
++	DEVICE_CS2_ATTR		= 0x3B,
++	DEVICE_CS3_ATTR		= 0x37,
++	BOOT_CS_ATTR		= 0x2F,
++	BOOTROM_ATTR		= 0x1D,
++	/* PCI Express interface */
++	PCI_0_IO_ATTR		= 0xE0,
++	PCI_0_MEM_ATTR		= 0xE8,
++	PCI_1_IO_ATTR		= 0xE0,
++	PCI_1_MEM_ATTR		= 0xE8,
++	PCI_2_IO_ATTR		= 0xD0,
++	PCI_2_MEM_ATTR		= 0xD8,
++	PCI_3_IO_ATTR		= 0xB0,
++	PCI_3_MEM_ATTR		= 0xB8,
++	/* Security Accelerator SRAM */
++	ENGINE_0_BYTES_ATTR	= 0x04,
++	ENGINE_0_NOS_ATTR	= 0x05,
++	ENGINE_0_BYTE_WORDS_ATTR= 0x06,
++	ENGINE_0_WORDS_ATTR	= 0x07,
++	ENGINE_1_BYTES_ATTR	= 0x08,
++	ENGINE_1_NOS_ATTR	= 0x09,
++	ENGINE_1_BYTE_WORDS_ATTR= 0x0A,
++	ENGINE_1_WORDS_ATTR	= 0x0B,
++	NOT_VALID_ATTR		= 0xFF,
++};
++
++#define MAX_MBUS_WINS				19
++#define MAX_MBUS_REMAP_WINS			8
++#define INTERNAL_REG_WIN_NUM			20
++
++
++#define MBUS_WIN_CTRL_REG(win_num)		((win_num < MAX_MBUS_REMAP_WINS) ? \
++		(win_num * 0x10) : (0x90 + (win_num-8)*0x08))
++#define MBUS_CR_WIN_ENABLE			0x1
++#define MBUS_CR_WIN_TARGET_OFFS			4
++#define MBUS_CR_WIN_TARGET_MASK			(0xf << MBUS_CR_WIN_TARGET_OFFS)
++#define MBUS_CR_WIN_ATTR_OFFS			8
++#define MBUS_CR_WIN_ATTR_MASK			(0xff << MBUS_CR_WIN_ATTR_OFFS)
++#define MBUS_CR_WIN_SIZE_OFFS			16
++#define MBUS_CR_WIN_SIZE_MASK			(0xffff << MBUS_CR_WIN_SIZE_OFFS)
++#define MBUS_CR_WIN_SIZE_ALIGNMENT		0x10000
++
++#define MBUS_WIN_BASE_REG(win_num)		((win_num < MAX_MBUS_REMAP_WINS) ? \
++		(0x4 + win_num*0x10) :	(0x94 + (win_num-8)*0x08))
++#define MBUS_BR_BASE_OFFS			16
++#define MBUS_BR_BASE_MASK			(0xffff << 	MBUS_BR_BASE_OFFS)
++
++#define MBUS_WIN_REMAP_LOW_REG(win_num)		((win_num < MAX_MBUS_REMAP_WINS) ? \
++		(0x8 + win_num*0x10) : (0))
++#define MBUS_RLR_REMAP_LOW_OFFS			16
++#define MBUS_RLR_REMAP_LOW_MASK			(0xffff << MBUS_RLR_REMAP_LOW_OFFS)
++
++#define MBUS_WIN_REMAP_HIGH_REG(win_num)	((win_num < MAX_MBUS_REMAP_WINS) ? \
++		(0xC + win_num*0x10) : (0))
++#define MBUS_RHR_REMAP_HIGH_OFFS		0
++#define MBUS_RHR_REMAP_HIGH_MASK		(0xffffffff << MBUS_RHR_REMAP_HIGH_OFFS)
++
++#define MBUS_WIN_INTEREG_REG			(0x80)
+diff --git a/arch/arm/include/asm/arch-mvebu/soc.h b/arch/arm/include/asm/arch-mvebu/soc.h
+index b6a0918..8470ff0 100644
+--- a/arch/arm/include/asm/arch-mvebu/soc.h
++++ b/arch/arm/include/asm/arch-mvebu/soc.h
+@@ -44,7 +44,6 @@ struct mvebu_soc_family {
+ 	char	**mpp_desc;
+ 	struct	mvebu_soc_info *soc_table;
+ 	struct	mvebu_soc_info *curr_soc;
+-	enum adec_types adec_type;
+ 
+ 	struct mpp_bus *mpp_buses;
+ 	u32 mpp_protect[MAX_MPP_REGS];
+-- 
+1.9.1
+

@@ -1,0 +1,37 @@
+From 3d3d042ae69befd50c6f732cd996bba478ecc0f2 Mon Sep 17 00:00:00 2001
+From: Ken Ma <make@marvell.com>
+Date: Thu, 3 Mar 2016 01:39:29 +0800
+Subject: [PATCH 1127/1240] gpio: a3700: enable the new generic mvebu gpio
+ driver
+
+- Enable generic mvebu gpio driver for a3700 by setting
+  CONFIG_MVEBU_GPIO to y in the config file;
+- Please notice that generic mvebu gpio driver is implemented by uclass
+  and uclass is based on driver model, so CONFIG_DM should be enabled
+  first.
+
+Change-Id: I01e0beef94addfc0f654a54abb0a981344ec23b7
+Signed-off-by: Ken Ma <make@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27988
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ configs/mvebu_armada3700_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/configs/mvebu_armada3700_defconfig b/configs/mvebu_armada3700_defconfig
+index 13ad3e6..c3d88fc 100644
+--- a/configs/mvebu_armada3700_defconfig
++++ b/configs/mvebu_armada3700_defconfig
+@@ -40,6 +40,7 @@ CONFIG_PHY_MARVELL=y
+ +S:# CONFIG_I2C_MV_PAD_REG is not set
+ CONFIG_MVEBU_SPI=y
+ CONFIG_MVEBU_PINCTL=y
++CONFIG_MVEBU_GPIO=y
+ CONFIG_USB=y
+ CONFIG_USB_XHCI_HCD=y
+ CONFIG_MVEBU_COMPHY_SUPPORT=y
+-- 
+1.9.1
+

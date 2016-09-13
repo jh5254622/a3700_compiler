@@ -1,0 +1,78 @@
+From fede82cd1bef0b31e7d1961dbed92b2206ca3acb Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Tue, 27 Jan 2015 14:24:45 +0200
+Subject: [PATCH 0107/1240] ARM: PSCI: Alow arch specific DT patching
+
+Both ARMv7 and ARMv8 need to patch the device tree but the kind
+of patching done is different. This creates a function that can be
+defined by each architecture to handle the differences
+
+Change-Id: I714b0d8d82c253fc2192c01c360efe153d7e355a
+Signed-off-by: Arnab Basu <arnab_basu@rocketmail.com>
+Cc: Bhupesh Sharma <bhupesh.sharma@freescale.com>
+Cc: Marc Zyngier <marc.zyngier@arm.com>
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/16356
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv7/virt-dt.c |  7 ++++++-
+ arch/arm/lib/bootm-fdt.c     | 11 ++++++++---
+ 2 files changed, 14 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/cpu/armv7/virt-dt.c b/arch/arm/cpu/armv7/virt-dt.c
+index ad19e4c..cb4cd53 100644
+--- a/arch/arm/cpu/armv7/virt-dt.c
++++ b/arch/arm/cpu/armv7/virt-dt.c
+@@ -88,7 +88,7 @@ static int fdt_psci(void *fdt)
+ 	return 0;
+ }
+ 
+-int armv7_update_dt(void *fdt)
++static int armv7_update_dt(void *fdt)
+ {
+ 	if (!armv7_boot_nonsec())
+ 		return 0;
+@@ -100,3 +100,8 @@ int armv7_update_dt(void *fdt)
+ 
+ 	return fdt_psci(fdt);
+ }
++
++int cpu_update_dt(void *fdt)
++{
++	return armv7_update_dt(fdt);
++}
+diff --git a/arch/arm/lib/bootm-fdt.c b/arch/arm/lib/bootm-fdt.c
+index d4f1578..daabc03 100644
+--- a/arch/arm/lib/bootm-fdt.c
++++ b/arch/arm/lib/bootm-fdt.c
+@@ -21,6 +21,11 @@
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
++__weak int cpu_update_dt(void *fdt)
++{
++	return 0;
++}
++
+ int arch_fixup_fdt(void *blob)
+ {
+ 	bd_t *bd = gd->bd;
+@@ -34,11 +39,11 @@ int arch_fixup_fdt(void *blob)
+ 	}
+ 
+ 	ret = fdt_fixup_memory_banks(blob, start, size, CONFIG_NR_DRAM_BANKS);
+-#if defined(CONFIG_ARMV7_NONSEC) || defined(CONFIG_ARMV7_VIRT)
++
+ 	if (ret)
+ 		return ret;
+ 
+-	ret = armv7_update_dt(blob);
+-#endif
++	ret = cpu_update_dt(blob);
++
+ 	return ret;
+ }
+-- 
+1.9.1
+

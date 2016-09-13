@@ -1,0 +1,39 @@
+From eefd27443c7618332a4bc6a414d440a2d33519e7 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Thu, 14 Apr 2016 14:59:55 +0300
+Subject: [PATCH 118/239] fix: a3700: Fix DMA coherency operation for
+ USB/SATA/eMMC
+
+- Add single GPP2 extention to untrusted boot mode for
+  switching ON the secure AXIPROT operation state for
+  SATA, USB and eMMC masters. This is required for a valid
+  DRAM configration acess and DMA coherent operations for
+  SATA, USB and eMMC masters.
+  The configation is valid for trusted and non-trusted boots.
+
+Change-Id: Ibc9488dadbb07f55f9dfacc5059b52c0e4d9a35c
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29054
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Wilson Ding <dingwei@marvell.com>
+---
+ tools/wtp/untrusted/gpp2.txt | 7 +++++++
+ 1 file changed, 7 insertions(+)
+ create mode 100644 tools/wtp/untrusted/gpp2.txt
+
+diff --git a/tools/wtp/untrusted/gpp2.txt b/tools/wtp/untrusted/gpp2.txt
+new file mode 100644
+index 0000000..964a149
+--- /dev/null
++++ b/tools/wtp/untrusted/gpp2.txt
+@@ -0,0 +1,7 @@
++; Enable secure access for eMMC/SATA/USB.
++; SEC_AXPROT_ST bits Controls the Secure AxPROT[1] Operating State of
++; its associated AXI routing port: these attributes has to match that
++; of the CPU’s regarding IO coherency. So, for IO coherency to work,
++; we need CM3 code to enable bits SEC_AXPROT[7:4] so set them also
++; to non-secure.
++WRITE: 0x400001A0 0x000000B0        ; BIT4 | BIT5 | BIT7
+-- 
+1.9.1
+

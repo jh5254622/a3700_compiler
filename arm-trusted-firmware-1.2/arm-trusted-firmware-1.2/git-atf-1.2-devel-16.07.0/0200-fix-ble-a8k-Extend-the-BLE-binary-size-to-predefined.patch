@@ -1,0 +1,53 @@
+From cee2ef515d083d138e60a23b65ce02c9039b09c2 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Tue, 10 May 2016 18:04:46 +0300
+Subject: [PATCH 200/239] fix: ble: a8k: Extend the BLE binary size to
+ predefined value
+
+- Pad the BLE binary to the size defined by BLE_LIMIT and
+  prevent overlapping between BLE BSS section and additional
+  extensions (for instance secure boot extension) that can
+  follow the BIN extension (BLE) in the flash image preamble.
+- If the BLE binary is not extended, its BSS section is mapped
+  to the area that in case of trusted boot is occupied by
+  the secure extension and its header.
+- The problem triggered by building a trusted boot mode image
+  (secure boot), which appends a secure extension to the
+  image preamble.
+
+Change-Id: Id215fbcad2760b49fa3c50941e445a813c72444a
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29680
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ ble/ble.ld.S | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/ble/ble.ld.S b/ble/ble.ld.S
+index f2368d7..42d6a41 100644
+--- a/ble/ble.ld.S
++++ b/ble/ble.ld.S
+@@ -69,6 +69,19 @@ SECTIONS
+         __BSS_END__ = .;
+     } >RAM
+ 
++   /*
++    * Extend the BLE binary to the maximum size allocated for it in platform
++    * definition files and prevent overlapping between BLE BSS section and
++    * additional extensions that can follow the BLE in flash image preamble.
++    * This situation happens for instance when secure extension is added to
++    * the image preamble.
++    */
++   .fill LOADADDR(.bss) + SIZEOF(.bss) : {
++       FILL(0xDEADC0DE);
++       . = ORIGIN(RAM) + LENGTH(RAM) - 1;
++       BYTE(0x00)
++   } >RAM
++
+     /*
+      * Define a linker symbol to mark end of the RW memory area for this
+      * image.
+-- 
+1.9.1
+

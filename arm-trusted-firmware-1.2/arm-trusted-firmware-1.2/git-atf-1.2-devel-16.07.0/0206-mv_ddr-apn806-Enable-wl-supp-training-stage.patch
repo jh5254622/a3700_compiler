@@ -1,0 +1,51 @@
+From abd3e0f58a3986d18b1474d49ff70cf0527f4541 Mon Sep 17 00:00:00 2001
+From: Victor Axelrod <victora@marvell.com>
+Date: Wed, 8 Jun 2016 23:55:05 +0300
+Subject: [PATCH 206/239] mv_ddr: apn806: Enable wl supp training stage
+
+Change-Id: I70795c7b90a8e1e1274a4d4c28da50f139c69a91
+Signed-off-by: Victor Axelrod <victora@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30377
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Ofir Fedida <ofedida@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c | 1 +
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h | 8 --------
+ 2 files changed, 1 insertion(+), 8 deletions(-)
+
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+index 787618b..77db828 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+@@ -541,6 +541,7 @@ static int ddr3_tip_init_apn806_silicon(u32 dev_num, u32 board_id)
+ 			  LOAD_PATTERN_MASK_BIT |
+ 			  SET_TARGET_FREQ_MASK_BIT |
+ 			  WRITE_LEVELING_TF_MASK_BIT |
++			  WRITE_LEVELING_SUPP_TF_MASK_BIT |
+ 			  READ_LEVELING_TF_MASK_BIT |
+ 			  RECEIVER_CALIBRATION_MASK_BIT |
+ 			  DQ_VREF_CALIBRATION_MASK_BIT);
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
+index a5e391d..0ed1dda 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
+@@ -218,15 +218,7 @@ enum{
+ #define DDR_CONTROLLER_BUS_WIDTH_MULTIPLIER	1
+ 
+ /* Tune internal training params values */
+-#if defined(a80x0) || defined(a80x0_cust)
+-/* FIXME: remove the configuration below for a80x0
+- * and set the correct value for the clk delay after implementing
+- * the supplementary algorithm
+- */
+-#define TUNE_TRAINING_PARAMS_CK_DELAY		80
+-#else
+ #define TUNE_TRAINING_PARAMS_CK_DELAY		160
+-#endif /* defined(a80x0) || defined(a80x0_cust) */
+ 
+ #define TUNE_TRAINING_PARAMS_PHYREG3VAL		0xA
+ #define TUNE_TRAINING_PARAMS_PRI_DATA		123
+-- 
+1.9.1
+

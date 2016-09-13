@@ -1,0 +1,751 @@
+From c6b79e41e74c59a9cebbf5875eeb402482deb2b7 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Mon, 21 Mar 2016 18:38:21 +0200
+Subject: [PATCH 1148/1240] wtmi: efuse: a3700: extend WTMI server with efuse
+ access support
+
+- Apply changes to basic WTMI code allowing RW access to A3700
+  eFuses through mailbox interface.
+
+Change-Id: I7fa05753307ae17764bd0c8c0527a77e2b80963d
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28424
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ tools/wtp/wtmi/efuse.c | 343 +++++++++++++++++++++++++++++++++++++++++++++++--
+ tools/wtp/wtmi/efuse.h |  41 +++++-
+ tools/wtp/wtmi/main.c  | 103 ++++++++++++---
+ tools/wtp/wtmi/mbox.h  |  29 +++++
+ tools/wtp/wtmi/regs.h  |  42 ++++--
+ tools/wtp/wtmi/types.h |  44 ++++---
+ 6 files changed, 535 insertions(+), 67 deletions(-)
+
+diff --git a/tools/wtp/wtmi/efuse.c b/tools/wtp/wtmi/efuse.c
+index a3248a7..2667aa7 100644
+--- a/tools/wtp/wtmi/efuse.c
++++ b/tools/wtp/wtmi/efuse.c
+@@ -16,24 +16,347 @@
+  * ***************************************************************************
+ */
+ #include "types.h"
++#include "bits.h"
++#include "regs.h"
++#include "io.h"
++#include "clock.h"
++#include "mbox.h"
+ #include "efuse.h"
+ 
++static inline void seq1(void)
++{
++	writel(0x0300, EFUSE_CONTROL_REG);
++	writel(0x0700, EFUSE_CONTROL_REG);
++}
++
++static inline void seq0(void)
++{
++	writel(0x0100, EFUSE_CONTROL_REG);
++	writel(0x0500, EFUSE_CONTROL_REG);
++}
++
+ /***************************************************************************************************
+-  * efuse_write
+-  *
+-  * return: status
++ * efuse_write_enable
++ *
++ * return: status
+  ***************************************************************************************************/
+-u32 efuse_write(u32 row, u32 *args)
++static u32 efuse_write_enable(u32 enable)
+ {
+-	return NO_ERROR;
++	u32	status = NO_ERROR;
++	u32	regval;
++	u32	n, timeout;
++
++	if (enable == 0) {	/* Disable */
++
++		/* Deactivate Program Sequence Code & Burning Circuitry
++		   by toggling PROG_SEQ_CODE_CLK
++		 */
++		 writel(0x0005, EFUSE_CONTROL_REG);
++		 writel(0x0405, EFUSE_CONTROL_REG);
++		 writel(0x0005, EFUSE_CONTROL_REG);
++
++		 /* Unset Master OTP Program Enable
++		    Applies to both Security Control OTP & Security Data OTP
++		  */
++		 writel(EFUSE_MASTER_OTP_PRG_DIS, EFUSE_MASTER_OTP_CTRL_REG);
++
++	} else {		/* Enable */
++
++		/* Power up SD OTP */
++		writel(0x0, EFUSE_CONTROL_REG);
++		wait_ns(EFUSE_POWER_UP_TIME_NS);
++
++		/* Set Master OTP Program Enable
++		   Applies to both Security Control OTP & Security Data OTP.
++		 */
++		writel(EFUSE_MASTER_OTP_PRG_EN, EFUSE_MASTER_OTP_CTRL_REG);
++
++		/* Turn on the clock and run sequence ”1011000110” 6 times */
++		writel(EFUSE_CTRL_SCLK_BIT, EFUSE_CONTROL_REG);
++		for (n = 0; n < 6; n++) {
++			seq1();
++			seq0();
++			seq1();
++			seq1();
++			seq0();
++			seq0();
++			seq0();
++			seq1();
++			seq1();
++			seq0();
++		}
++		/* Program Sequence Done */
++		writel(0x0, EFUSE_CONTROL_REG);
++		/* Check for CODE MATCH */
++		for (timeout = 0, status = ERR_TIMEOUT;
++		     timeout < EFUSE_CODE_MATCH_TIMEOUT_LOOPS; timeout++) {
++			regval = readl(EFUSE_AUXILIARY_REG);
++			regval &= EFUSE_AUX_CODE_MATCH_BIT;
++			if (regval) {
++				status = NO_ERROR;
++				break;
++			}
++			wait_ns(EFUSE_CODE_MATCH_LOOP_WAIT_NS);
++		}
++	}
++
++	return status;
+ }
+ 
+ /***************************************************************************************************
+-  * efuse_read
+-  *
+-  * return: status
++ * efuse_read_row_no_ecc
++ *
++ * return: status
++ ***************************************************************************************************/
++static u32 efuse_read_row_no_ecc(u32 row, u32 *msb, u32 *lsb)
++{
++	u32	regval;
++	u32	timeout;
++	u32	status;
++
++	if (msb == NULL || lsb == NULL)
++		return ERR_INVALID_ARGUMENT;
++
++	/* Set PRDT=0 to clear RD_DONE and any other SD OTP read status */
++	regval = EFUSE_CTRL_DEF_VAL | EFUSE_CTR_CSB_BIT;
++	writel(regval, EFUSE_CONTROL_REG);
++
++	wait_ns(EFUSE_POWER_UP_TIME_NS);
++
++	/* Set PRDT=1, Enter Access Mode */
++	regval = readl(EFUSE_CONTROL_REG);
++	regval |= EFUSE_CTR_PRDT_BIT;
++	writel(regval, EFUSE_CONTROL_REG);
++
++	/* Set CSB = 0, PGM_B = 1, LOAD = 1, Enter Read Mode */
++	regval = readl(EFUSE_CONTROL_REG);
++	regval &= ~EFUSE_CTR_CSB_BIT;
++	regval |= EFUSE_CTR_PGM_B_BIT | EFUSE_CTR_LOAD_BIT;
++	writel(regval, EFUSE_CONTROL_REG);
++
++	/* set ROW & COL address */
++	regval = EFUSE_RW_ROW(row) | EFUSE_RW_COL(0);
++	writel(regval, EFUSE_READ_WRITE_REG);
++
++	/* wait minimum 4ns */
++	wait_ns(EFUSE_ROW_COL_SET_TIME_NS);
++
++	/* Toggle SCLK = 1 for minimum 165ns */
++	regval = readl(EFUSE_CONTROL_REG);
++	regval |= EFUSE_CTRL_SCLK_BIT;
++	writel(regval, EFUSE_CONTROL_REG);
++
++	wait_ns(EFUSE_READ_SCLK_PULSE_WIDTH_NS);
++
++	regval = readl(EFUSE_CONTROL_REG);
++	regval &= ~EFUSE_CTRL_SCLK_BIT;
++	writel(regval, EFUSE_CONTROL_REG);
++
++	/* Set CSB = 1, LOAD = 0 to finish read cycle */
++	regval = readl(EFUSE_CONTROL_REG);
++	regval |= EFUSE_CTR_CSB_BIT;
++	regval &= ~EFUSE_CTR_LOAD_BIT;
++	writel(regval, EFUSE_CONTROL_REG);
++
++	/* If RD_DONE then OK to read row value */
++	for (timeout = 0, status = ERR_TIMEOUT;
++	     timeout < EFUSE_READ_TIMEOUT_LOOPS; timeout++) {
++		regval = readl(EFUSE_AUXILIARY_REG);
++		regval &= EFUSE_AUX_RD_DONE_BIT;
++		if (regval) {
++			status = NO_ERROR;
++			*lsb = readl(EFUSE_DATA0_REG);
++			*msb = readl(EFUSE_DATA1_REG);
++			break;
++		}
++		wait_ns(EFUSE_READ_LOOP_WAIT_NS);
++	}
++
++	return status;
++}
++
++/***************************************************************************************************
++ * efuse_read
++ *
++ * return: status
++ ***************************************************************************************************/
++u32 efuse_read(u32 size, u32 row, u32 offset, u32 *args)
++{
++	u32	lsb, msb, count;
++	u32	status;
++	u32	loops = EFUSE_ACCESS_LOOPS(size);
++
++	if (args == NULL || row >= EFUSE_MAX_ROW || offset > EFUSE_BITS_IN_ROW) {
++		status = ERR_INVALID_ARGUMENT;
++		goto rd_error;
++	}
++
++	/* read row by row */
++	for (count = 0; count < loops; count++) {
++		status = efuse_read_row_no_ecc(row + count, &msb, &lsb);
++		if (status != NO_ERROR)
++			goto rd_error;
++
++		args[count * 2]     = lsb;
++		args[count * 2 + 1] = msb;
++	}
++
++	/* remove noise from filds shorter than full row */
++	if (size < EFUSE_BITS_IN_ROW) {
++		/* 64-bit right shift */
++		if (offset < 32) {
++			args[0] >>= offset;
++			args[0] |= args[1] << (32 - offset);
++			args[1] >>= offset;
++		} else {
++			args[0] = args[1] >> (offset - 32);
++			args[1] = 0;
++		}
++
++		if (size == 1) {
++			/* single bit field values are calculated as
++			   majority vote between 3 physical bits */
++			args[0] &= 0x7;
++			args[1] = 0;
++			if (args[0] == 3 || args[0] > 4)
++				args[0] = 1;
++			else
++				args[0] = 0;
++
++		} else if (size <= 32) {
++			args[0] &=  0xFFFFFFFF >> (32 - size);
++			args[1] = 0;
++		}
++	}
++
++rd_error:
++	if (status == ERR_INVALID_ARGUMENT)
++		args[0] = MB_STAT_BAD_ARGUMENT;
++	else if (status == ERR_TIMEOUT)
++		args[0] = MB_STAT_TIMEOUT;
++	else if (status != NO_ERROR)
++		args[0] = MB_STAT_HW_ERROR;
++
++	return status;
++}
++/***************************************************************************************************
++ * efuse_write
++ *
++ * return: status
+  ***************************************************************************************************/
+-u32 efuse_read(u32 row, u32 *args)
++u32 efuse_write(u32 size, u32 row, u32 offset, u32 *args)
+ {
+-	return NO_ERROR;
++	u32	lsb, msb, count, col;
++	u32	status;
++	u32	loops = EFUSE_ACCESS_LOOPS(size);
++	u32	regval;
++
++	if (args == NULL || row >= EFUSE_MAX_ROW || offset > EFUSE_BITS_IN_ROW) {
++		status = ERR_INVALID_ARGUMENT;
++		goto wr_error;
++	}
++
++	/* Single bit - requres 2-3 bits programming for majority vote */
++	if (size == 1) {
++		/* expand single bit values to 3 bits for physical efuse field */
++		args[0] &= 1;
++		args[0] |= (args[0] << 1) | (args[0] << 2);
++		args[1] = 0;
++
++	} else if (size <= 32) {
++		/* cleanup the short field value */
++		args[0] &=  0xFFFFFFFF >> (32 - size);
++		args[1] = 0;
++	}
++
++	/* Enable OTP programming */
++	status = efuse_write_enable(1);
++	if (status != NO_ERROR)
++		goto wr_error;
++
++	for (count = 0; count < loops; count++) {
++		/* Each eFuse row should be read before programming */
++		status = efuse_read_row_no_ecc(row + count, &msb, &lsb);
++		if (status != NO_ERROR)
++			goto wr_error;
++
++		/* Set PRDT=1, Enter Access Mode */
++		regval = readl(EFUSE_CONTROL_REG);
++		regval |= EFUSE_CTR_PRDT_BIT;
++		writel(regval, EFUSE_CONTROL_REG);
++
++		/* Set CSB = 0, PGM_B = 0, LOAD = 0, Enter User Data Write Mode */
++		regval = readl(EFUSE_CONTROL_REG);
++		regval &= ~(EFUSE_CTR_CSB_BIT | EFUSE_CTR_PGM_B_BIT | EFUSE_CTR_LOAD_BIT);
++		writel(regval, EFUSE_CONTROL_REG);
++
++		/* Wait minimum 300ns */
++		wait_ns(EFUSE_WRITE_MODE_UP_TIME_NS);
++
++		/* Fields smaller than entire row should be correctly positioned */
++		if (size < EFUSE_BITS_IN_ROW) {
++			/* 64-bit left shift */
++			if (offset < 32) {
++				args[1] <<= offset;
++				args[1] |= args[0] >> (32 - offset);
++				args[0] <<= offset;
++			} else {
++				args[1] = args[0] << (offset - 32);
++				args[0] = 0;
++			}
++		}
++
++		/* Combile eFuse old values with new ones */
++		args[count * 2]     |= lsb;
++		args[count * 2 + 1] |= msb;
++
++		/* Burn the eFuse row bit by bit (bit is column) */
++		for (col = 0; col < EFUSE_BITS_IN_ROW; col++) {
++			if (args[count * 2 + col / 32] & 0x1) {
++				/* set ROW & COL address */
++				regval = EFUSE_RW_ROW(row + count) | EFUSE_RW_COL(col);
++				writel(regval, EFUSE_READ_WRITE_REG);
++
++				/* Toggle SCLK = 1 for 11000ns - 13000ns */
++				regval = readl(EFUSE_CONTROL_REG);
++				regval |= EFUSE_CTRL_SCLK_BIT;
++				writel(regval, EFUSE_CONTROL_REG);
++
++				wait_ns(EFUSE_WRITE_SCLK_PULSE_WIDTH_NS);
++
++				regval = readl(EFUSE_CONTROL_REG);
++				regval &= ~EFUSE_CTRL_SCLK_BIT;
++				writel(regval, EFUSE_CONTROL_REG);
++			}
++
++			args[count * 2 + col / 32] >>= 1;
++
++		} /* column loop */
++
++/*		wait_ns(EFUSE_WAIT_BETWEEN_ROWS_NS); */
++	}
++
++	/* Set CSB = 1, Exit */
++	regval = readl(EFUSE_CONTROL_REG);
++	regval |= EFUSE_CTR_CSB_BIT;
++	writel(regval, EFUSE_CONTROL_REG);
++
++	/* Set PGM_B = 1, LOAD = 0, End Programming Mode */
++	regval = readl(EFUSE_CONTROL_REG);
++	regval &= ~EFUSE_CTR_LOAD_BIT;
++	regval |= EFUSE_CTR_PGM_B_BIT;
++	writel(regval, EFUSE_CONTROL_REG);
++
++	/* Disable OTP programming */
++	efuse_write_enable(0);
++
++wr_error:
++	if (status == ERR_INVALID_ARGUMENT)
++		args[0] = MB_STAT_BAD_ARGUMENT;
++	else if (status == ERR_TIMEOUT)
++		args[0] = MB_STAT_TIMEOUT;
++	else if (status != NO_ERROR)
++		args[0] = MB_STAT_HW_ERROR;
++
++	return status;
+ }
+diff --git a/tools/wtp/wtmi/efuse.h b/tools/wtp/wtmi/efuse.h
+index 1822e41..23c2a68 100644
+--- a/tools/wtp/wtmi/efuse.h
++++ b/tools/wtp/wtmi/efuse.h
+@@ -19,11 +19,44 @@
+ #ifndef __EFUSE_H
+ #define __EFUSE_H
+ 
+-#define EFUSE_MAX_ROW		43
+-#define EFUSE_WORDS_IN_ROW	2	/* 64 bits */
++#define EFUSE_MAX_ROW			43
++#define EFUSE_BITS_IN_ROW		64
++#define EFUSE_ACCESS_LOOPS(sz)		((sz <= EFUSE_BITS_IN_ROW) ? 1 : (sz / EFUSE_BITS_IN_ROW))
+ 
++#define EFUSE_ROW_COL_SET_TIME_NS	300	/* required minimum 4ns for non-ECC mode */
++#define EFUSE_READ_SCLK_PULSE_WIDTH_NS	200
++#define EFUSE_READ_TIMEOUT_LOOPS	100000
++#define EFUSE_READ_LOOP_WAIT_NS		100
++#define EFUSE_WAIT_BETWEEN_ROWS_NS	1000000
++#define EFUSE_POWER_UP_TIME_NS		300
++#define EFUSE_CODE_MATCH_TIMEOUT_LOOPS	100000
++#define EFUSE_CODE_MATCH_LOOP_WAIT_NS	100
++#define EFUSE_WRITE_MODE_UP_TIME_NS	500
++#define EFUSE_WRITE_SCLK_PULSE_WIDTH_NS	13000
+ 
+-u32 efuse_write(u32 row, u32 *args);
+-u32 efuse_read(u32 row, u32 *args);
++/* EFUSE_CONTROL_REG fields */
++#define EFUSE_CTRL_SCLK_BIT		BIT8
++#define EFUSE_CTRL_PDWN_BIT		BIT4
++#define EFUSE_CTR_PRDT_BIT		BIT3
++#define EFUSE_CTR_CSB_BIT		BIT2
++#define EFUSE_CTR_LOAD_BIT		BIT1
++#define EFUSE_CTR_PGM_B_BIT		BIT0
++#define EFUSE_CTRL_DEF_VAL		(0)
++
++/* EFUSE_READ_WRITE_REG fields */
++#define EFUSE_RW_ROW(row)		(((row) & 0x3F) << 7)
++#define EFUSE_RW_COL(col)		((col) & 0x7F)
++
++/* EFUSE_AUXILIARY_REG fields */
++#define EFUSE_AUX_RD_DONE_BIT		BIT31
++#define EFUSE_AUX_CODE_MATCH_BIT	BIT29
++#define EFUSE_AUX_SFB_BIT		BIT4	/* efuse protection status */
++
++/* EFUSE_MASTER_OTP_CTRL_REG filds */
++#define EFUSE_MASTER_OTP_PRG_EN		(0x5A)
++#define EFUSE_MASTER_OTP_PRG_DIS	(0)
++
++u32 efuse_write(u32 size, u32 row, u32 offset, u32 *args);
++u32 efuse_read(u32 size, u32 row, u32 offset, u32 *args);
+ 
+ #endif /* __EFUSE_H */
+diff --git a/tools/wtp/wtmi/main.c b/tools/wtp/wtmi/main.c
+index a04fc88..eca5bc2 100644
+--- a/tools/wtp/wtmi/main.c
++++ b/tools/wtp/wtmi/main.c
+@@ -38,25 +38,86 @@ static void exception_handler(int exception)
+  ***************************************************************************************************/
+ u32 cmd_execute(u32 cmd, u32 *args, u32 *nargs)
+ {
+-	u32 row;
+-	u32 status;
++	u32			status;
++	enum mbox_opsize	opsz;
++	enum mbox_op		op;
++	u32			row;
++	u32			size;
++	u32			offset;
++	u32			*wr_args;
+ 
+-	*nargs = 0;
++	op = MBOX_OPERATION(cmd);
++	opsz = MBOX_OP_SIZE(cmd);
+ 
+-	if ((cmd >= CMD_WRITE_EFUSE_ROW_BASE) &&
+-	    (cmd <= (CMD_WRITE_EFUSE_ROW_BASE + EFUSE_MAX_ROW))) {
++	/* For bit fields, the first argument is the efuse
++	   row number, the second argument is the bit offset
++	   within the row.
++	   For other efuse fild sizes, the first argument
++	   defines the row number */
++
++	row = args[0];
++	if (row > EFUSE_MAX_ROW) {
++		args[0] = MB_STAT_BAD_ARGUMENT;
++		return ERR_INVALID_ARGUMENT;
++	}
++
++	switch (opsz) {
++	case MB_OPSZ_BIT:
++		size = 1;
++		offset = args[1];
++		wr_args = args + 2;
++		break;
++
++	case MB_OPSZ_BYTE:
++		size = 8;
++		offset = args[1];
++		wr_args = args + 2;
++		break;
++
++	case MB_OPSZ_WORD:
++		size = 32;
++		offset = args[1];
++		wr_args = args + 2;
++		break;
++
++	case MB_OPSZ_DWORD:
++		size = 64;
++		offset = 0;
++		wr_args = args + 1;
++		break;
++
++	case MB_OPSZ_256B:
++		size = 256;
++		offset = 0;
++		wr_args = args + 1;
++		break;
++
++	default:
++		args[0] = MB_STAT_BAD_ARGUMENT;
++		return ERR_INVALID_ARGUMENT;
++	}
++
++	/* Execute command */
++	if (op == MB_OP_WRITE) {
+ 		/* WRITE */
+-		row = cmd - CMD_WRITE_EFUSE_ROW_BASE;
+-		status = efuse_write(row, args);
+-	} else if ((cmd >= CMD_READ_EFUSE_ROW_BASE) &&
+-		   (cmd <= (CMD_READ_EFUSE_ROW_BASE + EFUSE_MAX_ROW))) {
++		*nargs = 0;
++		status = efuse_write(size, row, offset, wr_args);
++
++	} else if (op == MB_OP_READ) {
+ 		/* READ */
+-		row = cmd - CMD_READ_EFUSE_ROW_BASE;
+-		*nargs = EFUSE_WORDS_IN_ROW;
+-		status = efuse_read(row, args);
++		if (opsz == MB_OPSZ_DWORD)
++			*nargs = 2;
++		else if (opsz == MB_OPSZ_256B)
++			*nargs = 8;
++		else
++			*nargs = 1;
++		status = efuse_read(size, row, offset, args);
++
+ 	} else {
+ 		/* ERROR */
+ 		status = ERR_INVALID_COMMAND;
++		args[0] = MB_STAT_BAD_COMMAND;
++
+ 	}
+ 
+ 	return status;
+@@ -69,8 +130,9 @@ u32 cmd_execute(u32 cmd, u32 *args, u32 *nargs)
+  ***************************************************************************************************/
+ int main(int exception, char **dummy)
+ {
+-	u32 cmd, args[MAILBOX_MAX_ARGS];
+-	u32 status, nargs;
++	u32			cmd, args[MAILBOX_MAX_ARGS];
++	u32			status, nargs;
++	enum mbox_status	mb_stat = MB_STAT_SUCCESS;
+ 
+ 	if (exception != 0) {
+ 		exception_handler(exception);
+@@ -78,7 +140,9 @@ int main(int exception, char **dummy)
+ 	}
+ 
+ 	/* Initialization stuff */
+-	clock_init();
++	status = clock_init();
++	if (status)
++		return status;
+ 
+ 	/* Mailbox commands handling loop */
+ 	while (1) {
+@@ -86,11 +150,14 @@ int main(int exception, char **dummy)
+ 		if (status == NO_ERROR)
+ 			status = cmd_execute(cmd, args, &nargs);
+ 
+-		if (status != NO_ERROR)
++		/* In case of error, the status saved in args[0] */
++		if (status != NO_ERROR) {
+ 			nargs = 0;
++			mb_stat = args[0];
++		}
+ 
+-
+-		mbox_send(status, args, nargs);
++		/* Send the results back */
++		mbox_send(mb_stat, args, nargs);
+ 
+ 	} /* read and execute mailbox commands */
+ 
+diff --git a/tools/wtp/wtmi/mbox.h b/tools/wtp/wtmi/mbox.h
+index 6658999..2f08488 100644
+--- a/tools/wtp/wtmi/mbox.h
++++ b/tools/wtp/wtmi/mbox.h
+@@ -26,6 +26,35 @@
+ #define CMD_REG_OCCUPIED_BIT		BIT0
+ #define HOST_INT_CMD_COMPLETE_BIT	BIT0
+ 
++#define MBOX_COMMAND(sz, op)		((sz) | (op << 8))
++#define MBOX_OP_SIZE(cmd)		(cmd & 0xF)
++#define MBOX_OPERATION(cmd)		((cmd >> 8) & 0xF)
++
++enum mbox_opsize {
++	MB_OPSZ_BIT	= 1,	/* single bit */
++	MB_OPSZ_BYTE	= 2,	/* single byte */
++	MB_OPSZ_WORD	= 3,	/* 4 bytes - half row */
++	MB_OPSZ_DWORD	= 4,	/* 8 bytes - one row */
++	MB_OPSZ_256B	= 5,	/* 32 bytes - 4 rows */
++	MB_OPSZ_MAX
++};
++
++enum mbox_op {
++	MB_OP_READ	= 1,
++	MB_OP_WRITE	= 2,
++	MB_OP_MAX
++};
++
++enum mbox_status {
++	MB_STAT_SUCCESS			= 0,
++	MB_STAT_HW_ERROR		= 1,
++	MB_STAT_TIMEOUT			= 2,
++	MB_STAT_BAD_ARGUMENT		= 3,
++	MB_STAT_BAD_COMMAND		= 4,
++
++	MB_STAT_MAX
++};
++
+ u32 mbox_receive(u32 *cmd, u32 *args);
+ void mbox_send(u32 cmd, u32 *args, u32 nargs);
+ 
+diff --git a/tools/wtp/wtmi/regs.h b/tools/wtp/wtmi/regs.h
+index 5223b06..f3c0d58 100644
+--- a/tools/wtp/wtmi/regs.h
++++ b/tools/wtp/wtmi/regs.h
+@@ -19,11 +19,12 @@
+ #ifndef __REGS_H
+ #define __REGS_H
+ 
+-#define MVEBU_REGS_BASE			(0xC0000000)
++#define APPLICATION_CPU_REGS_BASE	(0xC0000000)
++#define SECURE_CPU_REGS_BASE		(0x40000000)
+ 
+ /* Clocks */
+-#define MVEBU_NORTH_CLOCK_REGS_BASE	(MVEBU_REGS_BASE + 0x13000)
+-#define MVEBU_SOUTH_CLOCK_REGS_BASE	(MVEBU_REGS_BASE + 0x18000)
++#define MVEBU_NORTH_CLOCK_REGS_BASE	(APPLICATION_CPU_REGS_BASE + 0x13000)
++#define MVEBU_SOUTH_CLOCK_REGS_BASE	(APPLICATION_CPU_REGS_BASE + 0x18000)
+ #define MVEBU_TESTPIN_NORTH_REG_BASE	(MVEBU_NORTH_CLOCK_REGS_BASE + 0x800)
+ 
+ 
+@@ -48,23 +49,36 @@
+ #define MVEBU_NORTH_CLOCK_DIVIDER_SELECT2_REG	(MVEBU_NORTH_CLOCK_REGS_BASE + 0xC)
+ #define MVEBU_NORTH_CLOCK_SELECT_REG		(MVEBU_NORTH_CLOCK_REGS_BASE + 0x10)
+ 
+-
+ /* Reset sample */
+-#define MVEBU_TEST_PIN_LATCH_N		(MVEBU_TESTPIN_NORTH_REG_BASE + 0x8)
++#define MVEBU_TEST_PIN_LATCH_N			(MVEBU_TESTPIN_NORTH_REG_BASE + 0x8)
+ 
+-/* Mailbox */
+-#define MAILBOX_START_ADDR		0x40000000
+ 
++/****************/
++/*  Mailbox     */
++/****************/
+ /* Mailbox offsets 0x0 to 0x40 are WO by aplication CPU (0x44 - 0x7F are undefined)
+    and offsets 0x80 to 0xE0 are RO by application CPU (0xE4 - 0xFF are undefined) */
+-#define MAILBOX_IN_ARG(n)		(MAILBOX_START_ADDR + n * 4)
+-#define MAILBOX_IN_CMD			(MAILBOX_START_ADDR + 0x40)
+-#define MAILBOX_OUT_STATUS		(MAILBOX_START_ADDR + 0x80)
+-#define MAILBOX_OUT_ARG(n)		(MAILBOX_START_ADDR + 0x84 + n * 4)
++#define MAILBOX_IN_ARG(n)		(SECURE_CPU_REGS_BASE + n * 4)
++#define MAILBOX_IN_CMD			(SECURE_CPU_REGS_BASE + 0x40)
++#define MAILBOX_OUT_STATUS		(SECURE_CPU_REGS_BASE + 0x80)
++#define MAILBOX_OUT_ARG(n)		(SECURE_CPU_REGS_BASE + 0x84 + n * 4)
+ 
+-#define HOST_INT_SET			(MAILBOX_START_ADDR + 0x214)
+-#define SP_INT_RESET			(MAILBOX_START_ADDR + 0x218)
+-#define SP_CONTROL			(MAILBOX_START_ADDR + 0x220)
++#define HOST_INT_SET			(SECURE_CPU_REGS_BASE + 0x234)
++#define SP_INT_RESET			(SECURE_CPU_REGS_BASE + 0x218)
++#define SP_CONTROL			(SECURE_CPU_REGS_BASE + 0x220)
++
++/****************/
++/*  eFuse       */
++/****************/
++#define EFUSE_REGS_BASE			(SECURE_CPU_REGS_BASE + 0x3400)
++#define EFUSE_CONTROL_REG		(EFUSE_REGS_BASE + 0x30)
++#define EFUSE_READ_WRITE_REG		(EFUSE_REGS_BASE + 0x34)
++#define EFUSE_DATA0_REG			(EFUSE_REGS_BASE + 0x38)
++#define EFUSE_DATA1_REG			(EFUSE_REGS_BASE + 0x3C)
++#define EFUSE_AUXILIARY_REG		(EFUSE_REGS_BASE + 0x40)
++#define EFUSE_ROW_MASK0_REG		(EFUSE_REGS_BASE + 0x50)
++#define EFUSE_ROW_MASK1_REG		(EFUSE_REGS_BASE + 0x54)
++#define EFUSE_MASTER_OTP_CTRL_REG	(EFUSE_REGS_BASE + 0x3F4)
+ 
+ 
+ #endif /* __REGS_H */
+diff --git a/tools/wtp/wtmi/types.h b/tools/wtp/wtmi/types.h
+index 20036a1..a3d5d4f 100644
+--- a/tools/wtp/wtmi/types.h
++++ b/tools/wtp/wtmi/types.h
+@@ -19,30 +19,32 @@
+ #ifndef __TYPES_H
+ #define __TYPES_H
+ 
+-typedef char               int_8;
+-typedef unsigned char      uint_8;
+-typedef short              int_16;
+-typedef unsigned short     uint_16;
+-typedef int                int_32;
+-typedef unsigned int       uint_32;
+-typedef long long          int_64;
+-typedef unsigned long long uint_64;
++typedef char			int_8;
++typedef unsigned char		uint_8;
++typedef short			int_16;
++typedef unsigned short		uint_16;
++typedef int			int_32;
++typedef unsigned int		uint_32;
++typedef long long		int_64;
++typedef unsigned long long	uint_64;
+ 
+-typedef unsigned long long u64;
+-typedef unsigned int       u32;
+-typedef unsigned short     u16;
+-typedef unsigned char      u8;
+-typedef long long          s64;
+-typedef int                s32;
+-typedef short              s16;
+-typedef char               s8;
+-typedef char               byte;
++typedef unsigned long long	u64;
++typedef unsigned int		u32;
++typedef unsigned short		u16;
++typedef unsigned char		u8;
++typedef long long		s64;
++typedef int			s32;
++typedef short			s16;
++typedef char			s8;
++typedef char			byte;
+ 
++#define	NULL			((void *)0)
+ 
+ /* Errors */
+-#define NO_ERROR			0x0000
+-#define ERR_INVALID_ARGUMENT		0x0001
+-#define ERR_INVALID_COMMAND		0x0002
+-#define ERR_BAD_CONFIGURATION		0x0003
++#define NO_ERROR		0x0000
++#define ERR_INVALID_ARGUMENT	0x0001
++#define ERR_INVALID_COMMAND	0x0002
++#define ERR_BAD_CONFIGURATION	0x0003
++#define ERR_TIMEOUT		0x0004
+ 
+ #endif /* __TYPES_H */
+-- 
+1.9.1
+

@@ -1,0 +1,71 @@
+From 0d2d4a002c6d577459227740afe0310c55ea14f5 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Thu, 12 Nov 2015 12:17:57 +0800
+Subject: [PATCH 0491/1240] pcie: armada3700: control debug output by local
+ flag
+
+Some PCIe routines will be called many times
+during scan, there will be many lines of prints if
+u-boot global debug is enabled.
+Need to replace the debug with local debug_cfg
+to make sure the output is under control even the
+global debug flag is enabled.
+Signed-off-by: Victor Gu <xigu@marvell.com>
+
+Change-Id: Id44e4cc7f80885b815b550d075ea1572975d9125
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24788
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/pci/pci_advk.c | 21 +++++++++++++++++----
+ 1 file changed, 17 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/pci/pci_advk.c b/drivers/pci/pci_advk.c
+index 187ab8f..c17463f 100644
+--- a/drivers/pci/pci_advk.c
++++ b/drivers/pci/pci_advk.c
+@@ -31,6 +31,19 @@
+ #include <pci.h>
+ #include <asm/arch-mvebu/fdt.h>
+ 
++/* #define DEBUG */
++/* #define DEBUG_CFG_CYCLE */
++/* During PCIe scan, PCIe drive will check the target BDF(bus, device, function) for many times,
++ * here use a local debug flag to control the print in PIO read and write routines, to make sure
++ * there will not be too much prints when global DEBUG is enabled.
++ * By default this flag(DEBUG_CFG_CYCLE) is disabled.
++ */
++#ifdef DEBUG_CFG_CYCLE
++#define debug_cfg(fmt, args...) printf(fmt, ##args)
++#else
++#define debug_cfg(fmt, args...)
++#endif
++
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+ struct pcie_win {
+@@ -167,8 +180,8 @@ int advk_pcie_pio_read_config(struct pci_controller *hose, pci_dev_t bdf, int wh
+ 	int ret = 0;
+ 
+ 	if (!advk_pcie_addr_valid(bdf, hose->first_busno)) {
+-		debug("CFG read: address out of range (%ld,%ld,%ld)\n",
+-		      PCI_BUS(bdf), PCI_DEV(bdf), PCI_FUNC(bdf));
++		debug_cfg("CFG read: address out of range (%ld,%ld,%ld)\n",
++			  PCI_BUS(bdf), PCI_DEV(bdf), PCI_FUNC(bdf));
+ 		*val = 0xFFFFFFFF;
+ 		return 1;
+ 	}
+@@ -239,8 +252,8 @@ int advk_pcie_pio_write_config(struct pci_controller *hose, pci_dev_t bdf, int w
+ 	int ret = 0;
+ 
+ 	if (!advk_pcie_addr_valid(bdf, hose->first_busno)) {
+-		debug("CFG write: address out of range (%ld,%ld,%ld)\n",
+-		      PCI_BUS(bdf), PCI_DEV(bdf), PCI_FUNC(bdf));
++		debug_cfg("CFG write: address out of range (%ld,%ld,%ld)\n",
++			  PCI_BUS(bdf), PCI_DEV(bdf), PCI_FUNC(bdf));
+ 		return 1;
+ 	}
+ 
+-- 
+1.9.1
+

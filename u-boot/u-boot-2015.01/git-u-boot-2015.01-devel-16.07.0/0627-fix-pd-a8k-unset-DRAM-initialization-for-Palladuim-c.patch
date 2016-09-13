@@ -1,0 +1,43 @@
+From ac9701e10554d1f4105a5cbdb2eef464a691de6f Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 4 Jan 2016 13:21:29 +0200
+Subject: [PATCH 0627/1240] fix: pd: a8k: unset DRAM initialization for
+ Palladuim compilation
+
+- SYSTEMSW-2100
+
+Change-Id: Iae0fc8b7b81a18c44054e2964ff6f539c3c4f059
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26470
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ configs/mvebu_apn806_pd_defconfig | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/configs/mvebu_apn806_pd_defconfig b/configs/mvebu_apn806_pd_defconfig
+index 9e40374..1eacb2d 100644
+--- a/configs/mvebu_apn806_pd_defconfig
++++ b/configs/mvebu_apn806_pd_defconfig
+@@ -3,6 +3,8 @@ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_ARMADA_8K=y
+ CONFIG_PALLADIUM=y
++CONFIG_MVEBU_CCU=y
++CONFIG_MVEBU_RFU=y
+ CONFIG_MVEBU_MPP_BUS=y
+ +S:CONFIG_DEVEL_BOARD=y
+ CONFIG_CMD_BOOTD=y
+@@ -19,8 +21,6 @@ CONFIG_CMD_MVEBU_MPP=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="apn-806-pd"
+-CONFIG_MVEBU_CCU=y
+-CONFIG_MVEBU_RFU=y
+ +S:CONFIG_SYS_NS16550=y
+ CONFIG_MVEBU_PINCTL=y
+-+S:CONFIG_MVEBU_MK6_SUPPORT=y
+++S:# CONFIG_MVEBU_SPL_DDR_SUPPORT is not set
+-- 
+1.9.1
+

@@ -1,0 +1,60 @@
+From 02835dd9632f48654b2d6853e61e03aee545f30a Mon Sep 17 00:00:00 2001
+From: zachary <zhangzg@marvell.com>
+Date: Sat, 16 Apr 2016 00:51:30 +0800
+Subject: [PATCH 1113/1240] io_decode: a3700: move io_decode from spl to u-boot
+
+This patch moves the IO decode window initialization
+from SPL to u-boot, thus the IO decode window could be
+initialized correctly without SPL, which is mandatory
+when boot ATF and u-boot without SPL
+
+Change-Id: I62d591863abc96a0c1401094de4390630b39bd1d
+Signed-off-by: zachary <zhangzg@marvell.com>
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29088
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/cpu/armv8/armada3700/soc-init.c | 5 +++++
+ configs/mvebu_armada3700_defconfig       | 2 +-
+ 2 files changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/armv8/armada3700/soc-init.c b/arch/arm/cpu/armv8/armada3700/soc-init.c
+index 4bb1f71..293098f 100644
+--- a/arch/arm/cpu/armv8/armada3700/soc-init.c
++++ b/arch/arm/cpu/armv8/armada3700/soc-init.c
+@@ -27,6 +27,7 @@
+ #include <asm/arch-mvebu/mbus.h>
+ #include <asm/arch-mvebu/pinctl.h>
+ #include <asm/arch-mvebu/fdt.h>
++#include <asm/arch-mvebu/io_addr_dec.h>
+ #include <libfdt.h>
+ #include <asm/arch/boot_mode.h>
+ #include <fdt_support.h>
+@@ -78,6 +79,10 @@ void soc_init(void)
+ 
+ #endif /* CONFIG_PALLADIUM */
+ 
++#ifdef CONFIG_MVEBU_A3700_IO_ADDR_DEC
++	init_io_addr_dec();
++#endif
++
+ #ifdef CONFIG_MVEBU_COMPHY_SUPPORT
+ 	if (comphy_init(gd->fdt_blob))
+ 		error("COMPHY initialization failed\n");
+diff --git a/configs/mvebu_armada3700_defconfig b/configs/mvebu_armada3700_defconfig
+index 50e3503..13ad3e6 100644
+--- a/configs/mvebu_armada3700_defconfig
++++ b/configs/mvebu_armada3700_defconfig
+@@ -2,7 +2,7 @@ CONFIG_SPL=y
+ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_ARMADA_3700=y
+-+S:CONFIG_MVEBU_A3700_IO_ADDR_DEC=y
++CONFIG_MVEBU_A3700_IO_ADDR_DEC=y
+ +S:CONFIG_MVEBU_A3700_MISC_INIT=y
+ +S:CONFIG_MVEBU_A3700_CLOCK=y
+ CONFIG_MVEBU_MPP_BUS=y
+-- 
+1.9.1
+

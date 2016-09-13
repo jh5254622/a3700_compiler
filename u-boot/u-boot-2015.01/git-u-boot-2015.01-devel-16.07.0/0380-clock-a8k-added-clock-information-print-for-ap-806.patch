@@ -1,0 +1,299 @@
+From 12f6e0cf96f25573a9ef5f8faa5c0ff7042dde3d Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 27 Aug 2015 17:57:29 +0300
+Subject: [PATCH 0380/1240] clock: a8k: added clock information print for
+ ap-806
+
+- Moved clock info print to per SOC files
+- implemented clock information print using PLL values
+
+Change-Id: Icf00505abd5d90745739604cd5e5285747546afe
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23290
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv7/armada38x/clock.c        | 16 ++++++---
+ arch/arm/cpu/armv8/armada8k/clock.c         | 52 +++++++++++++++++++++++------
+ arch/arm/cpu/armv8/armadalp/clock.c         |  8 +++++
+ arch/arm/cpu/mvebu-common/misc.c            | 28 +---------------
+ arch/arm/cpu/mvebu-common/tools/mvebu_sar.c | 20 +++++++++++
+ arch/arm/include/asm/arch-armada8k/sar.h    | 33 ++++--------------
+ arch/arm/include/asm/arch-mvebu/clock.h     |  7 ++--
+ 7 files changed, 93 insertions(+), 71 deletions(-)
+
+diff --git a/arch/arm/cpu/armv7/armada38x/clock.c b/arch/arm/cpu/armv7/armada38x/clock.c
+index ca43c94..e69c204 100644
+--- a/arch/arm/cpu/armv7/armada38x/clock.c
++++ b/arch/arm/cpu/armv7/armada38x/clock.c
+@@ -24,7 +24,7 @@
+ 
+ u32 soc_tclk_get(void)
+ {
+-	return MHZ * 200;
++	return MHz * 200;
+ }
+ 
+ u32 soc_cpu_clk_get(void)
+@@ -62,10 +62,18 @@ u32 get_fdt_tclk(const void *blob, int node)
+ 
+ 	switch (tclk) {
+ 	case 0:
+-		return MHZ * 250;
++		return MHz * 250;
+ 	case 1:
+-		return MHZ * 200;
++		return MHz * 200;
+ 	default:
+-		return MHZ * 250;
++		return MHz * 250;
+ 	}
+ }
++
++void soc_print_clock_info(void)
++{
++	printf("       CPU    @ %d [MHz]\n", soc_cpu_clk_get() / 1000000);
++	printf("       L2     @ %d [MHz]\n", soc_l2_clk_get() / 1000000);
++	printf("       TClock @ %d [MHz]\n", soc_tclk_get() / 1000000);
++	printf("       DDR    @ %d [MHz]\n", soc_ddr_clk_get() / 1000000);
++}
+diff --git a/arch/arm/cpu/armv8/armada8k/clock.c b/arch/arm/cpu/armv8/armada8k/clock.c
+index 6c7aa30..7ab623a 100644
+--- a/arch/arm/cpu/armv8/armada8k/clock.c
++++ b/arch/arm/cpu/armv8/armada8k/clock.c
+@@ -17,29 +17,61 @@
+  */
+ 
+ #include <common.h>
++#include <asm/io.h>
+ #include <asm/arch-mvebu/clock.h>
++#include <asm/arch/sar.h>
+ 
+-u32 soc_tclk_get(void)
++#define DDR_PLL_ID	0
++#define RING_PLL_ID	1
++#define CPU_PLL_ID	2
++#define PIDI_AP_PLL_ID	3
++#define PIDI_CP_PLL_ID	4
++
++#define MSS_CLOCK_DIV	6
++
++const u32 pll_freq_tbl[7][5] = {
++	/* DDR */   /* Ring */ /* CPU */ /* PIDI-AP */  /* PIDI-CP */
++	{1.2  * GHz, 2.0 * GHz, 2.5 * GHz, 2 * GHz,	2 * GHz},
++	{1.05 * GHz, 1.8 * GHz, 2.2 * GHz, 1 * GHz,	1 * GHz},
++	{900  * MHz, 1.6 * GHz, 2.0 * GHz, 1 * GHz,	1 * GHz},
++	{800  * MHz, 1.4 * GHz, 1.7 * GHz,    0,	   0},
++	{650  * MHz, 1.2 * GHz, 1.6 * GHz,    0,	   0},
++	{650  * MHz, 1.2 * GHz, 1.2 * GHz,    0,	   0},
++	{650  * MHz, 1.2 * GHz, 1.2 * GHz,    0,	   0}
++};
++
++u32 soc_get_ring_clk(void)
+ {
+-	return CONFIG_MSS_FREQUENCY;
++	u32 pll_idx = (readl(SAMPLE_AT_RESET_REG_1) & SAR1_PLL1_MASK) >> SAR1_PLL1_OFFSET;
++	return pll_freq_tbl[pll_idx][RING_PLL_ID];
+ }
+ 
+-u32 soc_cpu_clk_get(void)
++u32 soc_get_mss_clk(void)
++{
++	return soc_get_ring_clk() / MSS_CLOCK_DIV;
++}
++
++u32 soc_tclk_get(void)
+ {
+-	return 200000000;
++	return soc_get_mss_clk();
+ }
+ 
+-u32 soc_ddr_clk_get(void)
++u32 soc_get_cpu_clk(void)
+ {
+-	return 200000000;
++	u32 pll_idx = (readl(SAMPLE_AT_RESET_REG_1) & SAR1_PLL2_MASK) >> SAR1_PLL2_OFFSET;
++	return pll_freq_tbl[pll_idx][CPU_PLL_ID];
+ }
+ 
+-u32 soc_l2_clk_get(void)
++u32 soc_get_ddr_clk(void)
+ {
+-	return 800000000;
++	u32 pll_idx = (readl(SAMPLE_AT_RESET_REG_1) & SAR1_PLL0_MASK) >> SAR1_PLL0_OFFSET;
++	return pll_freq_tbl[pll_idx][DDR_PLL_ID];
+ }
+ 
+-u32 soc_timer_clk_get(void)
++void soc_print_clock_info(void)
+ {
+-	return 800000000;
++	printf("Clock: CPU     %-4d [MHz]\n", soc_get_cpu_clk() / MHz);
++	printf("       DDR     %-4d [MHz]\n", soc_get_ddr_clk() / MHz);
++	printf("       FABRIC  %-4d [MHz]\n", soc_get_ring_clk() / MHz);
++	printf("       MSS     %-4d [MHz]\n", soc_get_mss_clk() / MHz);
+ }
+diff --git a/arch/arm/cpu/armv8/armadalp/clock.c b/arch/arm/cpu/armv8/armadalp/clock.c
+index 7d66f49..59f7ab4 100644
+--- a/arch/arm/cpu/armv8/armadalp/clock.c
++++ b/arch/arm/cpu/armv8/armadalp/clock.c
+@@ -43,3 +43,11 @@ u32 soc_timer_clk_get(void)
+ {
+ 	return 800000000;
+ }
++
++void soc_print_clock_info(void)
++{
++	printf("       CPU    @ %d [MHz]\n", soc_cpu_clk_get() / 1000000);
++	printf("       L2     @ %d [MHz]\n", soc_l2_clk_get() / 1000000);
++	printf("       TClock @ %d [MHz]\n", soc_tclk_get() / 1000000);
++	printf("       DDR    @ %d [MHz]\n", soc_ddr_clk_get() / 1000000);
++}
+diff --git a/arch/arm/cpu/mvebu-common/misc.c b/arch/arm/cpu/mvebu-common/misc.c
+index f3e1d2d..259960c 100644
+--- a/arch/arm/cpu/mvebu-common/misc.c
++++ b/arch/arm/cpu/mvebu-common/misc.c
+@@ -69,35 +69,9 @@ void print_soc_specific_info(void) __attribute__((weak, alias("__print_soc_speci
+ 
+ void mvebu_print_soc_info(void)
+ {
+-#if 0
+-	char *device, *rev;
+-	char name[50];
+-	if (!mvCtrlIsValidSatR())
+-		printf("       Custom configuration\n");
+-	device = soc_get_device_name();
+-	device = soc_get_rev_name();
+-	printf("SoC:   %s-%s\n", device, rev);
+-	if (soc_get_cpu_cnt())
+-		printf("       running %d CPUs\n", mvCtrlGetCpuNum()+1);
+-
+-	mvCpuNameGet(name);
+-	printf("CPU:   %s LE",  name);
+-	if (mvCtrlGetCpuNum())
+-		printf("       CPU %d\n",  whoAmI());
+-#endif
+-	printf("       CPU    @ %d [MHz]\n", soc_cpu_clk_get() / 1000000);
+-	printf("       L2     @ %d [MHz]\n", soc_l2_clk_get() / 1000000);
+-	printf("       TClock @ %d [MHz]\n", soc_tclk_get() / 1000000);
+-	printf("       DDR    @ %d [MHz]\n", soc_ddr_clk_get() / 1000000);
+-#if 0
+-	printf("       DDR %dBit Width, %s Memory Access\n", mvCtrlDDRBusWidth(), mvCtrlDDRThruXbar()?"XBAR":"FastPath");
+-#if defined(CONFIG_ECC_SUPPORT)
+-	printf("       DDR ECC %s\n", mvCtrlDDRECC()?"Enabled":"Disabled");
+-#endif
+-#endif
++	soc_print_clock_info();
+ 
+ 	print_soc_specific_info();
+-
+ }
+ 
+ /*
+diff --git a/arch/arm/cpu/mvebu-common/tools/mvebu_sar.c b/arch/arm/cpu/mvebu-common/tools/mvebu_sar.c
+index 59c96d2..5fa7cd3 100644
+--- a/arch/arm/cpu/mvebu-common/tools/mvebu_sar.c
++++ b/arch/arm/cpu/mvebu-common/tools/mvebu_sar.c
+@@ -21,6 +21,26 @@
+ #include <asm/io.h>
+ #include <asm/arch/sar.h>
+ 
++struct sar_info sar_0[] = {
++	{"Dual AP mode       ", SAR_DUAL_AP_MODE_OFFSET, SAR_DUAL_AP_MODE_MASK },
++	{"I2C init Enable    ", SAR_I2C_INIT_EN_OFFSET, SAR_I2C_INIT_EN_MASK },
++	{"Boot Source        ", SAR_BOOT_SRC_OFFSET, SAR_BOOT_SRC_MASK },
++	{"C2C IHB select     ", SAR_C2C_IHB_OFFSET, SAR_C2C_IHB_MASK },
++	{"EFUSE ByPass       ", SAR_EFUSE_BYPASS_OFFSET, SAR_EFUSE_BYPASS_MASK },
++	{"Stand Alone AP mode", SAR_STAND_ALONE_AP_MODE_OFFSET, SAR_STAND_ALONE_AP_MODE_MASK},
++	{"Slave AP mode      ", SAR_SLAVE_AP_MODE_OFFSET, SAR_SLAVE_AP_MODE_MASK },
++	{"AVS master         ", SAR_AVS_MASTER_OFFSET, SAR_AVS_MASTER_MASK },
++	{"",			-1,			-1},
++};
++
++struct sar_info sar_1[] = {
++	{"Standalone AP      ", SAR1_STANDALONE_OFFSET, SAR1_STANDALONE_MASK},
++	{"PLL0 Config        ", SAR1_PLL0_OFFSET, SAR1_PLL0_MASK },
++	{"PLL1 Config        ", SAR1_PLL1_OFFSET, SAR1_PLL1_MASK },
++	{"PLL2 Config        ", SAR1_PLL2_OFFSET, SAR1_PLL2_MASK },
++	{"",			-1,			-1},
++};
++
+ void mvebu_sar_dump_reg(void)
+ {
+ 	u32 reg, val;
+diff --git a/arch/arm/include/asm/arch-armada8k/sar.h b/arch/arm/include/asm/arch-armada8k/sar.h
+index cef5b1f..793e6bb 100644
+--- a/arch/arm/include/asm/arch-armada8k/sar.h
++++ b/arch/arm/include/asm/arch-armada8k/sar.h
+@@ -42,12 +42,12 @@
+ 
+ #define SAMPLE_AT_RESET_REG_1		(MVEBU_REGS_BASE + 0x6F8204)
+ 
+-#define SAR1_PLL2_CONFIG_OFFSET		(15)
+-#define SAR1_PLL2_CONFIG_MASK		(0x7 << SAR1_PLL2_CONFIG_OFFSET)
+-#define SAR1_PLL1_CONFIG_OFFSET		(18)
+-#define SAR1_PLL1_CONFIG_MASK		(0x7 << SAR1_PLL1_CONFIG_OFFSET)
+-#define SAR1_PLL0_CONFIG_OFFSET		(21)
+-#define SAR1_PLL0_CONFIG_MASK		(0x7 << SAR1_PLL0_CONFIG_OFFSET)
++#define SAR1_PLL2_OFFSET		(15)
++#define SAR1_PLL2_MASK			(0x7 << SAR1_PLL2_OFFSET)
++#define SAR1_PLL1_OFFSET		(18)
++#define SAR1_PLL1_MASK			(0x7 << SAR1_PLL1_OFFSET)
++#define SAR1_PLL0_OFFSET		(21)
++#define SAR1_PLL0_MASK			(0x7 << SAR1_PLL0_OFFSET)
+ #define SAR1_STANDALONE_OFFSET		(24)
+ #define SAR1_STANDALONE_MASK		(1 << SAR1_STANDALONE_OFFSET)
+ 
+@@ -58,25 +58,4 @@ struct sar_info {
+ 	u32 mask;
+ };
+ 
+-struct sar_info sar_0[] = {
+-	{"Dual AP mode       ", SAR_DUAL_AP_MODE_OFFSET, SAR_DUAL_AP_MODE_MASK },
+-	{"I2C init Enable    ", SAR_I2C_INIT_EN_OFFSET, SAR_I2C_INIT_EN_MASK },
+-	{"Boot Source        ", SAR_BOOT_SRC_OFFSET, SAR_BOOT_SRC_MASK },
+-	{"C2C IHB select     ", SAR_C2C_IHB_OFFSET, SAR_C2C_IHB_MASK },
+-	{"EFUSE ByPass       ", SAR_EFUSE_BYPASS_OFFSET, SAR_EFUSE_BYPASS_MASK },
+-	{"Stand Alone AP mode", SAR_STAND_ALONE_AP_MODE_OFFSET, SAR_STAND_ALONE_AP_MODE_MASK},
+-	{"Slave AP mode      ", SAR_SLAVE_AP_MODE_OFFSET, SAR_SLAVE_AP_MODE_MASK },
+-	{"AVS master         ", SAR_AVS_MASTER_OFFSET, SAR_AVS_MASTER_MASK },
+-	{"",			-1,			-1},
+-};
+-
+-struct sar_info sar_1[] = {
+-	{"Standalone AP      ", SAR1_STANDALONE_OFFSET, SAR1_STANDALONE_MASK},
+-	{"PLL0 Config        ", SAR1_PLL0_CONFIG_OFFSET, SAR1_PLL0_CONFIG_MASK },
+-	{"PLL1 Config        ", SAR1_PLL1_CONFIG_OFFSET, SAR1_PLL1_CONFIG_MASK },
+-	{"PLL2 Config        ", SAR1_PLL2_CONFIG_OFFSET, SAR1_PLL2_CONFIG_MASK },
+-	{"",			-1,			-1},
+-};
+-
+-
+ #endif	/* _SAR_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/clock.h b/arch/arm/include/asm/arch-mvebu/clock.h
+index 944be53..7a79f10 100644
+--- a/arch/arm/include/asm/arch-mvebu/clock.h
++++ b/arch/arm/include/asm/arch-mvebu/clock.h
+@@ -19,9 +19,9 @@
+ #ifndef _MVEBU_CLOCK_H_
+ #define _MVEBU_CLOCK_H_
+ 
+-#define KHZ			1000
+-#define MHZ			1000000
+-#define GHZ			1000000000
++#define KHz			1000
++#define MHz			1000000
++#define GHz			1000000000
+ 
+ u32 soc_tclk_get(void);
+ u32 soc_l2_clk_get(void);
+@@ -31,5 +31,6 @@ u32 soc_timer_clk_get(void);
+ 
+ u32 soc_clock_get(const void *blob, int node);
+ u32 get_fdt_tclk(const void *blob, int node);
++void soc_print_clock_info(void);
+ 
+ #endif /* _MVEBU_CLOCK_H_ */
+-- 
+1.9.1
+

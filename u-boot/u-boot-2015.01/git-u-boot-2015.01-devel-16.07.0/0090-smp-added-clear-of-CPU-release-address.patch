@@ -1,0 +1,33 @@
+From 9eb8386bd47d7aef5a63b3eef633bb4429c14cfd Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 6 Oct 2014 16:55:08 +0300
+Subject: [PATCH 0090/1240] smp: added clear of CPU release address
+
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+
+Change-Id: Ifed9a54b1652bd9f852ce7ef3070469dec35eff9
+Reviewed-on: http://vgitil04.il.marvell.com:8080/13510
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/soc-init.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index c0d5c6a..d73b3d5 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -129,6 +129,10 @@ int mvebu_soc_init()
+ 	if (ret)
+ 		error("SOC late init failed");
+ 
++#ifdef CPU_RELEASE_ADDR
++	*(unsigned long *)CPU_RELEASE_ADDR = 0;
++#endif
++
+ 	return 0;
+ }
+ 
+-- 
+1.9.1
+

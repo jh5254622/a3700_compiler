@@ -1,0 +1,136 @@
+From 343e89572a03f252fe5ab6f10a2fb3c66265503a Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 5 Mar 2015 18:23:48 +0200
+Subject: [PATCH 0142/1240] fdt: spl: added support for FDT under SPL
+
+	- Added support for FDT under SPL
+	- Built SPL in U-Boot image
+	- Supported for A38x for now.
+
+Change-Id: I14c0b58ec1c2cbe39be59bb7f1313f778c3d6132
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17273
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/spl.c   | 16 ++++++++++++++++
+ configs/mvebu_armada38x_defconfig |  6 +++---
+ dts/Kconfig                       |  1 -
+ lib/Makefile                      |  8 +++++---
+ scripts/Makefile.spl              |  1 +
+ 5 files changed, 25 insertions(+), 7 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index 0634c16..4123210 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -18,16 +18,32 @@
+ 
+ #include <common.h>
+ #include <spl.h>
++#include <fdtdec.h>
++#include <asm/arch-mvebu/fdt.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+ extern void static_dram_init(void);
+ 
++static int setup_fdt(void)
++{
++#ifdef CONFIG_OF_CONTROL
++#ifdef CONFIG_OF_EMBED
++	/* Get a pointer to the FDT */
++	gd->fdt_blob = __dtb_dt_begin;
++#else
++	#error "Support only embedded FDT mode in SPL"
++#endif
++#endif
++	return 0;
++}
++
+ void board_init_f(ulong bootflag)
+ {
+ 	gd = &gdata;
+ 	gd->baudrate = CONFIG_BAUDRATE;
+ 
++	setup_fdt();
+ 	static_dram_init();
+ 	preloader_console_init();
+ }
+diff --git a/configs/mvebu_armada38x_defconfig b/configs/mvebu_armada38x_defconfig
+index 551f103..c24f3a9 100644
+--- a/configs/mvebu_armada38x_defconfig
++++ b/configs/mvebu_armada38x_defconfig
+@@ -3,9 +3,9 @@ CONFIG_SPL=y
+ +S:CONFIG_TARGET_ARMADA_38X=y
+ +S:CONFIG_MVEBU_UART=y
+ +S:CONFIG_MVEBU_I2C=y
+-CONFIG_OF_CONTROL=y
+-CONFIG_OF_EMBED=y
+-CONFIG_DEFAULT_DEVICE_TREE="armada-385-db"
+++S:CONFIG_OF_CONTROL=y
+++S:CONFIG_OF_EMBED=y
+++S:CONFIG_DEFAULT_DEVICE_TREE="armada-385-db"
+ CONFIG_MVEBU_NAND=y
+ CONFIG_MVEBU_SPI=y
+ CONFIG_MVEBU_PCI=y
+diff --git a/dts/Kconfig b/dts/Kconfig
+index 5fe63f8..ca5bd6f 100644
+--- a/dts/Kconfig
++++ b/dts/Kconfig
+@@ -9,7 +9,6 @@ config SUPPORT_OF_CONTROL
+ 	bool
+ 
+ menu "Device Tree Control"
+-	depends on !SPL_BUILD
+ 	depends on SUPPORT_OF_CONTROL
+ 
+ config OF_CONTROL
+diff --git a/lib/Makefile b/lib/Makefile
+index 07d175f..711a7f1 100644
+--- a/lib/Makefile
++++ b/lib/Makefile
+@@ -13,7 +13,6 @@ obj-$(CONFIG_LZO) += lzo/
+ obj-$(CONFIG_ZLIB) += zlib/
+ obj-$(CONFIG_BZIP2) += bzip2/
+ obj-$(CONFIG_TIZEN) += tizen/
+-obj-$(CONFIG_OF_LIBFDT) += libfdt/
+ obj-$(CONFIG_FIT) += libfdt/
+ 
+ obj-$(CONFIG_AES) += aes.o
+@@ -22,8 +21,6 @@ obj-y += crc7.o
+ obj-y += crc8.o
+ obj-y += crc16.o
+ obj-$(CONFIG_FIT) += fdtdec_common.o
+-obj-$(CONFIG_OF_CONTROL) += fdtdec_common.o
+-obj-$(CONFIG_OF_CONTROL) += fdtdec.o
+ obj-$(CONFIG_TEST_FDTDEC) += fdtdec_test.o
+ obj-$(CONFIG_GZIP) += gunzip.o
+ obj-$(CONFIG_GZIP_COMPRESSED) += gzip.o
+@@ -48,6 +45,11 @@ ifdef CONFIG_SPL_BUILD
+ obj-$(CONFIG_SPL_YMODEM_SUPPORT) += crc16.o
+ obj-$(CONFIG_SPL_NET_SUPPORT) += net_utils.o
+ endif
++
++obj-$(CONFIG_OF_LIBFDT) += libfdt/
++obj-$(CONFIG_OF_CONTROL) += fdtdec_common.o
++obj-$(CONFIG_OF_CONTROL) += fdtdec.o
++
+ obj-$(CONFIG_ADDR_MAP) += addr_map.o
+ obj-y += hashtable.o
+ obj-y += errno.o
+diff --git a/scripts/Makefile.spl b/scripts/Makefile.spl
+index 1b70bb8..3c5c397 100644
+--- a/scripts/Makefile.spl
++++ b/scripts/Makefile.spl
+@@ -80,6 +80,7 @@ libs-$(CONFIG_SPL_USB_HOST_SUPPORT) += drivers/usb/host/
+ libs-$(CONFIG_OMAP_USB_PHY) += drivers/usb/phy/
+ libs-$(CONFIG_SPL_SATA_SUPPORT) += drivers/block/
+ libs-$(CONFIG_MVEBU_SPL_DDR_SUPPORT) += drivers/ddr/
++libs-$(CONFIG_OF_EMBED) += dts/
+ 
+ head-y		:= $(addprefix $(obj)/,$(head-y))
+ libs-y		:= $(addprefix $(obj)/,$(libs-y))
+-- 
+1.9.1
+

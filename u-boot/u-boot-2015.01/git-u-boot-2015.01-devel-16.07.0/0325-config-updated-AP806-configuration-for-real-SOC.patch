@@ -1,0 +1,75 @@
+From 7caa9c8fa376fac8ecf7d22bc46a3eb2a62578eb Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 30 Jul 2015 16:09:17 +0300
+Subject: [PATCH 0325/1240] config: updated AP806 configuration for real SOC
+
+- Disabled palladium config
+- Added SPI and PCI drivers
+- Enabled BUBT command and fix typo in bubt command
+- Enabled Ping and Net command
+
+Change-Id: I46bea2b13ac9ffc0a2ed8e803624ce5be8549f97
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22361
+Tested-by: Star_Automation <star@marvell.com>
+---
+ common/mvebu/cmd_bubt.c        |  2 +-
+ configs/mvebu_apn806_defconfig | 10 ++++++++--
+ 2 files changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/common/mvebu/cmd_bubt.c b/common/mvebu/cmd_bubt.c
+index e4dcb91..2555c96 100644
+--- a/common/mvebu/cmd_bubt.c
++++ b/common/mvebu/cmd_bubt.c
+@@ -28,7 +28,7 @@
+ #include <nand.h>
+ 
+ #if defined(CONFIG_TARGET_ARMADA_8K)
+-#define MAIN_HDR_MAGIC		B105B002
++#define MAIN_HDR_MAGIC		0xB105B002
+ 
+ struct mvebu_image_header {
+ 	uint32_t	magic;			/*  0-3  */
+diff --git a/configs/mvebu_apn806_defconfig b/configs/mvebu_apn806_defconfig
+index f300841..07cd9b7 100644
+--- a/configs/mvebu_apn806_defconfig
++++ b/configs/mvebu_apn806_defconfig
+@@ -2,9 +2,11 @@ CONFIG_SPL=y
+ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_ARMADA_8K=y
++# CONFIG_PALLADIUM is not set
++CONFIG_MVEBU_SPI=y
++CONFIG_MVEBU_PCI=y
+ CONFIG_MVEBU_MPP_BUS=y
+ CONFIG_MVEBU_I2C=y
+-+S:CONFIG_MVEBU_MK6_SUPPORT=y
+ +S:CONFIG_DEVEL_BOARD=y
+ CONFIG_APN_806_DB=y
+ CONFIG_CMD_BOOTD=y
+@@ -13,13 +15,15 @@ CONFIG_CMD_EDITENV=y
+ CONFIG_CMD_SAVEENV=y
+ CONFIG_CMD_MEMORY=y
+ CONFIG_CMD_MEMTEST=y
+-CONFIG_CMD_PCI=y
+ CONFIG_CMD_I2C=y
++CONFIG_CMD_NET=y
++CONFIG_CMD_PING=y
+ CONFIG_CMD_TIME=y
+ CONFIG_CMD_MISC=y
+ CONFIG_CMD_TIMER=y
+ CONFIG_CMD_MVEBU_SAR=y
+ CONFIG_CMD_MVEBU_MPP=y
++CONFIG_CMD_MVEBU_BUBT=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="apn-806-db"
+@@ -27,3 +31,5 @@ CONFIG_MVEBU_CCU=y
+ CONFIG_MVEBU_RFU=y
+ +S:CONFIG_SYS_NS16550=y
+ CONFIG_MVEBU_PINCTL=y
+++S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+++S:CONFIG_MVEBU_MK6_SUPPORT=y
+-- 
+1.9.1
+

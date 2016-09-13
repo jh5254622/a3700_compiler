@@ -1,0 +1,65 @@
+From d7b7beb619732f6c51eae0c4145f27da7a826fce Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 3 Mar 2015 14:18:23 +0200
+Subject: [PATCH 02/66] aarch64: defconfig: Add mvebu_armv8_le_defconfig
+ file-system configuration
+
+	This configuration includes the common set of utilities for aarch64
+	targets. This is useful for running benchmarks, statistics...
+
+Change-Id: I8f4ed2a69f7a2f94fb5af62cb49d4ff9a448c40d
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17202
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ configs/mvebu_armv8_le_defconfig | 38 ++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 38 insertions(+)
+ create mode 100644 configs/mvebu_armv8_le_defconfig
+
+diff --git a/configs/mvebu_armv8_le_defconfig b/configs/mvebu_armv8_le_defconfig
+new file mode 100644
+index 0000000..d6a5a0a
+--- /dev/null
++++ b/configs/mvebu_armv8_le_defconfig
+@@ -0,0 +1,38 @@
++BR2_aarch64=y
++BR2_TOOLCHAIN_EXTERNAL=y
++BR2_TARGET_GENERIC_GETTY_PORT="ttyAMA0"
++BR2_PACKAGE_BZIP2=y
++BR2_PACKAGE_DHRYSTONE=y
++BR2_PACKAGE_LMBENCH=y
++BR2_PACKAGE_MEMSTAT=y
++BR2_PACKAGE_STRACE=y
++BR2_PACKAGE_STRESS=y
++BR2_PACKAGE_WHETSTONE=y
++BR2_PACKAGE_E2FSPROGS=y
++BR2_PACKAGE_I2C_TOOLS=y
++BR2_PACKAGE_IOSTAT=y
++BR2_PACKAGE_LM_SENSORS=y
++BR2_PACKAGE_LSHW=y
++BR2_PACKAGE_MDADM=y
++BR2_PACKAGE_PARTED=y
++BR2_PACKAGE_SDPARM=y
++BR2_PACKAGE_SMARTMONTOOLS=y
++BR2_PACKAGE_SYSSTAT=y
++BR2_PACKAGE_BC=y
++BR2_PACKAGE_ARPTABLES=y
++BR2_PACKAGE_BRIDGE_UTILS=y
++BR2_PACKAGE_DHCPCD=y
++BR2_PACKAGE_ETHTOOL=y
++BR2_PACKAGE_IFTOP=y
++BR2_PACKAGE_IPERF=y
++BR2_PACKAGE_IPERF3=y
++BR2_PACKAGE_IPTABLES=y
++BR2_PACKAGE_SAMBA=y
++BR2_PACKAGE_TCPDUMP=y
++BR2_PACKAGE_VSFTPD=y
++BR2_PACKAGE_FILE=y
++BR2_PACKAGE_FTOP=y
++BR2_PACKAGE_HTOP=y
++BR2_TARGET_ROOTFS_CPIO=y
++BR2_TARGET_ROOTFS_TAR_GZIP=y
++BR2_PACKAGE_HOST_MKE2IMG=y
+-- 
+1.9.1
+

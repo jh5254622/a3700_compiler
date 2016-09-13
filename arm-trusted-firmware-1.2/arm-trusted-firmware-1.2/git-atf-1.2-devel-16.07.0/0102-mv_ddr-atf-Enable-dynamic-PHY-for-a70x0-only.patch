@@ -1,0 +1,32 @@
+From 6a628dbed9c0db9a2a671803a50c0e45dd3207a8 Mon Sep 17 00:00:00 2001
+From: Victor Axelrod <victora@marvell.com>
+Date: Mon, 11 Apr 2016 17:56:28 +0300
+Subject: [PATCH 102/239] mv_ddr: atf: Enable dynamic PHY for a70x0 only
+
+Change-Id: I0a0aded00e2da8623a9f6ff75f004150cb54c5df
+Signed-off-by: Victor Axelrod <victora@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28935
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/Makefile | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/drivers/marvell/mv_ddr/Makefile b/drivers/marvell/mv_ddr/Makefile
+index a9bf994..8b8d170 100644
+--- a/drivers/marvell/mv_ddr/Makefile
++++ b/drivers/marvell/mv_ddr/Makefile
+@@ -227,6 +227,10 @@ CFLAGS += -march=armv8-a -fpie $(INCLUDE) -D$(PLATFORM)
+ 
+ CFLAGS += -DMV_DDR_ATF -DCONFIG_APN806 -DCONFIG_MC_STATIC
+ 
++ifneq ($(PLAT),a70x0)
++CFLAGS += -DCONFIG_PHY_STATIC
++endif
++
+ ifeq ($(MV_DDR4),y)
+ CFLAGS += -DCONFIG_DDR4
+ endif
+-- 
+1.9.1
+

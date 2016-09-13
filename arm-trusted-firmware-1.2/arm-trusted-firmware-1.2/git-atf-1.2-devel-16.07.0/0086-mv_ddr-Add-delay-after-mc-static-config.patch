@@ -1,0 +1,33 @@
+From 8288589027c92bea5b59e47cc98915e387c60cc8 Mon Sep 17 00:00:00 2001
+From: Victor Axelrod <victora@marvell.com>
+Date: Tue, 5 Apr 2016 15:20:51 +0300
+Subject: [PATCH 086/239] mv_ddr: Add delay after mc static config
+
+The delay is required to ensure the HW init sequence is done
+
+Change-Id: Ie14e52ab7bb54804c8e296204eac04496fda7bbe
+Signed-off-by: Victor Axelrod <victora@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28793
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+index a10ca01..d26473b 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+@@ -647,6 +647,9 @@ int mv_ddr_mc_static_config(void)
+ #else
+ 	mk6_mac_init();
+ #endif
++
++	mdelay(10);
++
+ 	return MV_OK;
+ }
+ 
+-- 
+1.9.1
+

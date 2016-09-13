@@ -1,0 +1,42 @@
+From 321ff662687301384d505141f66320ea265d7c2c Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 28 Apr 2016 13:58:38 +0300
+Subject: [PATCH 1083/1240] doc: mmc: add bus-width option to device-tree
+ binding documentation
+
+Change-Id: Ic639f92eae61c9c7ccfbfde0603b34b01eb71dbd
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29407
+Reviewed-by: Gina Tadmore <gina@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ doc/device-tree-bindings/mmc/xenon-mmc.txt | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/doc/device-tree-bindings/mmc/xenon-mmc.txt b/doc/device-tree-bindings/mmc/xenon-mmc.txt
+index 4741d74..bb9211f 100644
+--- a/doc/device-tree-bindings/mmc/xenon-mmc.txt
++++ b/doc/device-tree-bindings/mmc/xenon-mmc.txt
+@@ -3,8 +3,8 @@ This file documents the properties used by the sdhci-xenon drivers.
+ 
+ Required properties:
+ - compatible: Should be "marvell,xenon-sdhci".
+-- reg: base register offiset for the SDHCI registers.
+-- status: enable or disable this node
++- reg: Base register offiset for the SDHCI registers.
++- status: Enable or disable this node
+ 
+ Optional properties:
+ - xenon,emmc: whether only used for eMMC mode(does not support SD)
+@@ -13,6 +13,8 @@ Optional properties:
+   inform driver whether current slot is used for eMMC or SD/SDIO.
+   If this property is set, current slot will be used for eMMC.
+   If this property is not set, current slot will be used for SD/SDIO.
++- bus-width: Number of data lines, can be <1>, <4>, or <8>.  The default
++  will be <1> if the property is absent.
+ 
+ Example:
+ mmc0: mmc@D8000 {
+-- 
+1.9.1
+

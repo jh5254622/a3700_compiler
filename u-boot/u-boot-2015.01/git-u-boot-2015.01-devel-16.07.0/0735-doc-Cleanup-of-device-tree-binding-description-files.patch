@@ -1,0 +1,320 @@
+From 2ff15917f215674974f775ef72352caa9a2d763e Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 26 Jan 2016 13:55:10 +0200
+Subject: [PATCH 0735/1240] doc: Cleanup of device-tree-binding description
+ files
+
+	Align to a common template.
+
+Change-Id: Ia2e8c3cfe189c80e9fa1c054a484a0fa35a152a0
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27030
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ doc/device-tree-bindings/ddr/mvebu_ddr.txt            |  4 ++--
+ doc/device-tree-bindings/i2c/mvebu-i2c.txt            |  5 ++++-
+ doc/device-tree-bindings/misc/mvebu-ccu.txt           |  4 ++--
+ doc/device-tree-bindings/misc/mvebu-iob.txt           |  2 +-
+ doc/device-tree-bindings/misc/mvebu-pinctl.txt        |  2 +-
+ doc/device-tree-bindings/misc/mvebu-rfu.txt           |  4 ++--
+ doc/device-tree-bindings/nand/marvell-pxa3xx-nand.txt |  6 ++++--
+ doc/device-tree-bindings/net/mvebu-mdio.txt           |  5 +++--
+ doc/device-tree-bindings/pci/mvebu-pci.txt            |  4 ++--
+ doc/device-tree-bindings/phy/mvebu_comphy.txt         |  2 +-
+ doc/device-tree-bindings/sata/mvebu-sata.txt          |  9 ++++-----
+ doc/device-tree-bindings/serial/mvebu-serial.txt      | 10 ++++------
+ doc/device-tree-bindings/spi/mvebu-spi.txt            |  4 ++--
+ doc/device-tree-bindings/thermal/mvebu-thermal-v2.txt |  2 +-
+ doc/device-tree-bindings/usb/mvebu-usb3.txt           |  7 +++----
+ doc/mvebu/porting_guide.txt                           |  2 +-
+ 16 files changed, 37 insertions(+), 35 deletions(-)
+
+diff --git a/doc/device-tree-bindings/ddr/mvebu_ddr.txt b/doc/device-tree-bindings/ddr/mvebu_ddr.txt
+index e1a372d..0692536 100644
+--- a/doc/device-tree-bindings/ddr/mvebu_ddr.txt
++++ b/doc/device-tree-bindings/ddr/mvebu_ddr.txt
+@@ -5,11 +5,11 @@ The DDR node includes description about the DDR controller and PHY configuration
+ The driver runs in SPL mode, and is responsible to initial the DDR PHY and controller
+ according to user define paramters.
+ 
+-The DDR PHY node requires the following properties:
++DDR PHY mandatory properties:
+ 	- compatible: "marvell,mvebu-ddr-phy"
+ 	- reg: Base address of the DDR PHY registers.
+ 
+-The DDR MAC node requires the following properties:
++DDR MAC mandatory properties:
+ 	- compatible: "marvell,mvebu-ddr-mac"
+ 	- reg: Base address of the DDR MAC registers.
+ 	- cs_count: Number of DDR Chip-Selects on board.
+diff --git a/doc/device-tree-bindings/i2c/mvebu-i2c.txt b/doc/device-tree-bindings/i2c/mvebu-i2c.txt
+index c1e5dd9..53a5a37 100644
+--- a/doc/device-tree-bindings/i2c/mvebu-i2c.txt
++++ b/doc/device-tree-bindings/i2c/mvebu-i2c.txt
+@@ -1,7 +1,10 @@
+ Marvell I2C bindings
+ ====================
+ 
+-The I2C node requires the following properties:
++I2C driver provides read / write access to external peripherals
++using the I2C bus.
++
++Mandatory properties:
+ 	- compatible = "marvell,mvebu-i2c";
+ 	- reg = <0x511000 0x4>;
+ 		base address of I2C-0
+diff --git a/doc/device-tree-bindings/misc/mvebu-ccu.txt b/doc/device-tree-bindings/misc/mvebu-ccu.txt
+index a63e692..6de2da3 100644
+--- a/doc/device-tree-bindings/misc/mvebu-ccu.txt
++++ b/doc/device-tree-bindings/misc/mvebu-ccu.txt
+@@ -3,7 +3,7 @@ Marvell CCU address decoding bindings
+ 
+ The CCU node include describtion about the address decoding configuration.
+ 
+-The CCU node requires the following properties:
++Mandatory properties:
+ 	- compatible
+ 		should be "marvell,mvebu-ccu"
+ 	- reg: the base address of the CCU unit
+@@ -16,7 +16,7 @@ The CCU node requires the following properties:
+ 	  - low size of the window
+ 	  - target-id of the window
+ 
+-Note: if the base address is more than 32bit, it divided into high and low,
++Note: if the base address is more than 32bit, it should be divided into high and low,
+ 	same for size field, if it more that 32bit, it divided for high and low.
+ 	Base example:
+ 		base address: 0x10f0000000 should divided into:
+diff --git a/doc/device-tree-bindings/misc/mvebu-iob.txt b/doc/device-tree-bindings/misc/mvebu-iob.txt
+index d1159ca..6f6a326 100644
+--- a/doc/device-tree-bindings/misc/mvebu-iob.txt
++++ b/doc/device-tree-bindings/misc/mvebu-iob.txt
+@@ -8,7 +8,7 @@ When a transaction passes through the IOB, its address is compared to each of
+ the enabled windows. If there is a hit and it passes the security checks it is
+ advances to the target port.
+ 
+-The IOB node requires the following properties:
++Mandatory properties:
+ 	- compatible
+ 		should be "marvell,mvebu-iob"
+ 	- reg: the base address of the IOB unit
+diff --git a/doc/device-tree-bindings/misc/mvebu-pinctl.txt b/doc/device-tree-bindings/misc/mvebu-pinctl.txt
+index 840a57d..c9cbd5c 100644
+--- a/doc/device-tree-bindings/misc/mvebu-pinctl.txt
++++ b/doc/device-tree-bindings/misc/mvebu-pinctl.txt
+@@ -6,7 +6,7 @@ of multi purpose pins and controlling GPIOs. each dt
+ entry describes a single pinctl bank. an SOC may
+ have several pinctl banks.
+ 
+-The mvebu-pinctl requires the following proprties:
++Mandatory proprties:
+ 	- compatible
+ 	  	should be "marvell, mvebu-pinctl"
+ 	- bank-name
+diff --git a/doc/device-tree-bindings/misc/mvebu-rfu.txt b/doc/device-tree-bindings/misc/mvebu-rfu.txt
+index b54f875..81149d1 100644
+--- a/doc/device-tree-bindings/misc/mvebu-rfu.txt
++++ b/doc/device-tree-bindings/misc/mvebu-rfu.txt
+@@ -6,13 +6,13 @@ Transactions that are decoded by CCU windows as IO peripheral, have an additiona
+ layer of decoding, this additional address decoding layer defines one of the
+ following targets:
+ 	0x0 = BootRom
+-	0x1 = STM (Serial Trace Macro-cell, a programmer’s port into trace stream)
++	0x1 = STM (Serial Trace Macro-cell, a programmer's port into trace stream)
+ 	0x2 = SPI direct access
+ 	0x3 = PCIe registers
+ 	0x4 = IHB Port
+ 	0x5 = PCIe port
+ 
+-The RFU node requires the following properties:
++Mandatory properties:
+ 	- compatible
+ 		should be "marvell,mvebu-rfu"
+ 	- reg: the base address of the RFU window
+diff --git a/doc/device-tree-bindings/nand/marvell-pxa3xx-nand.txt b/doc/device-tree-bindings/nand/marvell-pxa3xx-nand.txt
+index f7f0adb..08526a9 100644
+--- a/doc/device-tree-bindings/nand/marvell-pxa3xx-nand.txt
++++ b/doc/device-tree-bindings/nand/marvell-pxa3xx-nand.txt
+@@ -1,7 +1,9 @@
+ PXA3xx NAND DT bindings
+------------------------
++=======================
+ 
+-Required properties:
++Implementation of NAND controller device driver for Marvell SoC's
++
++Mandatory properties:
+ - compatible:          Should be set to: marvell,mvebu-pxa3xx-nand
+ - reg:                 The register base for the controller
+ - #address-cells:      Set to <1> if the node includes partitions
+diff --git a/doc/device-tree-bindings/net/mvebu-mdio.txt b/doc/device-tree-bindings/net/mvebu-mdio.txt
+index b66426e..b564146 100644
+--- a/doc/device-tree-bindings/net/mvebu-mdio.txt
++++ b/doc/device-tree-bindings/net/mvebu-mdio.txt
+@@ -1,9 +1,10 @@
+ Marvell MDIO bindings
+ ====================
+ 
+-This MDIO driver supports Marvell SoC, which implements the SMI/XSMI transactions.
++The MDIO driver implements the required APIs to access
++ethernet PHYs/switches, using the SMI or XSMI protocols.
+ 
+-The MDIO node requires the following properties:
++Mandatory properties:
+ 	- compatible
+ 		should be "marvell,mvebu-mdio".
+ 	- reg_xsmi: the base address XSMI bus.
+diff --git a/doc/device-tree-bindings/pci/mvebu-pci.txt b/doc/device-tree-bindings/pci/mvebu-pci.txt
+index 8a22a38..f82de6f 100644
+--- a/doc/device-tree-bindings/pci/mvebu-pci.txt
++++ b/doc/device-tree-bindings/pci/mvebu-pci.txt
+@@ -4,7 +4,7 @@ Marvell MVEBU PCIe bindings
+ The mvebu-pcie driver controls a set of PCIe ports
+ that make up PCIe bus.
+ 
+-The mvebu-pcie requires the following proprties:
++Mandatory proprties:
+ 	- compatible
+ 		should be "marvell,mvebu-pcie" for legacy Marvell EBU PCIe IP,
+ 		and "marvell,advk-pcie" for Marvell Ardvark PCIe IP.
+@@ -21,7 +21,7 @@ The mvebu-pcie requires the following proprties:
+ 		- status
+ 			the pcie port's status. can be "okay" or "disabled".
+ 
+-Example of a pinctl bank node:
++Example of a pcie node:
+ 	pcie-controller {
+ 		#address-cells = <1>;
+ 		#size-cells = <1>;
+diff --git a/doc/device-tree-bindings/phy/mvebu_comphy.txt b/doc/device-tree-bindings/phy/mvebu_comphy.txt
+index 04da437..e0fefbe 100644
+--- a/doc/device-tree-bindings/phy/mvebu_comphy.txt
++++ b/doc/device-tree-bindings/phy/mvebu_comphy.txt
+@@ -5,7 +5,7 @@ The COMPHY node include description about the COMPHY SerDes lane configuration.
+ The comphy driver initialize the MUX of the SerDes lanes, and power up the serdes
+ by dependencies on the FDT blob configurations
+ 
+-The COMPHY node requires the following properties:
++Mandatory properties:
+ 	- compatible:
+ 		the compatible should include "marvell,mvebu-comphy"
+ 		and the COMPHY per chip compatible:
+diff --git a/doc/device-tree-bindings/sata/mvebu-sata.txt b/doc/device-tree-bindings/sata/mvebu-sata.txt
+index 0c1a34d..ce19835 100644
+--- a/doc/device-tree-bindings/sata/mvebu-sata.txt
++++ b/doc/device-tree-bindings/sata/mvebu-sata.txt
+@@ -1,16 +1,15 @@
+ Marvell EBU SATA bindings
+-====================
++=========================
+ 
+-This SATA driver supports Marvell EBU SoC, which implements the SATA core operations.
+-The node name is sata0 to show that it's SATA-0, for SATA-1 should be sata1.
++Support for the AHCI based Sata unit in mvebu SoC's.
+ 
+-The SATA node requires the following properties:
++Mandatory properties:
+ 	- compatible
+ 		should be "marvell,mvebu-sata".
+ 	- reg: the base address of the SATA unit.
+ 
+ Example for SATA-0 node:
+-	sata: sata@e0000 {
++	sata0@e0000 {
+ 		compatible = "marvell,mvebu-sata";
+ 		reg = <0xe0000 0x20>;
+ 		status = "disabled";
+diff --git a/doc/device-tree-bindings/serial/mvebu-serial.txt b/doc/device-tree-bindings/serial/mvebu-serial.txt
+index c0e3d68..3a53636 100644
+--- a/doc/device-tree-bindings/serial/mvebu-serial.txt
++++ b/doc/device-tree-bindings/serial/mvebu-serial.txt
+@@ -1,12 +1,10 @@
+ Marvell ArmadaLP UART bindings
+-====================
++==============================
+ 
+-This UART driver supports Marvell ArmadaLP SoC, which implements the uart core operations.
+-The node name is serial0 to show that it's UART-0, for UART-1 should be serial1.
++UART driver for Marvell ArmadaLP SoC's.
+ 
+-The armadaLP serial node requires the following properties:
+-	- compatible
+-		should be "marvell,armadalp-uart"
++Mandatory properties:
++	- compatible: should be "marvell,armadalp-uart"
+ 	- reg: the base address of the UART unit
+ 	- clock_frequency: input clock frequency of UART unit
+ 	- baudrate: the baudrate of the UART unit
+diff --git a/doc/device-tree-bindings/spi/mvebu-spi.txt b/doc/device-tree-bindings/spi/mvebu-spi.txt
+index ad03bdc..3114969 100644
+--- a/doc/device-tree-bindings/spi/mvebu-spi.txt
++++ b/doc/device-tree-bindings/spi/mvebu-spi.txt
+@@ -1,9 +1,9 @@
+ Marvell SPI bindings
+ ====================
+ 
+-The node name is spi0 to show that it's SPI-0, for SPI-1 should be spi1.
++Driver for SPI bus in Marvell's Armada-8K SoCs
+ 
+-The SPI node requires the following properties:
++Mandatory properties:
+ 	- compatible = "marvell,orion-spi";
+ 	- reg = <0x510600 0x50>;
+ 		base address of SPI-0
+diff --git a/doc/device-tree-bindings/thermal/mvebu-thermal-v2.txt b/doc/device-tree-bindings/thermal/mvebu-thermal-v2.txt
+index 4f018de..ff3c15d 100644
+--- a/doc/device-tree-bindings/thermal/mvebu-thermal-v2.txt
++++ b/doc/device-tree-bindings/thermal/mvebu-thermal-v2.txt
+@@ -5,7 +5,7 @@ The thermal node v2 include description about the Thermal Sensor External Unit.
+ The thernal sensor v2 is an on chip temprature sensor that read the temprature of
+ every core and return the average or the maximum between them.
+ 
+-The thermal node requires the following properties:
++Mandatory properties:
+ 	- compatible
+ 		should be "marvell,thermal-sensor-v2"
+ 	- reg: the base address of thermal unit
+diff --git a/doc/device-tree-bindings/usb/mvebu-usb3.txt b/doc/device-tree-bindings/usb/mvebu-usb3.txt
+index ff03a8c..3e3fd54 100644
+--- a/doc/device-tree-bindings/usb/mvebu-usb3.txt
++++ b/doc/device-tree-bindings/usb/mvebu-usb3.txt
+@@ -1,12 +1,11 @@
+ Marvell EBU USB 3.0 bindings
+-====================
++============================
+ 
+ This USB 3.0 driver is based on mainline xHCI, and it supports Marvell EBU SoC,
+ which implements the xHCI core operations.
+ 
+-The USB 3.0 node requires the following properties:
+-	- compatible
+-		should be "marvell,mvebu-usb3".
++Mandatory properties:
++	- compatible: should be "marvell,mvebu-usb3".
+ 	- reg: the base address of the xHCI unit.
+ 
+ Example for USB 3.0 node:
+diff --git a/doc/mvebu/porting_guide.txt b/doc/mvebu/porting_guide.txt
+index 985026d..ec09359 100644
+--- a/doc/mvebu/porting_guide.txt
++++ b/doc/mvebu/porting_guide.txt
+@@ -80,7 +80,6 @@ Customer board porting procedure
+ 		o I2C - i2c/mvebu-i2c.txt
+ 		o SMI / XSMI - net/mvebu-mdio.txt
+ 		o SATA - sata/mvebu-sata.txt
+-		o Serial - serial/mvebu-serial.txt
+ 		o USB - usb/mvebu-usb3.txt
+ 		o PCIe - pci/mvebu-pci.txt
+ 
+@@ -96,6 +95,7 @@ Customer board porting procedure
+ 
+ 	3.2. Armada-3700 SoC family
+ 	-------------------------
++		o Serial - serial/mvebu-serial.txt
+ 		o Clock - clock/mvebu-clock.txt
+ 		o IO-Decode - misc/mvebu-io-decode.txt
+ 		o MBUS - misc/mvebu-mbus.txt
+-- 
+1.9.1
+

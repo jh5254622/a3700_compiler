@@ -1,0 +1,66 @@
+From 8fda68097aabd4bd07241b75ef996fbed7c502a7 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 8 May 2016 19:51:44 +0300
+Subject: [PATCH 1101/1240] fix: comphy: usb: update USB3.0 transmitter
+ configuration
+
+Added 2 configuration of transmitter in USB3 COMPHY init sequence,
+this changes sets the de-emphasize level of the Transmitter to 3.5dB as required in the USB3,
+and override the tx margining from the MAC
+
+Change-Id: I437fbba4f6b05ce7f330a332312ba6509ebc9088
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29618
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/include/asm/arch-mvebu/comphy_hpipe.h | 8 ++++++++
+ drivers/phy/comphy_cp110.c                     | 6 ++++++
+ 2 files changed, 14 insertions(+)
+
+diff --git a/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h b/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h
+index 342d5c0..723f650 100644
+--- a/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h
++++ b/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h
+@@ -235,6 +235,10 @@
+ #define HPIPE_DFE_CTRL_28_PIPE4_OFFSET		7
+ #define HPIPE_DFE_CTRL_28_PIPE4_MASK		(0x1 << HPIPE_DFE_CTRL_28_PIPE4_OFFSET)
+ 
++#define HPIPE_LANE_CONFIG0_REG			0x600
++#define HPIPE_LANE_CONFIG0_TXDEEMPH0_OFFSET	0
++#define HPIPE_LANE_CONFIG0_TXDEEMPH0_MASK	(0x1 << HPIPE_LANE_CONFIG0_TXDEEMPH0_OFFSET)
++
+ #define HPIPE_LANE_CONFIG1_REG			0x604
+ #define HPIPE_LANE_CONFIG1_MAX_PLL_OFFSET	9
+ #define HPIPE_LANE_CONFIG1_MAX_PLL_MASK		(0x1 << HPIPE_LANE_CONFIG1_MAX_PLL_OFFSET)
+@@ -271,6 +275,10 @@
+ #define HPIPE_RST_CLK_CTRL_CORE_FREQ_SEL_OFFSET	9
+ #define HPIPE_RST_CLK_CTRL_CORE_FREQ_SEL_MASK	(0x1 << HPIPE_RST_CLK_CTRL_CORE_FREQ_SEL_OFFSET)
+ 
++#define HPIPE_TST_MODE_CTRL_REG			0x708
++#define HPIPE_TST_MODE_CTRL_MODE_MARGIN_OFFSET	2
++#define HPIPE_TST_MODE_CTRL_MODE_MARGIN_MASK	(0x1 << HPIPE_TST_MODE_CTRL_MODE_MARGIN_OFFSET)
++
+ #define HPIPE_CLK_SRC_LO_REG			0x70c
+ #define HPIPE_CLK_SRC_LO_BUNDLE_PERIOD_SEL_OFFSET	1
+ #define HPIPE_CLK_SRC_LO_BUNDLE_PERIOD_SEL_MASK		(0x1 << HPIPE_CLK_SRC_LO_BUNDLE_PERIOD_SEL_OFFSET)
+diff --git a/drivers/phy/comphy_cp110.c b/drivers/phy/comphy_cp110.c
+index a8ff1b8..c3abc7c 100644
+--- a/drivers/phy/comphy_cp110.c
++++ b/drivers/phy/comphy_cp110.c
+@@ -483,6 +483,12 @@ static int comphy_usb3_power_up(u32 lane, void __iomem *hpipe_base, void __iomem
+ 	/* Set select data width 20Bit (SEL_BITS[2:0]) */
+ 	reg_set(hpipe_addr + HPIPE_LOOPBACK_REG,
+ 		0x1 << HPIPE_LOOPBACK_SEL_OFFSET, HPIPE_LOOPBACK_SEL_MASK);
++	/* select de-emphasize 3.5db */
++	reg_set(hpipe_addr + HPIPE_LANE_CONFIG0_REG,
++		0x1 << HPIPE_LANE_CONFIG0_TXDEEMPH0_OFFSET, HPIPE_LANE_CONFIG0_TXDEEMPH0_MASK);
++	/* override tx margining from the MAC */
++	reg_set(hpipe_addr + HPIPE_TST_MODE_CTRL_REG,
++		0x1 << HPIPE_TST_MODE_CTRL_MODE_MARGIN_OFFSET, HPIPE_TST_MODE_CTRL_MODE_MARGIN_MASK);
+ 
+ 	/* Start analog paramters from ETP(HW) */
+ 	debug("stage: Analog paramters from ETP(HW)\n");
+-- 
+1.9.1
+

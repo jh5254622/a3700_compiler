@@ -1,0 +1,29 @@
+From 048735f43c5f6001bb2c04f07d46b7d3feb6c48b Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Tue, 19 Apr 2016 21:27:56 +0800
+Subject: [PATCH 137/239] sysinfo: a3700: enable sysinfo for a3700
+
+Change-Id: I0a51645f0f84bf712c719a8b0298a217c7205aa8
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29175
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ plat/marvell/a3700/a3700_z/platform.mk | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/plat/marvell/a3700/a3700_z/platform.mk b/plat/marvell/a3700/a3700_z/platform.mk
+index 86d4f7e..5cdd21d 100644
+--- a/plat/marvell/a3700/a3700_z/platform.mk
++++ b/plat/marvell/a3700/a3700_z/platform.mk
+@@ -72,6 +72,7 @@ BL31_SOURCES		+=	lib/cpus/aarch64/cortex_a53.S		\
+ 				$(PLAT_SRC_BASE)/plat_pm.c		\
+ 				$(PLAT_SRC_BASE)/plat_topology.c	\
+ 				$(PLAT_SRC_BASE)/plat_bl31_setup.c	\
++				plat/marvell/common/sys_info.c		\
+ 				plat/marvell/common/marvell_gicv3.c	\
+ 				${MARVELL_GIC_SOURCES}
+ 
+-- 
+1.9.1
+

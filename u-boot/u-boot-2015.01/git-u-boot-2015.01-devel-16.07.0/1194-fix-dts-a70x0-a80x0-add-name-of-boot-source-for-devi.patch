@@ -1,0 +1,104 @@
+From d2f30d61a18d5ada9ecb95a926df551f7bb737ae Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 9 Jun 2016 09:35:33 +0300
+Subject: [PATCH 1194/1240] fix: dts: a70x0: a80x0: add name of boot source for
+ device trees
+
+- add name boot source for device trees, should be more clear because there's
+  spesific device tree for different bootsrc
+
+Change-Id: I7612dcfc9442c253c6837e220c737d396a323a6f
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30380
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/armada-70x0-customer0.dts   | 2 +-
+ arch/arm/dts/armada-70x0-db_all_pcie.dts | 2 +-
+ arch/arm/dts/armada-70x0-db_kr.dts       | 2 +-
+ arch/arm/dts/armada-70x0-db_router.dts   | 2 +-
+ arch/arm/dts/armada-80x0-db-10G.dts      | 2 +-
+ arch/arm/dts/armada-80x0-db-SGMII.dts    | 2 +-
+ 6 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/dts/armada-70x0-customer0.dts b/arch/arm/dts/armada-70x0-customer0.dts
+index c938ac2..4600198 100644
+--- a/arch/arm/dts/armada-70x0-customer0.dts
++++ b/arch/arm/dts/armada-70x0-customer0.dts
+@@ -21,7 +21,7 @@
+ #include "armada-70x0.dtsi" /* include SoC device tree */
+ 
+ / {
+-	model = "DB-ARMADA-70x0 (Customer)";
++	model = "DB-ARMADA-70x0 (SPI-Customer)";
+ 	compatible = "marvell,armada-70x0";
+ 	fdt_config_id = <2>;
+ 	board_id = <0x12>;
+diff --git a/arch/arm/dts/armada-70x0-db_all_pcie.dts b/arch/arm/dts/armada-70x0-db_all_pcie.dts
+index b5996b9..6876863 100644
+--- a/arch/arm/dts/armada-70x0-db_all_pcie.dts
++++ b/arch/arm/dts/armada-70x0-db_all_pcie.dts
+@@ -22,7 +22,7 @@
+ #include "armada-70x0-dev-info.dtsi" /* include Marvell specific info (S@R, MPP cmd) */
+ 
+ / {
+-	model = "DB-ARMADA-7040-A0 (ALL_PCI)";
++	model = "DB-ARMADA-70x0 (SPI-ALL_PCI)";
+ 	compatible = "marvell,armada-70x0-db", "marvell,armada-70x0";
+ 	fdt_config_id = <4>;
+ 	board_id = <0x12>;
+diff --git a/arch/arm/dts/armada-70x0-db_kr.dts b/arch/arm/dts/armada-70x0-db_kr.dts
+index d802481..834db5f 100644
+--- a/arch/arm/dts/armada-70x0-db_kr.dts
++++ b/arch/arm/dts/armada-70x0-db_kr.dts
+@@ -22,7 +22,7 @@
+ #include "armada-70x0-dev-info.dtsi" /* include Marvell specific info (S@R, MPP cmd) */
+ 
+ / {
+-	model = "DB-ARMADA-70x0 (KR)";
++	model = "DB-ARMADA-70x0 (SPI-KR)";
+ 	compatible = "marvell,armada-70x0-db", "marvell,armada-70x0";
+ 	fdt_config_id = <3>;
+ 	board_id = <0x12>;
+diff --git a/arch/arm/dts/armada-70x0-db_router.dts b/arch/arm/dts/armada-70x0-db_router.dts
+index 7a52088..a2e1165 100644
+--- a/arch/arm/dts/armada-70x0-db_router.dts
++++ b/arch/arm/dts/armada-70x0-db_router.dts
+@@ -22,7 +22,7 @@
+ #include "armada-70x0-dev-info.dtsi" /* include Marvell specific info (S@R, MPP cmd) */
+ 
+ / {
+-	model = "DB-ARMADA-70x0 (ROUTER)";
++	model = "DB-ARMADA-70x0 (SPI-ROUTER)";
+ 	compatible = "marvell,armada-70x0-db", "marvell,armada-70x0";
+ 	fdt_config_id = <1>;
+ 	board_id = <0x12>;
+diff --git a/arch/arm/dts/armada-80x0-db-10G.dts b/arch/arm/dts/armada-80x0-db-10G.dts
+index 82823be..7e31934 100644
+--- a/arch/arm/dts/armada-80x0-db-10G.dts
++++ b/arch/arm/dts/armada-80x0-db-10G.dts
+@@ -20,7 +20,7 @@
+ 
+ #include "armada-80x0-db.dtsi" /* include initial Board device tree */
+ / {
+-	model = "DB-ARMADA-80x0 (Default - 10G)";
++	model = "DB-ARMADA-80x0 (SPI-Default-10G)";
+ 	compatible = "marvell,armada-80x0-db", "marvell,armada-80x0";
+ 	fdt_config_id = <1>;
+ 	board_id = <0x13>;
+diff --git a/arch/arm/dts/armada-80x0-db-SGMII.dts b/arch/arm/dts/armada-80x0-db-SGMII.dts
+index 1af1ab6..1aa07d1 100644
+--- a/arch/arm/dts/armada-80x0-db-SGMII.dts
++++ b/arch/arm/dts/armada-80x0-db-SGMII.dts
+@@ -20,7 +20,7 @@
+ 
+ #include "armada-80x0-db.dtsi" /* include initial Board device tree */
+ / {
+-	model = "DB-ARMADA-80x0 (SGMII)";
++	model = "DB-ARMADA-80x0 (SPI-SGMII)";
+ 	compatible = "marvell,armada-80x0-db", "marvell,armada-80x0";
+ 	fdt_config_id = <2>;
+ 	board_id = <0x13>;
+-- 
+1.9.1
+

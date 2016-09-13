@@ -1,0 +1,816 @@
+From e44e4e3f485ece8e8ab9f2617c4c3fceab9ff4c1 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Tue, 16 Jun 2015 15:42:57 +0300
+Subject: [PATCH 0198/1240] mpp-bus: added a mpp bus driver
+
+- Removed previous mpp implementation
+- Disabled mpp commands. future patch will fix these
+  commands based on the new driver
+- added DT documentation for driver
+- added DT nodes for SPI and NAND buses on A380
+
+Change-Id: Ia8897fe292a410e01da1f3920a2be11e74df285a
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20226
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv7/armada38x/tables.c           |  17 --
+ arch/arm/cpu/armv7/armadalp/tables.c            |  18 ---
+ arch/arm/cpu/mvebu-common/Kconfig               |  10 ++
+ arch/arm/cpu/mvebu-common/Makefile              |   2 +-
+ arch/arm/cpu/mvebu-common/mpp-bus.c             | 172 ++++++++++++++++++++
+ arch/arm/cpu/mvebu-common/mpp.c                 | 198 ------------------------
+ arch/arm/cpu/mvebu-common/soc-init.c            |  29 ----
+ arch/arm/dts/armada-385-db.dts                  |  20 +++
+ arch/arm/include/asm/arch-mvebu/mpp.h           |  36 +----
+ board/mvebu/armada38x/db-88f6820-info.c         |   6 +-
+ board/mvebu/armada38x/rd-88f6820-info.c         |   4 +-
+ board/mvebu/common/init.c                       |  15 +-
+ configs/mvebu_armada38x_defconfig               |   4 +-
+ doc/device-tree-bindings/misc/mvebu-mpp-bus.txt |  32 ++++
+ include/fdtdec.h                                |   1 +
+ lib/fdtdec.c                                    |   1 +
+ 16 files changed, 259 insertions(+), 306 deletions(-)
+ create mode 100644 arch/arm/cpu/mvebu-common/mpp-bus.c
+ delete mode 100644 arch/arm/cpu/mvebu-common/mpp.c
+ create mode 100644 doc/device-tree-bindings/misc/mvebu-mpp-bus.txt
+
+diff --git a/arch/arm/cpu/armv7/armada38x/tables.c b/arch/arm/cpu/armv7/armada38x/tables.c
+index c219a85..5d6f395 100644
+--- a/arch/arm/cpu/armv7/armada38x/tables.c
++++ b/arch/arm/cpu/armv7/armada38x/tables.c
+@@ -124,22 +124,6 @@ char *a38x_mpp_desc[MAX_MPP_ID + 1][MAX_MPP_OPTS] = {
+ /* 59 */ { "GPIO[59]", "PCIe0_RSTOUTn", "I2C1_SDA", "PCIe1_RSTOUTn", "SPI1_CSn[0]", "SD0_D[2]", "PCIe2_RSTOUTn"},
+ };
+ 
+-/* Describe the available MPP buses */
+-struct mpp_bus a38x_mpp_buses[MAX_MPP_BUS] = {
+-	[UART_0_MPP_BUS] = {"UART 0", 2, 1, {{{0, 0x1 }, {0, 0x1} } } },
+-	[UART_1_MPP_BUS] = {"UART 1", 2, 2, {{{4, 0x2}, {5, 0x2} }, {{19, 0x6}, {20, 0x6} } } },
+-	[I2C_0_MPP_BUS] = {"I2C 0", 2, 1, {{{2, 0x1}, {3, 0x1} } } },
+-	[GE_0_MPP_BUS] = {"GE 0", 14, 1, {{{4, 0x1}, {5, 0x1}, {6, 0x1}, {7, 0x1}, {8, 0x1}, {9, 0x1}, {10, 0x1}, {11, 0x1}, \
+-										{12, 0x1}, {13, 0x1}, {14, 0x1}, {15, 0x1}, {16, 0x1}, {17, 0x1} } } },
+-	[GE_1_MPP_BUS] = {"GE 1", 12, 1, {{{21, 0x2}, {27, 0x2}, {28, 0x2}, {29, 0x2}, {30, 0x2}, {31, 0x2}, {32, 0x2}, {37, 0x2}, {38, 0x2}, {39, 0x2}, {40, 0x2}, {41, 0x2} } } },
+-	[SPI_0_MPP_BUS]  = {"SPI 0", 4, 1, {{{22, 0x1}, {23, 0x1}, {24, 0x1}, {25, 0x1} } } },
+-	[M_VTT_0_MPP_BUS]  = {"M_VTT_CTRL", 1, 1, {{{43, 0x2} } } },
+-	[SDIO_0_MPP_BUS]  = {"SDIO 0", 10, 1, {{{48, 0x5}, {49, 0x5}, {50, 0x5}, {52, 0x5}, {53, 0x5}, {54, 0x5}, {55, 0x5}, {57, 0x5}, {58, 0x5}, {59, 0x5} } } },
+-	[NAND_0_MPP_BUS] = {"NAND 0", 14, 1, {{{22, 0x5}, {23, 0x5}, {25, 0x5}, {28, 0x5}, {30, 0x5}, {32, 0x5},
+-						{33, 0x5}, {34, 0x5}, {35, 0x5}, {36, 0x5}, {38, 0x5}, {40, 0x5},
+-						{41, 0x6}, {42, 0x5} } } },
+-};
+-
+ struct mvebu_soc_info a38x_soc_info[] = {
+ 	/* Armda 380 */
+ 	{
+@@ -173,5 +157,4 @@ struct mvebu_soc_family a38x_family_info = {
+ 	.base_unit_info = base_unit_mask_table,
+ 	.soc_table = a38x_soc_info,
+ 	.mpp_desc  = (char **)a38x_mpp_desc,
+-	.mpp_buses = a38x_mpp_buses,
+ };
+diff --git a/arch/arm/cpu/armv7/armadalp/tables.c b/arch/arm/cpu/armv7/armadalp/tables.c
+index 180f727..ebd9746 100644
+--- a/arch/arm/cpu/armv7/armadalp/tables.c
++++ b/arch/arm/cpu/armv7/armadalp/tables.c
+@@ -67,23 +67,6 @@ char *armadalp_mpp_desc[MAX_MPP_ID + 1][MAX_MPP_OPTS] = {
+ /* 3 */	{"GPIO_3", "NF_IO_5", "PTP_TRIG_GEN",	"P3_LED",	"AU_I2S_MCLK",	"ND_IO_5", "SPI_1_MISO"}, /* 1  */
+ };
+ 
+-/* Describe the available MPP buses */
+-struct mpp_bus armadalp_mpp_buses[MAX_MPP_BUS] = {
+-	/* the following entries are temporary examples only -  referenced from A38x */
+-	[UART_0_MPP_BUS] = {"UART 0", 2, 1, {{{0, 0x1 }, {0, 0x1} } } },
+-	[UART_1_MPP_BUS] = {"UART 1", 2, 2, {{{4, 0x2}, {5, 0x2} }, {{19, 0x6}, {20, 0x6} } } },
+-	[I2C_0_MPP_BUS] = {"I2C 0", 2, 1, {{{2, 0x1}, {3, 0x1} } } },
+-	[GE_0_MPP_BUS] = {"GE 0", 14, 1, {{{4, 0x1}, {5, 0x1}, {6, 0x1}, {7, 0x1}, {8, 0x1}, {9, 0x1}, {10, 0x1}, {11, 0x1}, \
+-										{12, 0x1}, {13, 0x1}, {14, 0x1}, {15, 0x1}, {16, 0x1}, {17, 0x1} } } },
+-	[GE_1_MPP_BUS] = {"GE 1", 12, 1, {{{21, 0x2}, {27, 0x2}, {28, 0x2}, {29, 0x2}, {30, 0x2}, {31, 0x2}, {32, 0x2}, {37, 0x2}, {38, 0x2}, {39, 0x2}, {40, 0x2}, {41, 0x2} } } },
+-	[SPI_0_MPP_BUS]  = {"SPI 0", 4, 1, {{{22, 0x1}, {23, 0x1}, {24, 0x1}, {25, 0x1} } } },
+-	[M_VTT_0_MPP_BUS]  = {"M_VTT_CTRL", 1, 1, {{{43, 0x2} } } },
+-	[SDIO_0_MPP_BUS]  = {"SDIO 0", 10, 1, {{{48, 0x5}, {49, 0x5}, {50, 0x5}, {52, 0x5}, {53, 0x5}, {54, 0x5}, {55, 0x5}, {57, 0x5}, {58, 0x5}, {59, 0x5} } } },
+-	[NAND_0_MPP_BUS] = {"NAND 0", 14, 1, {{{22, 0x5}, {23, 0x5}, {25, 0x5}, {28, 0x5}, {30, 0x5}, {32, 0x5},
+-						{33, 0x5}, {34, 0x5}, {35, 0x5}, {36, 0x5}, {38, 0x5}, {40, 0x5},
+-						{41, 0x6}, {42, 0x5} } } },
+-};
+-
+ struct mvebu_soc_info armadalp_soc_info[] = {
+ 	/* Armada LP A */
+ 	{
+@@ -110,5 +93,4 @@ struct mvebu_soc_family armadalp_family_info = {
+ 	.base_unit_info = base_unit_mask_table,
+ 	.soc_table = armadalp_soc_info,
+ 	.mpp_desc  = (char **)armadalp_mpp_desc,
+-	.mpp_buses = armadalp_mpp_buses,
+ };
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index d0baa19..17a7f26 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -66,6 +66,16 @@ config MVEBU_MPP
+ 	  MPP driver, for example, ArmadaLP.
+ 	  base address is configured under MVEBU_MPP_BASE
+ 
++config MVEBU_MPP_BUS
++	bool "MPP bus support"
++	depends on MVEBU_PINCTL
++	default n
++	help
++	  Choose this option to add support
++	  for the mpp-bus driver. This driver
++	  is used for enabling or disabling mpp
++	  buses at runtime
++
+ config MVEBU_UART_ARLP
+ 	bool "UART support for ArmadaLP"
+ 	default n
+diff --git a/arch/arm/cpu/mvebu-common/Makefile b/arch/arm/cpu/mvebu-common/Makefile
+index 3a977f6..bd18a6b 100644
+--- a/arch/arm/cpu/mvebu-common/Makefile
++++ b/arch/arm/cpu/mvebu-common/Makefile
+@@ -20,7 +20,7 @@
+ obj-y += unit-info.o
+ obj-y += soc-init.o
+ obj-y += misc.o
+-obj-$(CONFIG_MVEBU_MPP) += mpp.o
++obj-$(CONFIG_MVEBU_MPP_BUS) += mpp-bus.o
+ obj-y += fdt.o
+ obj-y += clock.o
+ obj-$(CONFIG_MVEBU_TIMER) += timer_mvebu.o
+diff --git a/arch/arm/cpu/mvebu-common/mpp-bus.c b/arch/arm/cpu/mvebu-common/mpp-bus.c
+new file mode 100644
+index 0000000..bd12b9a
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/mpp-bus.c
+@@ -0,0 +1,172 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt  on the worldwide
++ * web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#include <config.h>
++#include <common.h>
++#include <asm/system.h>
++#include <fdtdec.h>
++#include <libfdt.h>
++#include <errno.h>
++#include <asm/io.h>
++#include <malloc.h>
++#include <asm/arch-mvebu/mpp.h>
++#include <asm/arch-mvebu/soc.h>
++#include <asm/arch-mvebu/pinctl.h>
++
++#define MAX_MPP_BUSES	10
++
++struct mpp_pin {
++	u32 id;
++	u32 func;
++};
++
++struct mpp_bus {
++	const char *name;
++	int pin_cnt;
++	int bank_id;
++	struct mpp_pin *pins;
++};
++
++struct mpp_bus buses[MAX_MPP_BUSES];
++
++#define DEBUG
++int mpp_get_bus_id(char *name)
++{
++	int id = -1, i;
++	for (i = 0; i < MAX_MPP_BUSES; i++) {
++		if (strcmp(name, buses[i].name) == 0) {
++			id = i;
++			break;
++		}
++	}
++	return id;
++}
++
++int mpp_is_bus_enabled(char *name)
++{
++	int id;
++	int pin_id;
++	struct mpp_pin *pin;
++	struct mpp_bus *bus;
++	int bus_active = 1;
++
++	id = mpp_get_bus_id(name);
++	if (id < 0) {
++		error("mpp bus %s not found\n", name);
++		return -ENODEV;
++	}
++	bus = &buses[id];
++
++	for (pin_id = 0; pin_id < bus->pin_cnt; pin_id++) {
++		pin = &bus->pins[pin_id];
++		if (pinctl_get_pin_func(bus->bank_id, pin->id) != pin->func) {
++			bus_active = 0;
++			break;
++		}
++	}
++
++	return bus_active;
++}
++
++int mpp_enable_bus(char *name)
++{
++	int i, id;
++	struct mpp_pin *pin;
++	struct mpp_bus *bus;
++
++
++	/* Find bus by name */
++	id = mpp_get_bus_id(name);
++	if (id < 0) {
++		error("mpp bus %s not found\n", name);
++		return -ENODEV;
++	}
++	bus = &buses[id];
++
++	printf("Enabling MPP bus %s\n", name);
++	/* Check if someone already modified one of the pins */
++	for (i = 0; i < bus->pin_cnt; i++) {
++		pin = &bus->pins[i];
++
++		printf("Setting (bank, pin, func) = (%d, %d, %d)\n", bus->bank_id, pin->id, pin->func);
++		pinctl_set_pin_func(bus->bank_id, pin->id, pin->func);
++	}
++
++	return 0;
++}
++
++int mpp_bus_probe(void)
++{
++	int node_list[MAX_MPP_BUSES];
++	int count, i, node, err;
++	const void *blob = gd->fdt_blob;
++	struct mpp_bus *bus;
++	const char *bank_name;
++
++	/* Initialize the mpp registers */
++	count = fdtdec_find_aliases_for_id(blob, "mpp-bus",
++			COMPAT_MVEBU_MPP_BUS, node_list, MAX_MPP_BUSES);
++
++	if (count <= 0)
++		return -ENODEV;
++
++	if (count > MAX_MPP_BUSES) {
++		error("mpp-bus: too many buses. using first %d\n", MAX_MPP_BUSES);
++		count = MAX_MPP_BUSES;
++	}
++
++	for (i = 0; i < count ; i++) {
++		node = node_list[i];
++
++		if (node <= 0)
++			continue;
++
++		bus = &buses[i];
++		bus->name = fdt_getprop(blob, node, "bus-name", NULL);
++		if (bus->name == 0) {
++			error("Failed reading mpp bus name\n");
++			continue;
++		}
++
++		bus->pin_cnt = fdtdec_get_int(blob, node, "pin-count", 0);
++		if (bus->pin_cnt == 0) {
++			error("Failed reading pin count for bus %s\n", bus->name);
++			continue;
++		}
++		bus->pins = malloc(bus->pin_cnt * sizeof(struct mpp_pin));
++		if (bus->pins == 0) {
++			error("Failed allocating memory bus pins %s\n", bus->name);
++			continue;
++		}
++
++		err = fdtdec_get_int_array(blob, node, "pins", (u32 *)bus->pins, 2 * bus->pin_cnt);
++		if (err) {
++			error("Failed reading pins for bus %s\n", bus->name);
++			continue;
++		}
++
++		bank_name = fdt_getprop(blob, node, "bank-name", NULL);
++		bus->bank_id = pinctl_get_bank_id(bank_name);
++		if (bus->bank_id < 0) {
++			error("Failed getting bank id for bus %s\n", bus->name);
++			continue;
++		}
++	}
++
++	return 0;
++}
+diff --git a/arch/arm/cpu/mvebu-common/mpp.c b/arch/arm/cpu/mvebu-common/mpp.c
+deleted file mode 100644
+index a1e883a..0000000
+--- a/arch/arm/cpu/mvebu-common/mpp.c
++++ /dev/null
+@@ -1,198 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
+- * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
+- *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
+- * ***************************************************************************
+- */
+-
+-#include <config.h>
+-#include <common.h>
+-#include <asm/system.h>
+-#include <asm/bitops.h>
+-#include <asm/io.h>
+-#include <asm/arch-mvebu/mpp.h>
+-#include <asm/arch-mvebu/soc.h>
+-
+-char **mpp_get_desc_table(void)
+-{
+-	return soc_get_mpp_desc_table();
+-}
+-
+-static void set_field(int mpp_id, int value, u32 *base_ptr)
+-{
+-	int reg_offset;
+-	int field_offset;
+-	u32 reg, mask;
+-
+-	/* Calculate register address and bit in register */
+-	reg_offset   = 4 * (mpp_id >> (MPP_FIELD_BITS));
+-	field_offset = (MPP_BIT_CNT) * (mpp_id & MPP_FIELD_MASK);
+-	mask = ~(MPP_VAL_MASK << field_offset);
+-
+-	/* Clip value to bit resolution */
+-	value &= MPP_VAL_MASK;
+-
+-	reg = readl(base_ptr + reg_offset);
+-	reg = (reg & mask) | (value << field_offset);
+-	writel(reg, base_ptr + reg_offset);
+-}
+-
+-static u8 get_field(int mpp_id, u32 *base_ptr)
+-{
+-	u32 reg_offset;
+-	int field_offset;
+-	u32 reg;
+-	u8 value;
+-
+-	/* Calculate register address and bit in register */
+-	reg_offset   = mpp_id >> (MPP_FIELD_BITS);
+-	field_offset = (MPP_BIT_CNT) * (mpp_id & MPP_FIELD_MASK);
+-
+-	reg = readl(base_ptr + reg_offset);
+-	value = (reg >> field_offset) & MPP_VAL_MASK;
+-
+-	return value;
+-}
+-
+-void mpp_set_pin(int mpp_id, int value)
+-{
+-	if (value > MAX_MPP_OPTS)
+-		printf("Warning: MPP value %d > max value %d\n", value, MAX_MPP_OPTS);
+-
+-	/* Set the new MPP to HW registers */
+-	set_field(mpp_id, value, (u32 *)MPP_REGS_BASE);
+-}
+-
+-u8 mpp_get_pin(int mpp_id)
+-{
+-	u8 value;
+-
+-	/* Calculate register address and bit in register */
+-	value = get_field(mpp_id, (u32 *)MPP_REGS_BASE);
+-
+-	if (value > MAX_MPP_OPTS)
+-		printf("Warning: MPP value %d > max value %d\n", value, MAX_MPP_OPTS);
+-
+-	return value;
+-}
+-
+-void mpp_set_reg(u32 *mpp_reg, int first_reg, int last_reg)
+-{
+-	int reg;
+-	u32 *base = (u32 *)MPP_REGS_BASE;
+-
+-	for (reg = first_reg; reg < last_reg; reg++, mpp_reg++)
+-		writel(*mpp_reg, base + reg);
+-}
+-
+-void mpp_set_and_update(u32 *mpp_reg)
+-{
+-	int i;
+-	u32 *update_mask = soc_get_mpp_update_mask();
+-	u32 *update_val = soc_get_mpp_update_val();
+-	u32 *protect_mask = soc_get_mpp_protect_mask();
+-	u32 *base = (u32 *)MPP_REGS_BASE;
+-
+-	for (i = 0; i < MAX_MPP_REGS; i++) {
+-		/* Disable modifying protected MPPs */
+-		update_mask[i] &= ~protect_mask[i];
+-		update_val[i]  &= ~protect_mask[i];
+-
+-		/* Make sure the mask and val are synced */
+-		update_val[i] &= update_mask[i];
+-
+-		/* Now update the required MPP fields */
+-		mpp_reg[i] &= ~update_mask[i];
+-		mpp_reg[i] |= update_val[i];
+-
+-		debug("Set mpp reg 0x%08x\n", mpp_reg[i]);
+-
+-		/* Write to register */
+-		if (soc_get_id() == CONFIG_ARMADA_8K_SOC_ID)
+-			writel(mpp_reg[i], base - i);
+-		else
+-			writel(mpp_reg[i], base + i);
+-	}
+-}
+-
+-int mpp_is_bus_enabled(struct mpp_bus *bus)
+-{
+-	int bus_alt;
+-	int pin;
+-	int bus_active = 0;
+-
+-	for (bus_alt = 0; bus_alt < bus->bus_cnt; bus_alt++) {
+-		for (pin = 0; pin < bus->pin_cnt; pin++) {
+-			u8 id = bus->pin_data[bus_alt][pin].id;
+-			u8 val = bus->pin_data[bus_alt][pin].val;
+-			if (mpp_get_pin(id) != val)
+-				break;
+-		}
+-		if (pin == bus->pin_cnt) {
+-			bus_active = 1;
+-			break;
+-		}
+-	}
+-
+-	return bus_active;
+-}
+-
+-int mpp_is_bus_valid(struct mpp_bus *bus)
+-{
+-	int valid = (bus->pin_cnt > 0);
+-	return valid;
+-}
+-
+-int mpp_enable_bus(u32 *mpp_reg, int bus_id, int bus_alt)
+-{
+-	int i, reg_offset, field_offset, value;
+-	u32 mask;
+-	struct mpp_pin *pin;
+-	struct mpp_bus *bus = soc_get_mpp_bus(bus_id);
+-	u32 *update_mask = soc_get_mpp_update_mask();
+-
+-	debug("Enabling MPP bus %s\n", bus->name);
+-
+-	if (bus_alt < (bus->bus_cnt - 1)) {
+-		error("Bus alternative %d doesn't exist for bus %s\n", bus_alt, bus->name);
+-		return 1;
+-	}
+-
+-	/* Check if someone already modified one of the pins */
+-	for (i = 0; i < bus->pin_cnt; i++) {
+-		pin = &bus->pin_data[bus_alt][i];
+-		if (get_field(pin->id, update_mask) == MPP_VAL_MASK) {
+-			error("Pin %d of Bus %s already modified\n", pin->id, bus->name);
+-			return 1;
+-		}
+-	}
+-
+-	/* Update the mask and value */
+-	for (i = 0; i < bus->pin_cnt; i++) {
+-		pin = &bus->pin_data[bus_alt][i];
+-		debug("Setting [pin, val] = [%d, 0x%x]\n", pin->id, pin->val);
+-
+-		value =  MPP_VAL_MASK & pin->val;
+-		/* Calculate register address and bit in register */
+-		reg_offset   = pin->id >> (MPP_FIELD_BITS);
+-		field_offset = (MPP_BIT_CNT) * (pin->id & MPP_FIELD_MASK);
+-		mask = ~(MPP_VAL_MASK << field_offset);
+-
+-		mpp_reg[reg_offset] = (mpp_reg[reg_offset] & mask) | (value << field_offset);
+-	}
+-
+-	return 0;
+-}
+-
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index 01d041b..b9d1a42 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -42,35 +42,6 @@ u16 *soc_get_unit_mask_table(void)
+ 	return soc_family->base_unit_info;
+ }
+ 
+-char **soc_get_mpp_desc_table(void)
+-{
+-	struct mvebu_soc_family *soc_family = get_soc_family();
+-	return soc_family->mpp_desc;
+-}
+-
+-u32 *soc_get_mpp_update_mask(void)
+-{
+-	struct mvebu_soc_family *soc_family = get_soc_family();
+-	return soc_family->mpp_mask;
+-}
+-u32 *soc_get_mpp_update_val(void)
+-{
+-	struct mvebu_soc_family *soc_family = get_soc_family();
+-	return soc_family->mpp_update;
+-}
+-u32 *soc_get_mpp_protect_mask(void)
+-{
+-	struct mvebu_soc_family *soc_family = get_soc_family();
+-	return soc_family->mpp_protect;
+-}
+-
+-struct mpp_bus *soc_get_mpp_bus(int bus_id)
+-{
+-	struct mvebu_soc_family *soc_family = get_soc_family();
+-	return soc_family->mpp_buses + bus_id;
+-}
+-
+-
+ static int update_soc_units(struct mvebu_soc_info *soc)
+ {
+ 	u16 *unit_mask = soc_get_unit_mask_table();
+diff --git a/arch/arm/dts/armada-385-db.dts b/arch/arm/dts/armada-385-db.dts
+index afbcee7..969c53a 100644
+--- a/arch/arm/dts/armada-385-db.dts
++++ b/arch/arm/dts/armada-385-db.dts
+@@ -120,6 +120,26 @@
+ 			status = "okay";
+ 		};
+ 	};
++
++	/* This should go only into devel boards */
++	mpp-buses {
++		mpp-bus0 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "spi0";
++			bank-name = "armada-380";
++			pin-count = <4>;
++			pins = <22 1  23 1  24 1  25 1>;
++		};
++		mpp-bus1 {
++			compatible = "marvell,mvebu-mpp-bus";
++			bus-name = "nand";
++			bank-name = "armada-380";
++			pin-count = <14>;
++			pins = <22 5  23 5  25 5  28 5 30 5
++				32 5  33 5  34 5  35 5 36 5
++				38 5  40 5  41 6  42 5>;
++		};
++	};
+ };
+ 
+ &pinctl {
+diff --git a/arch/arm/include/asm/arch-mvebu/mpp.h b/arch/arm/include/asm/arch-mvebu/mpp.h
+index 89b9644..02285f4 100644
+--- a/arch/arm/include/asm/arch-mvebu/mpp.h
++++ b/arch/arm/include/asm/arch-mvebu/mpp.h
+@@ -29,33 +29,6 @@
+ 
+ char **mpp_get_desc_table(void);
+ 
+-enum mpp_bus_id {
+-	UART_0_MPP_BUS,
+-	UART_1_MPP_BUS,
+-	SPI_0_MPP_BUS,
+-	SPI_1_MPP_BUS,
+-	NAND_0_MPP_BUS,
+-	RGMII_0_MPP_BUS,
+-	I2C_0_MPP_BUS,
+-	GE_0_MPP_BUS,
+-	GE_1_MPP_BUS,
+-	M_VTT_0_MPP_BUS,
+-	SDIO_0_MPP_BUS,
+-	MAX_MPP_BUS
+-};
+-
+-struct mpp_pin {
+-	u8 id;
+-	u8 val;
+-};
+-
+-struct mpp_bus {
+-	char name[MAX_BUS_NAME];
+-	int pin_cnt;
+-	int bus_cnt;
+-	struct mpp_pin pin_data[MAX_BUS_OPTS][MAX_PINS_PER_BUS];
+-};
+-
+ #ifndef CONFIG_MVEBU_MPP
+ 
+ #define mpp_set_pin(mpp_id)
+@@ -67,14 +40,13 @@ struct mpp_bus {
+ 
+ 
+ #else
++int mpp_bus_probe(void);
+ 
+ u8   mpp_get_pin(int mpp_id);
+ void mpp_set_pin(int mpp_id, int value);
+-int  mpp_enable_bus(u32 *mpp_reg, int bus_id, int bus_alt);
+-int  mpp_is_bus_valid(struct mpp_bus *bus);
+-int  mpp_is_bus_enabled(struct mpp_bus *bus);
+-void mpp_set_and_update(u32 *mpp_reg);
+-struct mpp_bus *soc_get_mpp_bus(int bus_id);
++int mpp_enable_bus(char *name);
++int  mpp_is_bus_valid(char *name);
++int  mpp_is_bus_enabled(char *name);
+ 
+ #endif /* CONFIG_MVEBU_MPP */
+ 
+diff --git a/board/mvebu/armada38x/db-88f6820-info.c b/board/mvebu/armada38x/db-88f6820-info.c
+index c8d9e90..3fe13c1 100644
+--- a/board/mvebu/armada38x/db-88f6820-info.c
++++ b/board/mvebu/armada38x/db-88f6820-info.c
+@@ -37,11 +37,13 @@ int board_get_id(void)
+ 
+ int db_a38x_configure_mpp(void)
+ {
++#ifdef CONFIG_MVEBU_MPP_BUS
+ #ifdef CONFIG_MVEBU_NAND_BOOT
+-	mpp_enable_bus(a38x_db_info.mpp_regs, NAND_0_MPP_BUS, 0);
++	mpp_enable_bus("nand");
+ #endif
+ #ifdef CONFIG_MVEBU_SPI_BOOT
+-	mpp_enable_bus(a38x_db_info.mpp_regs, SPI_0_MPP_BUS, 0);
++	mpp_enable_bus("spi0");
++#endif
+ #endif
+ 	return 0;
+ }
+diff --git a/board/mvebu/armada38x/rd-88f6820-info.c b/board/mvebu/armada38x/rd-88f6820-info.c
+index 12b1e66..50ec40d 100644
+--- a/board/mvebu/armada38x/rd-88f6820-info.c
++++ b/board/mvebu/armada38x/rd-88f6820-info.c
+@@ -38,8 +38,10 @@ u16 a38x_rd_unit_disable[MAX_UNIT_ID] = {
+ 
+ int rd_a38x_configure_mpp(void)
+ {
++#ifdef CONFIG_MVEBU_MPP_BUS
+ #ifdef CONFIG_MVEBU_SPI_BOOT
+-	mpp_enable_bus(a38x_rd_info.mpp_regs, SPI_0_MPP_BUS, 0);
++	mpp_enable_bus("spi0");
++#endif
+ #endif
+ 	return 0;
+ }
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index 0be5f88..3faa169 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -27,6 +27,7 @@
+ #include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-mvebu/soc.h>
+ #include <asm/arch-mvebu/pinctl.h>
++#include <asm/arch-mvebu/mpp.h>
+ #include "board.h"
+ #ifdef CONFIG_MVEBU_DEVEL_BOARD
+ #include "devel-board.h"
+@@ -114,6 +115,10 @@ int mvebu_board_init(void)
+ 
+ 	debug("Initializing board\n");
+ 
++#ifdef CONFIG_MVEBU_PINCTL
++	mvebu_pinctl_probe();
++#endif
++
+ 	brd_fam = board_init_family();
+ 	if (!brd_fam) {
+ 		error("Failed to get board family structure");
+@@ -139,14 +144,12 @@ int mvebu_board_init(void)
+ 	if (brd->unit_mask)
+ 		update_unit_info(unit_mask, brd->unit_mask, brd->unit_update_mode);
+ 
+-#ifdef CONFIG_MVEBU_DEVEL_BOARD
+-	mvebu_devel_board_init(brd_fam);
++#ifdef CONFIG_MVEBU_MPP_BUS
++	mpp_bus_probe();
+ #endif
+ 
+-	/* mpp_set */
+-
+-#ifdef CONFIG_MVEBU_PINCTL
+-	mvebu_pinctl_probe();
++#ifdef CONFIG_MVEBU_DEVEL_BOARD
++	mvebu_devel_board_init(brd_fam);
+ #endif
+ 
+ 	return 0;
+diff --git a/configs/mvebu_armada38x_defconfig b/configs/mvebu_armada38x_defconfig
+index 9229efe..4332dce 100644
+--- a/configs/mvebu_armada38x_defconfig
++++ b/configs/mvebu_armada38x_defconfig
+@@ -5,7 +5,7 @@ CONFIG_MVEBU_NAND=y
+ CONFIG_MVEBU_SPI=y
+ CONFIG_MVEBU_PCI=y
+ CONFIG_MVEBU_MPP=y
+-CONFIG_MVEBU_PINCTL=y
++CONFIG_MVEBU_MPP_BUS=y
+ +S:CONFIG_MVEBU_I2C=y
+ CONFIG_CMD_BDI=y
+ CONFIG_CMD_BOOTD=y
+@@ -25,9 +25,9 @@ CONFIG_CMD_PING=y
+ CONFIG_CMD_TIME=y
+ CONFIG_CMD_MISC=y
+ CONFIG_CMD_TIMER=y
+-CONFIG_CMD_MVEBU_MPP=y
+ CONFIG_CMD_MVEBU_BUBT=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-385-db"
+ +S:CONFIG_SYS_NS16550=y
++CONFIG_MVEBU_PINCTL=y
+diff --git a/doc/device-tree-bindings/misc/mvebu-mpp-bus.txt b/doc/device-tree-bindings/misc/mvebu-mpp-bus.txt
+new file mode 100644
+index 0000000..c9123fa
+--- /dev/null
++++ b/doc/device-tree-bindings/misc/mvebu-mpp-bus.txt
+@@ -0,0 +1,32 @@
++Marvell mpp-bus bindings
++========================
++
++The mvebu-mpp-bus driver enables controlling buses
++of Multi Purpose Pins(MPP). each dt entry describes a
++single MPP bus. an SOC may have several MPP buses.
++
++The mvebu-mpp-bus requires the following proprties:
++	- compatible
++	  	should be "marvell, mvebu-mpp-bus"
++	- bus-name
++	  	a unique name identifying the bus. this
++		identifier is used to identify the bus
++		when calling mpp bus services
++	- bank-name
++	  	the name of the mpp bank of this bus.
++		see mvebu-pinctl driver.
++	- pin-count
++	  	the amount of pins in this bus.
++	- pins
++		an integer array of pin ids and functions.
++		the first value is the pin id followed by
++		the pin function.
++
++Example of a mpp-bus node:
++	mpp-bus0 {
++		compatible = "marvell,mvebu-mpp-bus";
++		bus-name = "spi0";
++		bank-name = "armada-380";
++		pin-count = <4>;
++		pins = <22 1  23 1  24 1  25 1>;
++	};
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 75c5d4c..0a06249 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -127,6 +127,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_I2C,
+ 	COMPAT_MVEBU_SAR,
+ 	COMPAT_MVEBU_PINCTL,
++	COMPAT_MVEBU_MPP_BUS,
+ 
+ 	COMPAT_COUNT,
+ };
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index ed363ab..6f74ae8 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -89,6 +89,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_I2C, "marvell,mvebu-i2c"),
+ 	COMPAT(MVEBU_SAR, "marvell,sample-at-reset"),
+ 	COMPAT(MVEBU_PINCTL, "marvell,mvebu-pinctl"),
++	COMPAT(MVEBU_MPP_BUS, "marvell,mvebu-mpp-bus"),
+ };
+ 
+ const char *fdtdec_get_compatible(enum fdt_compat_id id)
+-- 
+1.9.1
+

@@ -1,0 +1,30 @@
+From 550ec36eb84ce9e53dcf89a014025957e4afc047 Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Thu, 14 Apr 2016 12:58:58 +0300
+Subject: [PATCH 113/239] mv_ddr: Update version to 16.04.2
+
+Change-Id: I8356636db51dc1920b7fa7110b559b28ea0d935e
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29041
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Victor Axelrod <victora@marvell.com>
+---
+ drivers/marvell/mv_ddr/ddr3_training_ip.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/marvell/mv_ddr/ddr3_training_ip.h b/drivers/marvell/mv_ddr/ddr3_training_ip.h
+index a0b9ff4..28ac4fb 100644
+--- a/drivers/marvell/mv_ddr/ddr3_training_ip.h
++++ b/drivers/marvell/mv_ddr/ddr3_training_ip.h
+@@ -102,7 +102,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #include "ddr_topology_def.h"
+ #include "ddr_training_ip_db.h"
+ 
+-#define MV_DDR_VERSION "mv_ddr version: 16.04.1\n"
++#define MV_DDR_VERSION "mv_ddr version: 16.04.2\n"
+ 
+ #define MAX_CS_NUM		4
+ #define MAX_TOTAL_BUS_NUM	(MAX_INTERFACE_NUM * MAX_BUS_NUM)
+-- 
+1.9.1
+

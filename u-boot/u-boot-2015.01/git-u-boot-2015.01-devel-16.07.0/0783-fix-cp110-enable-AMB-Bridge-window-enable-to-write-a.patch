@@ -1,0 +1,120 @@
+From 045d971d4df7480bb275920b0d4eb75791c35171 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 2 Feb 2016 21:39:39 +0200
+Subject: [PATCH 0783/1240] fix: cp110: enable AMB-Bridge window enable to
+ write access for COMPHY/MDIO registers
+
+Change-Id: I687bdc6fbca5060cd6dc7b06a3f9151638ddd786
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27160
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/spl.c              | 12 +++++++++++
+ arch/arm/include/asm/arch-armada8k/misc-regs.h | 29 ++++++++++++++++++++++++++
+ arch/arm/include/asm/arch-armada8k/regs-base.h |  4 ++++
+ configs/mvebu_apn806_pd_defconfig              |  2 +-
+ 4 files changed, 46 insertions(+), 1 deletion(-)
+ create mode 100644 arch/arm/include/asm/arch-armada8k/misc-regs.h
+
+diff --git a/arch/arm/cpu/armv8/armada8k/spl.c b/arch/arm/cpu/armv8/armada8k/spl.c
+index c877a64..6a17469 100644
+--- a/arch/arm/cpu/armv8/armada8k/spl.c
++++ b/arch/arm/cpu/armv8/armada8k/spl.c
+@@ -25,6 +25,7 @@
+ #include <asm/arch-mvebu/rfu.h>
+ #include <asm/arch-mvebu/flc.h>
+ #include <asm/arch-mvebu/fdt.h>
++#include <asm/arch-armada8k/misc-regs.h>
+ #include <spl.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+@@ -51,6 +52,17 @@ void board_init_f(ulong silent)
+ 
+ 	preloader_console_init();
+ 
++#ifndef CONFIG_PALLADIUM
++	/* SoC spesific init for AMB-Bridge
++	   Open AMB bridge Window to Access COMPHY/MDIO registers
++	   This relevant for 70x0 only */
++	if (fdt_node_check_compatible(gd->fdt_blob, 0, "marvell,armada-70x0") == 0) {
++		reg_set((void *)MVEBU_AMB_IP_BRIDGE_WIN_REG(0),
++			0x7ff << MVEBU_AMB_IP_BRIDGE_WIN_SIZE_OFFSET | 0x1 << MVEBU_AMB_IP_BRIDGE_WIN_EN_OFFSET,
++			MVEBU_AMB_IP_BRIDGE_WIN_SIZE_MASK | MVEBU_AMB_IP_BRIDGE_WIN_EN_MASK);
++	}
++#endif
++
+ #ifdef CONFIG_MVEBU_SPL_SAR_DUMP
+ 	/* Sample at reset dump register */
+ 	mvebu_sar_dump_reg();
+diff --git a/arch/arm/include/asm/arch-armada8k/misc-regs.h b/arch/arm/include/asm/arch-armada8k/misc-regs.h
+new file mode 100644
+index 0000000..3790359
+--- /dev/null
++++ b/arch/arm/include/asm/arch-armada8k/misc-regs.h
+@@ -0,0 +1,29 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2015 Marvell International Ltd.
++* ***************************************************************************
++* This program is free software: you can redistribute it and/or modify it
++* under the terms of the GNU General Public License as published by the Free
++* Software Foundation, either version 2 of the License, or any later version.
++*
++* This program is distributed in the hope that it will be useful,
++* but WITHOUT ANY WARRANTY; without even the implied warranty of
++* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++* GNU General Public License for more details.
++*
++* You should have received a copy of the GNU General Public License
++* along with this program.  If not, see <http://www.gnu.org/licenses/>.
++* ***************************************************************************
++*/
++
++#ifndef _MISC_REGS_H_
++#define _MISC_REGS_H_
++#include <asm/arch-armada8k/regs-base.h>
++
++#define MVEBU_AMB_IP_BRIDGE_WIN_REG(win)	(MVEBU_AMB_IP_BASE + (win * 0x8))
++#define MVEBU_AMB_IP_BRIDGE_WIN_EN_OFFSET	0
++#define MVEBU_AMB_IP_BRIDGE_WIN_EN_MASK		(0x1 << MVEBU_AMB_IP_BRIDGE_WIN_EN_OFFSET)
++#define MVEBU_AMB_IP_BRIDGE_WIN_SIZE_OFFSET	16
++#define MVEBU_AMB_IP_BRIDGE_WIN_SIZE_MASK	(0xffff << MVEBU_AMB_IP_BRIDGE_WIN_SIZE_OFFSET)
++
++#endif /* _MISC_REGS_H_ */
+diff --git a/arch/arm/include/asm/arch-armada8k/regs-base.h b/arch/arm/include/asm/arch-armada8k/regs-base.h
+index 6b5c9e7..30bf000 100644
+--- a/arch/arm/include/asm/arch-armada8k/regs-base.h
++++ b/arch/arm/include/asm/arch-armada8k/regs-base.h
+@@ -21,6 +21,7 @@
+ 
+ #include <asm/arch/memory-map.h>
+ 
++/* Base registers for AP */
+ #define MPP_REGS_BASE	(MVEBU_REGS_BASE + 0x6F008C)
+ 
+ /* List of register base for all units */
+@@ -43,4 +44,7 @@
+ 
+ #define MVEBU_LLC_BASE		(MVEBU_REGS_BASE + 0x8000)
+ 
++/* Base registers for CP */
++#define MVEBU_AMB_IP_BASE	(MVEBU_CP0_REGS_BASE + 0x13ff00)
++
+ #endif	/* _REGS_BASE_H_ */
+diff --git a/configs/mvebu_apn806_pd_defconfig b/configs/mvebu_apn806_pd_defconfig
+index 3286932..22ab8ac 100644
+--- a/configs/mvebu_apn806_pd_defconfig
++++ b/configs/mvebu_apn806_pd_defconfig
+@@ -2,7 +2,7 @@ CONFIG_SPL=y
+ CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+ +S:CONFIG_ARM=y
+ +S:CONFIG_TARGET_ARMADA_8K=y
+-CONFIG_PALLADIUM=y
+++S:CONFIG_PALLADIUM=y
+ CONFIG_MVEBU_CCU=y
+ CONFIG_MVEBU_RFU=y
+ CONFIG_MVEBU_MPP_BUS=y
+-- 
+1.9.1
+

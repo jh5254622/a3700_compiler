@@ -1,0 +1,82 @@
+From f5fffee0eb69a04c6683de991c72ea08c31fc4d6 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Wed, 24 Feb 2016 19:30:32 +0200
+Subject: [PATCH 0905/1240] tools: a3700: Fix the CPU ID in XDB scripts
+
+- Fix the wrong CPU ID in XDB scripts for CA53.
+- When debugger is unable to read CPU ID from HW
+  it uses the CPU ID defined in JTAG CS files.
+  Our XDB configuration files had CPU ID that fits
+  ARMv7, which caused problems when debugging second
+  CA53 COU on A3700 right after releasing it from
+  reset.
+
+Change-Id: Icd2fedc9c8115d2ae15aef1b20469d97d32c3dfe
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27876
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ tools/marvell/debugger_scripts/XDB/hyperion_add/jtag1.ini | 5 ++---
+ tools/marvell/debugger_scripts/XDB/hyperion_add/jtag2.ini | 5 ++---
+ 2 files changed, 4 insertions(+), 6 deletions(-)
+
+diff --git a/tools/marvell/debugger_scripts/XDB/hyperion_add/jtag1.ini b/tools/marvell/debugger_scripts/XDB/hyperion_add/jtag1.ini
+index 77f5ca7..d4e3627 100644
+--- a/tools/marvell/debugger_scripts/XDB/hyperion_add/jtag1.ini
++++ b/tools/marvell/debugger_scripts/XDB/hyperion_add/jtag1.ini
+@@ -1,7 +1,7 @@
+ 
+ [JTAG_CS_CS_CS_dap4_jcs_hyperion_v8]
+ datfile=jcs/dap4.jcs
+-singlecpu=1.0.0,11,0x0411fc080
++singlecpu=1.0.0,11,0x0410fd030
+ steptimeout=1000
+ jtagdelay=200
+ connectdelay=500
+@@ -17,7 +17,7 @@ maxspeed=10KHz
+ 
+ [SWD_CS_CS_CS_dap4_jcs_hyperion_v8]
+ datfile=jcs/swddap4.jcs
+-singlecpu=1.0.0,11,0x0411fc080
++singlecpu=1.0.0,11,0x0410fd030
+ steptimeout=1000
+ jtagdelay=200
+ connectdelay=500
+@@ -29,4 +29,3 @@ ctinum=1.2
+ ectnum=1.0
+ cstf0num=1.0.1
+ maxspeed=10KHz
+-
+diff --git a/tools/marvell/debugger_scripts/XDB/hyperion_add/jtag2.ini b/tools/marvell/debugger_scripts/XDB/hyperion_add/jtag2.ini
+index f80a3ae..6a66009 100644
+--- a/tools/marvell/debugger_scripts/XDB/hyperion_add/jtag2.ini
++++ b/tools/marvell/debugger_scripts/XDB/hyperion_add/jtag2.ini
+@@ -1,7 +1,7 @@
+ 
+ [JTAG_CS_CS_CS_dap4_jcs_hyperion_v8]
+ datfile=jcs/dap4.jcs
+-singlecpu=1.1.1,11,0x0411fc080
++singlecpu=1.1.1,11,0x0410fd030
+ steptimeout=1000
+ jtagdelay=200
+ connectdelay=500
+@@ -17,7 +17,7 @@ maxspeed=10KHz
+ 
+ [SWD_CS_CS_CS_dap4_jcs_hyperion_v8]
+ datfile=jcs/swddap4.jcs
+-singlecpu=1.1.1,11,0x0411fc080
++singlecpu=1.1.1,11,0x0410fd030
+ steptimeout=1000
+ jtagdelay=200
+ connectdelay=500
+@@ -29,4 +29,3 @@ ctinum=1.2
+ ectnum=1.0
+ cstf0num=1.0.1
+ maxspeed=10KHz
+-
+-- 
+1.9.1
+

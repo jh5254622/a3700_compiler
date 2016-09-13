@@ -1,0 +1,267 @@
+From 168df54c7d4c85ba87203d54c890788dfe9af815 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Mon, 22 Feb 2016 15:48:41 +0200
+Subject: [PATCH 027/239] a3700: add support for a3700 UART driver
+
+- Add Drivers folder to the platform sources.
+  The drivers folder contains A3700 console driver.
+- Replace console driver object in patform make file
+
+Change-Id: I416ea939dc0192d82781a4eb444e3cb53f379697
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27745
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/marvell/uart/a3700_console.S              | 124 ++++++++++++++++++++++
+ drivers/marvell/uart/a3700_console.h              |  73 +++++++++++++
+ plat/marvell/a3700/a3700_z/include/platform_def.h |   2 +-
+ plat/marvell/a3700/a3700_z/platform.mk            |   3 +-
+ 4 files changed, 200 insertions(+), 2 deletions(-)
+ create mode 100644 drivers/marvell/uart/a3700_console.S
+ create mode 100644 drivers/marvell/uart/a3700_console.h
+
+diff --git a/drivers/marvell/uart/a3700_console.S b/drivers/marvell/uart/a3700_console.S
+new file mode 100644
+index 0000000..31f1ca5
+--- /dev/null
++++ b/drivers/marvell/uart/a3700_console.S
+@@ -0,0 +1,124 @@
++/*
++ * Copyright (c) 2015, ARM Limited and Contributors. All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ *
++ * Redistributions of source code must retain the above copyright notice, this
++ * list of conditions and the following disclaimer.
++ *
++ * Redistributions in binary form must reproduce the above copyright notice,
++ * this list of conditions and the following disclaimer in the documentation
++ * and/or other materials provided with the distribution.
++ *
++ * Neither the name of ARM nor the names of its contributors may be used
++ * to endorse or promote products derived from this software without specific
++ * prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
++ */
++
++#include <asm_macros.S>
++#include <a3700_console.h>
++
++	.globl	console_core_init
++	.globl	console_core_putc
++	.globl	console_core_getc
++
++	/* -----------------------------------------------
++	 * int console_core_init(unsigned long base_addr,
++	 * unsigned int uart_clk, unsigned int baud_rate)
++	 * Function to initialize the console without a
++	 * C Runtime to print debug information. This
++	 * function will be accessed by console_init and
++	 * crash reporting.
++	 * In: x0 - console base address
++	 *     w1 - Uart clock in Hz
++	 *     w2 - Baud rate
++	 * Out: return 1 on success
++	 * Clobber list : x1, x2, x3
++	 * -----------------------------------------------
++	 */
++func console_core_init
++
++	/* Program the baudrate */
++	/* Divisor =  Uart clock / (16 * baudrate) */
++	/* Todo:
++		1. set 115200KBps fixed Baud rate
++		2. reset FIFOs
++		3. No Parity, 1 Stop
++	*/
++
++init_fail:
++	ret
++endfunc console_core_init
++
++	/* --------------------------------------------------------
++	 * int console_core_putc(int c, unsigned int base_addr)
++	 * Function to output a character over the console. It
++	 * returns the character printed on success or -1 on error.
++	 * In : w0 - character to be printed
++	 *      x1 - console base address
++	 * Out : return -1 on error else return character.
++	 * Clobber list : x2
++	 * --------------------------------------------------------
++	 */
++func console_core_putc
++	/* Check the input parameter */
++	cbz	x1, putc_error
++
++	/* Prepend '\r' to '\n' */
++	cmp	w0, #0xA
++	b.ne	2f
++	/* Check if the transmit FIFO is full */
++1:	ldr	w2, [x1, #UART_STATUS_REG]
++	and	w2, w2, #UARTLSR_TXFIFOFULL
++	cmp	w2, #UARTLSR_TXFIFOFULL
++	b.eq	1b
++	mov	w2, #0xD		/* '\r' */
++	str	w2, [x1, #UART_TX_REG]
++
++	/* Check if the transmit FIFO is full */
++2:	ldr	w2, [x1, #UART_STATUS_REG]
++	and	w2, w2, #UARTLSR_TXFIFOFULL
++	cmp	w2, #UARTLSR_TXFIFOFULL
++	b.eq	2b
++	str	w0, [x1, #UART_TX_REG]
++	ret
++putc_error:
++	mov	w0, #-1
++	ret
++endfunc console_core_putc
++
++	/* ---------------------------------------------
++	 * int console_core_getc(void)
++	 * Function to get a character from the console.
++	 * It returns the character grabbed on success
++	 * or -1 on error.
++	 * In : w0 - console base address
++	 * Out : return -1 on error else return character.
++	 * Clobber list : x0, x1
++	 * ---------------------------------------------
++	 */
++func console_core_getc
++	/* Check if the receive FIFO is empty */
++/*
++1:	ldr	w1, [x0, #UARTLSR]
++	tbz	w1, #UARTLSR_RDR, 1b
++	ldr	w0, [x0, #UARTRX]
++*/
++	ret
++getc_error:
++	mov	w0, #-1
++	ret
++endfunc console_core_getc
+diff --git a/drivers/marvell/uart/a3700_console.h b/drivers/marvell/uart/a3700_console.h
+new file mode 100644
+index 0000000..0960891
+--- /dev/null
++++ b/drivers/marvell/uart/a3700_console.h
+@@ -0,0 +1,73 @@
++/*
++ * Copyright (c) 2015, ARM Limited and Contributors. All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ *
++ * Redistributions of source code must retain the above copyright notice, this
++ * list of conditions and the following disclaimer.
++ *
++ * Redistributions in binary form must reproduce the above copyright notice,
++ * this list of conditions and the following disclaimer in the documentation
++ * and/or other materials provided with the distribution.
++ *
++ * Neither the name of ARM nor the names of its contributors may be used
++ * to endorse or promote products derived from this software without specific
++ * prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
++ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
++ */
++
++#ifndef __A3700_CONSOLE_H__
++#define __A3700_CONSOLE_H__
++
++/* MVEBU UART Registers */
++#define UART_RX_REG		0x00
++#define UART_TX_REG		0x04
++#define UART_CTRL_REG		0x08
++#define UART_STATUS_REG		0x0c
++#define UART_BAUD_REG		0x10
++#define UART_POSSR_REG		0x14
++
++/* FIFO Control Register bits */
++#define UARTFCR_FIFOMD_16450	(0 << 6)
++#define UARTFCR_FIFOMD_16550	(1 << 6)
++#define UARTFCR_RXTRIG_1	(0 << 6)
++#define UARTFCR_RXTRIG_4	(1 << 6)
++#define UARTFCR_RXTRIG_8	(2 << 6)
++#define UARTFCR_RXTRIG_16	(3 << 6)
++#define UARTFCR_TXTRIG_1	(0 << 4)
++#define UARTFCR_TXTRIG_4	(1 << 4)
++#define UARTFCR_TXTRIG_8	(2 << 4)
++#define UARTFCR_TXTRIG_16	(3 << 4)
++#define UARTFCR_DMAEN		(1 << 3)	/* Enable DMA mode */
++#define UARTFCR_TXCLR		(1 << 2)	/* Clear contents of Tx FIFO */
++#define UARTFCR_RXCLR		(1 << 1)	/* Clear contents of Rx FIFO */
++#define UARTFCR_FIFOEN		(1 << 0)	/* Enable the Tx/Rx FIFO */
++
++/* Line Control Register bits */
++#define UARTLCR_DLAB		(1 << 7)	/* Divisor Latch Access */
++#define UARTLCR_SETB		(1 << 6)	/* Set BREAK Condition */
++#define UARTLCR_SETP		(1 << 5)	/* Set Parity to LCR[4] */
++#define UARTLCR_EVEN		(1 << 4)	/* Even Parity Format */
++#define UARTLCR_PAR		(1 << 3)	/* Parity */
++#define UARTLCR_STOP		(1 << 2)	/* Stop Bit */
++#define UARTLCR_WORDSZ_5	0		/* Word Length of 5 */
++#define UARTLCR_WORDSZ_6	1		/* Word Length of 6 */
++#define UARTLCR_WORDSZ_7	2		/* Word Length of 7 */
++#define UARTLCR_WORDSZ_8	3		/* Word Length of 8 */
++
++/* Line Status Register bits */
++#define UARTLSR_TXFIFOFULL	(1 << 11)	/* Tx Fifo Full */
++
++#endif	/* __A3700_CONSOLE_H__ */
+diff --git a/plat/marvell/a3700/a3700_z/include/platform_def.h b/plat/marvell/a3700/a3700_z/include/platform_def.h
+index b70599d..367366a 100644
+--- a/plat/marvell/a3700/a3700_z/include/platform_def.h
++++ b/plat/marvell/a3700/a3700_z/include/platform_def.h
+@@ -140,7 +140,7 @@ Trusted SRAM section 0x4000000..0x4200000:
+ /*
+  * PL011 related constants
+  */
+-#define PLAT_MARVELL_BOOT_UART_BASE		(MVEBU_REGS_BASE + 0x512000)
++#define PLAT_MARVELL_BOOT_UART_BASE		(MVEBU_REGS_BASE + 0x12000)
+ #define PLAT_MARVELL_BOOT_UART_CLK_IN_HZ	200000000
+ 
+ #define PLAT_MARVELL_CRASH_UART_BASE		PLAT_MARVELL_BOOT_UART_BASE
+diff --git a/plat/marvell/a3700/a3700_z/platform.mk b/plat/marvell/a3700/a3700_z/platform.mk
+index b43a7f1..4c2ee85 100644
+--- a/plat/marvell/a3700/a3700_z/platform.mk
++++ b/plat/marvell/a3700/a3700_z/platform.mk
+@@ -53,11 +53,12 @@ PLAT_INCLUDES		:=	-I$(PLAT_FAMILY_BASE)/$(PLAT)			\
+ 				-I$(PLAT_INCLUDE_BASE)/common					\
+ 				-I$(PLAT_INCLUDE_BASE)/common/aarch64			\
+ 				-I$(PLAT_SRC_BASE)								\
++				-Idrivers/marvell/uart			\
+ 				${ATF_INCLUDES}
+ 
+ PLAT_BL_COMMON_SOURCES	:=	$(PLAT_SRC_BASE)/aarch64/a7040_rz_common.c	\
+ 				drivers/console/console.S							\
+-				drivers/ti/uart/16550_console.S
++				drivers/marvell/uart/a3700_console.S
+ 
+ BL1_SOURCES		+=	$(PLAT_SRC_BASE)/aarch64/plat_helpers.S	\
+ 				lib/cpus/aarch64/cortex_a72.S
+-- 
+1.9.1
+

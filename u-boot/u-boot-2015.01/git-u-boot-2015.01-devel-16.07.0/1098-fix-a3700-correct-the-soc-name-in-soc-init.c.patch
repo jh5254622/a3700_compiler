@@ -1,0 +1,30 @@
+From 6a94583dd1a6c1b22cc1c962aca519d6f13da1cb Mon Sep 17 00:00:00 2001
+From: zachary <zhangzg@marvell.com>
+Date: Fri, 22 Apr 2016 00:41:01 +0800
+Subject: [PATCH 1098/1240] fix: a3700: correct the soc name in soc-init.c
+
+Change-Id: Ia1413e4fe917664a137860af7342ae3b8fd62aac
+Signed-off-by: zachary <zhangzg@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29253
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv8/armada3700/soc-init.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/armv8/armada3700/soc-init.c b/arch/arm/cpu/armv8/armada3700/soc-init.c
+index 157b3ee..4bb1f71 100644
+--- a/arch/arm/cpu/armv8/armada3700/soc-init.c
++++ b/arch/arm/cpu/armv8/armada3700/soc-init.c
+@@ -54,7 +54,7 @@ int soc_get_rev(void)
+ int soc_get_id(void)
+ {
+ 	/* TO-DO, get soc ID from PCIe register */
+-	/* in ArmadaLP, there is no device ID register, like A38x,
++	/* in Armada3700, there is no device ID register, like A38x,
+ 	    it needs to be got from PCIe register, like A370 and AXP */
+ 	u32 id = 0x9991;
+ 	return id;
+-- 
+1.9.1
+

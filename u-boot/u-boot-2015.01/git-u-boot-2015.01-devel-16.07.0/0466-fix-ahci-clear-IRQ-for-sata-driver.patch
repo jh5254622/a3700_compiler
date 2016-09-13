@@ -1,0 +1,56 @@
+From d5a1a3df0ba9700fdab57989d49f13e7bd7bb0cc Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Mon, 9 Nov 2015 10:06:33 +0800
+Subject: [PATCH 0466/1240] fix: ahci: clear IRQ for sata driver
+
+    In AHCI mainline driver, IRQ is enabled, despite of no IRQ handler routine,
+    so it has to be cleared before issue another command.
+
+Change-Id: Id6ce9b7e254f521470a86e6fe5699d26678b58b2
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24664
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/block/ahci.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/drivers/block/ahci.c b/drivers/block/ahci.c
+index 4109ad0..7708e1a 100644
+--- a/drivers/block/ahci.c
++++ b/drivers/block/ahci.c
+@@ -507,6 +507,10 @@ static void ahci_set_feature(u8 port)
+ 	memcpy((unsigned char *)pp->cmd_tbl, fis, sizeof(fis));
+ 	ahci_fill_cmd_slot(pp, cmd_fis_len);
+ 	ahci_dcache_flush_sata_cmd(pp);
++
++	/* clearing IRQ status register on Read/Write operations */
++	writel_with_flush(0xffffffff, port_mmio + PORT_IRQ_STAT);
++
+ 	writel(1, port_mmio + PORT_CMD_ISSUE);
+ 	readl(port_mmio + PORT_CMD_ISSUE);
+ 
+@@ -617,6 +621,9 @@ static int ahci_device_data_io(u8 port, u8 *fis, int fis_len, u8 *buf,
+ 	opts = (fis_len >> 2) | (sg_count << 16) | (is_write << 6);
+ 	ahci_fill_cmd_slot(pp, opts);
+ 
++	/* clearing IRQ status register on Read/Write operations */
++	writel_with_flush(0xffffffff, port_mmio + PORT_IRQ_STAT);
++
+ 	ahci_dcache_flush_sata_cmd(pp);
+ 	ahci_dcache_flush_range((unsigned long)buf, (unsigned long)buf_len);
+ 
+@@ -1004,6 +1011,9 @@ static int ata_io_flush(u8 port)
+ 
+ 	memcpy((unsigned char *)pp->cmd_tbl, fis, 20);
+ 	ahci_fill_cmd_slot(pp, cmd_fis_len);
++
++	/* clearing IRQ status register on Read/Write operations */
++	writel_with_flush(0xffffffff, port_mmio + PORT_IRQ_STAT);
+ 	writel_with_flush(1, port_mmio + PORT_CMD_ISSUE);
+ 
+ 	if (waiting_for_cmd_completed(port_mmio + PORT_CMD_ISSUE,
+-- 
+1.9.1
+

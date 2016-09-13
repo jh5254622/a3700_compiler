@@ -1,0 +1,74 @@
+From d5a731a84367bdffa94c4395ad62ae265b1d04da Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Tue, 2 Feb 2016 12:20:56 +0200
+Subject: [PATCH 002/239] atf: allow loading bl33 image (u-boot) to address 0
+
+remove assertions for address 0 loading to point/buffer since
+Marvell u-boot is loaded to address 0
+
+Change-Id: Iad3b16acd08506324e02d1a84d67acee4915bf33
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27116
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ drivers/io/io_fip.c     | 2 ++
+ drivers/io/io_memmap.c  | 3 +++
+ drivers/io/io_storage.c | 5 ++++-
+ 3 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/io/io_fip.c b/drivers/io/io_fip.c
+index d291423..ea1b1de 100644
+--- a/drivers/io/io_fip.c
++++ b/drivers/io/io_fip.c
+@@ -299,7 +299,9 @@ static int fip_file_read(io_entity_t *entity, uintptr_t buffer, size_t length,
+ 	uintptr_t backend_handle;
+ 
+ 	assert(entity != NULL);
++#ifndef PLAT_ALLOW_ZERO_ADDR_COPY
+ 	assert(buffer != (uintptr_t)NULL);
++#endif
+ 	assert(length_read != NULL);
+ 	assert(entity->info != (uintptr_t)NULL);
+ 
+diff --git a/drivers/io/io_memmap.c b/drivers/io/io_memmap.c
+index d45107e..e754073 100644
+--- a/drivers/io/io_memmap.c
++++ b/drivers/io/io_memmap.c
+@@ -32,6 +32,7 @@
+ #include <debug.h>
+ #include <io_driver.h>
+ #include <io_storage.h>
++#include <platform_def.h>
+ #include <string.h>
+ 
+ /* As we need to be able to keep state for seek, only one file can be open
+@@ -170,7 +171,9 @@ static int memmap_block_read(io_entity_t *entity, uintptr_t buffer,
+ 	file_state_t *fp;
+ 
+ 	assert(entity != NULL);
++#ifndef PLAT_ALLOW_ZERO_ADDR_COPY
+ 	assert(buffer != (uintptr_t)NULL);
++#endif
+ 	assert(length_read != NULL);
+ 
+ 	fp = (file_state_t *)entity->info;
+diff --git a/drivers/io/io_storage.c b/drivers/io/io_storage.c
+index 7cb1a6a..45c3e56 100644
+--- a/drivers/io/io_storage.c
++++ b/drivers/io/io_storage.c
+@@ -302,7 +302,10 @@ int io_read(uintptr_t handle,
+ 		size_t *length_read)
+ {
+ 	int result = -ENODEV;
+-	assert(is_valid_entity(handle) && (buffer != (uintptr_t)NULL));
++	assert(is_valid_entity(handle));
++#ifndef PLAT_ALLOW_ZERO_ADDR_COPY
++	assert(buffer != (uintptr_t)NULL);
++#endif
+ 
+ 	io_entity_t *entity = (io_entity_t *)handle;
+ 
+-- 
+1.9.1
+

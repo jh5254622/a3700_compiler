@@ -1,0 +1,36 @@
+From b37172f89fd22d05711fb3126250b157fe3d82e5 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Mon, 11 Jan 2016 15:32:26 +0200
+Subject: [PATCH 0665/1240] usb: enabled USB to ETH adapter support & generic
+ ASIX adpater
+
+Change-Id: Ia7d037d5f717432c7825910d25a7d57dc8979069
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26712
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/mvebu-common.h | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 3ce32a7..9bea7c8 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -282,6 +282,12 @@
+ 	#define CONFIG_SYS_NVRAM_BASE_ADDR DEVICE_CS1_BASE      /* dummy */
+ #endif
+ 
++/* Shared USB3.0 and USB2.0 definitions*/
++#if defined(CONFIG_USB_XHCI) || defined(CONFIG_USB_EHCI)
++#define CONFIG_USB_HOST_ETHER
++#define CONFIG_USB_ETHER_ASIX
++#endif
++
+ /* USB 3.0 */
+ #ifdef CONFIG_USB_XHCI_HCD
+ #define CONFIG_SYS_USB_XHCI_MAX_ROOT_PORTS 2
+-- 
+1.9.1
+

@@ -1,0 +1,23 @@
+From a7933c739e2c6370458a34469f401c3e04e5688e Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 18 Jan 2015 18:31:54 +0200
+Subject: [PATCH 0100/1240] fix: compilation error when enable FDT in config
+
+Change-Id: Ia9695bee5cc81190a555bad38f74c1f4e3aba129
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/16066
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/include/asm/gpio.h | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/arch/arm/include/asm/gpio.h b/arch/arm/include/asm/gpio.h
+index d49ad08..306ab4c 100644
+--- a/arch/arm/include/asm/gpio.h
++++ b/arch/arm/include/asm/gpio.h
+@@ -1,2 +1 @@
+-#include <asm/arch/gpio.h>
+ #include <asm-generic/gpio.h>
+-- 
+1.9.1
+

@@ -1,0 +1,82 @@
+From ffc74bbb48a1aa4d8fce52ee5cda0b3387119af9 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Tue, 7 Jul 2015 13:24:35 +0300
+Subject: [PATCH 0242/1240] bin2hex: print destination address only at start of
+ file
+
+This reduces the size of the hex file by half
+
+Change-Id: I84ec7bc81116373f2b61bc25999e39a670fa4e65
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/21068
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ scripts/bin2phex.pl | 17 +++++------------
+ 1 file changed, 5 insertions(+), 12 deletions(-)
+
+diff --git a/scripts/bin2phex.pl b/scripts/bin2phex.pl
+index f4f339b..5ae1975 100755
+--- a/scripts/bin2phex.pl
++++ b/scripts/bin2phex.pl
+@@ -4,10 +4,6 @@ sub bin2hex
+ {
+ 	my ($in_file, $out_file, $base_addr, $width, $page_size) = @_;
+ 
+-	# Convert base address to 16 byte resolution
+-	my $addr = sprintf("%d", hex($base_addr));
+-	$addr = $addr / $width;
+-
+ 	unless(open ($src, "<$in_file"))
+ 	{
+ 		print ("Failed to open input file $in_file\n");
+@@ -21,6 +17,11 @@ sub bin2hex
+ 		goto ERROR;
+ 	}
+ 
++	# Convert base address to 16 byte resolution
++	my $addr = sprintf("%d", hex($base_addr));
++	my $addr_str = sprintf("@%07x",$addr / $width);
++	print $dst "$addr_str\n";
++
+ 	my @bin;
+ 	while (<$src>)
+ 	{
+@@ -31,9 +32,6 @@ sub bin2hex
+ 	my $size = scalar(@bin);
+ 	my $idx = 0;
+ 	while ($size > 0) {
+-		# Print address line
+-		my $addr_str = sprintf("@%07x",$addr);
+-		print $dst "$addr_str\n";
+ 
+ 		$byte = 0;
+ 		while ($byte < $width) {
+@@ -42,7 +40,6 @@ sub bin2hex
+ 		}
+ 
+ 		print $dst "\n";
+-		$addr++;
+ 		$idx += $width;
+ 		$size -= $width;
+ 
+@@ -50,16 +47,12 @@ sub bin2hex
+ 		if(defined($page_size) and (($idx % $page_size) == 0)) {
+ 			my $spare = $page_size;
+ 			while ($spare > 0) {
+-				my $addr_str = sprintf("@%07x",$addr);
+-				print $dst "$addr_str\n";
+-
+ 				$byte = 0;
+ 				while ($byte < $width) {
+ 					print $dst "ff";
+ 					$byte++;
+ 				}
+ 				print $dst "\n";
+-				$addr++;
+ 				$spare -= $width;
+ 			}
+ 		}
+-- 
+1.9.1
+

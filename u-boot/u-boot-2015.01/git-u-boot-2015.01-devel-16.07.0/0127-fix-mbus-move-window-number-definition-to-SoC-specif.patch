@@ -1,0 +1,87 @@
+From 7ee42628a5793650b5eb1a3219c44e17b0fba89b Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Mon, 23 Feb 2015 19:33:49 +0200
+Subject: [PATCH 0127/1240] fix: mbus: move window number definition to SoC
+ specific code
+
+	Armada-LP will utilize the same address decoding mechanism
+	as for the MBUS, excpet for different window number limit.
+	- relocate window number definition MAX_MBUS_WINS to SoC
+	  specific code
+
+Change-Id: I84567239f54a26fd0f8f25b66f4373b7be9fb5c0
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/16945
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/adec_mbus.c            | 1 +
+ arch/arm/include/asm/arch-armada38x/memory-map.h | 2 ++
+ arch/arm/include/asm/arch-armada38x/soc-info.h   | 5 +++++
+ arch/arm/include/asm/arch-mvebu/adec_mbus.h      | 5 -----
+ 4 files changed, 8 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/adec_mbus.c b/arch/arm/cpu/mvebu-common/adec_mbus.c
+index 34a05d2..db70648 100644
+--- a/arch/arm/cpu/mvebu-common/adec_mbus.c
++++ b/arch/arm/cpu/mvebu-common/adec_mbus.c
+@@ -24,6 +24,7 @@
+ #include <asm/system.h>
+ #include <asm/io.h>
+ #include <asm/arch/regs-base.h>
++#include <asm/arch/soc-info.h>
+ #include <asm/arch-mvebu/mvebu.h>
+ #include <asm/arch-mvebu/adec.h>
+ 
+diff --git a/arch/arm/include/asm/arch-armada38x/memory-map.h b/arch/arm/include/asm/arch-armada38x/memory-map.h
+index 28a7d14..0674e23 100644
+--- a/arch/arm/include/asm/arch-armada38x/memory-map.h
++++ b/arch/arm/include/asm/arch-armada38x/memory-map.h
+@@ -26,9 +26,11 @@
+ /* 0xF1000000 - 0xF1100000 - INTERNAL_REG */
+ /* 0xFD000000 - 0xFD100000 - NOR_CS */
+ 
++/* General */
+ #define MVEBU_REGS_BASE			(0xF1000000)
+ #define MVEBU_REGS_SIZE			(0x100000)
+ 
++/* Memory windows settings */
+ #define MVEBU_PCIE_MEM_BASE(id)		(0xE0000000 + (id * 0x2000000))
+ #define MVEBU_PCIE_MEM_SIZE(id)		(0x2000000)
+ 
+diff --git a/arch/arm/include/asm/arch-armada38x/soc-info.h b/arch/arm/include/asm/arch-armada38x/soc-info.h
+index 015087a..5d2885e 100644
+--- a/arch/arm/include/asm/arch-armada38x/soc-info.h
++++ b/arch/arm/include/asm/arch-armada38x/soc-info.h
+@@ -20,6 +20,11 @@
+ #ifndef _SOC_INFO_H_
+ #define _SOC_INFO_H_
+ 
++/* MBUS definitions*/
++#define MAX_MBUS_WINS			19 /* window #20 reserved for internal register */
++#define MAX_MBUS_REMAP_WINS		8
++#define INTERNAL_REG_WIN_NUM		20
++
+ /* General MPP definitions */
+ #define MAX_MPP_OPTS		7
+ #define MAX_MPP_ID		59
+diff --git a/arch/arm/include/asm/arch-mvebu/adec_mbus.h b/arch/arm/include/asm/arch-mvebu/adec_mbus.h
+index 8402390..ca8559d 100644
+--- a/arch/arm/include/asm/arch-mvebu/adec_mbus.h
++++ b/arch/arm/include/asm/arch-mvebu/adec_mbus.h
+@@ -81,11 +81,6 @@ enum mbus_attribute {
+ 	NOT_VALID_ATTR		= 0xFF,
+ };
+ 
+-#define MAX_MBUS_WINS				19
+-#define MAX_MBUS_REMAP_WINS			8
+-#define INTERNAL_REG_WIN_NUM			20
+-
+-
+ #define MBUS_WIN_CTRL_REG(win_num)		((win_num < MAX_MBUS_REMAP_WINS) ? \
+ 		(win_num * 0x10) : (0x90 + (win_num-8)*0x08))
+ #define MBUS_CR_WIN_ENABLE			0x1
+-- 
+1.9.1
+

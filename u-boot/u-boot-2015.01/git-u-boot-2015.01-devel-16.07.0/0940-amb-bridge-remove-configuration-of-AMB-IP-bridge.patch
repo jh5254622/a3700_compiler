@@ -1,0 +1,99 @@
+From a0a4391ca752418507f6851f07b7ac1e9f6cf586 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 9 Mar 2016 13:21:07 +0200
+Subject: [PATCH 0940/1240] amb-bridge: remove configuration of AMB IP bridge
+
+configuration is moved to firmware
+
+Change-Id: Ia9038b8b70efd82141f1225e5ed92651bdadd8a2
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28140
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/spl.c              | 12 -----------
+ arch/arm/include/asm/arch-armada8k/misc-regs.h | 29 --------------------------
+ arch/arm/include/asm/arch-armada8k/regs-base.h |  3 ---
+ 3 files changed, 44 deletions(-)
+ delete mode 100644 arch/arm/include/asm/arch-armada8k/misc-regs.h
+
+diff --git a/arch/arm/cpu/armv8/armada8k/spl.c b/arch/arm/cpu/armv8/armada8k/spl.c
+index 7717d23..02fb5bf 100644
+--- a/arch/arm/cpu/armv8/armada8k/spl.c
++++ b/arch/arm/cpu/armv8/armada8k/spl.c
+@@ -23,8 +23,6 @@
+ #include <asm/arch-mvebu/ccu.h>
+ #include <asm/arch-mvebu/flc.h>
+ #include <asm/arch-mvebu/fdt.h>
+-#include <asm/arch-armada8k/misc-regs.h>
+-#include <asm/arch-mvebu/comphy.h>
+ #include <mvebu_chip_sar.h>
+ #include <spl.h>
+ 
+@@ -56,16 +54,6 @@ void board_init_f(ulong silent)
+ 
+ 	preloader_console_init();
+ 
+-#ifndef CONFIG_PALLADIUM
+-	/* SoC spesific init for AMB-Bridge
+-	   Open AMB bridge Window to Access COMPHY/MDIO registers
+-	   This relevant for 70x0 only */
+-	if (fdt_node_check_compatible(gd->fdt_blob, 0, "marvell,armada-70x0") == 0) {
+-		reg_set((void *)MVEBU_AMB_IP_BRIDGE_WIN_REG(0),
+-			0x7ff << MVEBU_AMB_IP_BRIDGE_WIN_SIZE_OFFSET | 0x1 << MVEBU_AMB_IP_BRIDGE_WIN_EN_OFFSET,
+-			MVEBU_AMB_IP_BRIDGE_WIN_SIZE_MASK | MVEBU_AMB_IP_BRIDGE_WIN_EN_MASK);
+-	}
+-#endif
+ 
+ #ifdef CONFIG_MVEBU_CHIP_SAR
+ 	/* Sample at reset register init */
+diff --git a/arch/arm/include/asm/arch-armada8k/misc-regs.h b/arch/arm/include/asm/arch-armada8k/misc-regs.h
+deleted file mode 100644
+index 3790359..0000000
+--- a/arch/arm/include/asm/arch-armada8k/misc-regs.h
++++ /dev/null
+@@ -1,29 +0,0 @@
+-/*
+-* ***************************************************************************
+-* Copyright (C) 2015 Marvell International Ltd.
+-* ***************************************************************************
+-* This program is free software: you can redistribute it and/or modify it
+-* under the terms of the GNU General Public License as published by the Free
+-* Software Foundation, either version 2 of the License, or any later version.
+-*
+-* This program is distributed in the hope that it will be useful,
+-* but WITHOUT ANY WARRANTY; without even the implied warranty of
+-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-* GNU General Public License for more details.
+-*
+-* You should have received a copy of the GNU General Public License
+-* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-* ***************************************************************************
+-*/
+-
+-#ifndef _MISC_REGS_H_
+-#define _MISC_REGS_H_
+-#include <asm/arch-armada8k/regs-base.h>
+-
+-#define MVEBU_AMB_IP_BRIDGE_WIN_REG(win)	(MVEBU_AMB_IP_BASE + (win * 0x8))
+-#define MVEBU_AMB_IP_BRIDGE_WIN_EN_OFFSET	0
+-#define MVEBU_AMB_IP_BRIDGE_WIN_EN_MASK		(0x1 << MVEBU_AMB_IP_BRIDGE_WIN_EN_OFFSET)
+-#define MVEBU_AMB_IP_BRIDGE_WIN_SIZE_OFFSET	16
+-#define MVEBU_AMB_IP_BRIDGE_WIN_SIZE_MASK	(0xffff << MVEBU_AMB_IP_BRIDGE_WIN_SIZE_OFFSET)
+-
+-#endif /* _MISC_REGS_H_ */
+diff --git a/arch/arm/include/asm/arch-armada8k/regs-base.h b/arch/arm/include/asm/arch-armada8k/regs-base.h
+index 3e72d3b..d8021c7 100644
+--- a/arch/arm/include/asm/arch-armada8k/regs-base.h
++++ b/arch/arm/include/asm/arch-armada8k/regs-base.h
+@@ -44,7 +44,4 @@
+ 
+ #define MVEBU_LLC_BASE		(MVEBU_REGS_BASE + 0x8000)
+ 
+-/* Base registers for CP */
+-#define MVEBU_AMB_IP_BASE		(MVEBU_CP0_REGS_BASE + 0x13ff00)
+-
+ #endif	/* _REGS_BASE_H_ */
+-- 
+1.9.1
+

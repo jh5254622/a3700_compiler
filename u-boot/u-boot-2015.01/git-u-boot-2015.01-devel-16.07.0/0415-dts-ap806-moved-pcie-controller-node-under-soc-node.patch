@@ -1,0 +1,51 @@
+From 840c68ebf6b33195bdd766733d162c8abff63546 Mon Sep 17 00:00:00 2001
+From: Shaker Daibes <shaker@marvell.com>
+Date: Tue, 8 Sep 2015 16:19:33 +0300
+Subject: [PATCH 0415/1240] dts: ap806: moved pcie-controller node under soc
+ node
+
+- Moved pcie-controller node under soc node due to register base address calculation
+
+Change-Id: I76bfdef0a8257badb7950b4d86ec781d7350b5a2
+Signed-off-by: Shaker Daibes <shaker@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23484
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/apn-806.dtsi | 20 ++++++++++----------
+ 1 file changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm/dts/apn-806.dtsi b/arch/arm/dts/apn-806.dtsi
+index ce7b7c8..a717890 100644
+--- a/arch/arm/dts/apn-806.dtsi
++++ b/arch/arm/dts/apn-806.dtsi
+@@ -120,16 +120,16 @@
+ 				status = "okay";
+ 			};
+ 
+-		};
+-		pcie-controller {
+-			#address-cells = <1>;
+-			#size-cells = <1>;
+-			compatible = "marvell,mvebu-pcie";
+-
+-			pcie@1,0 {
+-				reg = <0x50000000 0x2000>;
+-				mem = <0x40000000 0x40000000>;
+-				status = "okay";
++			pcie-controller {
++				#address-cells = <1>;
++				#size-cells = <1>;
++				compatible = "marvell,mvebu-pcie";
++
++				pcie@1,0 {
++					reg = <0x50000000 0x2000>;
++					mem = <0x40000000 0x40000000>;
++					status = "okay";
++				};
+ 			};
+ 		};
+ 	};
+-- 
+1.9.1
+

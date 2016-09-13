@@ -1,0 +1,33 @@
+From 3808cd88575416c3f6c0799ae8abb2d00d4b0673 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 18 Mar 2015 16:48:48 +0200
+Subject: [PATCH 0156/1240] a8k: disable initialization of address decoding for
+ A8k
+
+Change-Id: Ieaeed48db082a83beab9e8be2bb7db1294fad52a
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17623
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/soc-init.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index 2753f05..01d041b 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -119,8 +119,10 @@ int mvebu_soc_init()
+ 	/* Update SOC info according to family */
+ 	update_soc_units(soc);
+ 
++#ifndef CONFIG_PALLADIUM
+ 	/* Initialize physical memory map */
+ 	adec_init(soc->memory_map);
++#endif
+ 
+ 	/* Soc specific init */
+ 	ret = soc_late_init();
+-- 
+1.9.1
+

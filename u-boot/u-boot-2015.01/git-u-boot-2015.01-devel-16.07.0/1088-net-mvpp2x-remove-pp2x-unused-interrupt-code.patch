@@ -1,0 +1,49 @@
+From 4bfb73d6178e18e6ac2e3254b7d9c8ebe1c362f6 Mon Sep 17 00:00:00 2001
+From: Stefan Chulski <stefanc@marvell.com>
+Date: Thu, 5 May 2016 13:54:54 +0300
+Subject: [PATCH 1088/1240] net: mvpp2x: remove pp2x unused interrupt code
+
+- remove unused MV_PP2x_INTERRUPT in u-boot
+
+Change-Id: I54edf436fb669962da6cae15ee98ff8172d32161
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29552
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/net/mv_pp2x.c | 7 -------
+ drivers/net/mv_pp2x.h | 1 -
+ 2 files changed, 8 deletions(-)
+
+diff --git a/drivers/net/mv_pp2x.c b/drivers/net/mv_pp2x.c
+index 704eb66..a47bc07 100644
+--- a/drivers/net/mv_pp2x.c
++++ b/drivers/net/mv_pp2x.c
+@@ -1594,13 +1594,6 @@ static int mv_gop110_gmac_mode_cfg(struct gop_hw *gop, struct mv_mac_data *mac)
+ 	/* mask all ports interrupts */
+ 	mv_gop110_gmac_port_link_event_mask(gop, mac_num);
+ 
+-#if MV_PP2x_INTERRUPT
+-	/* unmask link change interrupt */
+-	val = mv_gop110_gmac_read(gop, mac_num, MV_GMAC_INTERRUPT_MASK_REG);
+-	val |= MV_GMAC_INTERRUPT_CAUSE_LINK_CHANGE_MASK;
+-	val |= 1; /* unmask summary bit */
+-	mv_gop110_gmac_write(gop, mac_num, MV_GMAC_INTERRUPT_MASK_REG, val);
+-#endif
+ 	return 0;
+ }
+ 
+diff --git a/drivers/net/mv_pp2x.h b/drivers/net/mv_pp2x.h
+index 3e6b731..89bb03d 100644
+--- a/drivers/net/mv_pp2x.h
++++ b/drivers/net/mv_pp2x.h
+@@ -37,7 +37,6 @@
+ # error Marvell mv_pp2x requires PHYLIB
+ #endif
+ 
+-#define MV_PP2x_INTERRUPT 0
+ #define MAX_CHIP_NUM 4
+ 
+ /* Some linux -> U-Boot compatibility stuff */
+-- 
+1.9.1
+

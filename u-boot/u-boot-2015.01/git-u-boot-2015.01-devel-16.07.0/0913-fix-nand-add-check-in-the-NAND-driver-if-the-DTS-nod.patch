@@ -1,0 +1,38 @@
+From 90de7fa8dcbc100ef3d27349063b850a0c3229d8 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 2 Mar 2016 16:58:13 +0200
+Subject: [PATCH 0913/1240] fix: nand: add check in the NAND driver if the DTS
+ node is enabled
+
+- The NAND driver get the parameteres from the FDT node, and ignore if the
+  status is okay or disabled.
+- This patch fix the issue, and checks if the status is enabled or not.
+- SYSTEMSW-2295
+
+Change-Id: I3cc3a1496bffd11a10c77cd6ef6b7f2d2b4f3879
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27995
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/mtd/nand/pxa3xx_nand.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/drivers/mtd/nand/pxa3xx_nand.c b/drivers/mtd/nand/pxa3xx_nand.c
+index 8f05b6d..17dada1 100644
+--- a/drivers/mtd/nand/pxa3xx_nand.c
++++ b/drivers/mtd/nand/pxa3xx_nand.c
+@@ -1550,6 +1550,10 @@ static int pxa3xx_nand_probe_dt(struct pxa3xx_nand_info *info)
+ 		return -1;
+ 	}
+ 
++	/* Check if the Node is enabled, if not retun -EINVAL */
++	if (!fdtdec_get_is_enabled(blob, node))
++		return -EINVAL;
++
+ 	/* Get the NAND controler base address */
+ 	info->mmio_base = (void *)fdt_get_regs_offs(blob, node, "reg");
+ 
+-- 
+1.9.1
+

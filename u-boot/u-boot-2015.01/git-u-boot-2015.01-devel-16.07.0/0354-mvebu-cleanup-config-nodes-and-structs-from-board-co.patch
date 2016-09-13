@@ -1,0 +1,398 @@
+From 0a846343d4be146ed9034de65399d4ba6a3864aa Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 20 Aug 2015 17:02:08 +0300
+Subject: [PATCH 0354/1240] mvebu: cleanup config nodes and structs from board
+ code
+
+Change-Id: I6d49d65433f03d26b4a68940b8bd4214020dd021
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23003
+Tested-by: Star_Automation <star@marvell.com>
+---
+ board/mvebu/armada38x/board-info.c       | 27 ---------------------------
+ board/mvebu/armada38x/customer-board.c   |  1 -
+ board/mvebu/armada38x/db-88f6820-info.c  |  1 -
+ board/mvebu/armada38x/rd-88f6820-info.c  |  1 -
+ board/mvebu/armada8k/board-info.c        | 31 -------------------------------
+ board/mvebu/armada8k/db-8210-info.c      |  1 -
+ board/mvebu/armada8k/rd-8210-info.c      |  1 -
+ board/mvebu/armadalp/board-info.c        | 29 -----------------------------
+ board/mvebu/armadalp/customer-board.c    |  1 -
+ board/mvebu/armadalp/db0-armadalp-info.c |  1 -
+ board/mvebu/armadalp/db1-armadalp-info.c |  1 -
+ board/mvebu/common/Makefile              |  3 +--
+ board/mvebu/common/board.h               | 19 -------------------
+ board/mvebu/common/devel-board.c         | 29 -----------------------------
+ board/mvebu/common/entry.c               | 23 -----------------------
+ 15 files changed, 1 insertion(+), 168 deletions(-)
+ delete mode 100644 board/mvebu/common/entry.c
+
+diff --git a/board/mvebu/armada38x/board-info.c b/board/mvebu/armada38x/board-info.c
+index f8b5d99..c316670 100644
+--- a/board/mvebu/armada38x/board-info.c
++++ b/board/mvebu/armada38x/board-info.c
+@@ -20,32 +20,6 @@
+ #include <linux/compiler.h>
+ #include "board-info.h"
+ 
+-#define SATR_EEPROM0_ADDR	0x22
+-
+-/* Define all board configuration variables */
+-/* Assuming their location is equal on all boards */
+-struct cfg_var a38x_cfg_lookup[MAX_CFG] = {
+-	[BOARD_ID_CFG] = {0, 0, 3, 4, 0,
+-		{{ARMADA_38X_DB_ID, "DB-88F6820-BP", VAR_IS_DEFUALT},
+-		 {ARMADA_38X_RD_ID, "DB-88F6820-RD", 0} }
+-	},
+-	[SERDES_0_CFG] = {1, 0, 3, 2, 0,
+-		{{0x0, "pcie 0", VAR_IS_DEFUALT},
+-		 {0x1, "sata 0", 0} },
+-	},
+-	[SERDES_1_CFG] = {1, 3, 3, 3, 0,
+-		{{0x0, "pcie 1", 0},
+-		 {0x1, "sata 1", VAR_IS_DEFUALT},
+-		 {0x2, "usb3 1", 0} },
+-	}
+-};
+-
+-/* Define general SAR information */
+-struct cfg_data a38x_cfg = {
+-	.chip_addr    = 0x55,
+-	.cfg_lookup   = a38x_cfg_lookup
+-};
+-
+ struct mvebu_board_info *a38x_board_lookup[MAX_BOARD_ID] = {
+ 	[ARMADA_38X_DB_ID] = &a38x_db_info,
+ 	[ARMADA_38X_RD_ID] = &a38x_rd_info,
+@@ -56,6 +30,5 @@ struct mvebu_board_family a38x_board_family = {
+ 	.default_id = ARMADA_38X_DB_ID,
+ 	.board_cnt = MAX_BOARD_ID,
+ 	.boards_info = a38x_board_lookup,
+-	.cfg = &a38x_cfg,
+ };
+ 
+diff --git a/board/mvebu/armada38x/customer-board.c b/board/mvebu/armada38x/customer-board.c
+index f3b760a..21e6bb4 100644
+--- a/board/mvebu/armada38x/customer-board.c
++++ b/board/mvebu/armada38x/customer-board.c
+@@ -23,6 +23,5 @@
+ struct mvebu_board_info a38x_customer_info = {
+ 	.name = "CUSTOMER-BOARD",
+ 	.id = ARMADA_38X_CUSTOMER_ID,
+-	.configurable = 0,
+ };
+ 
+diff --git a/board/mvebu/armada38x/db-88f6820-info.c b/board/mvebu/armada38x/db-88f6820-info.c
+index 64f4a15..75ceeaa 100644
+--- a/board/mvebu/armada38x/db-88f6820-info.c
++++ b/board/mvebu/armada38x/db-88f6820-info.c
+@@ -43,6 +43,5 @@ struct mvebu_board_info a38x_db_info = {
+ 	.name = "DB-88F6820-BP",
+ 	.id = ARMADA_38X_DB_ID,
+ 	.configure_mpp = &db_a38x_configure_mpp,
+-	.configurable = 1,
+ };
+ 
+diff --git a/board/mvebu/armada38x/rd-88f6820-info.c b/board/mvebu/armada38x/rd-88f6820-info.c
+index a068313..fdf3654 100644
+--- a/board/mvebu/armada38x/rd-88f6820-info.c
++++ b/board/mvebu/armada38x/rd-88f6820-info.c
+@@ -35,5 +35,4 @@ struct mvebu_board_info a38x_rd_info = {
+ 	.name = "RD-88F6820-GP",
+ 	.id = ARMADA_38X_RD_ID,
+ 	.configure_mpp = &rd_a38x_configure_mpp,
+-	.configurable = 1,
+ };
+diff --git a/board/mvebu/armada8k/board-info.c b/board/mvebu/armada8k/board-info.c
+index 933b45d..e9601bb 100644
+--- a/board/mvebu/armada8k/board-info.c
++++ b/board/mvebu/armada8k/board-info.c
+@@ -20,36 +20,6 @@
+ #include <linux/compiler.h>
+ #include "board-info.h"
+ 
+-#define SATR_EEPROM0_ADDR	0x22
+-
+-/* Define all board configuration variables */
+-/* Assuming their location is equal on all boards */
+-struct cfg_var a8k_cfg_lookup[MAX_CFG] = {
+-	[BOARD_ID_CFG] = {0, 0, 3, 4, 0,
+-		{{ARMADA_8021_DB_ID, "DB-88FA806-DDR4-MODULAR", VAR_IS_DEFUALT},
+-		 {ARMADA_8021_RD_ID, "RD-88FA806-DDR4-MODULAR", 0},
+-		 {ARMADA_8022_DB_ID, "DB-8022", 0},
+-		 {ARMADA_8022_RD_ID, "RD-8022", 0} },
+-	},
+-	[SERDES_0_CFG] = {1, 0, 3, 2, 0,
+-		{{0x0, "pcie 0", VAR_IS_DEFUALT},
+-		 {0x1, "sata 0", 0} },
+-	},
+-	[SERDES_1_CFG] = {1, 3, 3, 3, 0,
+-		{{0x0, "pcie 1", 0},
+-		 {0x1, "sata 1", VAR_IS_DEFUALT},
+-		 {0x2, "usb3 1", 0} },
+-	}
+-};
+-
+-/* Define general SAR information */
+-struct cfg_data a8k_cfg = {
+-	.chip_addr    = 0x55,
+-	.cfg_lookup   = a8k_cfg_lookup
+-};
+-
+-
+-
+ struct mvebu_board_info *a8k_board_lookup[MAX_BOARD_ID] = {
+ 	[ARMADA_8021_DB_ID] = &a8021_db_info,
+ 	[ARMADA_8021_RD_ID] = &a8021_rd_info
+@@ -59,6 +29,5 @@ struct mvebu_board_family a8k_board_family = {
+ 	.default_id = ARMADA_8021_DB_ID,
+ 	.board_cnt = MAX_BOARD_ID,
+ 	.boards_info = a8k_board_lookup,
+-	.cfg = &a8k_cfg,
+ };
+ 
+diff --git a/board/mvebu/armada8k/db-8210-info.c b/board/mvebu/armada8k/db-8210-info.c
+index 783e08a..16e1ad7 100644
+--- a/board/mvebu/armada8k/db-8210-info.c
++++ b/board/mvebu/armada8k/db-8210-info.c
+@@ -23,6 +23,5 @@
+ struct mvebu_board_info a8021_db_info = {
+ 	.name = "DB-MV8021",
+ 	.id = ARMADA_8021_DB_ID,
+-	.configurable = 1,
+ };
+ 
+diff --git a/board/mvebu/armada8k/rd-8210-info.c b/board/mvebu/armada8k/rd-8210-info.c
+index bcd8a43..89fa9b4 100644
+--- a/board/mvebu/armada8k/rd-8210-info.c
++++ b/board/mvebu/armada8k/rd-8210-info.c
+@@ -23,6 +23,5 @@
+ struct mvebu_board_info a8021_rd_info = {
+ 	.name = "RD-MV8021",
+ 	.id = ARMADA_8021_RD_ID,
+-	.configurable = 1,
+ };
+ 
+diff --git a/board/mvebu/armadalp/board-info.c b/board/mvebu/armadalp/board-info.c
+index 9e25fc3..411f1e2 100644
+--- a/board/mvebu/armadalp/board-info.c
++++ b/board/mvebu/armadalp/board-info.c
+@@ -20,34 +20,6 @@
+ #include <linux/compiler.h>
+ #include "board-info.h"
+ 
+-#define SATR_EEPROM0_ADDR	0x22
+-
+-/* Define all board configuration variables */
+-/* Assuming their location is equal on all boards */
+-struct cfg_var armadalp_cfg_lookup[MAX_CFG] = {
+-	[BOARD_ID_CFG] = {0, 0, 3, 4, 0,
+-		{{ARMADA_LP_DB0_ID, "DB-9990", VAR_IS_DEFUALT},
+-		 {ARMADA_LP_DB1_ID, "DB-9991", 0} },
+-	},
+-	[SERDES_0_CFG] = {1, 0, 3, 2, 0,
+-		{{0x0, "pcie 0", VAR_IS_DEFUALT},
+-		 {0x1, "sata 0", 0} },
+-	},
+-	[SERDES_1_CFG] = {1, 3, 3, 3, 0,
+-		{{0x0, "pcie 1", 0},
+-		 {0x1, "sata 1", VAR_IS_DEFUALT},
+-		 {0x2, "usb3 1", 0} },
+-	}
+-};
+-
+-/* Define general SAR information */
+-struct cfg_data armadalp_cfg = {
+-	.chip_addr    = 0x55,
+-	.cfg_lookup   = armadalp_cfg_lookup
+-};
+-
+-
+-
+ struct mvebu_board_info *armadalp_board_lookup[MAX_BOARD_ID] = {
+ 	[ARMADA_LP_DB0_ID] = &db0_armadalp_info,
+ 	[ARMADA_LP_DB1_ID] = &db1_armadalp_info
+@@ -56,6 +28,5 @@ struct mvebu_board_family armadalp_board_family = {
+ 	.default_id = ARMADA_LP_DB0_ID,
+ 	.board_cnt = MAX_BOARD_ID,
+ 	.boards_info = armadalp_board_lookup,
+-	.cfg = &armadalp_cfg,
+ };
+ 
+diff --git a/board/mvebu/armadalp/customer-board.c b/board/mvebu/armadalp/customer-board.c
+index 26b5bbb..ce35ab8 100644
+--- a/board/mvebu/armadalp/customer-board.c
++++ b/board/mvebu/armadalp/customer-board.c
+@@ -23,6 +23,5 @@
+ struct mvebu_board_info armadalp_customer_info = {
+ 	.name = "CUSTOMER-BOARD0-MV-ARMADA-LP",
+ 	.id = ARMADA_LP_CUSTOMER0_ID,
+-	.configurable = 0,
+ };
+ 
+diff --git a/board/mvebu/armadalp/db0-armadalp-info.c b/board/mvebu/armadalp/db0-armadalp-info.c
+index 60691c5..41fc766 100644
+--- a/board/mvebu/armadalp/db0-armadalp-info.c
++++ b/board/mvebu/armadalp/db0-armadalp-info.c
+@@ -23,6 +23,5 @@
+ struct mvebu_board_info db0_armadalp_info = {
+ 	.name = "DB0-MV-ARMADALP",
+ 	.id = ARMADA_LP_DB0_ID,
+-	.configurable = 1,
+ };
+ 
+diff --git a/board/mvebu/armadalp/db1-armadalp-info.c b/board/mvebu/armadalp/db1-armadalp-info.c
+index d81a93c..fcbef94 100644
+--- a/board/mvebu/armadalp/db1-armadalp-info.c
++++ b/board/mvebu/armadalp/db1-armadalp-info.c
+@@ -23,6 +23,5 @@
+ struct mvebu_board_info db1_armadalp_info = {
+ 	.name = "DB1-MV-ARMADALP",
+ 	.id = ARMADA_LP_DB1_ID,
+-	.configurable = 1,
+ };
+ 
+diff --git a/board/mvebu/common/Makefile b/board/mvebu/common/Makefile
+index baf6bf4..54cb2c7 100644
+--- a/board/mvebu/common/Makefile
++++ b/board/mvebu/common/Makefile
+@@ -17,13 +17,12 @@
+ #
+ 
+ obj-y	+= board-common.o
+-obj-y	+= entry.o
+ obj-y	+= init.o
+ obj-$(CONFIG_MVEBU_NAND) += nand_init.o
+ obj-$(CONFIG_CMD_NET)	+= eth_init.o
+ 
+ ifdef CONFIG_DEVEL_BOARD
+ obj-y	+= sar.o
+-obj-y	+= config.o
++obj-n	+= config.o
+ obj-y	+= devel-board.o
+ endif
+diff --git a/board/mvebu/common/board.h b/board/mvebu/common/board.h
+index 26a4e41..8ee23fb 100644
+--- a/board/mvebu/common/board.h
++++ b/board/mvebu/common/board.h
+@@ -24,23 +24,10 @@
+ #include <asm/arch/soc-info.h>
+ #include <linux/compiler.h>
+ #include "sar.h"
+-#include "config.h"
+ 
+ #define MAX_BOARD_NAME		32
+ 
+ /*
+- * mvebu_board_config  - Describes board configuration features
+- *
+- * sar_cnt - number of suported SAR options
+- * supported_sar - array of supported SAR variables
+- * sar_override - table that overrides the default sar table
+- */
+-struct mvebu_board_config {
+-	int cfg_cnt;
+-	enum cfg_variables active_cfg[MAX_SAR];
+-};
+-
+-/*
+  * mvebu_board_info - Describes board specific features
+  *
+  * name -	short name of the board
+@@ -59,9 +46,6 @@ struct mvebu_board_info {
+ 	char name[MAX_BOARD_NAME];
+ 	u32  id;
+ 
+-	/* Only for development boards */
+-	bool configurable;
+-	struct mvebu_board_config *config_data;
+ 	/* Configure MPP for different board configurations */
+ 	int (*configure_mpp)(void);
+ };
+@@ -81,9 +65,6 @@ struct mvebu_board_family {
+ 	int  board_cnt;
+ 	struct mvebu_board_info *curr_board;
+ 	struct mvebu_board_info **boards_info;
+-
+-	/* Only for development boards */
+-	struct cfg_data *cfg;
+ };
+ 
+ /* APIs required from all board families */
+diff --git a/board/mvebu/common/devel-board.c b/board/mvebu/common/devel-board.c
+index 973200c..2189369 100644
+--- a/board/mvebu/common/devel-board.c
++++ b/board/mvebu/common/devel-board.c
+@@ -28,14 +28,7 @@
+ int mvebu_devel_board_init(struct mvebu_board_family *brd_fam)
+ {
+ 	struct mvebu_board_info *brd = brd_fam->curr_board;
+-	int cfg_id;
+ 
+-	/* Update SAR and CFG for board */
+-	if (brd->configurable) {
+-		/* Deactivate all CFG entries */
+-		for (cfg_id = 0; cfg_id < MAX_CFG; cfg_id++)
+-			brd_fam->cfg->cfg_lookup[cfg_id].active = 0;
+-	}
+ 	sar_init();
+ 
+ 	/* Update MPP configurations */
+@@ -45,25 +38,3 @@ int mvebu_devel_board_init(struct mvebu_board_family *brd_fam)
+ 	return 0;
+ }
+ 
+-struct cfg_data *board_get_cfg(void)
+-{
+-	struct mvebu_board_family *brd_fam = get_board_family();
+-
+-	if (brd_fam->curr_board->configurable &&
+-	    brd_fam->curr_board->config_data->cfg_cnt)
+-		return brd_fam->cfg;
+-	else
+-		return NULL;
+-}
+-
+-struct cfg_var *board_get_cfg_table(void)
+-{
+-	struct mvebu_board_family *brd_fam = get_board_family();
+-
+-	if (brd_fam->curr_board->configurable &&
+-	    brd_fam->curr_board->config_data->cfg_cnt)
+-		return brd_fam->cfg->cfg_lookup;
+-	else
+-		return NULL;
+-}
+-
+diff --git a/board/mvebu/common/entry.c b/board/mvebu/common/entry.c
+deleted file mode 100644
+index d751e4f..0000000
+--- a/board/mvebu/common/entry.c
++++ /dev/null
+@@ -1,23 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-/* #define DEBUG*/
+-
+-#include <common.h>
+-
+-
+-- 
+1.9.1
+

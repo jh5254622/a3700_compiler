@@ -1,0 +1,28 @@
+From aebbc6bd2cce2389a3703304da87d94fc7877e1c Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 2 Feb 2016 13:53:41 +0200
+Subject: [PATCH 0769/1240] fix: comphy: dts: fix base address of HPIPE unit
+
+Change-Id: Ib308160abefa620d34090913075a428b6046417a
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27151
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ arch/arm/dts/cp110.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index e853877..48d09a8 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -129,5 +129,5 @@ comphy {
+ 	mux-bitcount = <4>;
+ 	max-lanes = <6>;
+ 	reg-comphy = <0x441000 0x8>;
+-	reg-hpipe3 = <0x120800 0x8>;
++	reg-hpipe3 = <0x120000 0x8>;
+ };
+-- 
+1.9.1
+

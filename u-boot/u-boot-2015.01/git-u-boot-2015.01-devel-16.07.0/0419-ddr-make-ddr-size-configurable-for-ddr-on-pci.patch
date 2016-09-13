@@ -1,0 +1,64 @@
+From b42f375a1f9fa854d56e9641beb7ccb9841ad03b Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 3 Sep 2015 13:20:44 +0300
+Subject: [PATCH 0419/1240] ddr: make ddr size configurable for ddr-on-pci
+
+The default is set to 512 MB which is supported by
+all DDR endpoints
+
+Change-Id: Ib4fad8b9dce101f023723b8dd636fcce51c7d39a
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23466
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/soc.c |  4 ++--
+ arch/arm/cpu/mvebu-common/Kconfig | 10 ++++++++++
+ 2 files changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/soc.c b/arch/arm/cpu/armv8/armada8k/soc.c
+index 77cacb8..c7e335c 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc.c
++++ b/arch/arm/cpu/armv8/armada8k/soc.c
+@@ -23,6 +23,7 @@
+ #include <asm/arch-mvebu/soc.h>
+ #include <asm/arch-armada8k/armada8k.h>
+ #include <asm/arch/regs-base.h>
++#include <linux/sizes.h>
+ 
+ #define ADDRESS_SHIFT			(20)
+ #define MAX_CCU_WINDOWS			(8)
+@@ -61,8 +62,7 @@ void soc_init(void)
+ int dram_init(void)
+ {
+ #ifdef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+-	/* set static dram size 256MB*/
+-	gd->ram_size = 0x10000000;
++	gd->ram_size = CONFIG_DDR_OVER_PCI_SIZE;
+ #elif defined(CONFIG_PALLADIUM)
+ 	gd->ram_size = 0x20000000;
+ #else
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index 1312313..a31a1b8 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -63,6 +63,16 @@ config MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+ 	  Choose this option to add support
+ 	  for DDR over PCIE support
+ 
++config DDR_OVER_PCI_SIZE
++	int "size of DDR over PCI"
++	depends on MVEBU_SPL_DDR_OVER_PCI_SUPPORT
++	default  536870912
++	help
++	  Defines the size of DRAM over
++	  on the PCI endpoint. Relvant
++	  only when DDR over PCI is
++	  used.
++
+ endmenu
+ 
+ 
+-- 
+1.9.1
+

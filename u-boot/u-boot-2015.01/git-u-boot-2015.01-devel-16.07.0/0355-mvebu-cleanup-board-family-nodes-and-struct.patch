@@ -1,0 +1,558 @@
+From 7bbe2be8cf4cb2545c0f29056709bc748db838e3 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 20 Aug 2015 18:43:35 +0300
+Subject: [PATCH 0355/1240] mvebu: cleanup board family nodes and struct
+
+- Added support for FDT and compatible strings for board instead of board
+  family structs and nodes
+
+Change-Id: Ib6509231e46799c17088734c3e44f78d194fe9ce
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23004
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/armada-385-db.dts        |  2 +-
+ arch/arm/dts/armada-lp-db.dts         |  2 +-
+ arch/arm/dts/armada-lp-palladium.dts  |  2 +-
+ board/mvebu/armada38x/Makefile        |  2 --
+ board/mvebu/armada38x/armada38x.c     | 19 +++++++++++-------
+ board/mvebu/armada38x/board-info.c    | 34 -------------------------------
+ board/mvebu/armada38x/board-info.h    |  1 -
+ board/mvebu/armada8k/Makefile         |  1 -
+ board/mvebu/armada8k/armada8021-pxp.c | 17 +++++++++++-----
+ board/mvebu/armada8k/board-info.c     | 33 ------------------------------
+ board/mvebu/armadalp/Makefile         |  1 -
+ board/mvebu/armadalp/armadalp.c       | 17 +++++++++++-----
+ board/mvebu/armadalp/board-info.c     | 32 -----------------------------
+ board/mvebu/common/board-common.c     |  4 ----
+ board/mvebu/common/board.h            | 33 ++----------------------------
+ board/mvebu/common/devel-board.c      |  4 +---
+ board/mvebu/common/devel-board.h      |  8 +-------
+ board/mvebu/common/init.c             | 38 +++++++++++++----------------------
+ include/fdtdec.h                      |  9 +++++++++
+ lib/fdtdec.c                          |  9 +++++++++
+ 20 files changed, 75 insertions(+), 193 deletions(-)
+ delete mode 100644 board/mvebu/armada38x/board-info.c
+ delete mode 100644 board/mvebu/armada8k/board-info.c
+ delete mode 100644 board/mvebu/armadalp/board-info.c
+
+diff --git a/arch/arm/dts/armada-385-db.dts b/arch/arm/dts/armada-385-db.dts
+index 509af90..bea7397 100644
+--- a/arch/arm/dts/armada-385-db.dts
++++ b/arch/arm/dts/armada-385-db.dts
+@@ -6,7 +6,7 @@
+ 
+ / {
+ 	model = "Marvell Armada 385 Development Board";
+-	compatible = "marvell,a385-db", "marvell,armada385", "marvell,armada38x";
++	compatible = "marvell,armada-38x-db", "marvell,armada38x";
+ 
+ 	#address-cells = <2>;
+ 	#size-cells = <1>;
+diff --git a/arch/arm/dts/armada-lp-db.dts b/arch/arm/dts/armada-lp-db.dts
+index aea446a..9babf69 100644
+--- a/arch/arm/dts/armada-lp-db.dts
++++ b/arch/arm/dts/armada-lp-db.dts
+@@ -5,7 +5,7 @@
+ 
+ / {
+ 	model = "Marvell Armada_LP Development Board";
+-	compatible = "marvell,armada-lp-db", "marvell,armada-lp";
++	compatible = "marvell,armada-lp-db0", "marvell,armada-lp";
+ 
+ 	soc {
+ 		internal-regs {
+diff --git a/arch/arm/dts/armada-lp-palladium.dts b/arch/arm/dts/armada-lp-palladium.dts
+index d9c2e72..130c64b 100644
+--- a/arch/arm/dts/armada-lp-palladium.dts
++++ b/arch/arm/dts/armada-lp-palladium.dts
+@@ -5,7 +5,7 @@
+ 
+ / {
+ 	model = "Marvell Armada_LP Palladium";
+-	compatible = "marvell,armada-lp-palladium", "marvell,armada-lp";
++	compatible = "marvell,armada-lp-db0", "marvell,armada-lp";
+ 
+ 	soc {
+ 		internal-regs {
+diff --git a/board/mvebu/armada38x/Makefile b/board/mvebu/armada38x/Makefile
+index 0ff433b..c0afbe0 100644
+--- a/board/mvebu/armada38x/Makefile
++++ b/board/mvebu/armada38x/Makefile
+@@ -17,8 +17,6 @@
+ #
+ 
+ obj-y	+= armada38x.o
+-obj-y	+= board-info.o
+ obj-y	+= db-88f6820-info.o
+ obj-y	+= rd-88f6820-info.o
+ obj-y	+= customer-board.o
+-#obj-y	+= platform.o
+diff --git a/board/mvebu/armada38x/armada38x.c b/board/mvebu/armada38x/armada38x.c
+index 6517caa..00a3b46 100644
+--- a/board/mvebu/armada38x/armada38x.c
++++ b/board/mvebu/armada38x/armada38x.c
+@@ -16,8 +16,6 @@
+  * ***************************************************************************
+  */
+ 
+-/* #define DEBUG*/
+-
+ #include <common.h>
+ #include <malloc.h>
+ #include <errno.h>
+@@ -27,10 +25,17 @@
+ #include <linux/compiler.h>
+ #include "board-info.h"
+ 
+-
+-struct mvebu_board_family *board_init_family(void)
++struct mvebu_board_info *mvebu_board_info_get(enum fdt_compat_id compat_id)
+ {
+-	/* Board family specific init goes here */
+-
+-	return &a38x_board_family;
++	switch (compat_id) {
++	case COMPAT_MVEBU_ARMADA_38X_DB:
++		return &a38x_db_info;
++	case COMPAT_MVEBU_ARMADA_38X_RD:
++		return &a38x_rd_info;
++	case COMPAT_MVEBU_ARMADA_38X_CUSTOMER:
++		return &a38x_customer_info;
++	default:
++		error("Missing board information for compatible string = %d\n", compat_id);
++		return &a38x_db_info;
++	}
+ }
+diff --git a/board/mvebu/armada38x/board-info.c b/board/mvebu/armada38x/board-info.c
+deleted file mode 100644
+index c316670..0000000
+--- a/board/mvebu/armada38x/board-info.c
++++ /dev/null
+@@ -1,34 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#include <common.h>
+-#include <linux/compiler.h>
+-#include "board-info.h"
+-
+-struct mvebu_board_info *a38x_board_lookup[MAX_BOARD_ID] = {
+-	[ARMADA_38X_DB_ID] = &a38x_db_info,
+-	[ARMADA_38X_RD_ID] = &a38x_rd_info,
+-	[ARMADA_38X_CUSTOMER_ID] = &a38x_customer_info
+-};
+-
+-struct mvebu_board_family a38x_board_family = {
+-	.default_id = ARMADA_38X_DB_ID,
+-	.board_cnt = MAX_BOARD_ID,
+-	.boards_info = a38x_board_lookup,
+-};
+-
+diff --git a/board/mvebu/armada38x/board-info.h b/board/mvebu/armada38x/board-info.h
+index 0a16ee0..6dd33c3 100644
+--- a/board/mvebu/armada38x/board-info.h
++++ b/board/mvebu/armada38x/board-info.h
+@@ -32,6 +32,5 @@ enum a38x_board_types {
+ extern struct mvebu_board_info a38x_db_info;
+ extern struct mvebu_board_info a38x_rd_info;
+ extern struct mvebu_board_info a38x_customer_info;
+-extern struct mvebu_board_family a38x_board_family;
+ 
+ #endif /* _BOARD_INFO_H_ */
+diff --git a/board/mvebu/armada8k/Makefile b/board/mvebu/armada8k/Makefile
+index 5870a81..6682204 100644
+--- a/board/mvebu/armada8k/Makefile
++++ b/board/mvebu/armada8k/Makefile
+@@ -17,6 +17,5 @@
+ #
+ 
+ obj-y	+= armada8021-pxp.o
+-obj-y	+= board-info.o
+ obj-y	+= db-8210-info.o
+ obj-y	+= rd-8210-info.o
+diff --git a/board/mvebu/armada8k/armada8021-pxp.c b/board/mvebu/armada8k/armada8021-pxp.c
+index fc960fb..8ba2db9 100644
+--- a/board/mvebu/armada8k/armada8021-pxp.c
++++ b/board/mvebu/armada8k/armada8021-pxp.c
+@@ -27,10 +27,17 @@
+ #include <linux/compiler.h>
+ #include "board-info.h"
+ 
+-
+-struct mvebu_board_family *board_init_family(void)
++struct mvebu_board_info *mvebu_board_info_get(enum fdt_compat_id compat_id)
+ {
+-	/* Board family specific init goes here */
+-
+-	return &a8k_board_family;
++	switch (compat_id) {
++	case COMPAT_MVEBU_APN_806_DB:
++		return &a8021_db_info;
++	case COMPAT_MVEBU_APN_806_RD:
++		return &a8021_rd_info;
++	case COMPAT_MVEBU_APN_806_CUSTOMER:
++	default:
++		error("Missing board information for compatible string = %d\n", compat_id);
++		return &a8021_db_info;
++	}
+ }
++
+diff --git a/board/mvebu/armada8k/board-info.c b/board/mvebu/armada8k/board-info.c
+deleted file mode 100644
+index e9601bb..0000000
+--- a/board/mvebu/armada8k/board-info.c
++++ /dev/null
+@@ -1,33 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#include <common.h>
+-#include <linux/compiler.h>
+-#include "board-info.h"
+-
+-struct mvebu_board_info *a8k_board_lookup[MAX_BOARD_ID] = {
+-	[ARMADA_8021_DB_ID] = &a8021_db_info,
+-	[ARMADA_8021_RD_ID] = &a8021_rd_info
+-};
+-
+-struct mvebu_board_family a8k_board_family = {
+-	.default_id = ARMADA_8021_DB_ID,
+-	.board_cnt = MAX_BOARD_ID,
+-	.boards_info = a8k_board_lookup,
+-};
+-
+diff --git a/board/mvebu/armadalp/Makefile b/board/mvebu/armadalp/Makefile
+index c7d525a..ee1db20 100644
+--- a/board/mvebu/armadalp/Makefile
++++ b/board/mvebu/armadalp/Makefile
+@@ -17,7 +17,6 @@
+ #
+ 
+ obj-y	+= armadalp.o
+-obj-y	+= board-info.o
+ obj-y	+= db0-armadalp-info.o
+ obj-y	+= db1-armadalp-info.o
+ obj-y	+= customer-board.o
+diff --git a/board/mvebu/armadalp/armadalp.c b/board/mvebu/armadalp/armadalp.c
+index 2fbeada..76dcd90 100644
+--- a/board/mvebu/armadalp/armadalp.c
++++ b/board/mvebu/armadalp/armadalp.c
+@@ -27,10 +27,17 @@
+ #include <linux/compiler.h>
+ #include "board-info.h"
+ 
+-
+-struct mvebu_board_family *board_init_family(void)
++struct mvebu_board_info *mvebu_board_info_get(enum fdt_compat_id compat_id)
+ {
+-	/* Board family specific init goes here */
+-
+-	return &armadalp_board_family;
++	switch (compat_id) {
++	case COMPAT_MVEBU_ARMADA_LP_DB0:
++		return &db0_armadalp_info;
++	case COMPAT_MVEBU_ARMADA_LP_DB1:
++		return &db1_armadalp_info;
++	case COMPAT_MVEBU_ARMADA_LP_CUSTOMER:
++		return &armadalp_customer_info;
++	default:
++		error("Missing board information for compatible string = %d\n", compat_id);
++		return &db0_armadalp_info;
++	}
+ }
+diff --git a/board/mvebu/armadalp/board-info.c b/board/mvebu/armadalp/board-info.c
+deleted file mode 100644
+index 411f1e2..0000000
+--- a/board/mvebu/armadalp/board-info.c
++++ /dev/null
+@@ -1,32 +0,0 @@
+-/*
+-* ***************************************************************************
+-* Copyright (C) 2015 Marvell International Ltd.
+-* ***************************************************************************
+-* This program is free software: you can redistribute it and/or modify it
+-* under the terms of the GNU General Public License as published by the Free
+-* Software Foundation, either version 2 of the License, or any later version.
+-*
+-* This program is distributed in the hope that it will be useful,
+-* but WITHOUT ANY WARRANTY; without even the implied warranty of
+-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-* GNU General Public License for more details.
+-*
+-* You should have received a copy of the GNU General Public License
+-* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-* ***************************************************************************
+-*/
+-
+-#include <common.h>
+-#include <linux/compiler.h>
+-#include "board-info.h"
+-
+-struct mvebu_board_info *armadalp_board_lookup[MAX_BOARD_ID] = {
+-	[ARMADA_LP_DB0_ID] = &db0_armadalp_info,
+-	[ARMADA_LP_DB1_ID] = &db1_armadalp_info
+-};
+-struct mvebu_board_family armadalp_board_family = {
+-	.default_id = ARMADA_LP_DB0_ID,
+-	.board_cnt = MAX_BOARD_ID,
+-	.boards_info = armadalp_board_lookup,
+-};
+-
+diff --git a/board/mvebu/common/board-common.c b/board/mvebu/common/board-common.c
+index 395c5c820..536bf42 100644
+--- a/board/mvebu/common/board-common.c
++++ b/board/mvebu/common/board-common.c
+@@ -27,10 +27,6 @@
+ #include <asm/arch-mvebu/soc.h>
+ #include "board.h"
+ 
+-DECLARE_GLOBAL_DATA_PTR;
+-
+-struct mvebu_board_family *brd;
+-
+ /* Generic board id function. Each board family can make his own */
+ int __board_get_id(void)
+ {
+diff --git a/board/mvebu/common/board.h b/board/mvebu/common/board.h
+index 8ee23fb..9e26219 100644
+--- a/board/mvebu/common/board.h
++++ b/board/mvebu/common/board.h
+@@ -20,6 +20,7 @@
+ #define _BOARD_H_
+ 
+ #include <common.h>
++#include <fdtdec.h>
+ #include <asm/arch-mvebu/mvebu.h>
+ #include <asm/arch/soc-info.h>
+ #include <linux/compiler.h>
+@@ -32,15 +33,6 @@
+  *
+  * name -	short name of the board
+  * id -		a unique board id value
+- * unit_mask -	pointer to table that modifies the
+- *		active units for this board (optional)
+- * unit_update_mode -	specifies the unit update method (optional). Is either
+- *			UNIT_INFO_DISABLE - disable existing units
+- *			UNIT_INFO_ENABLE - enable more units
+- *			UNIT_INFO_OVERRIDE - override active unit info
+- * config -	pointer to board configuration options (optional).
+- *		this should be used only for configurable boards like
+- *		Development Boards (DB)
+  */
+ struct mvebu_board_info {
+ 	char name[MAX_BOARD_NAME];
+@@ -50,33 +42,12 @@ struct mvebu_board_info {
+ 	int (*configure_mpp)(void);
+ };
+ 
+-/*
+- * mvebu_board_familt - Describes common board data
+- *
+- * default_id - defualt board id in case board_id can't be read.
+- * board_cnt - number of different boards
+- * curr_board - pointer to current board's info
+- * boards_info - pointer to table containing
+- * sar - General SAR information for all boards (optional)
+- *
+- */
+-struct mvebu_board_family {
+-	int  default_id;
+-	int  board_cnt;
+-	struct mvebu_board_info *curr_board;
+-	struct mvebu_board_info **boards_info;
+-};
+-
+-/* APIs required from all board families */
+-struct mvebu_board_family *board_init_family(void);
++struct mvebu_board_info *mvebu_board_info_get(enum fdt_compat_id);
+ 
+ /* Common board API */
+ int board_get_id(void);
+ 
+-
+ DECLARE_GLOBAL_DATA_PTR;
+-#define get_board_family()	(struct mvebu_board_family *)(gd->arch.board_family)
+-#define set_board_family(x)	(gd->arch.board_family = x)
+ #define get_board_info()	(struct mvebu_board_info *)(gd->arch.board_family->curr_board)
+ #define set_board_info(x)	(gd->arch.board_family->curr_board = x)
+ 
+diff --git a/board/mvebu/common/devel-board.c b/board/mvebu/common/devel-board.c
+index 2189369..0903b4b 100644
+--- a/board/mvebu/common/devel-board.c
++++ b/board/mvebu/common/devel-board.c
+@@ -25,10 +25,8 @@
+ 
+ #include "sar.h"
+ 
+-int mvebu_devel_board_init(struct mvebu_board_family *brd_fam)
++int mvebu_devel_board_init(struct mvebu_board_info *brd)
+ {
+-	struct mvebu_board_info *brd = brd_fam->curr_board;
+-
+ 	sar_init();
+ 
+ 	/* Update MPP configurations */
+diff --git a/board/mvebu/common/devel-board.h b/board/mvebu/common/devel-board.h
+index df04f42..2dccd34 100644
+--- a/board/mvebu/common/devel-board.h
++++ b/board/mvebu/common/devel-board.h
+@@ -22,12 +22,6 @@
+ #include <common.h>
+ #include "board.h"
+ 
+-int mvebu_devel_board_init(struct mvebu_board_family *brd_fam);
+-
+-struct sar_data *board_get_sar(void);
+-struct sar_var  *board_get_sar_table(void);
+-struct cfg_data *board_get_cfg(void);
+-struct cfg_var  *board_get_cfg_table(void);
+-
++int mvebu_devel_board_init(struct mvebu_board_info *brd);
+ 
+ #endif /* _DEVEL_BOARD_H_ */
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index ea2bf17..4781bdd 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -33,8 +33,6 @@
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+-struct mvebu_brd_fam *brd_fam;
+-
+ #ifdef CONFIG_BOARD_LATE_INIT
+ int board_late_init(void)
+ {
+@@ -104,10 +102,20 @@ int mvebu_print_info(char *board_name)
+ 	return 0;
+ }
+ 
++struct mvebu_board_info *mvebu_fdt_get_board(void)
++{
++	const void *blob = gd->fdt_blob;
++	struct mvebu_board_info *brd;
++	u32 compt_id;
++
++	compt_id = fdtdec_lookup(blob, 0);
++	brd = mvebu_board_info_get(compt_id);
++
++	return brd;
++}
++
+ int mvebu_board_init(void)
+ {
+-	int board_id;
+-	struct mvebu_board_family *brd_fam;
+ 	struct mvebu_board_info *brd;
+ 
+ 	debug("Initializing board\n");
+@@ -115,25 +123,7 @@ int mvebu_board_init(void)
+ #ifdef CONFIG_MVEBU_PINCTL
+ 	mvebu_pinctl_probe();
+ #endif
+-
+-	brd_fam = board_init_family();
+-	if (!brd_fam) {
+-		error("Failed to get board family structure");
+-		return 0;
+-	}
+-
+-	set_board_family(board_init_family());
+-
+-	/* Identify the specific board */
+-	board_id = board_get_id();
+-	if ((board_id < 0) || (board_id > brd_fam->board_cnt)) {
+-		error("Unidentified board id %d. Using default %d",
+-		      board_id, brd_fam->default_id);
+-		board_id = brd_fam->default_id;
+-	}
+-
+-	brd_fam->curr_board = brd_fam->boards_info[board_id];
+-	brd = brd_fam->curr_board;
++	brd = mvebu_fdt_get_board();
+ 
+ 	mvebu_print_info(brd->name);
+ 
+@@ -142,7 +132,7 @@ int mvebu_board_init(void)
+ #endif
+ 
+ #ifdef CONFIG_DEVEL_BOARD
+-	mvebu_devel_board_init(brd_fam);
++	mvebu_devel_board_init(brd);
+ #endif
+ 
+ 	return 0;
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 3c2799e..ef96760 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -143,6 +143,15 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_FLC,
+ 	COMPAT_MVEBU_DDR_MAC,
+ 	COMPAT_MVEBU_DDR_PHY,
++	COMPAT_MVEBU_ARMADA_38X_DB,
++	COMPAT_MVEBU_ARMADA_38X_RD,
++	COMPAT_MVEBU_ARMADA_38X_CUSTOMER,
++	COMPAT_MVEBU_APN_806_DB,
++	COMPAT_MVEBU_APN_806_RD,
++	COMPAT_MVEBU_APN_806_CUSTOMER,
++	COMPAT_MVEBU_ARMADA_LP_DB0,
++	COMPAT_MVEBU_ARMADA_LP_DB1,
++	COMPAT_MVEBU_ARMADA_LP_CUSTOMER,
+ 
+ 	COMPAT_COUNT,
+ };
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 3e67c00..9e0b1d0 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -105,6 +105,15 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_FLC, "marvell,mvebu-flc"),
+ 	COMPAT(MVEBU_DDR_MAC, "marvell,mvebu-ddr-mac"),
+ 	COMPAT(MVEBU_DDR_PHY, "marvell,mvebu-ddr-phy"),
++	COMPAT(MVEBU_ARMADA_38X_DB, "marvell,armada-38x-db"),
++	COMPAT(MVEBU_ARMADA_38X_RD, "marvell,armada-38x-rd"),
++	COMPAT(MVEBU_ARMADA_38X_CUSTOMER, "marvell,armada-38x-customer"),
++	COMPAT(MVEBU_APN_806_DB, "marvell,apn-806-db"),
++	COMPAT(MVEBU_APN_806_RB, "marvell,apn-806-rb"),
++	COMPAT(MVEBU_APN_806_CUSTOMER, "marvell,apn-806-customer"),
++	COMPAT(MVEBU_ARMADA_LP_DB0, "marvell,armada-lp-db0"),
++	COMPAT(MVEBU_ARMADA_LP_DB1, "marvell,armada-lp-db1"),
++	COMPAT(MVEBU_ARMADA_LP_CUSTOMER, "marvell,armada-lp-customer"),
+ };
+ 
+ const char *fdtdec_get_compatible(enum fdt_compat_id id)
+-- 
+1.9.1
+

@@ -1,0 +1,34 @@
+From 2098c4698f353a9eaa5f37245856ead0a503a264 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 13 Mar 2016 14:20:18 +0200
+Subject: [PATCH 056/239] fix: rfu: update address decoding of IHB window for
+ PHY-reg
+
+- Update the address decoding to be: 0xf9100000 - 0xf9200000
+- The previous window had conflict with PCIe0 Window (in IOB)
+
+Change-Id: I238b0b068f077cf0594f5656c0831cb0bc27bc32
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28197
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c b/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c
+index 14871c2..4724f16 100644
+--- a/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a7040_rz/board/marvell_plat_config.c
+@@ -47,7 +47,7 @@
+ struct rfu_win rfu_memory_map[] = {
+ 	{0x0,	0xfe000000,	0x0,	0x1f00000,	PCIE_PORT_TID}, /* PCIe window 31Mb for PCIe port*/
+ 	{0x0,	0xffe00000,	0x0,	0x100000,	PCIE_REGS_TID}, /* PCI-REG window 64Kb for PCIe-reg*/
+-	{0x0,	0xf6000000,	0x0,	0x100000,	IHBPHY_TID},	/* IHB window  1Mb for PHY-reg*/
++	{0x0,	0xf9100000,	0x0,	0x100000,	IHBPHY_TID},	/* IHB window  1Mb for PHY-reg*/
+ };
+ 
+ uintptr_t marvell_get_rfu_reg_offs(void)
+-- 
+1.9.1
+

@@ -1,0 +1,33 @@
+From e3bb1324106ae2b1a95ca21e2e5cb97b0e4e9a53 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Tue, 19 Apr 2016 12:58:21 +0300
+Subject: [PATCH 1063/1240] fix: fdt_config: fixed error message when pattern
+ not detected on EEPROM
+
+original messesge was shown out of context (wasn't clear the relevance to EEPROM)
+
+Change-Id: I0678168d08abfb3408a4e519b47641a78923443f
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29185
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ board/mvebu/common/cfg_eeprom.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/board/mvebu/common/cfg_eeprom.c b/board/mvebu/common/cfg_eeprom.c
+index 04c6e93..13c4e31 100644
+--- a/board/mvebu/common/cfg_eeprom.c
++++ b/board/mvebu/common/cfg_eeprom.c
+@@ -531,7 +531,7 @@ int cfg_eeprom_init(void)
+ 
+ 	/* check if pattern in EEPROM is invalid */
+ 	if (eeprom_buffer.pattern != board_config_val.pattern) {
+-		printf("Could not find pattern. Loading default FDT\n");
++		printf("EEPROM configuration pattern not detected. Loading default FDT\n");
+ 		cfg_eeprom_upload_fdt_from_flash(get_default_fdt_config_id(cfg_eeprom_get_board_id()));
+ 		goto init_done;
+ 	}
+-- 
+1.9.1
+

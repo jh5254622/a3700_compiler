@@ -1,0 +1,393 @@
+From b8570dc56c6cab2983f8c3f1e281b3fce4432568 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 20 Jul 2015 16:50:58 +0300
+Subject: [PATCH 0258/1240] ap806: comphy: added initial support for COMPHY for
+ AP-806
+
+- Added initial support for COMPHY initialization for AP-806
+- Include PCIe sequence initialization
+
+Change-Id: I927a52102d04fb5acc89839fe1cc8d3bc1164286
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22009
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/include/asm/arch-mvebu/comphy_hpipe.h |  55 +++++++-
+ drivers/phy/Makefile                           |   1 +
+ drivers/phy/comphy_a38x.c                      |  22 +--
+ drivers/phy/comphy_ap806_z1.c                  | 181 +++++++++++++++++++++++++
+ drivers/phy/comphy_core.c                      |  12 ++
+ 5 files changed, 247 insertions(+), 24 deletions(-)
+ create mode 100644 drivers/phy/comphy_ap806_z1.c
+
+diff --git a/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h b/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h
+index 1f06a17..25ce787 100644
+--- a/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h
++++ b/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h
+@@ -19,22 +19,49 @@
+ #ifndef _COMPHY_HPIPE_H_
+ #define _COMPHY_HPIPE_H_
+ 
+-#define HPIPE_POWER_AND_PLL_CTRL_REG            0x004
++#define HPIPE_PWR_PLL_REG			0x4
++#define HPIPE_PWR_PLL_REF_FREQ_OFFSET		0
++#define HPIPE_PWR_PLL_REF_FREQ_MASK		(0x1f << HPIPE_PWR_PLL_REF_FREQ_OFFSET)
++#define HPIPE_PWR_PLL_PHY_MODE_OFFSET		5
++#define HPIPE_PWR_PLL_PHY_MODE_MASK		(0xe << HPIPE_PWR_PLL_PHY_MODE_OFFSET)
++
+ #define HPIPE_SQUELCH_FFE_SETTING_REG           0x018
+ #define HPIPE_DFE_REG0                          0x01C
+ #define HPIPE_G1_SETTINGS_0_REG                 0x034
+ #define HPIPE_G1_SETTINGS_1_REG                 0x038
+ #define HPIPE_G2_SETTINGS_1_REG                 0x040
+ #define HPIPE_SYNC_PATTERN_REG                  0x090
+-#define HPIPE_INTERFACE_REG                     0x094
+-#define HPIPE_ISOLATE_REG                       0x098
++
++#define HPIPE_INTERFACE_REG			0x94
++#define HPIPE_INTERFACE_GEN_MAX_OFFSET		10
++#define HPIPE_INTERFACE_GEN_MAX_MASK		(0x3 << HPIPE_INTERFACE_GEN_MAX_OFFSET)
++
++#define HPIPE_ISOLATE_MODE_REG			0x98
++#define HPIPE_ISOLATE_MODE_GEN_RX_OFFSET	0
++#define HPIPE_ISOLATE_MODE_GEN_RX_MASK		(0xf << HPIPE_ISOLATE_MODE_GEN_RX_OFFSET)
++#define HPIPE_ISOLATE_MODE_GEN_TX_OFFSET	4
++#define HPIPE_ISOLATE_MODE_GEN_TX_MASK		(0xf << HPIPE_ISOLATE_MODE_GEN_TX_OFFSET)
++
+ #define HPIPE_VTHIMPCAL_CTRL_REG                0x104
+ #define HPIPE_PCIE_REG0                         0x120
+-#define HPIPE_LANE_ALIGN_REG0                   0x124
+-#define HPIPE_MISC_REG                          0x13C
++
++#define HPIPE_LANE_ALIGN_REG			0x124
++#define HPIPE_LANE_ALIGN_OFF_OFFSET		12
++#define HPIPE_LANE_ALIGN_OFF_MASK		(0x1 << HPIPE_LANE_ALIGN_OFF_OFFSET)
++
++#define HPIPE_MISC_REG				0x13C
++#define HPIPE_MISC_CLK500_EN_OFFSET		7
++#define HPIPE_MISC_CLK500_EN_MASK		(0x1 << HPIPE_MISC_CLK500_EN_OFFSET)
++
+ #define HPIPE_GLUE_REG                          0x140
+ #define HPIPE_GENERATION_DIVIDER_FORCE_REG      0x144
+-#define HPIPE_RESET_DFE_REG                     0x148
++
++#define HPIPE_PWR_CTR_REG			0x148
++#define HPIPE_PWR_CTR_RST_DFE_OFFSET		0
++#define HPIPE_PWR_CTR_RST_DFE_MASK		(0x1 << HPIPE_PWR_CTR_RST_DFE_OFFSET)
++#define HPIPE_PWR_CTR_SFT_RST_OFFSET		10
++#define HPIPE_PWR_CTR_SFT_RST_MASK		(0x1 << HPIPE_PWR_CTR_SFT_RST_OFFSET)
++
+ #define HPIPE_PLLINTP_REG1                      0x150
+ #define HPIPE_RX_REG3                           0x188
+ #define HPIPE_PCIE_REG1                         0x288
+@@ -45,7 +72,21 @@
+ #define HPIPE_G2_SETTINGS_4_REG                 0x44C
+ #define HPIPE_LANE_STATUS0_REG			0x60C
+ #define HPIPE_LANE_CFG4_REG                     0x620
+-#define HPIPE_GLOBAL_CLK_CTRL                   0x704
++
++#define HPIPE_RST_CLK_CTRL_REG			0x704
++#define HPIPE_RST_CLK_CTRL_PIPE_RST_OFFSET	0
++#define HPIPE_RST_CLK_CTRL_PIPE_RST_MASK	(0x1 << HPIPE_RST_CLK_CTRL_PIPE_RST_OFFSET)
++#define HPIPE_RST_CLK_CTRL_FIXED_PCLK_OFFSET	2
++#define HPIPE_RST_CLK_CTRL_FIXED_PCLK_MASK	(0x1 << HPIPE_RST_CLK_CTRL_FIXED_PCLK_OFFSET)
++
++#define HPIPE_CLK_SRC_HI_REG			0x710
++#define HPIPE_CLK_SRC_HI_LANE_STRT_OFFSET	0
++#define HPIPE_CLK_SRC_HI_LANE_STRT_MASK		(0x1 << HPIPE_CLK_SRC_HI_LANE_STRT_OFFSET)
++#define HPIPE_CLK_SRC_HI_LANE_BREAK_OFFSET	1
++#define HPIPE_CLK_SRC_HI_LANE_BREAK_MASK	(0x1 << HPIPE_CLK_SRC_HI_LANE_BREAK_OFFSET)
++#define HPIPE_CLK_SRC_HI_LANE_MASTER_OFFSET	2
++#define HPIPE_CLK_SRC_HI_LANE_MASTER_MASK	(0x1 << HPIPE_CLK_SRC_HI_LANE_MASTER_OFFSET)
++
+ #define HPIPE_GLOBAL_MISC_CTRL                  0x718
+ #define HPIPE_GLOBAL_PM_CTRL                    0x740
+ 
+diff --git a/drivers/phy/Makefile b/drivers/phy/Makefile
+index 1df0c04..18c0e25 100644
+--- a/drivers/phy/Makefile
++++ b/drivers/phy/Makefile
+@@ -1,3 +1,4 @@
+ obj-y += comphy_core.o
+ obj-y += comphy_a38x.o
++obj-y += comphy_ap806_z1.o
+ obj-y += comphy_pcie_config.o
+diff --git a/drivers/phy/comphy_a38x.c b/drivers/phy/comphy_a38x.c
+index 4ab54a7..23d091a 100644
+--- a/drivers/phy/comphy_a38x.c
++++ b/drivers/phy/comphy_a38x.c
+@@ -40,18 +40,6 @@ struct comphy_mux_data a38x_comphy_mux_data[] = {
+ 		{USB3_DEVICE, 0x5} } },
+ };
+ 
+-void reg_set(u32 addr, u32 mask, u32 data)
+-{
+-	u32 reg_data;
+-	debug("Write to address = %#010x, data = %#010x (mask = %#010x) - ", addr, data, mask);
+-	debug("old value = %#010x ==> ", readl(addr));
+-	reg_data = readl(addr);
+-	reg_data &= ~mask;
+-	reg_data |= data;
+-	writel(reg_data, addr);
+-	debug("new value %#010x\n", readl(addr));
+-}
+-
+ /* comphy_mux_check_config
+  * description: this function passes over the COMPHY lanes and check if the type
+  *              is valid for specific lane. If the type is not valid, the function
+@@ -142,7 +130,7 @@ static int comphy_pcie_power_up(u32 pex_index, u32 comphy_addr, u32 hpipe_addr)
+ 	reg_set(comphy_addr + COMMON_PHY_CONFIGURATION2_REG, 0x5C, 0x58);
+ 	reg_set(comphy_addr + COMMON_PHY_CONFIGURATION4_REG, 0x3, 0x1);
+ 	reg_set(comphy_addr + COMMON_PHY_CONFIGURATION1_REG, 0x7800, 0x6000);
+-	reg_set(hpipe_addr + HPIPE_GLOBAL_CLK_CTRL, 0x3D, 0x35);
++	reg_set(hpipe_addr + HPIPE_RST_CLK_CTRL_REG, 0x3D, 0x35);
+ 	reg_set(hpipe_addr + HPIPE_GLOBAL_MISC_CTRL, 0xC0, 0x0);
+ 	reg_set(hpipe_addr + HPIPE_MISC_REG, 0x4C0, 0x80);
+ 	udelay(20);
+@@ -150,7 +138,7 @@ static int comphy_pcie_power_up(u32 pex_index, u32 comphy_addr, u32 hpipe_addr)
+ 	/* TODO: Add configuration for 20Mhz */
+ 	/* configuration seq for REF_CLOCK_100MHz */
+ 	debug("**** start of PCIe comphy ref clock configuration ****\n");
+-	reg_set(hpipe_addr + HPIPE_POWER_AND_PLL_CTRL_REG, 0x1F, 0x0);
++	reg_set(hpipe_addr + HPIPE_PWR_PLL_REG, 0x1F, 0x0);
+ 	reg_set(hpipe_addr + HPIPE_MISC_REG, 0x400, 0x0);
+ 	reg_set(hpipe_addr + HPIPE_GLOBAL_PM_CTRL, 0xFF, 0x1E);
+ 	reg_set(hpipe_addr + HPIPE_INTERFACE_REG, 0xC00, 0x400);
+@@ -173,12 +161,12 @@ static int comphy_pcie_power_up(u32 pex_index, u32 comphy_addr, u32 hpipe_addr)
+ 
+ 	/* PEX - TX configuration sequence 2 */
+ 	debug("**** start of PCIe TX configuration sequence 2 ****\n");
+-	reg_set(hpipe_addr + HPIPE_RESET_DFE_REG, 0x401, 0x401);
++	reg_set(hpipe_addr + HPIPE_PWR_CTR_REG, 0x401, 0x401);
+ 	udelay(20);
+ 
+ 	/* PEX - TX configuration sequence 3 */
+ 	debug("**** start of PCIe TX configuration sequence 3 ****\n");
+-	reg_set(hpipe_addr + HPIPE_RESET_DFE_REG, 0x401, 0x0);
++	reg_set(hpipe_addr + HPIPE_PWR_CTR_REG, 0x401, 0x0);
+ 	udelay(20000);
+ 	reg_set(hpipe_addr + HPIPE_RX_REG3, 0xFF, 0xDC);
+ 	reg_set(hpipe_addr + HPIPE_RX_REG3, 0x100, 0x100);
+@@ -186,7 +174,7 @@ static int comphy_pcie_power_up(u32 pex_index, u32 comphy_addr, u32 hpipe_addr)
+ 
+ 	/* PEX - TX configuration sequence 1 */
+ 	debug("**** start of PCIe TX configuration sequence 1 ****\n");
+-	reg_set(hpipe_addr + HPIPE_GLOBAL_CLK_CTRL, 0x1, 0x0);
++	reg_set(hpipe_addr + HPIPE_RST_CLK_CTRL_REG, 0x1, 0x0);
+ 	udelay(20000);
+ 
+ 	debug_exit();
+diff --git a/drivers/phy/comphy_ap806_z1.c b/drivers/phy/comphy_ap806_z1.c
+new file mode 100644
+index 0000000..1af087f
+--- /dev/null
++++ b/drivers/phy/comphy_ap806_z1.c
+@@ -0,0 +1,181 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2015 Marvell International Ltd.
++* ***************************************************************************
++* This program is free software: you can redistribute it and/or modify it
++* under the terms of the GNU General Public License as published by the Free
++* Software Foundation, either version 2 of the License, or any later version.
++*
++* This program is distributed in the hope that it will be useful,
++* but WITHOUT ANY WARRANTY; without even the implied warranty of
++* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++* GNU General Public License for more details.
++*
++* You should have received a copy of the GNU General Public License
++* along with this program.  If not, see <http://www.gnu.org/licenses/>.
++* ***************************************************************************
++*/
++
++/*#define DEBUG */
++#include <common.h>
++#include <asm/io.h>
++#include <asm/arch-mvebu/comphy.h>
++#include <asm/arch-mvebu/comphy_hpipe.h>
++#include <asm/arch-mvebu/mvebu.h>
++
++#define COMPHY_RESET_REG		0x0
++
++#define COMPHY_RESET_SW_OFFSET		14
++#define COMPHY_RESET_SW_MASK		(1 << COMPHY_RESET_SW_OFFSET)
++#define COMPHY_RESET_CORE_OFFSET	13
++#define COMPHY_RESET_CORE_MASK		(1 << COMPHY_RESET_CORE_OFFSET)
++
++static void comphy_pcie_release_soft_reset(u32 hpipe_addr)
++{
++	/* DFE reset sequence */
++	reg_set(hpipe_addr + HPIPE_PWR_CTR_REG,
++		0x1 << HPIPE_PWR_CTR_RST_DFE_OFFSET, HPIPE_PWR_CTR_RST_DFE_MASK);
++	udelay(10);
++	reg_set(hpipe_addr + HPIPE_PWR_CTR_REG,
++		0x0 << HPIPE_PWR_CTR_RST_DFE_OFFSET, HPIPE_PWR_CTR_RST_DFE_MASK);
++
++	/* SW reset for interupt logic */
++	reg_set(hpipe_addr + HPIPE_PWR_CTR_REG,
++		0x1 << HPIPE_PWR_CTR_SFT_RST_OFFSET, HPIPE_PWR_CTR_SFT_RST_MASK);
++	udelay(10);
++	reg_set(hpipe_addr + HPIPE_PWR_CTR_REG,
++		0x0 << HPIPE_PWR_CTR_SFT_RST_OFFSET, HPIPE_PWR_CTR_SFT_RST_MASK);
++
++	/* release PIPE RESET - release PHY from reset */
++	reg_set(hpipe_addr + HPIPE_RST_CLK_CTRL_REG,
++		0x0 << HPIPE_RST_CLK_CTRL_PIPE_RST_OFFSET, HPIPE_RST_CLK_CTRL_PIPE_RST_MASK);
++}
++
++static int comphy_pcie_power_up(u32 lane, u32 pcie_by4, u32 hpipe_addr)
++{
++	u32 start_val, break_val, master_val;
++	debug_enter();
++
++	/* Enable CLK 500 */
++	reg_set(hpipe_addr + HPIPE_MISC_REG, 0x1 << HPIPE_MISC_CLK500_EN_OFFSET, HPIPE_MISC_CLK500_EN_MASK);
++	/* Clear lane align off */
++	if (pcie_by4)
++		reg_set(hpipe_addr + HPIPE_LANE_ALIGN_REG,
++			0x0 << HPIPE_LANE_ALIGN_OFF_OFFSET, HPIPE_LANE_ALIGN_OFF_MASK);
++	/* Reference Frequency Select set 0 (for PCIe 0 = 100Mhz) */
++	reg_set(hpipe_addr + HPIPE_PWR_PLL_REG, 0x0 << HPIPE_PWR_PLL_REF_FREQ_OFFSET, HPIPE_PWR_PLL_REF_FREQ_MASK);
++	/* PHY Mode Select (set PCIe = 0x3) */
++	reg_set(hpipe_addr + HPIPE_PWR_PLL_REG, 0x3 << HPIPE_PWR_PLL_PHY_MODE_OFFSET, HPIPE_PWR_PLL_PHY_MODE_MASK);
++	/* Set PIPE RESET - SW reset for the PIPE */
++	reg_set(hpipe_addr + HPIPE_RST_CLK_CTRL_REG,
++		0x1 << HPIPE_RST_CLK_CTRL_PIPE_RST_OFFSET, HPIPE_RST_CLK_CTRL_PIPE_RST_MASK);
++	/* Set PCIe fixed mode to 8 bit @ 250 Mhz */
++	reg_set(hpipe_addr + HPIPE_RST_CLK_CTRL_REG,
++		0x1 << HPIPE_RST_CLK_CTRL_FIXED_PCLK_OFFSET, HPIPE_RST_CLK_CTRL_FIXED_PCLK_MASK);
++	/* Set 5Gbps for RX and TX */
++	reg_set(hpipe_addr + HPIPE_ISOLATE_MODE_REG,
++		0x1 << HPIPE_ISOLATE_MODE_GEN_RX_OFFSET, HPIPE_ISOLATE_MODE_GEN_RX_MASK);
++	reg_set(hpipe_addr + HPIPE_ISOLATE_MODE_REG,
++		0x1 << HPIPE_ISOLATE_MODE_GEN_TX_OFFSET, HPIPE_ISOLATE_MODE_GEN_TX_MASK);
++	/* Set Max PHY generation setting - 5GBps */
++	reg_set(hpipe_addr + HPIPE_INTERFACE_REG,
++		0x1 << HPIPE_INTERFACE_GEN_MAX_OFFSET, HPIPE_INTERFACE_GEN_MAX_MASK);
++	/* Set lane Break/Start/Master:
++	 master - Provide RefClock to MAC
++	 start - Start of providing RefClock
++	 break - Stop passing the RefClock */
++	if (pcie_by4) {
++		/* if By4 Lane 0 - is master and start PHY
++		    lane 1-2 - pass refclock to next phy
++		    lane 3 - stop passing refclock */
++		if (lane == 0) {
++			start_val = 0x1;
++			break_val = 0x0;
++			master_val = 0x1;
++		} else if (lane == 3) {
++			start_val = 0x0;
++			break_val = 0x1;
++			master_val = 0x0;
++		} else {
++			start_val = 0x0;
++			break_val = 0x0;
++			master_val = 0x0;
++		}
++	} else {
++		start_val = 0x1;
++		break_val = 0x1;
++		master_val = 0x1;
++	}
++	reg_set(hpipe_addr + HPIPE_CLK_SRC_HI_REG,
++		start_val << HPIPE_CLK_SRC_HI_LANE_STRT_OFFSET, HPIPE_CLK_SRC_HI_LANE_STRT_MASK);
++	reg_set(hpipe_addr + HPIPE_CLK_SRC_HI_REG,
++		break_val << HPIPE_CLK_SRC_HI_LANE_BREAK_OFFSET, HPIPE_CLK_SRC_HI_LANE_BREAK_MASK);
++	reg_set(hpipe_addr + HPIPE_CLK_SRC_HI_REG,
++		master_val << HPIPE_CLK_SRC_HI_LANE_MASTER_OFFSET, HPIPE_CLK_SRC_HI_LANE_MASTER_MASK);
++
++	/* SW reset for PCIe by 1 - for PCIe by4 need to reset after configure all 4 lanes*/
++	if (!pcie_by4)
++		comphy_pcie_release_soft_reset(hpipe_addr);
++
++	debug_exit();
++	return 0;
++}
++
++int comphy_ap806_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy_map *serdes_map)
++{
++	struct comphy_map *ptr_comphy_map;
++	u32 comphy_base_addr, hpipe_base_addr;
++	u32 hpipe_addr;
++	u32 comphy_max_count, lane;
++	u32 pcie_by4 = 1;
++
++	debug_enter();
++
++	comphy_base_addr = ptr_chip_cfg->comphy_base_addr;
++	comphy_max_count = ptr_chip_cfg->comphy_lanes_count;
++	hpipe_base_addr = ptr_chip_cfg->hpipe3_base_addr;
++
++	/* Set PHY to Normal mode */
++	reg_set(comphy_base_addr + COMPHY_RESET_REG, 1 << COMPHY_RESET_SW_OFFSET, COMPHY_RESET_SW_MASK);
++	reg_set(comphy_base_addr + COMPHY_RESET_REG, 1 << COMPHY_RESET_CORE_OFFSET, COMPHY_RESET_CORE_MASK);
++
++	/* Check if the first 4 lanes configured as By-4 */
++	for (lane = 0, ptr_comphy_map = serdes_map; lane < 4; lane++, ptr_comphy_map++) {
++		if (ptr_comphy_map->type != PEX0) {
++			pcie_by4 = 0;
++			break;
++		}
++	}
++
++	for (lane = 0, ptr_comphy_map = serdes_map; lane < comphy_max_count; lane++, ptr_comphy_map++) {
++		debug("Initialize serdes number %d\n", lane);
++		debug("Serdes type = 0x%x\n", ptr_comphy_map->type);
++		hpipe_addr = hpipe_base_addr + 0x800 * lane;
++		switch (ptr_comphy_map->type) {
++		case UNCONNECTED:
++			continue;
++			break;
++		case PEX0:
++		case PEX1:
++		case PEX2:
++		case PEX3:
++			comphy_pcie_power_up(lane, pcie_by4, hpipe_addr);
++			udelay(20);
++			break;
++		default:
++			debug("Unknown SerDes type, skip initialize SerDes %d\n", lane);
++			break;
++		}
++	}
++
++	/* SW reset for PCIe for all lanes after power up */
++	if (pcie_by4) {
++		for (lane = 0; lane < 4; lane++) {
++			hpipe_addr = hpipe_base_addr + 0x800 * lane;
++			comphy_pcie_release_soft_reset(hpipe_addr);
++		}
++	}
++
++	debug_exit();
++	return 0;
++}
+diff --git a/drivers/phy/comphy_core.c b/drivers/phy/comphy_core.c
+index 6ca835d..891e231 100644
+--- a/drivers/phy/comphy_core.c
++++ b/drivers/phy/comphy_core.c
+@@ -73,6 +73,18 @@ static char *get_type_string(enum phy_type type)
+ 	return type_strings[type];
+ }
+ 
++void reg_set(u32 addr, u32 mask, u32 data)
++{
++	u32 reg_data;
++	debug("Write to address = %#010x, data = %#010x (mask = %#010x) - ", addr, data, mask);
++	debug("old value = %#010x ==> ", readl(addr));
++	reg_data = readl(addr);
++	reg_data &= ~mask;
++	reg_data |= data;
++	writel(reg_data, addr);
++	debug("new value %#010x\n", readl(addr));
++}
++
+ void comphy_print(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy_map *comphy_map_data)
+ {
+ 	u32 lane;
+-- 
+1.9.1
+

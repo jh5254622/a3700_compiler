@@ -1,0 +1,32 @@
+From 9ab470b3074177355d00ea7d0b84e8e0effa7ea6 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Mon, 23 Mar 2015 10:17:01 +0200
+Subject: [PATCH 0164/1240] doimage: fix compilation warning
+
+	Add "string.h" to include files list to eliminate compilation
+	warnings when using GCC-4.9.x
+
+Change-Id: I9b28c105704c133219b94985c123730afe015fbc
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17756
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ tools/doimage.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/tools/doimage.c b/tools/doimage.c
+index 621af25..4999dd0 100644
+--- a/tools/doimage.c
++++ b/tools/doimage.c
+@@ -21,6 +21,7 @@
+ #include <stdio.h>
+ #include <stdint.h>
+ #include <stddef.h>
++#include <string.h>
+ #include <sys/stat.h>
+ 
+ #define MAX_FILENAME	256
+-- 
+1.9.1
+

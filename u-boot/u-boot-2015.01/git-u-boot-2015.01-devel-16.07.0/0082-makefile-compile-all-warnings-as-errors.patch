@@ -1,0 +1,27 @@
+From 9fca71cff2c15aafeed4f56a94cbca22a17640c4 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 29 Sep 2014 16:43:09 +0300
+Subject: [PATCH 0082/1240] makefile: compile all warnings as errors
+
+Change-Id: I20ae47fff88e8dddea8b9292f08ee5c34c84116d
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index fda54fa..171f2e2 100644
+--- a/Makefile
++++ b/Makefile
+@@ -349,7 +349,7 @@ CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
+ 
+ KBUILD_CPPFLAGS := -D__KERNEL__ -D__UBOOT__
+ 
+-KBUILD_CFLAGS   := -Wall -Wstrict-prototypes \
++KBUILD_CFLAGS   := -Wall -Werror -Wstrict-prototypes \
+ 		   -Wno-format-security \
+ 		   -fno-builtin -ffreestanding
+ KBUILD_AFLAGS   := -D__ASSEMBLY__
+-- 
+1.9.1
+

@@ -1,0 +1,363 @@
+From a5f266e445d8e356a2f7ac7f1c8609472961aa17 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Thu, 28 Jan 2016 17:15:11 +0800
+Subject: [PATCH 0815/1240] hw_info: mvebu: add support for hardware
+ information command
+
+- Add support for hw_info command to save/load hardware board information
+  om EEPROM
+The command include:
+- hw_info dump: dump all or specific HW parameter
+- hw_info load: save all or specific HW parameter to env variables
+- hw_info store: store inputted string
+
+The patch include:
+- Add for cmd_he_info
+- Add Kconfig option for hw_info and includes it in Makefile
+- Call cmd_hw_info_load during env reset to initialize the
+  HW configuration
+
+Change-Id: Ia097bec802817d3fe2ec0bff62bbed1d628634a3
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27058
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ common/env_common.c              |  11 ++
+ common/mvebu/Kconfig             |  10 ++
+ common/mvebu/Makefile            |   1 +
+ common/mvebu/cmd_hw_info.c       | 242 +++++++++++++++++++++++++++++++++++++++
+ configs/mvebu_armadalp_defconfig |   1 +
+ include/environment.h            |   5 +
+ 6 files changed, 270 insertions(+)
+ create mode 100644 common/mvebu/cmd_hw_info.c
+
+diff --git a/common/env_common.c b/common/env_common.c
+index af59c72..54ff474 100644
+--- a/common/env_common.c
++++ b/common/env_common.c
+@@ -123,6 +123,17 @@ void set_default_env(const char *s)
+ 		error("Environment import failed: errno = %d\n", errno);
+ 
+ 	gd->flags |= GD_FLG_ENV_READY;
++
++#ifdef CONFIG_CMD_MVEBU_HW_INFO
++	/* load the HW configuration from EEPROM to env variables and saveenv.
++	 * This is because when the env varibles are reset, need to recover the
++	 * HW configuration related env varibles from EEPROM.
++	 * The only generic U-Boot env variable that will be overridden here
++	 * will be the MAC address variables, while the rest are Marvell
++	 * specific variables
++	 */
++	cmd_hw_info_load(NULL, 1);
++#endif /* CONFIG_CMD_MVEBU_HW_INFO */
+ }
+ 
+ 
+diff --git a/common/mvebu/Kconfig b/common/mvebu/Kconfig
+index 38392c3..fd6929c 100644
+--- a/common/mvebu/Kconfig
++++ b/common/mvebu/Kconfig
+@@ -70,4 +70,14 @@ config CMD_MVEBU_PHY_INDIRECT
+ 	help
+ 	  phy_indirect - Access to PHY indirect registers
+ 
++config CMD_MVEBU_HW_INFO
++	bool "hw_info"
++	select BOARD_CONFIG_EEPROM
++	default n
++	help
++	  hw_info - load HW information such as board ID, PCB SLM number,
++	  MAC addresses from EEPROM and apply them to enviroment variables.
++	  And update the MAC address in FDT file for Linux.
++	  When save the box information, it will be saved to EEPROM.
++
+ endmenu
+diff --git a/common/mvebu/Makefile b/common/mvebu/Makefile
+index f3f99e8..f196ae3 100644
+--- a/common/mvebu/Makefile
++++ b/common/mvebu/Makefile
+@@ -24,3 +24,4 @@ obj-$(CONFIG_CMD_MVEBU_BUBT) += cmd_bubt.o
+ obj-$(CONFIG_CMD_MVEBU_MSS_BOOT) += cmd_mss.o
+ obj-$(CONFIG_CMD_MVEBU_PHY_INDIRECT) += cmd_phy_indirect.o
+ obj-$(CONFIG_ENV_IS_IN_BOOTDEV) += env_bootdev.o
++obj-$(CONFIG_CMD_MVEBU_HW_INFO) += cmd_hw_info.o
+diff --git a/common/mvebu/cmd_hw_info.c b/common/mvebu/cmd_hw_info.c
+new file mode 100644
+index 0000000..14195fd
+--- /dev/null
++++ b/common/mvebu/cmd_hw_info.c
+@@ -0,0 +1,242 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <config.h>
++#include <common.h>
++#include <command.h>
++#include <errno.h>
++#include "../../board/mvebu/common/cfg_eeprom.h"
++
++/* load the HW configuration from cfg_eeprom module and dump them */
++static int cmd_hw_info_dump(char *name)
++{
++	int idx;
++	int hw_param_num;
++	uchar hw_info_str[MVEBU_HW_INFO_LEN];
++	struct hw_info_point_struct hw_info_point_array[HW_INFO_MAX_PARAM_NUM];
++
++	/* need to set all to 0 for later string operation */
++	memset(hw_info_str, 0, sizeof(hw_info_str));
++	cfg_eeprom_get_hw_info_str(hw_info_str);
++
++	hw_param_num = cfg_eeprom_parse_hw_info(hw_info_str, hw_info_point_array);
++
++	/* it is possible the HW configuration is empty */
++	if (hw_param_num == 0)
++		return 0;
++
++	if (hw_param_num > MVEBU_HW_INFO_LEN) {
++		error("hw_info internal error, counter should not exceed %d\n", MVEBU_HW_INFO_LEN);
++		return -EINVAL;
++	}
++
++	printf("\nname               value\n");
++	printf("------------------------------------\n");
++	for (idx = 0; idx < hw_param_num; idx++) {
++		if (name) {
++			if (strcmp(name, hw_info_point_array[idx].name) == 0) {
++				printf("%-16s   %-s\n", hw_info_point_array[idx].name, hw_info_point_array[idx].value);
++				break;
++			}
++		} else {
++			printf("%-16s   %-s\n", hw_info_point_array[idx].name, hw_info_point_array[idx].value);
++		}
++	}
++
++	return 0;
++}
++
++int cmd_hw_info_load(char *name, int silence)
++{
++	int idx;
++	int hw_param_num;
++	uchar hw_info_str[MVEBU_HW_INFO_LEN];
++	struct hw_info_point_struct hw_info_point_array[HW_INFO_MAX_PARAM_NUM];
++
++	/* get hw_info from system
++	 * need to memset the hw_info to 0 for later string operation
++	 */
++	memset(hw_info_str, 0, sizeof(hw_info_str));
++	cfg_eeprom_get_hw_info_str(hw_info_str);
++
++	hw_param_num = cfg_eeprom_parse_hw_info(hw_info_str, hw_info_point_array);
++
++	/* it is possible the HW configuration is empty */
++	if (hw_param_num == 0)
++		return 0;
++
++	if (hw_param_num > MVEBU_HW_INFO_LEN) {
++		error("Factory HW information: variables number from EEPROM should not exceed %d\n", MVEBU_HW_INFO_LEN);
++		return -EINVAL;
++	}
++
++	/* save the HW parameter to env varibles one by one */
++	for (idx = 0; idx < hw_param_num; idx++) {
++		/* if customer input a specific and valid HW parameter name, only save this HW parameter
++		 * from EEPROM to env variables.
++		 * otherwise save all the HW parameters from EEPROM to env variables.
++		 */
++		if (name) {
++			if (strcmp(name, hw_info_point_array[idx].name) == 0) {
++				setenv(hw_info_point_array[idx].name, hw_info_point_array[idx].value);
++				break;
++			}
++		} else {
++			setenv(hw_info_point_array[idx].name, hw_info_point_array[idx].value);
++		}
++	}
++
++	printf("HW information is loaded to enviroment variables\n");
++	cmd_hw_info_dump(name);
++
++	/* just print indication to ask user to perform saveenv manually in silence mode,
++	 * which is used when restore the HW configuration to env variables with env reset.
++	 * to ask confirmation that if need to save env in non-silence mode,
++	 * which is used by hw_info cmd.
++	 */
++	if (silence) {
++		printf("To save the changes, please run the command saveenv\n");
++	} else {
++		printf("Do you want to save enviroment variables? <y/N> ");
++		if (confirm_yesno())
++			saveenv();
++		else
++			printf("To save the changes, please run the command saveenv\n");
++	}
++
++	return 0;
++}
++
++static int cmd_hw_info_store(char *name)
++{
++	int idx;
++	int str_len = 0;
++	int total_str_len = 0;
++	int hw_param_num;
++	uchar hw_info_str[MVEBU_HW_INFO_LEN];
++	struct hw_info_data_struct hw_info_data_arry[HW_INFO_MAX_PARAM_NUM];
++
++	printf("Are you sure you want to override factory settings in EEPROM? <y/N>");
++	if (!confirm_yesno())
++		return 0;
++
++	/* get hw_info from env */
++	hw_param_num = cfg_eeprom_parse_env(&hw_info_data_arry[0], sizeof(hw_info_data_arry));
++
++	/* return in case no valid env variables */
++	if (0 == hw_param_num) {
++		printf("There is no supported HW configuration parameter in env variables\n");
++		return 0;
++	}
++
++	 /* need to memset the hw_info to 0 for later string operation */
++	memset(hw_info_str, 0, sizeof(hw_info_str));
++	for (idx = 0; (idx < hw_param_num) && (total_str_len < MVEBU_HW_INFO_LEN); idx++) {
++		/* check name in case only want to store specific HW parameter */
++		if (name && strcmp(name, hw_info_data_arry[idx].name))
++			continue;
++
++		str_len = strlen(hw_info_data_arry[idx].name);
++		if (str_len > HW_INFO_MAX_NAME_LEN)
++			str_len = HW_INFO_MAX_NAME_LEN;
++
++		if ((total_str_len + str_len) > MVEBU_HW_INFO_LEN) {
++			error("HW information string from env is too long, exceed %d\n", MVEBU_HW_INFO_LEN);
++			break;
++		}
++
++		memcpy(hw_info_str + total_str_len, hw_info_data_arry[idx].name, str_len);
++		total_str_len += str_len;
++
++		if ((total_str_len + 1) > MVEBU_HW_INFO_LEN) {
++			error("HW information string from env is too long, exceed %d\n", MVEBU_HW_INFO_LEN);
++			break;
++		}
++
++		hw_info_str[total_str_len++] = '=';
++
++		str_len = strlen(hw_info_data_arry[idx].value);
++		if (str_len > HW_INFO_MAX_VALUE_LEN)
++			str_len = HW_INFO_MAX_VALUE_LEN;
++
++		if ((total_str_len + str_len) > MVEBU_HW_INFO_LEN) {
++			error("HW information string from env is too long, exceed %d\n", MVEBU_HW_INFO_LEN);
++			break;
++		}
++
++		memcpy(hw_info_str + total_str_len, hw_info_data_arry[idx].value, str_len);
++		total_str_len += str_len;
++
++		if ((total_str_len + 1) > MVEBU_HW_INFO_LEN) {
++			error("HW information string from env is too long, exceed %d\n", MVEBU_HW_INFO_LEN);
++			break;
++		}
++		hw_info_str[total_str_len++] = ' ';
++	}
++
++	cfg_eeprom_set_hw_info_str(hw_info_str);
++	cfg_eeprom_save();
++
++	printf("hw_info is saved to EEPROM\n");
++	cmd_hw_info_dump(name);
++
++	return 0;
++}
++
++int do_hw_info(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
++{
++	const char *cmd = argv[1];
++
++	if (argc < 2)
++		return CMD_RET_USAGE;
++
++	if (!strcmp(cmd, "dump")) {
++		if (cmd_hw_info_dump(argv[2]))
++			return -EINVAL;
++	} else if (!strcmp(cmd, "load")) {
++		if (cmd_hw_info_load(argv[2], 0))
++			return -EINVAL;
++	} else if (!strcmp(cmd, "store")) {
++		if (cmd_hw_info_store(argv[2]))
++			return -EINVAL;
++	} else {
++		return CMD_RET_USAGE;
++	}
++
++	return 0;
++}
++
++U_BOOT_CMD(
++	hw_info,      3,     0,      do_hw_info,
++	"hw_info\n",
++	"\n"
++	"Load or store HW information such as board ID, PCB SLM number, MAC addresses between EEPROM and env variables\n"
++	"\tdump  <name>            - Dump all or specific HW parameter from EEPROM\n"
++	"\tload  <name>            - Load all or specific HW parameter from EEPROM to env variables\n"
++	"\tstore <name>            - Store all or specific HW parameter from env variables to EEPROM\n"
++	"Supported HW information parameters\n"
++	"\tboard_id      board ID\n"
++	"\tpcb_slm       PCB SLM number\n"
++	"\tpcb_rev       PCB revision number\n"
++	"\teco_rev       ECO revision number\n"
++	"\tpcb_sn        PCB SN\n"
++	"\tethaddr       first MAC address\n"
++	"\teth1addr      second MAC address\n"
++	"\teth2addr      third MAC address\n"
++	"\teth3addr      fourth MAC address\n"
++);
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index 1d1f904..9b220d1 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -23,6 +23,7 @@ CONFIG_CMD_MISC=y
+ CONFIG_CMD_MVEBU_MPP=y
+ CONFIG_CMD_MVEBU_FDT_CONFIG=y
+ CONFIG_CMD_MVEBU_BUBT=y
++CONFIG_CMD_MVEBU_HW_INFO=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-lp-db"
+diff --git a/include/environment.h b/include/environment.h
+index 1fdbdad..494656b 100644
+--- a/include/environment.h
++++ b/include/environment.h
+@@ -211,6 +211,11 @@ void env_crc_update(void);
+ /* Look up the variable from the default environment */
+ char *getenv_default(const char *name);
+ 
++/* load box information to environment */
++#ifdef CONFIG_CMD_MVEBU_HW_INFO
++int cmd_hw_info_load(char *name, int silence);
++#endif /* CONFIG_CMD_MVEBU_HW_INFO */
++
+ /* [re]set to the default environment */
+ void set_default_env(const char *s);
+ 
+-- 
+1.9.1
+

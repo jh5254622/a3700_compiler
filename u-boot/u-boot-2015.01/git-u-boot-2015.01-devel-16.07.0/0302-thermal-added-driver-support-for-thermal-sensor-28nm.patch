@@ -1,0 +1,282 @@
+From 7b352ea0a0c5334932ec0a7690e9c0d001ca969f Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 5 Aug 2015 11:56:38 +0300
+Subject: [PATCH 0302/1240] thermal: added driver support for thermal sensor
+ 28nm
+
+- Added driver support for thermal sensor 28nm
+
+Change-Id: I4554f99185124f98790a225cf8bb1331bd2107a8
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22543
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/soc-init.c               | 10 +++
+ arch/arm/include/asm/arch-mvebu/thermal.h          | 26 ++++++
+ doc/device-tree-bindings/thermal/mvebu-thermal.txt | 17 ++++
+ drivers/Kconfig                                    |  2 +
+ drivers/thermal/Kconfig                            |  9 ++
+ drivers/thermal/Makefile                           |  1 +
+ drivers/thermal/mvebu_thermal_28nm.c               | 95 ++++++++++++++++++++++
+ include/fdtdec.h                                   |  1 +
+ lib/fdtdec.c                                       |  1 +
+ 9 files changed, 162 insertions(+)
+ create mode 100644 arch/arm/include/asm/arch-mvebu/thermal.h
+ create mode 100644 doc/device-tree-bindings/thermal/mvebu-thermal.txt
+ create mode 100644 drivers/thermal/Kconfig
+ create mode 100644 drivers/thermal/mvebu_thermal_28nm.c
+
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index 331d531..a5baf2c 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -24,6 +24,7 @@
+ #include <asm/arch-mvebu/mvebu.h>
+ #include <asm/arch-mvebu/soc.h>
+ #include <asm/arch-mvebu/tables.h>
++#include <asm/arch-mvebu/thermal.h>
+ 
+ #ifdef CONFIG_MVEBU_CCU
+ #include <asm/arch-mvebu/ccu.h>
+@@ -38,6 +39,13 @@
+ #include <asm/arch-mvebu/mbus.h>
+ #endif
+ 
++/* Weak function for SoC who need specific thermal sensor */
++u32 __mvebu_thermal_sensor_probe(void)
++{
++	return 0;
++}
++u32 mvebu_thermal_sensor_probe(void) __attribute__((weak, alias("__mvebu_thermal_sensor_probe")));
++
+ /* Weak function for boards who need specific init seqeunce */
+ int __soc_late_init(void)
+ {
+@@ -65,6 +73,8 @@ int mvebu_soc_init()
+ 	init_mbus();
+ #endif
+ 
++	mvebu_thermal_sensor_probe();
++
+ 	/* Soc specific init */
+ 	ret = soc_late_init();
+ 	if (ret)
+diff --git a/arch/arm/include/asm/arch-mvebu/thermal.h b/arch/arm/include/asm/arch-mvebu/thermal.h
+new file mode 100644
+index 0000000..f8bcdb2
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/thermal.h
+@@ -0,0 +1,26 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _THERMAL_H_
++#define _THERMAL_H_
++
++u32 mvebu_thermal_sensor_read(void);
++u32 mvebu_thermal_sensor_probe(void);
++
++#endif /* _THERMAL_H_ */
++
+diff --git a/doc/device-tree-bindings/thermal/mvebu-thermal.txt b/doc/device-tree-bindings/thermal/mvebu-thermal.txt
+new file mode 100644
+index 0000000..0f0d3be
+--- /dev/null
++++ b/doc/device-tree-bindings/thermal/mvebu-thermal.txt
+@@ -0,0 +1,17 @@
++Marvell Thermal Sensor bindings
++=====================================
++
++The thermal node include describtion about the Thermal Sensor Unit.
++
++The thermal node requires the following properties:
++	- compatible
++		should be "marvell,thermal-sensor"
++	- reg: the base address of thermal unit
++
++Example:
++	thermal: thermal@e4070 {
++		compatible = "marvell,thermal-sensor";
++		reg = <0xE4070 0x12>;
++		status = "okay";
++	};
++
+diff --git a/drivers/Kconfig b/drivers/Kconfig
+index c560560..7fdb815 100644
+--- a/drivers/Kconfig
++++ b/drivers/Kconfig
+@@ -50,4 +50,6 @@ source "drivers/crypto/Kconfig"
+ 
+ source "drivers/phy/Kconfig"
+ 
++source "drivers/thermal/Kconfig"
++
+ endmenu
+diff --git a/drivers/thermal/Kconfig b/drivers/thermal/Kconfig
+new file mode 100644
+index 0000000..547833f
+--- /dev/null
++++ b/drivers/thermal/Kconfig
+@@ -0,0 +1,9 @@
++config MVEBU_THERMAL_SENSOR_28NM
++	bool "Enable Thermal Sensor 28NM driver"
++	default n
++	help
++	  Choose this option to add support for
++	  thermal sensor 28nm driver.
++	  This driver init the thermal sensor unit,
++	  and read the tempreture from the unit.
++
+diff --git a/drivers/thermal/Makefile b/drivers/thermal/Makefile
+index 6d4cacd..a6127ff 100644
+--- a/drivers/thermal/Makefile
++++ b/drivers/thermal/Makefile
+@@ -7,3 +7,4 @@
+ 
+ obj-$(CONFIG_DM_THERMAL) += thermal-uclass.o
+ obj-$(CONFIG_IMX6_THERMAL) += imx_thermal.o
++obj-$(CONFIG_MVEBU_THERMAL_SENSOR_28NM) += mvebu_thermal_28nm.o
+diff --git a/drivers/thermal/mvebu_thermal_28nm.c b/drivers/thermal/mvebu_thermal_28nm.c
+new file mode 100644
+index 0000000..87f8f5f
+--- /dev/null
++++ b/drivers/thermal/mvebu_thermal_28nm.c
+@@ -0,0 +1,95 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#define DEBUG
++
++#include <common.h>
++#include <asm/io.h>
++#include <fdtdec.h>
++#include <asm/arch-mvebu/mvebu.h>
++#include <asm/arch-mvebu/fdt.h>
++#include <asm/arch-mvebu/thermal.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++void __iomem __attribute__((section(".data")))*thermal_base;
++u32 __attribute__((section(".data")))tsen_ready;
++
++#define THERMAL_SEN_CTRL_MSB				0x4
++#define THERMAL_SEN_CTRL_MSB_RST_OFFSET			8
++#define THERMAL_SEN_CTRL_MSB_RST_MASK			(0x1 << THERMAL_SEN_CTRL_MSB_RST_OFFSET)
++
++#define THERMAL_SEN_CTRL_STATS				0x8
++#define THERMAL_SEN_CTRL_STATS_VALID_OFFSET		10
++#define THERMAL_SEN_CTRL_STATS_VALID_MASK		(0x1 << THERMAL_SEN_CTRL_STATS_VALID_OFFSET)
++#define THERMAL_SEN_CTRL_STATS_TEMP_OUT_OFFSET		0
++#define THERMAL_SEN_CTRL_STATS_TEMP_OUT_MASK		(0x3FF << THERMAL_SEN_CTRL_STATS_TEMP_OUT_OFFSET)
++
++u32 mvebu_thermal_sensor_read(void)
++{
++	u32 reg;
++
++	if (!tsen_ready)
++		return 0;
++
++	reg = readl(thermal_base + THERMAL_SEN_CTRL_STATS);
++	reg = ((reg & THERMAL_SEN_CTRL_STATS_TEMP_OUT_MASK) >> THERMAL_SEN_CTRL_STATS_TEMP_OUT_OFFSET);
++
++	return ((4761 * reg) - 2791000) / 10000;
++}
++
++u32 mvebu_thermal_sensor_probe(void)
++{
++	const void *blob = gd->fdt_blob;
++	u32 node, reg;
++
++	debug_enter();
++	debug("Initializing thermal sensor unit\n");
++	/* flag to indicate that TSEN is not ready */
++	tsen_ready = 0;
++
++	/* Get thermal sensor node from the FDT blob */
++	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_THERMAL_SENSOR));
++	if (node == -1) {
++		debug("No thermal sensor node found in FDT blob\n");
++		return -1;
++	}
++	/* Get the base address */
++	thermal_base = (void *)fdt_get_regs_offs(blob, node, "reg");
++
++	/* Initialize thermal sensor hardware reset once */
++	reg = readl(thermal_base + THERMAL_SEN_CTRL_MSB);
++	reg |= THERMAL_SEN_CTRL_MSB_RST_MASK;
++	writel(reg, thermal_base + THERMAL_SEN_CTRL_MSB);
++
++	udelay(10); /* wait 10 ms and check if the TSEN is ready */
++	reg = readl(thermal_base + THERMAL_SEN_CTRL_STATS);
++	if ((reg & THERMAL_SEN_CTRL_STATS_VALID_MASK) == 0) {
++		error("%s: thermal sensor is not ready\n", __func__);
++		return -1;
++	}
++
++	/* TSEN is ready to use */
++	tsen_ready = 1;
++
++
++	debug("Done thermal sensor initializing unit\n");
++	debug_exit();
++
++	return 0;
++}
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 05ea9c4..5dc8ff3 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -138,6 +138,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_COMPHY,
+ 	COMPAT_COMPHY_ARMADA_38X,
+ 	COMPAT_COMPHY_AP806,
++	COMPAT_MVEBU_THERMAL_SENSOR,
+ 
+ 	COMPAT_COUNT,
+ };
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index df00b8b..58fa145 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -100,6 +100,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_COMPHY, "marvell,mvebu-comphy"),
+ 	COMPAT(COMPHY_ARMADA_38X, "marvell,comphy-armada38x"),
+ 	COMPAT(COMPAT_COMPHY_AP806, "marvell,comphy-ap806"),
++	COMPAT(MVEBU_THERMAL_SENSOR, "marvell,thermal-sensor"),
+ };
+ 
+ const char *fdtdec_get_compatible(enum fdt_compat_id id)
+-- 
+1.9.1
+

@@ -1,0 +1,94 @@
+From 4ec0c73f3b1c1bc3688abf113b13daaedbbb8be6 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Wed, 23 Mar 2016 18:41:49 +0200
+Subject: [PATCH 0980/1240] dts: sar: a8k: add fields for SAR on armada-70x0
+
+create 'armada-70x0-dev-info.dtsi' for SAR fields on armada-70x0
+
+Change-Id: I294d5a4198dc00e3653d831b8ea83e97ccf8c0e4
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28490
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/armada-70x0-db_router.dts |  1 +
+ arch/arm/dts/armada-70x0-dev-info.dtsi | 54 ++++++++++++++++++++++++++++++++++
+ 2 files changed, 55 insertions(+)
+ create mode 100644 arch/arm/dts/armada-70x0-dev-info.dtsi
+
+diff --git a/arch/arm/dts/armada-70x0-db_router.dts b/arch/arm/dts/armada-70x0-db_router.dts
+index 009edce..8468f02 100644
+--- a/arch/arm/dts/armada-70x0-db_router.dts
++++ b/arch/arm/dts/armada-70x0-db_router.dts
+@@ -19,6 +19,7 @@
+ /dts-v1/;
+ 
+ #include "armada-70x0.dtsi" /* include SoC device tree */
++#include "armada-70x0-dev-info.dtsi" /* include Marvell specific info (S@R, MPP cmd) */
+ 
+ / {
+ 	model = "DB-ARMADA-70x0 (ROUTER)";
+diff --git a/arch/arm/dts/armada-70x0-dev-info.dtsi b/arch/arm/dts/armada-70x0-dev-info.dtsi
+new file mode 100644
+index 0000000..ed9420f
+--- /dev/null
++++ b/arch/arm/dts/armada-70x0-dev-info.dtsi
+@@ -0,0 +1,54 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/ {
++	/* This should go only into devel boards */
++	compatible = "marvell,cp110";
++
++	sar {
++		compatible = "marvell,sample-at-reset";
++		#address-cells = <1>;
++		#size-cells = <0>;
++		reg = <0x4c 0x4e>;
++		chip_count = <2>;
++		bit_width = <5>;
++
++		freq {
++			key = "freq";
++			description = "CPU/DDR frequencies";
++			start-bit = <0>;
++			bit-length = <3>;
++			option-cnt = <2>;
++			options = "0x7", "1300/800 Mhz",
++				"0x6", "1300/650 Mhz";
++			default = <0x6>;
++			status = "okay";
++		};
++		boot_mode {
++			key = "boot_mode";
++			description = "Boot mode options";
++			start-bit = <4>;
++			bit-length = <6>;
++			option-cnt = <2>;
++			options = "0x32", "CP_SPI_1 IHB 24bits",
++				"0xf", "NAND IHB 8bits";
++			default = <0x32>;
++			status = "okay";
++		};
++	};
++};
+-- 
+1.9.1
+

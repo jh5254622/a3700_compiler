@@ -1,0 +1,80 @@
+From d29060bc69c3e26c172d0703375189bb4e72aede Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Sun, 20 Dec 2015 15:30:04 +0800
+Subject: [PATCH 0626/1240] Revert "net: modify e1000 driver for Aardvark PCIe
+ interface"
+
+This reverts commit b2fa65b86058482f189f300a852b6fbff411abf9.
+It is because the WR in e1000 driver is not needed anymore after
+PCIe driver ues direct access mode.
+
+Change-Id: I0028e07773e5b82cae7e0ab1eefb1aa6ecbfbee1
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26135
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/net/e1000.c | 18 ++----------------
+ 1 file changed, 2 insertions(+), 16 deletions(-)
+
+diff --git a/drivers/net/e1000.c b/drivers/net/e1000.c
+index 8a34424..e5d86f8 100644
+--- a/drivers/net/e1000.c
++++ b/drivers/net/e1000.c
+@@ -43,18 +43,6 @@ tested on both gig copper and gig fiber boards
+ #define E1000_DEFAULT_PCI_PBA	0x00000030
+ #define E1000_DEFAULT_PCIE_PBA	0x000a0026
+ 
+-/* PCI Address prefix
+- * Aardvark PCIe inbound data transfers will use the command definitions
+- * in Command Core structure defined via PCI_ADDR[63:60].
+- * For inbound Read/Write to SoC DDR, this field should be set to 4.
+- * Otherwise it should be 4'h0
+- */
+-#ifdef CONFIG_PCI_ADDR_PREFIX
+-#define PCI_ADDR_UPPER_32_DDR	0x40000000ULL
+-#else
+-#define PCI_ADDR_UPPER_32_DDR	0x00000000ULL
+-#endif
+-
+ /* NIC specific static variables go here */
+ 
+ /* Intel i210 needs the DMA descriptor rings aligned to 128b */
+@@ -4966,7 +4954,6 @@ fill_rx(struct e1000_hw *hw)
+ 	rx_tail = (rx_tail + 1) % 8;
+ 	memset(rd, 0, 16);
+ 	rd->buffer_addr = cpu_to_le64((unsigned long)packet);
+-	rd->buffer_addr += (PCI_ADDR_UPPER_32_DDR << 32);
+ 
+ 	/*
+ 	 * Make sure there are no stale data in WB over this area, which
+@@ -4998,7 +4985,7 @@ e1000_configure_tx(struct e1000_hw *hw)
+ 	uint32_t ipgr1, ipgr2;
+ 
+ 	E1000_WRITE_REG(hw, TDBAL, (unsigned long)tx_base);
+-	E1000_WRITE_REG(hw, TDBAH, PCI_ADDR_UPPER_32_DDR);
++	E1000_WRITE_REG(hw, TDBAH, 0);
+ 
+ 	E1000_WRITE_REG(hw, TDLEN, 128);
+ 
+@@ -5142,7 +5129,7 @@ e1000_configure_rx(struct e1000_hw *hw)
+ 	}
+ 	/* Setup the Base and Length of the Rx Descriptor Ring */
+ 	E1000_WRITE_REG(hw, RDBAL, (unsigned long)rx_base);
+-	E1000_WRITE_REG(hw, RDBAH, PCI_ADDR_UPPER_32_DDR);
++	E1000_WRITE_REG(hw, RDBAH, 0);
+ 
+ 	E1000_WRITE_REG(hw, RDLEN, 128);
+ 
+@@ -5211,7 +5198,6 @@ static int e1000_transmit(struct eth_device *nic, void *txpacket, int length)
+ 	tx_tail = (tx_tail + 1) % 8;
+ 
+ 	txp->buffer_addr = cpu_to_le64(virt_to_bus(hw->pdev, nv_packet));
+-	txp->buffer_addr += (PCI_ADDR_UPPER_32_DDR << 32);
+ 	txp->lower.data = cpu_to_le32(hw->txd_cmd | length);
+ 	txp->upper.data = 0;
+ 
+-- 
+1.9.1
+

@@ -1,0 +1,104 @@
+From 1cb7fb3b66995f35b445904cdf7a45bd7e135a55 Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Wed, 4 May 2016 15:44:36 +0300
+Subject: [PATCH 139/239] misc: update asm include files copyrights
+
+removed Marvell header
+
+Change-Id: I2bcfc859287ecca082fd4cc0ffcd4445e65534a3
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29501
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Neta Zur Hershkovits <neta@marvell.com>
+---
+ include/plat/marvell/common/asm/linkage.h | 33 -------------------------------
+ include/plat/marvell/common/asm/macro.h   | 33 -------------------------------
+ 2 files changed, 66 deletions(-)
+
+diff --git a/include/plat/marvell/common/asm/linkage.h b/include/plat/marvell/common/asm/linkage.h
+index fc5495d..504c576 100644
+--- a/include/plat/marvell/common/asm/linkage.h
++++ b/include/plat/marvell/common/asm/linkage.h
+@@ -1,37 +1,4 @@
+ /*
+-* ***************************************************************************
+-* Copyright (C) 2016 Marvell International Ltd.
+-* ***************************************************************************
+-*
+-* Redistribution and use in source and binary forms, with or without
+-* modification, are permitted provided that the following conditions are met:
+-*
+-* Redistributions of source code must retain the above copyright notice, this
+-* list of conditions and the following disclaimer.
+-*
+-* Redistributions in binary form must reproduce the above copyright notice,
+-* this list of conditions and the following disclaimer in the documentation
+-* and/or other materials provided with the distribution.
+-*
+-* Neither the name of Marvell nor the names of its contributors may be used
+-* to endorse or promote products derived from this software without specific
+-* prior written permission.
+-*
+-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+-* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+-* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+-* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+-* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+-* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+-* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+-* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+-* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+-* POSSIBILITY OF SUCH DAMAGE.
+-*
+-***************************************************************************
+-*/
+-/*
+  * U-boot - linkage.h
+  *
+  * Copyright (c) 2005-2007 Analog Devices Inc.
+diff --git a/include/plat/marvell/common/asm/macro.h b/include/plat/marvell/common/asm/macro.h
+index 2f2e087..09f034f 100644
+--- a/include/plat/marvell/common/asm/macro.h
++++ b/include/plat/marvell/common/asm/macro.h
+@@ -1,37 +1,4 @@
+ /*
+-* ***************************************************************************
+-* Copyright (C) 2016 Marvell International Ltd.
+-* ***************************************************************************
+-*
+-* Redistribution and use in source and binary forms, with or without
+-* modification, are permitted provided that the following conditions are met:
+-*
+-* Redistributions of source code must retain the above copyright notice, this
+-* list of conditions and the following disclaimer.
+-*
+-* Redistributions in binary form must reproduce the above copyright notice,
+-* this list of conditions and the following disclaimer in the documentation
+-* and/or other materials provided with the distribution.
+-*
+-* Neither the name of Marvell nor the names of its contributors may be used
+-* to endorse or promote products derived from this software without specific
+-* prior written permission.
+-*
+-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+-* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+-* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+-* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+-* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+-* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+-* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+-* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+-* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+-* POSSIBILITY OF SUCH DAMAGE.
+-*
+-***************************************************************************
+-*/
+-/*
+  * include/asm-arm/macro.h
+  *
+  * Copyright (C) 2009 Jean-Christophe PLAGNIOL-VILLARD <plagnioj@jcrosoft.com>
+-- 
+1.9.1
+

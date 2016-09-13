@@ -1,0 +1,39 @@
+From 520b65538ef29529adac743841327fa225fc5426 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 24 Jun 2015 14:41:15 +0300
+Subject: [PATCH 0219/1240] apn806: pcie: added dt node for pcie controller
+
+Change-Id: I720c7a3882695058ac7dde98160b2cdd20b2846f
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20461
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/armada-8k.dts | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/arch/arm/dts/armada-8k.dts b/arch/arm/dts/armada-8k.dts
+index 2edbbb4..080cc0d 100644
+--- a/arch/arm/dts/armada-8k.dts
++++ b/arch/arm/dts/armada-8k.dts
+@@ -66,5 +66,17 @@
+ 					0xf6000000 0x2000000 0x02 /* PCI-REG window */>;
+ 			};
+ 		};
++
++		pcie-controller {
++			#address-cells = <1>;
++			#size-cells = <1>;
++			compatible = "marvell,mvebu-pcie";
++
++			pcie@1,0 {
++				reg = <0xbff0000 0x2000>;
++				mem = <0xf8000000 0x4000000>;
++				status = "ok";
++			};
++		};
+ 	};
+ };
+-- 
+1.9.1
+

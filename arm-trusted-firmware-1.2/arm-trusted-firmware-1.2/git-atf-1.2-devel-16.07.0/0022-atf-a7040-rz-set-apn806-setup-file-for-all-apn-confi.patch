@@ -1,0 +1,150 @@
+From 39cb4af62e0890bb363b9590d92ff563a5b4c0fa Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Tue, 23 Feb 2016 18:56:11 +0200
+Subject: [PATCH 022/239] atf: a7040-rz: set apn806 setup file for all apn
+ configurations
+
+this file will initialize the RFU, CCU, IOB and any other
+APN configuration
+
+Change-Id: Ibea1c7a52523b9acbab13d1982dc9f62503ef86e
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27801
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ .../plat/marvell/a8k/a7040_rz/board/apn806_setup.h | 39 ++++++++++++++++++++++
+ plat/marvell/a8k/a7040_rz/apn806_setup.c           | 39 ++++++++++++++++++++++
+ plat/marvell/a8k/a7040_rz/plat_bl31_setup.c        |  5 +++
+ plat/marvell/a8k/a7040_rz/platform.mk              |  1 +
+ 4 files changed, 84 insertions(+)
+ create mode 100644 include/plat/marvell/a8k/a7040_rz/board/apn806_setup.h
+ create mode 100644 plat/marvell/a8k/a7040_rz/apn806_setup.c
+
+diff --git a/include/plat/marvell/a8k/a7040_rz/board/apn806_setup.h b/include/plat/marvell/a8k/a7040_rz/board/apn806_setup.h
+new file mode 100644
+index 0000000..feffd05
+--- /dev/null
++++ b/include/plat/marvell/a8k/a7040_rz/board/apn806_setup.h
+@@ -0,0 +1,39 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2016 Marvell International Ltd.
++* ***************************************************************************
++*
++* Redistribution and use in source and binary forms, with or without
++* modification, are permitted provided that the following conditions are met:
++*
++* Redistributions of source code must retain the above copyright notice, this
++* list of conditions and the following disclaimer.
++*
++* Redistributions in binary form must reproduce the above copyright notice,
++* this list of conditions and the following disclaimer in the documentation
++* and/or other materials provided with the distribution.
++*
++* Neither the name of Marvell nor the names of its contributors may be used
++* to endorse or promote products derived from this software without specific
++* prior written permission.
++*
++* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
++* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++* POSSIBILITY OF SUCH DAMAGE.
++*
++***************************************************************************
++*/
++#ifndef __APN806_SETUP_H__
++#define __APN806_SETUP_H__
++
++void apn806_init(void);
++
++#endif /* __APN806_SETUP_H__ */
+diff --git a/plat/marvell/a8k/a7040_rz/apn806_setup.c b/plat/marvell/a8k/a7040_rz/apn806_setup.c
+new file mode 100644
+index 0000000..fba1bba
+--- /dev/null
++++ b/plat/marvell/a8k/a7040_rz/apn806_setup.c
+@@ -0,0 +1,39 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2016 Marvell International Ltd.
++* ***************************************************************************
++*
++* Redistribution and use in source and binary forms, with or without
++* modification, are permitted provided that the following conditions are met:
++*
++* Redistributions of source code must retain the above copyright notice, this
++* list of conditions and the following disclaimer.
++*
++* Redistributions in binary form must reproduce the above copyright notice,
++* this list of conditions and the following disclaimer in the documentation
++* and/or other materials provided with the distribution.
++*
++* Neither the name of Marvell nor the names of its contributors may be used
++* to endorse or promote products derived from this software without specific
++* prior written permission.
++*
++* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
++* OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++* POSSIBILITY OF SUCH DAMAGE.
++*
++***************************************************************************
++*/
++
++#include <apn806_setup.h>
++
++void apn806_init(void)
++{
++}
+diff --git a/plat/marvell/a8k/a7040_rz/plat_bl31_setup.c b/plat/marvell/a8k/a7040_rz/plat_bl31_setup.c
+index d669a4b..1b3571d 100644
+--- a/plat/marvell/a8k/a7040_rz/plat_bl31_setup.c
++++ b/plat/marvell/a8k/a7040_rz/plat_bl31_setup.c
+@@ -33,6 +33,7 @@
+ */
+ 
+ #include <plat_marvell.h>
++#include <apn806_setup.h>
+ #include <cp110_setup.h>
+ 
+ /* This function overruns the same function in marvell_bl31_setup.c */
+@@ -40,5 +41,9 @@ void bl31_plat_arch_setup(void)
+ {
+ 	marvell_bl31_plat_arch_setup();
+ 
++	/* configure apn806 */
++	apn806_init();
++
++	/* configure cp110 */
+ 	cp110_init();
+ }
+diff --git a/plat/marvell/a8k/a7040_rz/platform.mk b/plat/marvell/a8k/a7040_rz/platform.mk
+index 5c2906d..10b725f 100644
+--- a/plat/marvell/a8k/a7040_rz/platform.mk
++++ b/plat/marvell/a8k/a7040_rz/platform.mk
+@@ -69,6 +69,7 @@ BL31_SOURCES		+=	lib/cpus/aarch64/cortex_a72.S		\
+ 				$(PLAT_SRC_BASE)/plat_pm.c					\
+ 				$(PLAT_SRC_BASE)/plat_topology.c			\
+ 				$(PLAT_SRC_BASE)/plat_bl31_setup.c			\
++				$(PLAT_SRC_BASE)/apn806_setup.c				\
+ 				$(PLAT_SRC_BASE)/cp110_setup.c				\
+ 				plat/marvell/common/marvell_gicv2.c			\
+ 				${MARVELL_GIC_SOURCES}
+-- 
+1.9.1
+

@@ -1,0 +1,42 @@
+From 0fb507f1e4f85d924da0add3963895850ec406d4 Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Wed, 30 Mar 2016 16:51:58 +0300
+Subject: [PATCH 093/239] mv_ddr: Add missing param in two func calls
+
+This patch adds missing parameter (dev_num) to read_phase_value and
+write_leveling_value func calls in ddr3_debug.c
+
+Change-Id: I6caabe32e653cdd7f8d8050a131d96de48d9af8b
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28676
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28850
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/marvell/mv_ddr/ddr3_debug.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/marvell/mv_ddr/ddr3_debug.c b/drivers/marvell/mv_ddr/ddr3_debug.c
+index f4a5c04..89590de 100644
+--- a/drivers/marvell/mv_ddr/ddr3_debug.c
++++ b/drivers/marvell/mv_ddr/ddr3_debug.c
+@@ -1736,7 +1736,7 @@ int ddr3_tip_run_leveling_sweep_test(int dev_num, u32 repeat_num,
+ 		/* save leveling value after running algorithm */
+ 		ddr3_tip_read_adll_value(dev_num, ctrl_adll,
+ 					 (reg + (cs * CS_REGISTER_ADDR_OFFSET)), 0x1F);
+-		read_phase_value(ctrl_level_phase, (reg + (cs * CS_REGISTER_ADDR_OFFSET)), 0x7 << 6);
++		read_phase_value(dev_num, ctrl_level_phase, (reg + (cs * CS_REGISTER_ADDR_OFFSET)), 0x7 << 6);
+ 
+ 		if (direction == 0)
+ 			ddr3_tip_read_adll_value(dev_num, ctrl_adll1,
+@@ -1871,7 +1871,7 @@ int ddr3_tip_run_leveling_sweep_test(int dev_num, u32 repeat_num,
+ 		}
+ 
+ 		/* write back to the phy the Rx DQS value, we store in the beginning */
+-		write_leveling_value(ctrl_adll, ctrl_level_phase, (reg +  cs * CS_REGISTER_ADDR_OFFSET));
++		write_leveling_value(dev_num, ctrl_adll, ctrl_level_phase, (reg +  cs * CS_REGISTER_ADDR_OFFSET));
+ 		if (direction == 0)
+ 			ddr3_tip_write_adll_value(dev_num, ctrl_adll1,
+ 						  (0x1 + (cs * CS_REGISTER_ADDR_OFFSET)));
+-- 
+1.9.1
+

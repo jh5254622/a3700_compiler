@@ -1,0 +1,653 @@
+From 8d4c90a30b8c2dca61ba2e73916eb7fc17898729 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Mon, 29 Feb 2016 13:08:26 +0200
+Subject: [PATCH 0947/1240] i2c: add support to i2c bridge
+
+i2c bridge driver is expansion of the legacy i2c driver.
+in order to support i2c bridge driver, enable MVEBU_I2C_BRIDGE
+
+Change-Id: I848bd39029d6087425f9a5dc924b4778063562f3
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27933
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ configs/mvebu_armada38x_defconfig |   1 +
+ drivers/i2c/Kconfig               |  10 +
+ drivers/i2c/mvebu_i2c.c           | 531 ++++++++++++++++++++++++++++++--------
+ 3 files changed, 433 insertions(+), 109 deletions(-)
+
+diff --git a/configs/mvebu_armada38x_defconfig b/configs/mvebu_armada38x_defconfig
+index 17c8928..62137ab 100644
+--- a/configs/mvebu_armada38x_defconfig
++++ b/configs/mvebu_armada38x_defconfig
+@@ -35,6 +35,7 @@ CONFIG_NAND_PXA3XX=y
+ CONFIG_MVEBU_MBUS=y
+ +S:CONFIG_SYS_NS16550=y
+ +S:CONFIG_MVEBU_I2C=y
+++S# CONFIG_MVEBU_I2C_BRIDGE is not set
+ CONFIG_MVEBU_SPI=y
+ CONFIG_MVEBU_PINCTL=y
+ +S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+diff --git a/drivers/i2c/Kconfig b/drivers/i2c/Kconfig
+index db3ceb5..6ef5107 100644
+--- a/drivers/i2c/Kconfig
++++ b/drivers/i2c/Kconfig
+@@ -19,6 +19,16 @@ config MVEBU_I2C
+ 	  I2C driver, which is used
+ 	  by Armada8k and Armada38x.
+ 
++config MVEBU_I2C_BRIDGE
++	bool "MVEBU I2C BRIDGE support"
++	default y
++	depends on MVEBU_I2C
++	help
++	  Choose this option to add
++	  support for Marvell's MVEBU
++	  I2C BRIDGE driver, which is used
++	  by Armada8k.
++
+ config I2C_MV
+ 	bool "I2C support for armada100/armadaLP"
+ 	default n
+diff --git a/drivers/i2c/mvebu_i2c.c b/drivers/i2c/mvebu_i2c.c
+index 00f0098..827c85e 100644
+--- a/drivers/i2c/mvebu_i2c.c
++++ b/drivers/i2c/mvebu_i2c.c
+@@ -51,8 +51,42 @@
+ #define I2C_STATUS_LOST_ARB_GENERAL_CALL	0x78
+ #define	I2C_STATUS_IDLE				0xF8
+ #define MAX_CHIPS_PER_BUS			10
++
++#define I2C_BRIDGE_PAGE_READ_SIZE		8
++#define I2C_BRIDGE_PAGE_WRITE_SIZE		4
++#define I2C_BRIDGE_TIMEOUT_VALUE		100
++#define I2C_BRIDGE_REG_OFFSET			0xC0
++
++/* I2C Bridge Control */
++#define I2C_BC_WRITE_OFFSET			0
++#define I2C_BC_READ_OFFSET			1
++#define I2C_BC_SLAVE_ADDR_OFFSET		2
++#define I2C_BC_EXTAND_ADDR_OFFSET		12
++#define I2C_BC_TX_SIZE_OFFSET			13
++#define I2C_BC_RX_SIZE_OFFSET			16
++#define I2C_BC_BRIDGE_EN_OFFSET			19
++#define I2C_BC_REPEATED_START_OFFSET		20
++
++/* I2C Bridge Status */
++#define I2C_BS_ERROR_STATE_OFFSET		11
++#define I2C_BS_ERROR_STATE_MASK			0X7 << I2C_BS_ERROR_STATE_OFFSET
++
++#define reverse_2_bytes(v) ((v) & 0xff) << 8 | ((v) & 0xff00) >> 8;
++
+ DECLARE_GLOBAL_DATA_PTR;
+ 
++struct  mvebu_i2c_bridge_regs {
++	u32 transmit_low;
++	u32 transmit_high;
++	u32 receive_low;
++	u32 receive_high;
++	u32 control;
++	u32 status;
++	u32 interrupt;
++	u32 interrupt_mask;
++	u32 timing_gaps;
++};
++
+ struct  mvebu_i2c_regs {
+ 	u32 slave_address;
+ 	u32 data;
+@@ -68,18 +102,30 @@ struct  mvebu_i2c_regs {
+ 
+ struct mvebu_i2c_bus {
+ 	struct  mvebu_i2c_regs *i2c_reg;
++	struct  mvebu_i2c_bridge_regs *i2c_bridge_reg;
+ 	u32 clock;
+ 	int two_bytes_addr[MAX_CHIPS_PER_BUS];
+ 	bool status;
+ };
+ 
++enum i2c_bridge_error {
++	I2C_BRIDGE_NO_ERROR,
++	I2C_BRIDGE_START_ERROR,
++	I2C_BRIDGE_ADDR_ERROR,
++	I2C_BRIDGE_EXTENDED_ADDR_ERROR,
++	I2C_BRIDGE_TRANSMIT_ERROR,
++	I2C_BRIDGE_RECEIVE_ERROR,
++	I2C_BRIDGE_UNKNOWN_ERROR,
++};
++
+ /* initialize i2c_bus to -1, because we use this struct before relocation */
+-static struct mvebu_i2c_bus i2c_bus[CONFIG_MAX_I2C_NUM] = { { .i2c_reg = NULL, .clock = -1,
++static struct mvebu_i2c_bus i2c_bus[CONFIG_MAX_I2C_NUM] = { { .i2c_reg = NULL, .i2c_bridge_reg = NULL, .clock = -1,
+ 					 .two_bytes_addr = {[0 ... MAX_CHIPS_PER_BUS - 1] = -1}, .status = false},
+-							    { .i2c_reg = NULL, .clock = -1,
++							    { .i2c_reg = NULL, .i2c_bridge_reg = NULL, .clock = -1,
+ 					 .two_bytes_addr = {[0 ... MAX_CHIPS_PER_BUS - 1] = -1}, .status = false} };
+ 
+ #define i2c_reg(x) (&i2c_bus[gd->cur_i2c_bus].i2c_reg->x)
++#define i2c_bridge_reg(x) (&i2c_bus[gd->cur_i2c_bus].i2c_bridge_reg->x)
+ 
+ static int mvebu_i2c_lost_arbitration(u32 *status)
+ {
+@@ -235,111 +281,6 @@ static int mvebu_i2c_address_set(u8 chain, int command)
+ 	return 0;
+ }
+ 
+-static int mvebu_i2c_data_receive(u8 *p_block, u32 block_size)
+-{
+-	u32 reg, status, block_size_read = block_size;
+-
+-	/* Wait for cause interrupt */
+-	if (mvebu_i2c_wait_interrupt()) {
+-		error("Start clear bit timeout\n");
+-		return -ETIMEDOUT;
+-	}
+-	while (block_size_read) {
+-		if (block_size_read == 1) {
+-			reg = readl(i2c_reg(control));
+-			reg &= ~(I2C_CONTROL_ACK);
+-			writel(reg, i2c_reg(control));
+-		}
+-		mvebu_i2c_interrupt_clear();
+-
+-		if (mvebu_i2c_wait_interrupt()) {
+-			error("Start clear bit timeout\n");
+-			return -ETIMEDOUT;
+-		}
+-		/* check the status */
+-		if (mvebu_i2c_lost_arbitration(&status)) {
+-			debug("%s - %d: Lost arbitration, got status %x\n", __func__, __LINE__, status);
+-			return -EAGAIN;
+-		}
+-		if ((status != I2C_STATUS_DATA_R_ACK) && (block_size_read != 1)) {
+-			error("Status %x in read transaction\n", status);
+-			return -EPERM;
+-		}
+-		if ((status != I2C_STATUS_DATA_R_NAK) && (block_size_read == 1)) {
+-			error("Status %x in Rd Terminate\n", status);
+-			return -EPERM;
+-		}
+-
+-		/* read the data */
+-		*p_block = (u8) readl(i2c_reg(data));
+-		debug("%s: place %d read %x\n", __func__, block_size - block_size_read, *p_block);
+-		p_block++;
+-		block_size_read--;
+-	}
+-
+-	return 0;
+-}
+-
+-static int mvebu_i2c_data_transmit(u8 *p_block, u32 block_size)
+-{
+-	u32 status, block_size_write = block_size;
+-
+-	if (mvebu_i2c_wait_interrupt()) {
+-		error("Start clear bit timeout\n");
+-		return -ETIMEDOUT;
+-	}
+-
+-	while (block_size_write) {
+-		/* write the data */
+-		writel((u32) *p_block, i2c_reg(data));
+-		debug("%s: index = %d, data = %x\n", __func__, block_size - block_size_write, *p_block);
+-		p_block++;
+-		block_size_write--;
+-
+-		mvebu_i2c_interrupt_clear();
+-
+-		if (mvebu_i2c_wait_interrupt()) {
+-			error("Start clear bit timeout\n");
+-			return -ETIMEDOUT;
+-		}
+-
+-		/* check the status */
+-		if (mvebu_i2c_lost_arbitration(&status)) {
+-			debug("%s - %d: Lost arbitration, got status %x\n", __func__, __LINE__, status);
+-			return -EAGAIN;
+-		}
+-		if (status != I2C_STATUS_DATA_W_ACK) {
+-			error("Status %x in write transaction\n", status);
+-			return -EPERM;
+-		}
+-	}
+-
+-	return 0;
+-}
+-
+-static int mvebu_i2c_target_offset_set(int chip, uint addr)
+-{
+-	u8 off_block[2], support_two_bytes = 0;
+-	u32 off_size, i;
+-
+-	for (i = 0; (i < MAX_CHIPS_PER_BUS) && (i2c_bus[gd->cur_i2c_bus].two_bytes_addr[i] != -1) ; i++) {
+-		if (i2c_bus[gd->cur_i2c_bus].two_bytes_addr[i] == chip) {
+-			support_two_bytes = 1;
+-			break;
+-		}
+-	}
+-	if (support_two_bytes) {
+-		off_block[0] = (addr >> 8) & 0xff;
+-		off_block[1] = addr & 0xff;
+-		off_size = 2;
+-	} else {
+-		off_block[0] = addr & 0xff;
+-		off_size = 1;
+-	}
+-	debug("%s: off_size = %x addr1 = %x addr2 = %x\n", __func__, off_size, off_block[0], off_block[1]);
+-	return mvebu_i2c_data_transmit(off_block, off_size);
+-}
+-
+ static unsigned int mvebu_i2c_bus_speed_set(struct i2c_adapter *adap, unsigned int requested_speed)
+ {
+ 	unsigned int n, m, freq, margin, min_margin = 0xffffffff;
+@@ -387,6 +328,9 @@ static void mvebu_i2c_init(struct i2c_adapter *adap, int speed, int slaveaddr)
+ 		if (gd->cur_i2c_bus == i) {
+ 			i2c_bus[gd->cur_i2c_bus].i2c_reg =
+ 				(struct  mvebu_i2c_regs *)fdt_get_regs_offs(gd->fdt_blob, node, "reg");
++			i2c_bus[gd->cur_i2c_bus].i2c_bridge_reg =
++				(struct  mvebu_i2c_bridge_regs *)(fdt_get_regs_offs(gd->fdt_blob, node, "reg")
++											+ I2C_BRIDGE_REG_OFFSET);
+ 			i2c_bus[gd->cur_i2c_bus].clock = soc_clock_get(gd->fdt_blob, node);
+ 			/* Get the fisrt variable in i2c (if exist) */
+ 			var = fdt_first_subnode(gd->fdt_blob, node);
+@@ -451,6 +395,376 @@ static int mvebu_i2c_probe(struct i2c_adapter *adap, uchar chip)
+ 	return ret;
+ }
+ 
++#ifdef CONFIG_MVEBU_I2C_BRIDGE
++static int i2c_bridge_detect_error(int status)
++{
++	status = (status & I2C_BS_ERROR_STATE_MASK) >> I2C_BS_ERROR_STATE_OFFSET;
++	if (status < I2C_BRIDGE_UNKNOWN_ERROR)
++		return status;
++	return I2C_BRIDGE_UNKNOWN_ERROR;
++}
++
++static bool i2c_offload_write(u16 dev_addr, u16 offset, u8 offset_length, u8 *data, u8 size, u8 extend_addr)
++{
++	u32 control_reg, status_reg;
++	u32 low_trans, high_trans;
++	u32 i, timeout = 0;
++
++	/* verify data size */
++	if (size > I2C_BRIDGE_PAGE_WRITE_SIZE || size < 1) {
++		error("bytes to transmit should be betweeen 1 and 6\n");
++		return false;
++	}
++
++	/* verify device address according to the extended address,
++	   extend address: 0x0 = 7-bit address, 0x1 = 10-bit address */
++	if (extend_addr && (dev_addr > 0x3ff)) {
++			error("address is more than 10bits\n");
++			return false;
++	} else if (dev_addr > 0x7f) {
++		error("address is more than 7bits\n");
++		return false;
++	}
++
++	/* verify offset length */
++	if (offset_length < 1 || offset_length > 2) {
++		error("i2c bridge support only 1 or 2 bytes address\n");
++		return false;
++	}
++
++	/* write offset and data to transmit registers */
++	if (offset_length == 2) {
++		control_reg = ((size + 1) << I2C_BC_TX_SIZE_OFFSET);
++		/* reverse the offset address */
++		offset = reverse_2_bytes(offset);
++		/* write data starting from the third byte in low transmit register
++		   until the fourth byte in high transmitregister */
++		for (i = 0, low_trans = 0x0, high_trans = 0x0; i < size; i++) {
++			if (i > 1)
++				high_trans |= (data[i] << (i - 2)*8);
++			else
++				low_trans |= (data[i] << (i + 2)*8);
++		}
++	} else if (offset_length == 1) {
++		control_reg = (size << I2C_BC_TX_SIZE_OFFSET);
++		offset &= 0xff;
++		/* write data starting from the second byte in low transmit register
++		   until the fourth byte in high transmitregister */
++		for (i = 0, low_trans = 0x0, high_trans = 0x0; i < size; i++) {
++			if (i > 2)
++				high_trans |= (data[i] << (i - 3)*8);
++			else
++				low_trans |= (data[i] << (i + 1)*8);
++		}
++	}
++	low_trans |= offset;
++	writel(low_trans, i2c_bridge_reg(transmit_low));
++	writel(high_trans, i2c_bridge_reg(transmit_high));
++
++	/* extend address: 0x0 = 7-bit address, 0x1 = 10-bit address */
++	if (extend_addr)
++		control_reg |= (0x1 << I2C_BC_EXTAND_ADDR_OFFSET);
++
++	/* write device address */
++	control_reg |= (dev_addr << I2C_BC_SLAVE_ADDR_OFFSET);
++
++	/* prepare to write transaction  */
++	control_reg |= (0x1 << I2C_BC_WRITE_OFFSET);
++	writel(control_reg, i2c_bridge_reg(control));
++
++	/* start transaction */
++	control_reg |= (0x1 << I2C_BC_BRIDGE_EN_OFFSET);
++	writel(control_reg, i2c_bridge_reg(control));
++
++	/* wait to interrupt until transaction is ending */
++	while (!readl(i2c_bridge_reg(interrupt)) && (timeout++ < I2C_BRIDGE_TIMEOUT_VALUE))
++		udelay(100);
++	if (timeout >= I2C_BRIDGE_TIMEOUT_VALUE)
++		return -ETIMEDOUT;
++
++	/* back to back write transaction delay */
++	udelay(10000);
++
++	/* read status register to verify no error */
++	status_reg = readl(i2c_bridge_reg(status));
++	debug("register status write = %x\n", status_reg);
++
++	/* reset control register */
++	writel(0x0, i2c_bridge_reg(control));
++
++	/* reset interrupt register */
++	writel(0x0, i2c_bridge_reg(interrupt));
++
++	if (status_reg & 0x1) {
++		/* reset status register */
++		writel(0x0, i2c_bridge_reg(status));
++		error("status register = %d\n", i2c_bridge_detect_error(status_reg));
++		return false;
++	}
++	return true;
++}
++
++static bool i2c_offload_read(u16 dev_addr, u16 offset, u8 offset_length, u8 *data, u8 size, u8 extend_addr)
++{
++	u32 control_reg, status_reg;
++	u32 low_trans, high_rec, low_rec;
++	u32 i, timeout = 0;
++
++	/* verify data size */
++	if (size > I2C_BRIDGE_PAGE_READ_SIZE || size < 1) {
++		error("bytes to transmit should be betweeen 1 and 8\n");
++		return false;
++	}
++
++	/* verify device address according to the extended address,
++	   extend address: 0x0 = 7-bit address, 0x1 = 10-bit address */
++	if (extend_addr && (dev_addr > 0x3ff)) {
++			error("address is more than 10bits\n");
++			return false;
++	} else if (dev_addr > 0x7f) {
++		error("address is more than 7bits\n");
++		return false;
++	}
++
++	/* verify offset length */
++	if (offset_length < 1 || offset_length > 2) {
++		error("i2c bridge support only 1 or 2 bytes address\n");
++		return false;
++	}
++
++	/* write offset size and offset address */
++	if (offset_length == 2) {
++		control_reg = (0x1 << I2C_BC_TX_SIZE_OFFSET);
++		/* reverse the offset address */
++		offset = reverse_2_bytes(offset);
++	} else if (offset_length == 1) {
++		offset &= 0xff;
++		control_reg = (0x0 << I2C_BC_TX_SIZE_OFFSET);
++	}
++	low_trans = offset;
++	writel(low_trans, i2c_bridge_reg(transmit_low));
++
++	/* extend address: 0x0 = 7-bit address, 0x1 = 10-bit address */
++	if (extend_addr)
++		control_reg |= (0x1 << I2C_BC_EXTAND_ADDR_OFFSET);
++
++	/* write device address */
++	control_reg |= (dev_addr << I2C_BC_SLAVE_ADDR_OFFSET);
++
++	/* write size of receive data */
++	control_reg |= ((size - 1) << I2C_BC_RX_SIZE_OFFSET);
++
++	/* prepare to read after write transaction */
++	control_reg |= ((0x1 << I2C_BC_WRITE_OFFSET) | (0x1 << I2C_BC_READ_OFFSET));
++	writel(control_reg , i2c_bridge_reg(control));
++
++	/* start transaction */
++	control_reg |= (0x1 << I2C_BC_BRIDGE_EN_OFFSET) | (0x1 << I2C_BC_REPEATED_START_OFFSET);
++	writel(control_reg, i2c_bridge_reg(control));
++
++	/* wait to interrupt until transaction is ending */
++	while (!readl(i2c_bridge_reg(interrupt)) && (timeout++ < I2C_BRIDGE_TIMEOUT_VALUE))
++		udelay(100);
++	if (timeout >= I2C_BRIDGE_TIMEOUT_VALUE)
++		return -ETIMEDOUT;
++
++	/* back to back write transaction delay */
++	udelay(1000);
++
++	/* read status register to verify no error */
++	status_reg = readl(i2c_bridge_reg(status));
++	debug("register status read = %x\n", status_reg);
++
++	/* reset control register */
++	writel(0x0, i2c_bridge_reg(control));
++
++	/* reset interrupt register */
++	writel(0x0, i2c_bridge_reg(interrupt));
++
++	if (status_reg & 0x1) {
++		/* reset status register */
++		writel(0x0, i2c_bridge_reg(status));
++		error("status register = %d\n", i2c_bridge_detect_error(status_reg));
++		return false;
++	}
++
++	/* copy received data from registers */
++	low_rec = readl(i2c_bridge_reg(receive_low));
++	high_rec = readl(i2c_bridge_reg(receive_high));
++	for (i = 0; i < size; i++) {
++		if (i < 4)
++			data[i] = (low_rec >> i*8) & 0xff;
++		else
++			data[i] = (high_rec >> (i-4)*8) & 0xff;
++	}
++	return true;
++}
++
++static int mvebu_i2c_read(struct i2c_adapter *adap, uchar chip, uint addr,
++			int alen, uchar *data, int length)
++{
++	int reserve_length, size_of_loop, i;
++
++	/* i2c bridge support on read transaction with 8-bytes */
++	size_of_loop = length / I2C_BRIDGE_PAGE_READ_SIZE;
++	reserve_length = length % I2C_BRIDGE_PAGE_READ_SIZE;
++
++	/* read from EEPROM in sections of 8 bytes */
++	for (i = 0; i < size_of_loop; i++) {
++		i2c_offload_read(chip, addr + (i*I2C_BRIDGE_PAGE_READ_SIZE), alen,
++				 (uint8_t *)data + i*I2C_BRIDGE_PAGE_READ_SIZE, I2C_BRIDGE_PAGE_READ_SIZE, 0);
++	}
++	if (reserve_length)
++		i2c_offload_read(chip, addr + (i*I2C_BRIDGE_PAGE_READ_SIZE), alen,
++				 (uint8_t *)data + i*I2C_BRIDGE_PAGE_READ_SIZE, reserve_length, 0);
++	return 0;
++}
++
++static int mvebu_i2c_write(struct i2c_adapter *adap, uchar chip, uint addr,
++			int alen, uchar *data, int length)
++{
++	int reserve_length = 0, size_of_loop = 0, i;
++
++	/* writing the first bytes until align to 32, because i2c page write align to 32 bytes */
++	if ((addr % 32 + length) > 31) {
++		for (i = addr%32; (i + I2C_BRIDGE_PAGE_WRITE_SIZE) < 32 && length >= I2C_BRIDGE_PAGE_WRITE_SIZE;
++										     i += I2C_BRIDGE_PAGE_WRITE_SIZE) {
++			i2c_offload_write(chip, addr, alen, (uint8_t *)data, I2C_BRIDGE_PAGE_WRITE_SIZE, 0);
++			length -= I2C_BRIDGE_PAGE_WRITE_SIZE;
++			addr += I2C_BRIDGE_PAGE_WRITE_SIZE;
++			data += I2C_BRIDGE_PAGE_WRITE_SIZE;
++		}
++
++		reserve_length = 32 - i;
++		if (reserve_length) {
++			i2c_offload_write(chip, addr, alen, (uint8_t *)data, reserve_length, 0);
++			addr += reserve_length;
++			data += reserve_length;
++			length -= reserve_length;
++		}
++	}
++	/* i2c bridge support on write transaction with 4-bytes */
++	size_of_loop = length / I2C_BRIDGE_PAGE_WRITE_SIZE;
++	reserve_length = length % I2C_BRIDGE_PAGE_WRITE_SIZE;
++
++	/* write to EEPROM in sections of 4 bytes */
++	for (i = 0; i < size_of_loop;  i++) {
++		i2c_offload_write(chip, addr + i*I2C_BRIDGE_PAGE_WRITE_SIZE, alen,
++				  (uint8_t *)data + i*I2C_BRIDGE_PAGE_WRITE_SIZE, I2C_BRIDGE_PAGE_WRITE_SIZE, 0);
++	}
++
++	if (reserve_length)
++		i2c_offload_write(chip, addr + i*I2C_BRIDGE_PAGE_WRITE_SIZE, alen,
++				  (uint8_t *)data + i*I2C_BRIDGE_PAGE_WRITE_SIZE, reserve_length, 0);
++	return 0;
++}
++#else
++/* regular i2c transaction */
++static int mvebu_i2c_data_receive(u8 *p_block, u32 block_size)
++{
++	u32 reg, status, block_size_read = block_size;
++
++	/* Wait for cause interrupt */
++	if (mvebu_i2c_wait_interrupt()) {
++		error("Start clear bit timeout\n");
++		return -ETIMEDOUT;
++	}
++	while (block_size_read) {
++		if (block_size_read == 1) {
++			reg = readl(i2c_reg(control));
++			reg &= ~(I2C_CONTROL_ACK);
++			writel(reg, i2c_reg(control));
++		}
++		mvebu_i2c_interrupt_clear();
++
++		if (mvebu_i2c_wait_interrupt()) {
++			error("Start clear bit timeout\n");
++			return -ETIMEDOUT;
++		}
++		/* check the status */
++		if (mvebu_i2c_lost_arbitration(&status)) {
++			debug("%s - %d: Lost arbitration, got status %x\n", __func__, __LINE__, status);
++			return -EAGAIN;
++		}
++		if ((status != I2C_STATUS_DATA_R_ACK) && (block_size_read != 1)) {
++			error("Status %x in read transaction\n", status);
++			return -EPERM;
++		}
++		if ((status != I2C_STATUS_DATA_R_NAK) && (block_size_read == 1)) {
++			error("Status %x in Rd Terminate\n", status);
++			return -EPERM;
++		}
++
++		/* read the data */
++		*p_block = (u8) readl(i2c_reg(data));
++		debug("%s: place %d read %x\n", __func__, block_size - block_size_read, *p_block);
++		p_block++;
++		block_size_read--;
++	}
++
++	return 0;
++}
++
++static int mvebu_i2c_data_transmit(u8 *p_block, u32 block_size)
++{
++	u32 status, block_size_write = block_size;
++
++	if (mvebu_i2c_wait_interrupt()) {
++		error("Start clear bit timeout\n");
++		return -ETIMEDOUT;
++	}
++
++	while (block_size_write) {
++		/* write the data */
++		writel((u32) *p_block, i2c_reg(data));
++		debug("%s: index = %d, data = %x\n", __func__, block_size - block_size_write, *p_block);
++		p_block++;
++		block_size_write--;
++
++		mvebu_i2c_interrupt_clear();
++
++		if (mvebu_i2c_wait_interrupt()) {
++			error("Start clear bit timeout\n");
++			return -ETIMEDOUT;
++		}
++
++		/* check the status */
++		if (mvebu_i2c_lost_arbitration(&status)) {
++			debug("%s - %d: Lost arbitration, got status %x\n", __func__, __LINE__, status);
++			return -EAGAIN;
++		}
++		if (status != I2C_STATUS_DATA_W_ACK) {
++			error("Status %x in write transaction\n", status);
++			return -EPERM;
++		}
++	}
++
++	return 0;
++}
++
++static int mvebu_i2c_target_offset_set(int chip, uint addr)
++{
++	u8 off_block[2], support_two_bytes = 0;
++	u32 off_size, i;
++
++	for (i = 0; (i < MAX_CHIPS_PER_BUS) && (i2c_bus[gd->cur_i2c_bus].two_bytes_addr[i] != -1) ; i++) {
++		if (i2c_bus[gd->cur_i2c_bus].two_bytes_addr[i] == chip) {
++			support_two_bytes = 1;
++			break;
++		}
++	}
++	if (support_two_bytes) {
++		off_block[0] = (addr >> 8) & 0xff;
++		off_block[1] = addr & 0xff;
++		off_size = 2;
++	} else {
++		off_block[0] = addr & 0xff;
++		off_size = 1;
++	}
++	debug("%s: off_size = %x addr1 = %x addr2 = %x\n", __func__, off_size, off_block[0], off_block[1]);
++	return mvebu_i2c_data_transmit(off_block, off_size);
++}
++
+ static int mvebu_i2c_read(struct i2c_adapter *adap, uchar chip, uint addr,
+ 			int alen, uchar *data, int length)
+ {
+@@ -504,7 +818,6 @@ static int mvebu_i2c_read(struct i2c_adapter *adap, uchar chip, uint addr,
+ 	writel(readl(i2c_reg(control)) | I2C_CONTROL_ACK, i2c_reg(control));
+ 
+ 	udelay(1000);
+-
+ 	return 0;
+ }
+ 
+@@ -551,9 +864,9 @@ static int mvebu_i2c_write(struct i2c_adapter *adap, uchar chip, uint addr,
+ 		error("I2C transactions failed, got EAGAIN %d times\n", I2C_MAX_RETRY_CNT);
+ 
+ 	udelay(1000);
+-
+ 	return 0;
+ }
++#endif  /* CONFIG_MVEBU_I2C_BRIDGE */
+ 
+ U_BOOT_I2C_ADAP_COMPLETE(mvebu0, mvebu_i2c_init, mvebu_i2c_probe,
+ 			 mvebu_i2c_read, mvebu_i2c_write,
+-- 
+1.9.1
+

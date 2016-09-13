@@ -1,0 +1,54 @@
+From 942646a88b207c5d53844af2fef15033d4bbbe88 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Sun, 30 Aug 2015 10:21:31 +0300
+Subject: [PATCH 0385/1240] SAR: Remove extra prints in Sample-at-Reset table
+
+	Remove Mask and Offset fields from the sample-at-reset table.
+
+Change-Id: I3ac4817d968b01b334437bbf76636e4df196e6f0
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23296
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/tools/mvebu_sar.c | 13 ++++++-------
+ 1 file changed, 6 insertions(+), 7 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/tools/mvebu_sar.c b/arch/arm/cpu/mvebu-common/tools/mvebu_sar.c
+index 5fa7cd3..098a481 100644
+--- a/arch/arm/cpu/mvebu-common/tools/mvebu_sar.c
++++ b/arch/arm/cpu/mvebu-common/tools/mvebu_sar.c
+@@ -46,24 +46,23 @@ void mvebu_sar_dump_reg(void)
+ 	u32 reg, val;
+ 	struct sar_info *sar;
+ 
+-	printf("| SAR Name            | Mask       | Offset     | Value      |\n");
+ 	reg = readl(SAMPLE_AT_RESET_REG_0);
+-	printf("Sample at reset register 0 [0x%08x]:\n", reg);
++	printf("SAR register 0 [0x%08x]:\n", reg);
++	printf("----------------------------------\n");
+ 	sar = sar_0;
+ 	while (sar->offset != -1) {
+ 		val = (reg & sar->mask) >> sar->offset;
+-		printf("| %s | 0x%08x | 0x%08x | 0x%08x |\n",
+-		       sar->name, sar->offset, sar->mask, val);
++		printf("%s  0x%x\n", sar->name, val);
+ 		sar++;
+ 	}
+ 
+ 	reg = readl(SAMPLE_AT_RESET_REG_1);
+-	printf("Sample at reset register 1 [0x%08x]:\n", reg);
++	printf("\nSAR register 1 [0x%08x]:\n", reg);
++	printf("----------------------------------\n");
+ 	sar = sar_1;
+ 	while (sar->offset != -1) {
+ 		val = (reg & sar->mask) >> sar->offset;
+-		printf("| %s | 0x%08x | 0x%08x | 0x%08x |\n",
+-		       sar->name, sar->offset, sar->mask, val);
++		printf("%s  0x%x\n", sar->name, val);
+ 		sar++;
+ 	}
+ 	printf("\n");
+-- 
+1.9.1
+

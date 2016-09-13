@@ -1,0 +1,55 @@
+From ee6943f145cdb5fc65a3f936cab6a43d4b72f217 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Sun, 20 Dec 2015 15:23:29 +0800
+Subject: [PATCH 0610/1240] pcie: a3700: change pcie to direct access mode
+
+There are two modes for XENON PCIe, command queue mode and direct
+access mode.
+In command queue mode, bit[63:60] will be used to differentiate
+different command and request.
+in direct access mode, the lower 32-bit address from external PCIe
+device will directly pass over for SDRAM access.
+A3700 select to use direct access mode.
+
+Change-Id: Ic2f3d3111b9a4e52c1a1fa76b48990c14e37b655
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26134
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-by: Hua Jing <jinghua@marvell.com>
+---
+ drivers/pci/pci_advk.c | 11 +++++------
+ 1 file changed, 5 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/pci/pci_advk.c b/drivers/pci/pci_advk.c
+index 3197cc8..0123d26 100644
+--- a/drivers/pci/pci_advk.c
++++ b/drivers/pci/pci_advk.c
+@@ -423,6 +423,11 @@ static int advk_pcie_init(int host_id, void __iomem *reg_base, struct pcie_win *
+ 	state |= 0x7;
+ 	writel(state, PCIE_CORE_CONFIG_REG_ADDR(reg_base, 4));
+ 
++	/* enable direct mode */
++	state = readl(PCIE_CTRL_CORE_REG_ADDR(reg_base, PCIE_CTRL_CONFIG_REG));
++	state &= ~(PCIE_CTRL_MODE_MASK << PCIE_CTRL_MODE_SHIFT);
++	writel(state, PCIE_CTRL_CORE_REG_ADDR(reg_base, PCIE_CTRL_CONFIG_REG));
++
+ 	/* Set config address */
+ 	hose->cfg_addr = (unsigned int *)reg_base;
+ 
+@@ -483,12 +488,6 @@ static void advk_pcie_set_core_mode(int host_id, void __iomem *reg_base, int mod
+ 	config |= ((mode & PCIE_CTRL_MODE_MASK) << IS_RC_SHIFT);
+ 	writel(config, PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_CTRL0_REG));
+ 
+-	/* Set PCI core control register to RC or EP mode */
+-	config = readl(PCIE_CTRL_CORE_REG_ADDR(reg_base, PCIE_CTRL_CONFIG_REG));
+-	config &= ~(PCIE_CTRL_MODE_MASK << PCIE_CTRL_MODE_SHIFT);
+-	config |= ((mode & PCIE_CTRL_MODE_MASK) << PCIE_CTRL_MODE_SHIFT);
+-	writel(config, PCIE_CTRL_CORE_REG_ADDR(reg_base, PCIE_CTRL_CONFIG_REG));
+-
+ 	debug("PCIE-%d: core mode %s\n", host_id, mode_str[mode]);
+ }
+ 
+-- 
+1.9.1
+

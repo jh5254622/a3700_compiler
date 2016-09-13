@@ -1,0 +1,27 @@
+From 2738a634fbc0068cade9082174eafd69d79f8381 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Fri, 25 Mar 2016 16:42:10 +0300
+Subject: [PATCH 0974/1240] fix: ap806: add config for Z1 SoC for AP-806
+ defconfig
+
+Change-Id: Ie1b0ef4f4980ee80cb2252feafd2e8ec53f69367
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28535
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ configs/mvebu_apn806_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/configs/mvebu_apn806_defconfig b/configs/mvebu_apn806_defconfig
+index 6b01311..8912373 100644
+--- a/configs/mvebu_apn806_defconfig
++++ b/configs/mvebu_apn806_defconfig
+@@ -35,3 +35,4 @@ CONFIG_MVEBU_COMPHY_SUPPORT=y
+ CONFIG_MVEBU_THERMAL_SENSOR=y
+ CONFIG_MVEBU_THERMAL_SENSOR_28NM_V2=y
+ CONFIG_DEVEL_BOARD=y
++CONFIG_AP806_Z_SUPPORT=y
+-- 
+1.9.1
+

@@ -1,0 +1,38 @@
+From 24b8a8377458e94fd8882d16eed53b16df77f0eb Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 10 Nov 2015 14:08:27 +0200
+Subject: [PATCH 0483/1240] fix: spl: update Makefile of SPL, to compile misc
+ folder
+
+- In the Makefile of misc driver there is conditions for every driver
+
+Change-Id: If2ab4a7af997271bfafc2322b4dc2aa48ac547f4
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24708
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ scripts/Makefile.spl | 6 +-----
+ 1 file changed, 1 insertion(+), 5 deletions(-)
+
+diff --git a/scripts/Makefile.spl b/scripts/Makefile.spl
+index 909e46f..2b3f1c9 100644
+--- a/scripts/Makefile.spl
++++ b/scripts/Makefile.spl
+@@ -83,12 +83,8 @@ libs-$(CONFIG_MVEBU_SPL_DDR_SUPPORT) += drivers/ddr/
+ libs-$(CONFIG_MVEBU_COMPHY_SUPPORT) += drivers/phy/
+ libs-$(CONFIG_OF_EMBED) += dts/
+ libs-$(CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT) += drivers/pci/
+-libs-$(CONFIG_MVEBU_FLC) += drivers/misc/
+-#libs-$(CONFIG_MVEBU_A3700_IO_ADDR_DEC) += drivers/misc/
+-#libs-$(CONFIG_MVEBU_SPL_A3700_GPIO) += drivers/misc/
+-#if defined(CONFIG_MVEBU_A3700_IO_ADDR_DEC) || defined(CONFIG_MVEBU_SPL_A3700_GPIO)
+ libs-y += drivers/misc/
+-#endif
++
+ head-y		:= $(addprefix $(obj)/,$(head-y))
+ libs-y		:= $(addprefix $(obj)/,$(libs-y))
+ u-boot-spl-dirs	:= $(patsubst %/,%,$(filter %/, $(libs-y)))
+-- 
+1.9.1
+

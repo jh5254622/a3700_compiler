@@ -1,0 +1,36 @@
+From 289ba8c8add07be6ba9c5a9e7dcb99f92ad9cca5 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 29 Sep 2014 15:56:22 +0300
+Subject: [PATCH 0079/1240] cmd: ir: renamed call of function readline to
+ cli_readline
+
+Change-Id: I58f4f696dbbde78d7c5b30c9885efe2be3397006
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ common/mvebu/cmd_misc.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/common/mvebu/cmd_misc.c b/common/mvebu/cmd_misc.c
+index b2de878..3bbbbee 100644
+--- a/common/mvebu/cmd_misc.c
++++ b/common/mvebu/cmd_misc.c
+@@ -20,6 +20,7 @@
+ #include <config.h>
+ #include <common.h>
+ #include <command.h>
++#include <cli.h>
+ 
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/adec.h>
+@@ -144,7 +145,7 @@ int ir_cmd(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+ 			printf("-");
+ 	}
+ 
+-	readline("\nNEW: ");
++	cli_readline("\nNEW: ");
+ 	strcpy(cmd, console_buffer);
+ 	if ((cmd[0] == '0') && (cmd[1] == 'x')) {
+ 		reg = simple_strtoul(cmd, NULL, 16);
+-- 
+1.9.1
+

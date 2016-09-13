@@ -1,0 +1,1002 @@
+From 98a78e4e52d349b684458124c5d68337d0162ba1 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Fri, 18 Sep 2015 09:44:24 +0800
+Subject: [PATCH 0473/1240] armada3700: pcie: add initial support for Aardvark
+ PCIe IP
+
+Aardvark PCIe for Armada-3700 supports GEN3.0 and X1 link
+By default the PCIe driver uses PIO mode.
+	- add initial Aardvark PCIe definitions and functions
+	- add Kconfig support for Aardvark PCIe module
+Signed-off-by: Victor Gu <xigu@marvell.com>
+
+Change-Id: I11e31a1d5f216a59fd0cb37afa11b60960d24539
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23644
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/include/asm/arch-armadalp/pcie-core.h | 413 ++++++++++++++++++++
+ drivers/pci/Kconfig                            |  10 +
+ drivers/pci/Makefile                           |   1 +
+ drivers/pci/pci_advk.c                         | 516 +++++++++++++++++++++++++
+ 4 files changed, 940 insertions(+)
+ create mode 100644 arch/arm/include/asm/arch-armadalp/pcie-core.h
+ create mode 100644 drivers/pci/pci_advk.c
+
+diff --git a/arch/arm/include/asm/arch-armadalp/pcie-core.h b/arch/arm/include/asm/arch-armadalp/pcie-core.h
+new file mode 100644
+index 0000000..1453d11
+--- /dev/null
++++ b/arch/arm/include/asm/arch-armadalp/pcie-core.h
+@@ -0,0 +1,413 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2015 Marvell International Ltd.
++* ***************************************************************************
++* This program is free software: you can redistribute it and/or modify it
++* under the terms of the GNU General Public License as published by the Free
++* Software Foundation, either version 2 of the License, or any later version.
++*
++* This program is distributed in the hope that it will be useful,
++* but WITHOUT ANY WARRANTY; without even the implied warranty of
++* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the
++* GNU General Public License for more details.
++*
++* You should have received a copy of the GNU General Public License
++* along with this program.  If not, see <http://www.gnu.org/licenses/>.
++* ***************************************************************************
++*/
++/* pcie-core.h
++ *
++ * Definition for PCIe core unit
++ *
++ * Author: Victor Gu <xigu@marvell.com>
++ *
++ * March 6, 2015
++ *
++ */
++
++#ifndef _PCIE_CORE_H_
++#define _PCIE_CORE_H_
++
++#include <asm/arch/memory-map.h>
++#include <asm/arch-mvebu/mvebu.h>
++#include <pci.h>
++
++/* ArLP RC has only 1 port */
++#define PCIE_ADVK_MAX_PORT	(1)
++
++/*
++ * Make it 1 because we fake up internal bus 0.
++ * We fake up internal bus 0 because we assume root port 0
++ * is on bus 0. In that case, if we send a config TLP to
++ * Endpoint device on bus 1, it must be a Type 1 TLP.
++ * However, it's not. Because we only have one link, without
++ * any internal bus.
++ * If we don't fake internal bus, then just leave it 0.
++ */
++#define PCIE_ADVK_ACTUAL_FIRST_BUSNO	1
++
++#define SIZE_8BIT	1
++#define SIZE_16BIT	2
++#define SIZE_32BIT	4
++
++#define LOCAL_VENDOR_ID		0x11AB
++#define LOCAL_DEVICE_ID		0x0
++#define LOCAL_SUBVENDOR_ID	0x11AB
++#define LOCAL_SUBDEVICE_ID	0x0
++#define LOCAL_CLASS_CODE	0x2
++#define LOCAL_SUBCLASS_CODE	0x0
++#define LOCAL_REVISION_ID	0x0
++#define LOCAL_PROGIF_CODE	0x0
++
++#define BAR_PCIE_MEM		0x0
++#define BAR_PCIE_REG		0x4
++
++/*
++ * Used in PIO read/write
++ * Should choose this value more carefully
++ */
++#define PCIE_CORE_PIO_TIMEOUT_NUM	100
++#define PCIE_CORE_PIO_ADDR_MASK	0xfffffffc
++/* This defines the size of VPD RAM */
++#define PCIE_CORE_VPD_RAM_SIZE	0x400 /*1K*/
++
++/* Transaction types */
++#define PCIE_MEM_RD		0x0
++#define PCIE_MEM_WR		0x2
++#define PCIE_IO_RD		0x4
++#define PCIE_IO_WR		0x6
++#define PCIE_CONFIG_RD_TYPE0	0x8
++#define PCIE_CONFIG_RD_TYPE1	0x9
++#define PCIE_CONFIG_WR_TYPE0	0xa
++#define PCIE_CONFIG_WR_TYPE1	0xb
++#define PCIE_MSG_REQ		0xc
++
++/* Message codes
++ * virtual legacy interrupt messages
++ */
++#define MSG_ASSERT_INTA		0x20
++#define MSG_ASSERT_INTB		0x21
++#define MSG_ASSERT_INTC		0x22
++#define MSG_ASSERT_INTD		0x23
++#define MSG_DEASSERT_INTA	0x24
++#define MSG_DEASSERT_INTB	0x25
++#define MSG_DEASSERT_INTC	0x26
++#define MSG_DEASSERT_INTD	0x27
++
++/* Power related messages */
++#define MSG_PM_ACTIVE_STATE_NAK	0x14
++#define MSG_PM_PME		0x18
++#define MSG_PM_TURN_OFF		0x19
++#define MSG_PM_TO_ACK		0x1b
++
++/* Error messages */
++#define MSG_ERR_COR		0x30
++#define MSG_ERR_NONFATAL	0x31
++#define MSG_ERR_FATAL		0x33
++
++/* Unlock message */
++#define MSG_UNLOCK		0x00
++
++/* Slot power limit set message */
++#define MSG_SET_SLOT_POWER_LIMIT	0x50
++
++/* Hot-Plug related messages */
++#define MSG_ATT_INDICATOR_ON		0x41
++#define MSG_ATT_INDICATOR_BLINK		0x43
++#define MSG_ATT_INDICATOR_OFF		0x40
++#define MSG_POWER_INDICATOR_ON		0x45
++#define MSG_POWER_INDICATOR_BLINK	0x47
++#define MSG_POWER_INDICATOR_OFF		0x44
++#define MSG_ATT_BUTTON_PRESSED		0x48
++
++#define PCIE_CORE_DEV_CTRL_STATS_REG	0xC8
++#define PCIE_CORE_LINK_CTRL_STAT_REG	0xD0
++#define PCIE_CORE_LINK_TRAINING_SHIFT	5
++#define PCIE_CORE_LINK_SPEED_SHIFT	16
++#define PCIE_CORE_LINK_SPEED_MASK	0xF
++#define PCIE_CORE_LINK_WIDTH_SHIFT	20
++#define PCIE_CORE_LINK_WIDTH_MASK	0x3F
++#define PCIE_CORE_LINK_DLL_STATE_SHIFT	29
++#define PCIE_CORE_LINK_DLL_STATE_MASK	0x1
++
++#define PCIE_DLL_STATE_ACTIVE	1
++#define PCIE_DLL_STATE_INACTIVE	0
++
++#define PCIE_CORE_ERR_CAP_CTRL_REG	0x118
++
++/* Shift */
++#define PCIE_CORE_PIO_CTRL_BYTE_COUNT_SHIFT	16
++
++/* Aardvark PIO registers */
++#define PIO_BASE_ADDR			0x4000
++#define PCIE_CORE_PIO_CTRL		0x0
++#define PCIE_CORE_PIO_STAT		0x4
++#define PCIE_CORE_PIO_ADDR_LS		0x8
++#define PCIE_CORE_PIO_ADDR_MS		0xc
++#define PCIE_CORE_PIO_WR_DATA		0x10
++#define PCIE_CORE_PIO_WR_DATA_STRB	0x14
++#define PCIE_CORE_PIO_RD_DATA		0x18
++#define PCIE_CORE_PIO_START		0x1c
++#define PCIE_CORE_PIO_ISR		0x20
++#define PCIE_CORE_PIO_ISRM		0x24
++
++/* Aardvark PCIe DPMU registers */
++#define DPMU_BASE_ADDR			0x4400
++#define PCIE_CORE_DPMU_CTRL0		0x0
++
++/* Aardvark Control registers */
++#define CONTROL_BASE_ADDR	0x4800
++#define PCIE_CORE_CTRL0_REG	0x0
++#define PCIE_GEN_SEL_MSK	0x3
++#define PCIE_GEN_SEL_SHIFT	0x0
++#define SPEED_GEN_1		0
++#define SPEED_GEN_2		1
++#define SPEED_GEN_3		2
++#define IS_RC_MSK		0x4
++#define IS_RC_SHIFT		2
++#define LANE_CNT_MSK		0x18
++#define LANE_CNT_SHIFT		0x3
++#define LANE_COUNT_1		(0 << LANE_CNT_SHIFT)
++#define LANE_COUNT_2		(1 << LANE_CNT_SHIFT)
++#define LANE_COUNT_4		(2 << LANE_CNT_SHIFT)
++#define LANE_COUNT_8		(3 << LANE_CNT_SHIFT)
++#define LINK_TRAINNING_EN	BIT6
++#define CORE_RESET_MSK		BIT7
++#define MGMT_RESET_MSK		BIT8
++#define MGMT_STICKY_RESET_MSK	BIT9
++#define APP_RESET_MSK		BIT16
++#define LEGACY_INTA		BIT28
++#define LEGACY_INTB		BIT29
++#define LEGACY_INTC		BIT30
++#define LEGACY_INTD		BIT31
++#define PCIE_CORE_CTRL1_REG	0x4
++#define HOT_RESET_GEN		BIT0
++#define PCIE_CORE_CTRL2_REG	0x8
++#define STRICT_ORDER_ENABLE	BIT5
++#define OB_WIN_ENABLE		BIT6
++#define MSI_ENABLE		BIT10
++#define PCIE_CORE_FLUSH_REG	0xC
++#define PCIE_CORE_FLUSH_TIMER_MASK	0xFFFF
++#define PCIE_CORE_FORCE_FLUSH	BIT16
++#define PCIE_CORE_FLUSH_ACTIVE	BIT17
++#define PCIE_CORE_FLUSH_CLEAR	BIT18
++#define PCIE_CORE_PWR_CTRL_REG	0x10
++#define REQ_PM_TRANSITION_L23	(1 << 0)
++#define POWER_STATE_CHANGE_ACK	(1 << 1)
++#define PCIE_CORE_PHY_REF_CLK_REG	0x14
++#define PCIE_CORE_EN_TX		(1 << 1)
++#define PCIE_CORE_EN_RX		(1 << 2)
++#define PCIE_CORE_SEL_AMP_MASK	0x7
++#define PCIE_CORE_SEL_AMP_SHIFT	0x8
++#define PCIE_CORE_EN_PU		(1 << 12)
++#define PCIE_CORE_MSG_LOG0		0x30
++#define PCIE_CORE_MSG_LOG0_MSK		0xFF
++#define PCIE_CORE_ISR0			0x40
++#define PCIE_CORE_ISR0_HOT_RESET		BIT0
++#define PCIE_CORE_ISR0_LINK_DOWN		BIT1
++#define PCIE_CORE_ISR0_INB_MSG			BIT2
++#define PCIE_CORE_ISR0_DP_PERR			BIT3
++#define PCIE_CORE_ISR0_DP_FERR			BIT4
++#define PCIE_CORE_ISR0_MSG_PME2ACK		BIT5
++#define PCIE_CORE_ISR0_MSG_PM_TURN_OFF		BIT6
++#define PCIE_CORE_ISR0_MSG_PM_PME		BIT7
++#define PCIE_CORE_ISR0_MSG_PM_ACTIVE_NAK	BIT8
++#define PCIE_CORE_ISR0_LEGACY_INT_SENT		BIT9
++#define PCIE_CORE_ISR0_LEGACY_INTA_ASSERT	BIT16
++#define PCIE_CORE_ISR0_LEGACY_INTB_ASSERT	BIT17
++#define PCIE_CORE_ISR0_LEGACY_INTC_ASSERT	BIT18
++#define PCIE_CORE_ISR0_LEGACY_INTD_ASSERT	BIT19
++#define PCIE_CORE_ISR0_LEGACY_INTA_DEASSERT	BIT20
++#define PCIE_CORE_ISR0_LEGACY_INTB_DEASSERT	BIT21
++#define PCIE_CORE_ISR0_LEGACY_INTC_DEASSERT	BIT22
++#define PCIE_CORE_ISR0_LEGACY_INTD_DEASSERT	BIT23
++#define PCIE_CORE_ISRM0				0x44
++#define PCIE_CORE_ISR1				0x48
++#define PCIE_CORE_ISR1_PWR_CHANGE_STATE		BIT4
++#define PCIE_CORE_ISR1_FLUSH_OFF		BIT5
++#define PCIE_CORE_ISRM1				0x4c
++#define PCIE_CORE_MSI_MSG_LOW_ADDR		0x50
++#define PCIE_CORE_MSI_MSG_HIGH_ADDR		0x54
++#define PCIE_CORE_MSI_MSG_ISR_STAT		0x58
++#define PCIE_CORE_MSI_MSG_ISR_MASK		0x5c
++#define PCIE_CORE_DP_PAR_CNTL	0x60
++#define PCIE_CORE_DP_PAR_STAT0	0x64
++#define PCIE_CORE_DP_PAR_STAT1	0x68
++
++/* Victor: below PF/VF register do not exist in ArLP */
++#define PCIE_CORE_PF_FLR_CTRL	0x80
++#define PCIE_CORE_PF_FLR_STAT	0x84
++#define PCIE_CORE_VF_FLR_CTRL	0x88
++#define PCIE_CORE_VF_FLR_TRL	0x8c
++
++#define PCIE_CORE_MSI_PAYLOAD	0x9c
++
++#define OB_WIN_BASE_ADDR	0x4c00
++#define OB_WIN_MATCH_LS		0x00
++#define OB_WIN_MATCH_MS		0x04
++#define OB_WIN_REMAP_LS		0x08
++#define OB_WIN_REMAP_MS		0x0c
++#define OB_WIN_MASK_LS		0x10
++#define OB_WIN_MASK_MS		0x14
++#define OB_WIN_ACTIONS		0x18
++
++#define OB_WIN_BLOCK_SIZE	0x20
++
++#define OB_Default_ACTIONS	0xfc
++
++#define OB_PCIE_MEM		0x0
++#define OB_PCIE_IO		0x4
++#define OB_PCIE_CONFIG0		0x8
++#define OB_PCIE_CONFIG1		0x9
++#define OB_PCIE_MSG		0xc
++#define OB_PCIE_MSG_VENDOR	0xd
++
++#define OB_ATTR_SEL		BIT11
++#define OB_FUNC_SEL		BIT23
++
++/* PCIe address translation registers */
++#define ADDR_TRANSLATION_ADDR	0x5800
++#define AT_PF0_BAR0		0x0
++#define BAR_TYPE_32b		0
++#define BAR_TYPE_64b		0x4
++#define BAR_ADDR_MASK		(~0x7F)
++#define AT_PF0_BAR1		0x4
++#define AT_PF0_BAR2		0x8
++#define AT_PF0_BAR3		0xc
++#define AT_PF0_BAR4		0x10
++#define AT_PF0_BAR5		0x14
++#define MSG_BAR			0x100
++#define EXT_ROM_BAR		0x120
++#define AT_ISEL_PF0_BAR0	0x200
++#define AT_ISEL_PF0_BAR1	0x204
++#define AT_ISEL_PF0_BAR2	0x208
++#define AT_ISEL_PF0_BAR3	0x20c
++#define AT_ISEL_PF0_BAR4	0x210
++#define AT_ISEL_PF0_BAR5	0x214
++
++#define LMI_BASE_ADDR		0x6000
++#define PHY_CONF_REG0		0x0
++#define PHY_ERR_REPORT		BIT6
++#define LTSSM_STATE_SHIFT	24
++#define LTSSM_STATE_MASK	0x3f000000
++#define PHY_CONF_REG1		0x4
++#define DLL_TIMER_CONF		0x8
++#define REPLAY_TIMEOUT_MASK	0xffff
++#define REPLAY_TIMEOUT_SHIFT	0
++#define ACK_TIMEOUT_MASK	0xffff0000
++#define ACK_TIMEOUT_SHIFT	16
++#define RCV_CREDIT_LT_REG0	0xc
++#define RCV_CREDIT_LT_REG1	0x10
++#define TRANSMIT_CREDIT_LT_REG0	0x14
++#define TRANSMIT_CREDIT_LT_REG1	0x18
++#define TRANSMIT_CREDIT_UPDATE_REG0 0x1c
++#define TRANSMIT_CREDIT_UPDATE_REG1 0x20
++#define L0S_TIMEOUT_REG		0x24
++#define L0S_TIMEOUT_SHIFT	0
++#define L0S_TIMEOUT_MASK	0xffff
++#define L2_ENTRY_ENABLE		BIT16
++#define L1_REENTRY_DELAY	0x40
++#define LOCAL_VENDOR_ID_REG	0x44
++#define ASPM_L1_TIMEOUT_REG	0x48
++#define ASPM_L1_TIMEOUT_MASK	0xfffff
++#define LOCAL_ERR_STAT_REG	0x20c
++#define PNP_RX_FIFO_PAR		BIT0
++#define CPL_RX_FIFO_PAR		BIT1
++#define REPLAY_BUF_PAR		BIT2
++#define PNP_RX_FIFO_OVERFLOW	BIT3
++#define CPL_RX_FIFO_OVERFLOW	BIT4
++#define REPLAY_TIMEOUT		BIT5
++#define REPLAY_TIMER_ROLLOVER	BIT6
++#define PHY_ERR			BIT7
++#define MALFORMED_TLP		BIT8
++#define UNEXPECTED_CPL		BIT9
++#define FLOW_CONTROL_ERR	BIT10
++#define CPL_TIMEOUT		BIT11
++#define LOCAL_ERR_INT_MASK_REG	0x210
++#define LCRC_ERR_COUNT_REG	0x214
++#define LCRC_COUNT_MASK		0xffff
++#define ECC_COR_ERR_COUNT_REG	0x218
++#define PNP_RX_FIFO_MASK	0xff
++#define PNP_RX_FIFO_SHIFT	0
++#define CPL_RX_FIFO_MASK	0xff00
++#define CPL_RX_FIFO_SHIFT	8
++#define REPLAY_RAM_MASK		0xff0000
++#define REPLAY_RAM_SHIFT	16
++#define PHY_FUNC_0_BAR_CONF_REG	0x240
++#define PHY_FUNC_1_BAR_CONF_REG	0x244
++#define BAR_0_1_APERTURE_SHIFT	0
++#define BAR_2_3_APERTURE_SHIFT	7
++#define BAR_4_5_APERTURE_SHIFT	19
++#define BAR_ROM_APERTURE_SHIFT	26
++#define BAR_0_1_ENABLE		(1 << 5)
++#define BAR_2_3_ENABLE		(1 << 12)
++#define BAR_4_5_ENABLE		(1 << 24)
++#define BAR_ROM_ENABLE		(1 << 31)
++#define BAR_0_1_PREFETCHABLE	(1 << 6)
++#define BAR_2_3_PREFETCHABLE	(1 << 13)
++#define BAR_4_5_PREFETCHABLE	(1 << 25)
++
++#define PHY_BASE_ADDR		0x8000		/* update for Sycamore */
++
++/* For new PIO */
++#define PCIE_BDF(dev)            (dev << 4)	/* PCI_BDF shifts 8bit, so we need extra 4bit shift */
++#define PCIE_BUS(bus)            ((bus & 0xFF) << 20)
++#define PCIE_DEV(dev)            ((dev & 0x1F) << 15)
++#define PCIE_FUNC(fun)           ((fun & 0x7)  << 12)
++#define PCIE_REG_ADDR(reg)       ((reg & 0xFFC) << 0)
++
++/* PCIe core controller registers */
++#define PCIE_CTRL_CORE_BASE_ADDR	0x18000
++#define PCIE_CTRL_CONFIG_REG		0x0
++#define PCIE_CTRL_MODE_SHIFT		0x0
++#define PCIE_CTRL_MODE_MASK		0x1
++
++#define PCIE_CORE_MODE_EP		0x0
++#define PCIE_CORE_MODE_RC		0x1
++
++/* PCIe interrupt registers */
++#define PCIE_CTRL_INT_BASE_ADDR		0x1B000
++#define RC_INT_STATS_REG		0x0
++#define RC_INT_MASK_REG			0x4
++
++/*
++ * Get the register address of a given function's configuration space(each funciton has an address space of 0x1000)
++ * baseaddr is the base address of a PCIe device in Aardvark
++ */
++#define PCIE_CORE_CONFIG_REG_ADDR(baseaddr, offset) ((u64)baseaddr + offset)
++
++/* Get the PIO registers addresses of a PCIE device, 0x4000 is the offset of PIO register block */
++#define PCIE_CORE_PIO_REG_ADDR(baseaddr, offset) ((u64)baseaddr + PIO_BASE_ADDR + offset)
++
++/* Get the Control registers addresses of a PCIE device, 0x4800 is the offset of control register block*/
++#define PCIE_CORE_CTRL_REG_ADDR(baseaddr, offset) ((u64)baseaddr + CONTROL_BASE_ADDR + offset)
++
++/* Get the Outbound Address Translation window register address, 0x4c00 is the offset of ob window register block */
++#define PCIE_CORE_OB_REG_ADDR(baseaddr, offset, win) ((u64)baseaddr + OB_WIN_BASE_ADDR + win*OB_WIN_BLOCK_SIZE + offset)
++
++/* Get the DPMU registers addresses of a PCIE device, 0x4400 is the offset of control register block */
++#define PCIE_CORE_DPMU_REG_ADDR(baseaddr, offset) ((u64)baseaddr + DPMU_BASE_ADDR + offset)
++
++/* Get the Address Translation registers address of a PCIE device's , 0x5800 is the offset of control register block */
++#define PCIE_CORE_AT_REG_ADDR(baseaddr, offset) ((u64)baseaddr + ADDR_TRANSLATION_ADDR + offset)
++
++/* Get the VPD addresses of a PCIe device, 0x5000 is the offset of VPD register block */
++#define PCIE_CORE_VPD_RAM_ADDR(baseaddr, vfnum, offset) ((u64)baseaddr + VPD_RAM_BASE_ADDR + offset)
++
++/* Get the LMI register address of a PCIE device, 0x6000 is the offset of control register block */
++#define PCIE_CORE_LMI_REG_ADDR(baseaddr, offset) ((u64)baseaddr + LMI_BASE_ADDR + offset)
++
++/* Get the PHY register address of a PCIE device, 0x7000 is the offset of control register block */
++#define PCIE_CORE_PHY_REG_ADDR(baseaddr, offset) ((u64)baseaddr + PHY_BASE_ADDR + offset)
++
++/* Get PCIe controller core configuration addresses of a PCIe device, 0x180000 is the offset of controller core block */
++#define PCIE_CTRL_CORE_REG_ADDR(baseaddr, offset) ((u64)baseaddr + PCIE_CTRL_CORE_BASE_ADDR + offset)
++
++/*
++ * Get PCIe controller interrupt configuration addresses of a PCIe device,
++ * 0x1B0000 is the offset of controller interrupt block
++ */
++#define PCIE_CTRL_INT_REG_ADDR(baseaddr, offset) ((u64)baseaddr + PCIE_CTRL_INT_BASE_ADDR + offset)
++
++#endif /* _PCIE_CORE_H_ */
++
+diff --git a/drivers/pci/Kconfig b/drivers/pci/Kconfig
+index d77f694..f909812 100644
+--- a/drivers/pci/Kconfig
++++ b/drivers/pci/Kconfig
+@@ -8,6 +8,16 @@ config MVEBU_PCI
+ 	  Choose this option to add
+ 	  support for MVEBU PCI driver
+ 
++config MVEBU_ADVK_PCIE
++	bool "PCIE support for MVEBU Aardvark PCIe 3 driver"
++	default n
++	select CMD_PCI
++	help
++	  Choose this option to support
++	  MVEBU Aardvark PCIe 3 driver
++	  based on Ardvark IP.
++	  Ardvark supports X1 GEN 3
++
+ config DW_PCIE
+ 	bool "Enable DesignWare PCIe3 driver"
+ 	default n
+diff --git a/drivers/pci/Makefile b/drivers/pci/Makefile
+index 8e75de8..510062f 100755
+--- a/drivers/pci/Makefile
++++ b/drivers/pci/Makefile
+@@ -20,5 +20,6 @@ obj-$(CONFIG_TSI108_PCI) += tsi108_pci.o
+ obj-$(CONFIG_WINBOND_83C553) += w83c553f.o
+ obj-$(CONFIG_PCIE_LAYERSCAPE) += pcie_layerscape.o
+ obj-$(CONFIG_MVEBU_PCI) += pci_mvebu.o
++obj-$(CONFIG_MVEBU_ADVK_PCIE) += pci_advk.o
+ obj-$(CONFIG_DW_PCIE) += pcie_dw.o
+ obj-$(CONFIG_MVEBU_DW_PCIE) += pcie_mvebu_dw.o
+diff --git a/drivers/pci/pci_advk.c b/drivers/pci/pci_advk.c
+new file mode 100644
+index 0000000..187ab8f
+--- /dev/null
++++ b/drivers/pci/pci_advk.c
+@@ -0,0 +1,516 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++/* pic_advk.c
++ *
++ * Implementation for Aardvark PCIe IP
++ *
++ * Author: Victor Gu <xigu@marvell.com>
++ *
++ * March 6, 2015
++ *
++ */
++#include <common.h>
++#include <fdtdec.h>
++#include <asm/io.h>
++#include <asm/arch/pcie-core.h>
++#include <pci.h>
++#include <asm/arch-mvebu/fdt.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++struct pcie_win {
++	u32 base;
++	u32 size;
++};
++
++static struct pci_controller	pci_hose[PCIE_ADVK_MAX_PORT];
++static const char speed_str[4][8] = {"NA", "2.5GHz", "5GHz", "8GHz"};
++static const char width_str[9][8] = {"NA", "x1", "x2", "NA", "x4", "NA", "NA", "NA", "x8"};
++static const char mode_str[2][16] = {"Endpoint", "Root Complex"};
++
++/*
++ * We dont use a host bridge so don't let the
++ * stack skip CFG cycle for dev = 0 func = 0
++ */
++int pci_skip_dev(struct pci_controller *hose, pci_dev_t dev)
++{
++	return 0;
++}
++
++/*
++ * Check PIO status
++ */
++int advk_pcie_check_pio_status(void __iomem *reg_base)
++{
++	unsigned int pio_status;
++	unsigned char comp_status;
++	char *strcomp_status;
++
++	pio_status = readl(PCIE_CORE_PIO_REG_ADDR(reg_base, PCIE_CORE_PIO_STAT));
++	comp_status = (pio_status >> 7) & 0x7;
++
++	switch (comp_status) {
++	case 0:
++		break;
++	case 1:
++		strcomp_status = "UR";
++		break;
++	case 2:
++		strcomp_status = "CRS";
++		break;
++	case 4:
++		strcomp_status = "CA";
++		break;
++	default:
++		strcomp_status = "Unkown";
++		break;
++	}
++	if (0 != comp_status) {
++		if (pio_status & (0x1 << 10))
++			printf("Non-posted PIO Response Status: %s, %#x @ %#x\n",
++			       strcomp_status, pio_status,
++			       readl(PCIE_CORE_PIO_REG_ADDR(reg_base, PCIE_CORE_PIO_ADDR_LS)));
++		else
++			printf("Posted PIO Response Status: %s, %#x @ %#x\n",
++			       strcomp_status, pio_status,
++			       readl(PCIE_CORE_PIO_REG_ADDR(reg_base, PCIE_CORE_PIO_ADDR_LS)));
++	}
++	return 0;
++}
++
++static int advk_pcie_addr_valid(pci_dev_t bdf, int first_busno)
++{
++	/*
++	 * In PCIE-E only a single device (0) can exist
++	 * on the local bus. Beyound the local bus, there might be
++	 * a Switch and everyting is possible.
++	 */
++	if ((PCI_BUS(bdf) == first_busno) && (PCI_DEV(bdf) > 0))
++		return 0;
++
++	return 1;
++}
++
++/*
++ * Set PCIe address window register which could be used for memory mapping.
++ * These address window registers are within PCIe IP internally.
++ * It should be called and set correctly if want to access external PCIe device
++ * by accessing CPU memory space directly.
++ */
++int advk_pcie_set_ob_win(void __iomem *reg_base,
++			u32 win_num,
++			u32 match_ms,
++			u32 match_ls,
++			u32 mask_ms,
++			u32 mask_ls,
++			u32 remap_ms,
++			u32 remap_ls,
++			u32 action)
++{
++	writel(match_ms, PCIE_CORE_OB_REG_ADDR(reg_base, OB_WIN_MATCH_MS, win_num));
++	writel(mask_ms, PCIE_CORE_OB_REG_ADDR(reg_base, OB_WIN_MASK_MS, win_num));
++	writel(mask_ls, PCIE_CORE_OB_REG_ADDR(reg_base, OB_WIN_MASK_LS, win_num));
++	writel(remap_ms, PCIE_CORE_OB_REG_ADDR(reg_base, OB_WIN_REMAP_MS, win_num));
++	writel(remap_ls, PCIE_CORE_OB_REG_ADDR(reg_base, OB_WIN_REMAP_LS, win_num));
++	writel(action, PCIE_CORE_OB_REG_ADDR(reg_base, OB_WIN_ACTIONS, win_num));
++	writel(match_ls, PCIE_CORE_OB_REG_ADDR(reg_base, OB_WIN_MATCH_LS, win_num));
++	writel(match_ls | 0x1, PCIE_CORE_OB_REG_ADDR(reg_base, OB_WIN_MATCH_LS, win_num));
++
++	return 0;
++}
++
++/*
++ * This routine is used to enable or dieable AXI address window location generation.
++ * Disabled: No address window mapping. Use AXI user fields
++ * provided by the AXI fabric.
++ * Enabled: Enable the address window mapping. The HAL bridge
++ * generates the AXI user field locally. Use the local generated AXI user fields.
++ * It should be disabled when access PCIe device by PIO.
++ * It should be enabled when access PCIe device by memory access directly.
++ */
++int advk_pcie_enable_axi_addr_gen(void __iomem *reg_base, int enable)
++{
++	u32 reg32;
++
++	reg32 = readl(PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_CTRL2_REG));
++	if (enable)
++		reg32 |= OB_WIN_ENABLE;
++	else
++		reg32 &= ~(OB_WIN_ENABLE);
++	writel(reg32, PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_CTRL2_REG));
++	return 0;
++}
++
++/*
++ * Configuration read
++ */
++int advk_pcie_pio_read_config(struct pci_controller *hose, pci_dev_t bdf, int where, u32 *val)
++{
++	int i;
++	u32 reg32;
++	u32 is_done;
++	int ret = 0;
++
++	if (!advk_pcie_addr_valid(bdf, hose->first_busno)) {
++		debug("CFG read: address out of range (%ld,%ld,%ld)\n",
++		      PCI_BUS(bdf), PCI_DEV(bdf), PCI_FUNC(bdf));
++		*val = 0xFFFFFFFF;
++		return 1;
++	}
++
++	/* Disabled AXI address window location generation.
++	 * Use AXI user fields provided by the AXI fabric.
++	 */
++	advk_pcie_enable_axi_addr_gen((void __iomem *)hose->cfg_addr, 0);
++
++	/* Start PIO */
++	writel(0x0, PCIE_CORE_PIO_REG_ADDR(hose->cfg_addr, PCIE_CORE_PIO_START));
++	writel(0x1, PCIE_CORE_PIO_REG_ADDR(hose->cfg_addr, PCIE_CORE_PIO_ISR));
++
++	/* Program the control register */
++	if (PCI_BUS(bdf) > hose->first_busno + PCIE_ADVK_ACTUAL_FIRST_BUSNO)
++		reg32 = (0x4 << PCIE_CORE_PIO_CTRL_BYTE_COUNT_SHIFT) | PCIE_CONFIG_RD_TYPE1;
++	else
++		reg32 = (0x4 << PCIE_CORE_PIO_CTRL_BYTE_COUNT_SHIFT) | PCIE_CONFIG_RD_TYPE0;
++	writel(reg32, PCIE_CORE_PIO_REG_ADDR(hose->cfg_addr, PCIE_CORE_PIO_CTRL));
++
++	/* Program the address registers */
++	reg32 = PCIE_BDF(bdf)|(PCIE_REG_ADDR(where));
++	writel(reg32, PCIE_CORE_PIO_REG_ADDR(hose->cfg_addr, PCIE_CORE_PIO_ADDR_LS));
++	writel(0, PCIE_CORE_PIO_REG_ADDR(hose->cfg_addr, PCIE_CORE_PIO_ADDR_MS));
++
++	/* Program the data strobe */
++	writel(0xf, PCIE_CORE_PIO_REG_ADDR(hose->cfg_addr, PCIE_CORE_PIO_WR_DATA_STRB));
++
++	/* Start the transfer */
++	writel(1, PCIE_CORE_PIO_REG_ADDR(hose->cfg_addr, PCIE_CORE_PIO_START));
++
++	for (i = 0; i < PCIE_CORE_PIO_TIMEOUT_NUM; i++) {
++		reg32 = readl(PCIE_CORE_PIO_REG_ADDR(hose->cfg_addr, PCIE_CORE_PIO_START));
++		is_done = readl(PCIE_CORE_PIO_REG_ADDR(hose->cfg_addr, PCIE_CORE_PIO_ISR));
++		if ((!reg32) && is_done)
++			break;
++		udelay(1000);
++	}
++
++	if (i == PCIE_CORE_PIO_TIMEOUT_NUM) {
++		printf("%s(%d): wait for PIO time out\n", __func__, __LINE__);
++		/* Enable AXI address window location generation.
++		 * The HAL bridge generates the AXI user field locally.
++		 */
++		advk_pcie_enable_axi_addr_gen((void __iomem *)hose->cfg_addr, 1);
++		return 1;
++	}
++
++	advk_pcie_check_pio_status((void __iomem *)hose->cfg_addr);
++
++	*val = readl(PCIE_CORE_PIO_REG_ADDR(hose->cfg_addr, PCIE_CORE_PIO_RD_DATA));
++
++	/* Enable AXI address window location generation.
++	 * The HAL bridge generates the AXI user field locally.
++	 */
++	advk_pcie_enable_axi_addr_gen((void __iomem *)hose->cfg_addr, 1);
++
++	return ret;
++}
++
++/*
++ * Configuration write
++ */
++int advk_pcie_pio_write_config(struct pci_controller *hose, pci_dev_t bdf, int where, u32 val)
++{
++	int i;
++	u32 reg32;
++	int ret = 0;
++
++	if (!advk_pcie_addr_valid(bdf, hose->first_busno)) {
++		debug("CFG write: address out of range (%ld,%ld,%ld)\n",
++		      PCI_BUS(bdf), PCI_DEV(bdf), PCI_FUNC(bdf));
++		return 1;
++	}
++
++	/* Disabled AXI address window location generation.
++	 * Use AXI user fields provided by the AXI fabric.
++	 */
++	advk_pcie_enable_axi_addr_gen((void __iomem *)hose->cfg_addr, 0);
++
++	/* Start PIO */
++	writel(0x0, PCIE_CORE_PIO_REG_ADDR(hose->cfg_addr, PCIE_CORE_PIO_START));
++	writel(0x1, PCIE_CORE_PIO_REG_ADDR(hose->cfg_addr, PCIE_CORE_PIO_ISR));
++
++	/* Program the control register */
++	if (PCI_BUS(bdf) > hose->first_busno + PCIE_ADVK_ACTUAL_FIRST_BUSNO)
++		reg32 = (0x4 << PCIE_CORE_PIO_CTRL_BYTE_COUNT_SHIFT) | PCIE_CONFIG_WR_TYPE1;
++	else
++		reg32 = (0x4 << PCIE_CORE_PIO_CTRL_BYTE_COUNT_SHIFT) | PCIE_CONFIG_WR_TYPE0;
++	writel(reg32, PCIE_CORE_PIO_REG_ADDR(hose->cfg_addr, PCIE_CORE_PIO_CTRL));
++
++	/* Program the address registers */
++	reg32 = PCIE_BDF(bdf) | PCIE_REG_ADDR(where);  /* Ignore the last 2 bits of where */
++	writel(reg32, PCIE_CORE_PIO_REG_ADDR(hose->cfg_addr, PCIE_CORE_PIO_ADDR_LS));
++	writel(0, PCIE_CORE_PIO_REG_ADDR(hose->cfg_addr, PCIE_CORE_PIO_ADDR_MS));
++
++	/* Program the data register */
++	writel(val, PCIE_CORE_PIO_REG_ADDR(hose->cfg_addr, PCIE_CORE_PIO_WR_DATA));
++
++	/* Program the data strobe */
++	writel(0xf, PCIE_CORE_PIO_REG_ADDR(hose->cfg_addr, PCIE_CORE_PIO_WR_DATA_STRB));
++
++	/* Start the transfer */
++	writel(1, PCIE_CORE_PIO_REG_ADDR(hose->cfg_addr, PCIE_CORE_PIO_START));
++
++	for (i = 0; i < PCIE_CORE_PIO_TIMEOUT_NUM; i++) {
++		reg32 = readl(PCIE_CORE_PIO_REG_ADDR(hose->cfg_addr, PCIE_CORE_PIO_START));
++		if (!reg32)
++			break;
++	}
++	if (i == PCIE_CORE_PIO_TIMEOUT_NUM) {
++		printf("%s(%d): wait for PIO time out\n", __func__, __LINE__);
++		/* Enable AXI address window location generation.
++		 * The HAL bridge generates the AXI user field locally.
++		 */
++		advk_pcie_enable_axi_addr_gen((void __iomem *)hose->cfg_addr, 1);
++		return 1;
++	}
++
++	advk_pcie_check_pio_status((void __iomem *)hose->cfg_addr);
++
++	/* Enable AXI address window location generation.
++	 * The HAL bridge generates the AXI user field locally.
++	 */
++	advk_pcie_enable_axi_addr_gen((void __iomem *)hose->cfg_addr, 1);
++
++	return ret;
++}
++
++static int advk_pcie_init(int host_id, void __iomem *reg_base, struct pcie_win *win, int first_busno)
++{
++	u32 state;
++	u32 speed;
++	u32 width;
++	u32 region_id = 0;
++
++	struct pci_controller *hose = &pci_hose[host_id];
++
++	debug_enter();
++
++	memset(hose, 0, sizeof(hose));
++
++	/* Enable PU */
++	state = readl(PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_PHY_REF_CLK_REG));
++	state |= PCIE_CORE_EN_PU;
++	writel(state, PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_PHY_REF_CLK_REG));
++
++	/* Select AMP */
++	state = readl(PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_PHY_REF_CLK_REG));
++	state &= ~(PCIE_CORE_SEL_AMP_MASK << PCIE_CORE_SEL_AMP_SHIFT);
++	state |= (0x3 << PCIE_CORE_SEL_AMP_SHIFT);
++	writel(state, PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_PHY_REF_CLK_REG));
++
++	/* Disable RX */
++	state = readl(PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_PHY_REF_CLK_REG));
++	state &= ~PCIE_CORE_EN_RX;
++	writel(state, PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_PHY_REF_CLK_REG));
++
++	/* Enable TX */
++	state = readl(PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_PHY_REF_CLK_REG));
++	state |= PCIE_CORE_EN_TX;
++	writel(state, PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_PHY_REF_CLK_REG));
++
++	/* Set Advanced Error Capabilities and Control PF0 register
++	 * ECRC_CHCK_RCV (RD0070118h [8]) = 1h
++	 * ECRC_CHCK (RD0070118h [7]) = 1h
++	 * ECRC_GEN_TX_EN (RD0070118h [6]) = 1h
++	 * ECRC_CHK_TX (RD0070118h [5]) = 1h
++	 */
++	writel(0x01E0, PCIE_CORE_CONFIG_REG_ADDR(reg_base, PCIE_CORE_ERR_CAP_CTRL_REG));
++
++	/* Set PCIe Device Control and Status 1 PF0 register
++	 * MAX_RD_REQ_SIZE (RD00700C8h [14:12])/MAX_RD_REQ_SZ (RD00700C8h [14:12]) = 2h (default)
++	 * Clear EN_NO_SNOOP (RD00700C8h [11])/EN_NO_SNOOP (RD00700C8h [11]) = 0h (default is 1h)
++	 * MAX_PAYLOAD_SIZEW (RD00700C8h [7:5])/MAX_PAYLOAD (RD00700C8h [7:5]) = 2
++	 * EN_RELAXED_ORDERING (RD00700C8h [4])/EN_RELAXED_ORDERING (RD00700C8h [4])= 0h (default is 1h)
++	 */
++	writel(0x2040, PCIE_CORE_CONFIG_REG_ADDR(reg_base, PCIE_CORE_DEV_CTRL_STATS_REG));
++
++	/* Program PCIe Control 2 (RD0074808h) to 0000001Fh to disable strict ordering by clearing
++	 * STRICT_ORDERING_EN (RD0074808h [5]) = 0h (default is 1h).
++	 */
++	writel(0x001F, PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_CTRL2_REG));
++
++	/* Set GEN2 */
++	state = readl(PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_CTRL0_REG));
++	state &= ~PCIE_GEN_SEL_MSK;
++	state |= SPEED_GEN_2;
++	writel(state, PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_CTRL0_REG));
++
++	/* Set lane X1 */
++	state = readl(PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_CTRL0_REG));
++	state &= ~LANE_CNT_MSK;
++	state |= LANE_COUNT_1;
++	writel(state, PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_CTRL0_REG));
++
++	/* Enable link training */
++	state = readl(PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_CTRL0_REG));
++	state |= LINK_TRAINNING_EN;
++	writel(state, PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_CTRL0_REG));
++
++	/* Disable strict ordering */
++	state = readl(PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_CTRL2_REG));
++	state &= ~STRICT_ORDER_ENABLE;
++	writel(state, PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_CTRL2_REG));
++
++	/* Start link training */
++	state = readl(PCIE_CORE_CONFIG_REG_ADDR(reg_base, PCIE_CORE_LINK_CTRL_STAT_REG));
++	state |= (1 << PCIE_CORE_LINK_TRAINING_SHIFT);
++	writel(state, PCIE_CORE_CONFIG_REG_ADDR(reg_base, PCIE_CORE_LINK_CTRL_STAT_REG));
++
++	/* Set PCIe Control 2 register
++	 * bit[1:0] ASPM Control, set to 1 to enable L0S entry
++	 */
++	writel(0x00100001, PCIE_CORE_CONFIG_REG_ADDR(reg_base, PCIE_CORE_LINK_CTRL_STAT_REG));
++
++	/* Enable BUS, IO, Memory space assess
++	 * bit2: Memory IO Request
++	 * bit1: Memory Access Enable
++	 * bit0: IO Access Enable
++	 */
++	state = readl(PCIE_CORE_CONFIG_REG_ADDR(reg_base, 4));
++	state |= 0x7;
++	writel(state, PCIE_CORE_CONFIG_REG_ADDR(reg_base, 4));
++
++	/* Don't know why to delay 1 ms. Just leave it as legacy code. */
++	mdelay(1);
++
++	/* Set config address */
++	hose->cfg_addr = (unsigned int *)reg_base;
++
++	/* Set PCI memory region */
++	pci_set_region(&hose->regions[region_id++], win->base, win->base, win->size, PCI_REGION_MEM);
++	hose->region_count = region_id;
++
++	/* Register outbound window for configuration and set r/w config operations */
++	advk_pcie_set_ob_win(reg_base,/* reg base */
++			     0,/* window block  */
++			     0,/* match ms */
++			     win->base, /* match ls */
++			     0xffffffff, /* mask ms */
++			     0xf8000000, /* mask ls */
++			     0,	       /* remap ms */
++			     win->base, /* remap ls */
++			    (2 << 20)|OB_PCIE_MEM);
++	/* Enable outbound window by default */
++	advk_pcie_enable_axi_addr_gen(reg_base, 1);
++
++	pci_set_ops(hose,
++		    pci_hose_read_config_byte_via_dword,
++		    pci_hose_read_config_word_via_dword,
++		    advk_pcie_pio_read_config,
++		    pci_hose_write_config_byte_via_dword,
++		    pci_hose_write_config_word_via_dword,
++		    advk_pcie_pio_write_config);
++
++	/* Assign config table to hose */
++	hose->first_busno = first_busno;
++
++	/* Register the hose */
++	pci_register_hose(hose);
++
++	/* Scan the bus */
++	debug("ArLP PCIe Scan start\n");
++	hose->last_busno = pci_hose_scan(hose);
++
++	/* Check the link type - for info only */
++	state = readl(PCIE_CORE_CONFIG_REG_ADDR(reg_base, PCIE_CORE_LINK_CTRL_STAT_REG));
++	speed = (state >> PCIE_CORE_LINK_SPEED_SHIFT) & PCIE_CORE_LINK_SPEED_MASK;
++	width = (state >> PCIE_CORE_LINK_WIDTH_SHIFT) & PCIE_CORE_LINK_WIDTH_MASK;
++
++	printf("PCIE-%d: Bus(%d) Link width(%s) Speed(%s)\n", host_id, first_busno, width_str[width], speed_str[speed]);
++
++	debug_exit();
++
++	return hose->last_busno + 1;
++}
++
++static void advk_pcie_set_core_mode(int host_id, void __iomem *reg_base, int mode)
++{
++	u32 config;
++
++	/* Set PCI global control register to RC mode */
++	config = readl(PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_CTRL0_REG));
++	config &= ~(PCIE_CTRL_MODE_MASK << IS_RC_SHIFT);
++	config |= ((mode & PCIE_CTRL_MODE_MASK) << IS_RC_SHIFT);
++	writel(config, PCIE_CORE_CTRL_REG_ADDR(reg_base, PCIE_CORE_CTRL0_REG));
++
++	/* Set PCI core control register to RC mode */
++	config = readl(PCIE_CTRL_CORE_REG_ADDR(reg_base, PCIE_CTRL_CONFIG_REG));
++	config &= ~(PCIE_CTRL_MODE_MASK << PCIE_CTRL_MODE_SHIFT);
++	config |= ((mode & PCIE_CTRL_MODE_MASK) << PCIE_CTRL_MODE_SHIFT);
++	writel(config, PCIE_CTRL_CORE_REG_ADDR(reg_base, PCIE_CTRL_CONFIG_REG));
++
++	debug("PCIE-%d: core mode %s\n", host_id, mode_str[mode]);
++}
++
++void pci_init_board(void)
++{
++	int host_id = -1;
++	int first_busno = 0;
++	int bus_node, port_node, count;
++	const void *blob = gd->fdt_blob;
++	struct pcie_win win;
++	void __iomem *reg_base;
++	int err;
++
++	count = fdtdec_find_aliases_for_id(blob, "pcie-controller",
++			COMPAT_MVEBU_ADVK_PCIE, &bus_node, 1);
++
++	if (count <= 0)
++		return;
++
++	fdt_for_each_subnode(blob, port_node, bus_node) {
++		host_id++;
++
++		if (!fdtdec_get_is_enabled(blob, port_node))
++			continue;
++
++		reg_base = fdt_get_regs_offs(blob, port_node, "reg");
++		if (reg_base == 0) {
++			error("Missing registers in PCIe node\n");
++			continue;
++		}
++
++		if (fdtdec_get_bool(blob, port_node, "endpoint")) {
++			/* Set to end point mode */
++			advk_pcie_set_core_mode(host_id, reg_base, PCIE_CORE_MODE_EP);
++
++			continue;
++		} else {
++			/* Set to root complex mode */
++			advk_pcie_set_core_mode(host_id, reg_base, PCIE_CORE_MODE_RC);
++		}
++
++		err = fdtdec_get_int_array(blob, port_node, "mem", (u32 *)&win, 2);
++		if (err) {
++			error("pcie: missing pci memory space in fdt\n");
++			continue;
++		}
++
++		/* If all is well register the host */
++		first_busno = advk_pcie_init(host_id, reg_base, &win, first_busno);
++	}
++}
+-- 
+1.9.1
+

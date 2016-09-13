@@ -1,0 +1,37 @@
+From 6cfeb088c7833830dbb5bd29840a9eaf828116d5 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 26 Aug 2015 14:07:55 +0300
+Subject: [PATCH 0353/1240] fix: pcie: fdt: fixed get address function of PCIe
+ base address
+
+Change-Id: Ic0624cabe772fcc4cebb79f86172a9c92e1e2b92
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23166
+---
+ drivers/pci/pci_mvebu.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/pci/pci_mvebu.c b/drivers/pci/pci_mvebu.c
+index d83f783..ae57344 100644
+--- a/drivers/pci/pci_mvebu.c
++++ b/drivers/pci/pci_mvebu.c
+@@ -338,8 +338,15 @@ void pci_init_board(void)
+ 
+ 		if (!fdtdec_get_is_enabled(blob, port_node))
+ 			continue;
+-
++#ifdef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
++		/* fdt_get_regs_offs function added the base address to base of
++		   the PCIe, when using DDR over PCI need to use fdtdec_get_addr
++		    to get the base address without adding the base of the SoC */
++		reg_base = (void *)((uintptr_t)fdtdec_get_addr(blob, port_node, "reg"));
++#else
+ 		reg_base = fdt_get_regs_offs(blob, port_node, "reg");
++#endif
++
+ 		if (reg_base == 0) {
+ 			error("Missing registers in PCIe node\n");
+ 			continue;
+-- 
+1.9.1
+

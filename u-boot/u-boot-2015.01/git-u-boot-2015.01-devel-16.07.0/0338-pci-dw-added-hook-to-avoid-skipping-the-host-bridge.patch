@@ -1,0 +1,41 @@
+From 4b960728d4466465369c685c496dc05fc5232ac3 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Tue, 18 Aug 2015 17:05:16 +0300
+Subject: [PATCH 0338/1240] pci: dw: added hook to avoid skipping the host
+ bridge
+
+by default u-boot will skip when bus = device = function = 0
+in our setup this is where the pci bridge, i.e. our own root complex
+is located so we add an empty hook to avoid this skip
+
+Change-Id: I1155def30523c00554365b9fce7672b0e8e8d1ba
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22918
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/pci/pcie_dw.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/pci/pcie_dw.c b/drivers/pci/pcie_dw.c
+index 919a98e..c8d71f1 100644
+--- a/drivers/pci/pcie_dw.c
++++ b/drivers/pci/pcie_dw.c
+@@ -170,6 +170,14 @@ static int dw_pcie_write_config(struct pci_controller *hose, pci_dev_t bdf,
+ 	return 0;
+ }
+ 
++/*
++ * We dont use a host bridge so don't let the
++ * stack skip CFG cycle for dev = 0 func = 0
++ */
++int pci_skip_dev(struct pci_controller *hose, pci_dev_t dev)
++{
++	return 0;
++}
+ 
+ static struct pci_controller	pci_hose[MAX_PCIE_PORTS];
+ int dw_pcie_init(int host_id, uintptr_t regs_base, struct pcie_win *mem_win,
+-- 
+1.9.1
+

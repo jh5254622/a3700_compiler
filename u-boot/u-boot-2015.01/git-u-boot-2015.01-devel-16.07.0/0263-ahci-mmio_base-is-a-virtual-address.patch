@@ -1,0 +1,166 @@
+From e853e42ed9d25e3f618b5c6930f4d3a0f1e3bdb6 Mon Sep 17 00:00:00 2001
+From: Scott Wood <scottwood@freescale.com>
+Date: Fri, 17 Apr 2015 09:19:01 -0500
+Subject: [PATCH 0263/1240] ahci: mmio_base is a virtual address
+
+Don't store it in a u32.
+
+Don't dereference the bus address as if it were a virtual address
+(fixes 284231e49a2b4 ("ahci: Support splitting of read transactions
+into multiple chunks")).
+
+Fixes crash on boot in MPC8641HPCN_36BIT target.
+
+Change-Id: I9113cfc2c96ff544197db6baf8c2a99a8602907f
+Signed-off-by: Scott Wood <scottwood@freescale.com>
+Cc: Vadim Bendebury <vbendeb@chromium.org>
+Acked-by: York Sun <yorksun@freescale.com>
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22176
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv7/omap-common/boot-common.c |  2 +-
+ arch/arm/cpu/armv7/omap-common/sata.c        |  6 +++---
+ board/highbank/highbank.c                    |  2 +-
+ board/sunxi/ahci.c                           |  2 +-
+ drivers/block/ahci.c                         | 11 ++++++-----
+ drivers/block/dwc_ahsata.c                   |  2 +-
+ include/ahci.h                               |  6 +++---
+ 7 files changed, 16 insertions(+), 15 deletions(-)
+
+diff --git a/arch/arm/cpu/armv7/omap-common/boot-common.c b/arch/arm/cpu/armv7/omap-common/boot-common.c
+index 00a1082..9a535b1 100644
+--- a/arch/arm/cpu/armv7/omap-common/boot-common.c
++++ b/arch/arm/cpu/armv7/omap-common/boot-common.c
+@@ -149,6 +149,6 @@ void __noreturn jump_to_image_no_args(struct spl_image_info *spl_image)
+ #ifdef CONFIG_SCSI_AHCI_PLAT
+ void arch_preboot_os(void)
+ {
+-	ahci_reset(DWC_AHSATA_BASE);
++	ahci_reset((void __iomem *)DWC_AHSATA_BASE);
+ }
+ #endif
+diff --git a/arch/arm/cpu/armv7/omap-common/sata.c b/arch/arm/cpu/armv7/omap-common/sata.c
+index d18bc50..2c2d1bc 100644
+--- a/arch/arm/cpu/armv7/omap-common/sata.c
++++ b/arch/arm/cpu/armv7/omap-common/sata.c
+@@ -69,7 +69,7 @@ int init_sata(int dev)
+ 	val = TI_SATA_IDLE_NO | TI_SATA_STANDBY_NO;
+ 	writel(val, TI_SATA_WRAPPER_BASE + TI_SATA_SYSCONFIG);
+ 
+-	ret = ahci_init(DWC_AHSATA_BASE);
++	ret = ahci_init((void __iomem *)DWC_AHSATA_BASE);
+ 
+ 	return ret;
+ }
+@@ -88,6 +88,6 @@ void scsi_init(void)
+ 
+ void scsi_bus_reset(void)
+ {
+-	ahci_reset(DWC_AHSATA_BASE);
+-	ahci_init(DWC_AHSATA_BASE);
++	ahci_reset((void __iomem *)DWC_AHSATA_BASE);
++	ahci_init((void __iomem *)DWC_AHSATA_BASE);
+ }
+diff --git a/board/highbank/highbank.c b/board/highbank/highbank.c
+index fc2385c..ba1beb5 100644
+--- a/board/highbank/highbank.c
++++ b/board/highbank/highbank.c
+@@ -57,7 +57,7 @@ void scsi_init(void)
+ 	u32 reg = readl(HB_SREG_A9_PWRDOM_STAT);
+ 
+ 	if (reg & PWRDOM_STAT_SATA) {
+-		ahci_init(HB_AHCI_BASE);
++		ahci_init((void __iomem *)HB_AHCI_BASE);
+ 		scsi_scan(1);
+ 	}
+ }
+diff --git a/board/sunxi/ahci.c b/board/sunxi/ahci.c
+index b7f0dda..6d51b9b 100644
+--- a/board/sunxi/ahci.c
++++ b/board/sunxi/ahci.c
+@@ -83,5 +83,5 @@ void scsi_init(void)
+ 	if (sunxi_ahci_phy_init(SUNXI_SATA_BASE) < 0)
+ 		return;
+ 
+-	ahci_init(SUNXI_SATA_BASE);
++	ahci_init((void __iomem *)SUNXI_SATA_BASE);
+ }
+diff --git a/drivers/block/ahci.c b/drivers/block/ahci.c
+index 37d2d2a..d5a0075 100644
+--- a/drivers/block/ahci.c
++++ b/drivers/block/ahci.c
+@@ -137,10 +137,10 @@ static void sunxi_dma_init(volatile u8 *port_mmio)
+ }
+ #endif
+ 
+-int ahci_reset(u32 base)
++int ahci_reset(void __iomem *base)
+ {
+ 	int i = 1000;
+-	u32 host_ctl_reg = base + HOST_CTL;
++	u32 __iomem *host_ctl_reg = base + HOST_CTL;
+ 	u32 tmp = readl(host_ctl_reg); /* global controller reset */
+ 
+ 	if ((tmp & HOST_RESET) == 0)
+@@ -419,8 +419,9 @@ static int ahci_init_one(pci_dev_t pdev)
+ 	probe_ent->pio_mask = 0x1f;
+ 	probe_ent->udma_mask = 0x7f;	/*Fixme,assume to support UDMA6 */
+ 
+-	pci_read_config_dword(pdev, PCI_BASE_ADDRESS_5, &probe_ent->mmio_base);
+-	debug("ahci mmio_base=0x%08x\n", probe_ent->mmio_base);
++	probe_ent->mmio_base = pci_map_bar(pdev, PCI_BASE_ADDRESS_5,
++					   PCI_REGION_MEM);
++	debug("ahci mmio_base=0x%p\n", probe_ent->mmio_base);
+ 
+ 	/* Take from kernel:
+ 	 * JMicron-specific fixup:
+@@ -921,7 +922,7 @@ void scsi_low_level_init(int busdevfunc)
+ }
+ 
+ #ifdef CONFIG_SCSI_AHCI_PLAT
+-int ahci_init(u32 base)
++int ahci_init(void __iomem *base)
+ {
+ 	int i, rc = 0;
+ 	u32 linkmap;
+diff --git a/drivers/block/dwc_ahsata.c b/drivers/block/dwc_ahsata.c
+index 01a4148..cf3ef6b 100644
+--- a/drivers/block/dwc_ahsata.c
++++ b/drivers/block/dwc_ahsata.c
+@@ -343,7 +343,7 @@ static int ahci_init_one(int pdev)
+ 				| ATA_FLAG_PIO_DMA
+ 				| ATA_FLAG_NO_ATAPI;
+ 
+-	probe_ent->mmio_base = CONFIG_DWC_AHSATA_BASE_ADDR;
++	probe_ent->mmio_base = (void __iomem *)CONFIG_DWC_AHSATA_BASE_ADDR;
+ 
+ 	/* initialize adapter */
+ 	rc = ahci_host_init(probe_ent);
+diff --git a/include/ahci.h b/include/ahci.h
+index e8dee53..6d91712 100644
+--- a/include/ahci.h
++++ b/include/ahci.h
+@@ -151,7 +151,7 @@ struct ahci_probe_ent {
+ 	u32	hard_port_no;
+ 	u32	host_flags;
+ 	u32	host_set_flags;
+-	u32	mmio_base;
++	void __iomem *mmio_base;
+ 	u32     pio_mask;
+ 	u32	udma_mask;
+ 	u32	flags;
+@@ -160,7 +160,7 @@ struct ahci_probe_ent {
+ 	u32	link_port_map; /*linkup port map*/
+ };
+ 
+-int ahci_init(u32 base);
+-int ahci_reset(u32 base);
++int ahci_init(void __iomem *base);
++int ahci_reset(void __iomem *base);
+ 
+ #endif
+-- 
+1.9.1
+

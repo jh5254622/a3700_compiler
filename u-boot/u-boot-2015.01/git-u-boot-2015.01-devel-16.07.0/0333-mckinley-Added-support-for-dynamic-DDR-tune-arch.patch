@@ -1,0 +1,130 @@
+From f994ab22ae08c8772387560ba564d39add898468 Mon Sep 17 00:00:00 2001
+From: Ofir Fedida <ofedida@marvell.com>
+Date: Thu, 13 Aug 2015 16:29:35 +0300
+Subject: [PATCH 0333/1240] mckinley: Added support for dynamic DDR tune arch
+
+	-Added support to compile dynamic McKinley tune
+	-To run dynamic McKinley code need to enable CONFIG_MVEBU_MK6_DYNAMIC_SUPPORT
+
+Change-Id: I4bdd97b291e47e68cec7141c83db45aaf64cec4c
+Signed-off-by: Ofir Fedida <ofedida@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22817
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/spl.c       |  2 +-
+ arch/arm/include/asm/arch-mvebu/ddr.h |  2 +-
+ drivers/ddr/Kconfig                   | 17 ++++++++++++++---
+ drivers/ddr/Makefile                  |  3 ++-
+ drivers/ddr/mvebu_ddr.c               | 22 ++++++++++++++++------
+ 5 files changed, 34 insertions(+), 12 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index 61a1810..9aa8238 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -73,7 +73,7 @@ void board_init_f(ulong silent)
+ 		error("COMPHY initialization failed\n");
+ #endif
+ #ifndef CONFIG_PALLADIUM
+-	static_dram_init(gd->fdt_blob);
++	mvebu_dram_init(gd->fdt_blob);
+ #endif
+ #else
+ 	dram_over_pci_init(gd->fdt_blob);
+diff --git a/arch/arm/include/asm/arch-mvebu/ddr.h b/arch/arm/include/asm/arch-mvebu/ddr.h
+index 454c283..bdd14c2 100644
+--- a/arch/arm/include/asm/arch-mvebu/ddr.h
++++ b/arch/arm/include/asm/arch-mvebu/ddr.h
+@@ -26,7 +26,7 @@ struct mvebu_dram_config {
+ 	u32 cs_count;
+ };
+ 
+-void static_dram_init(const void *blob);
++void mvebu_dram_init(const void *blob);
+ void mvebu_dram_mac_init(struct mvebu_dram_config *dram_config);
+ void mvebu_dram_phy_init(struct mvebu_dram_config *dram_config);
+ 
+diff --git a/drivers/ddr/Kconfig b/drivers/ddr/Kconfig
+index 08bcbf6..f733d76 100644
+--- a/drivers/ddr/Kconfig
++++ b/drivers/ddr/Kconfig
+@@ -20,12 +20,23 @@ config MVEBU_DUNIT_SUPPORT
+ 	  Choose this option to add support
+ 	  for DUNIT controller.
+ 
+-config MVEBU_MK6_SUPPORT
+-	bool "MK6 controller support"
++config MVEBU_MK6_STATIC_SUPPORT
++	bool "MK6 static controller support"
+ 	depends on MVEBU_SPL_DDR_SUPPORT
+ 	help
+ 	  Choose this option to add support
+-	  for MK6 controller.
++	  for static DDR training code for MK6 controller
++	  to add this option to SPL code,
++	  need to add +S:CONFIG_MVEBU_MK6_STATIC_SUPPORT to defconfig file
++
++config MVEBU_MK6_DYNAMIC_SUPPORT
++	bool "MK6 dynamic controller support"
++	depends on MVEBU_SPL_DDR_SUPPORT
++	help
++	  Choose this option to add support
++	  for dynamic DDR training code for MK6 controller
++	  to add this option to SPL code,
++	  need to add +S:CONFIG_MVEBU_MK6_DYNAMIC_SUPPORT to defconfig file
+ 
+ endchoice
+ endmenu
+diff --git a/drivers/ddr/Makefile b/drivers/ddr/Makefile
+index 79119bc..ae0ff55 100644
+--- a/drivers/ddr/Makefile
++++ b/drivers/ddr/Makefile
+@@ -1,3 +1,4 @@
+ obj-y += mvebu_ddr.o
+ obj-$(CONFIG_MVEBU_DUNIT_SUPPORT) += ddr_dunit.o
+-obj-$(CONFIG_MVEBU_MK6_SUPPORT) += ddr_mckinley6.o
++obj-$(CONFIG_MVEBU_MK6_STATIC_SUPPORT) += ddr_mckinley6.o
++obj-$(CONFIG_MVEBU_MK6_DYNAMIC_SUPPORT) += mckinley_ddr/
+diff --git a/drivers/ddr/mvebu_ddr.c b/drivers/ddr/mvebu_ddr.c
+index 3cdce85..93320dc 100644
+--- a/drivers/ddr/mvebu_ddr.c
++++ b/drivers/ddr/mvebu_ddr.c
+@@ -23,7 +23,17 @@
+ #include <asm/arch-mvebu/mvebu.h>
+ #include <asm/arch-mvebu/fdt.h>
+ 
+-void static_dram_init(const void *blob)
++#ifdef CONFIG_MVEBU_MK6_STATIC_SUPPORT
++static void static_dram_init(struct mvebu_dram_config *config)
++{
++	mvebu_dram_mac_init(config);
++	mvebu_dram_phy_init(config);
++
++	printf("Static DRAM initialization is DONE..\n");
++}
++#endif
++
++void mvebu_dram_init(const void *blob)
+ {
+ 	u32 node;
+ 	struct mvebu_dram_config dram_config;
+@@ -55,10 +65,10 @@ void static_dram_init(const void *blob)
+ 		error("missing DDR PHY base address in DDR PHY node\n");
+ 		return;
+ 	}
+-
+-	mvebu_dram_mac_init(config);
+-	mvebu_dram_phy_init(config);
+-
+-	printf("Static DDR initialization is DONE..\n");
++#ifdef CONFIG_MVEBU_MK6_STATIC_SUPPORT
++	static_dram_init(config);
++#elif CONFIG_MVEBU_MK6_DYNAMIC_SUPPORT
++	dynamic_dram_init(config);
++#endif
+ 	debug_exit();
+ }
+-- 
+1.9.1
+

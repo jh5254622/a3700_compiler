@@ -1,0 +1,396 @@
+From 726b63112d6229232596e9736607917ac063f3b7 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Sun, 3 Apr 2016 19:40:05 +0300
+Subject: [PATCH 1021/1240] rtc: a8k: add support for rtc driver
+
+- add node for rtc in cp110.dtsi.
+- add a new Kconfig, with the config MVEBU_RTC to enable rtc.
+- add a new compatible for the rtc.
+- add a rtc driver from u-boot-2013 (arm38x).
+
+Change-Id: I9af9a352d34fa9691f3cfb4c4bb86e8870e550a7
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28745
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/dts/cp110.dtsi                    |   4 +
+ configs/mvebu_armada70x0_defconfig         |   1 +
+ doc/device-tree-bindings/rtc/mvebu-rtc.txt |  17 ++++
+ drivers/rtc/Kconfig                        |  12 +++
+ drivers/rtc/Makefile                       |   1 +
+ drivers/rtc/mvebu_rtc.c                    | 152 +++++++++++++++++++++++++++++
+ drivers/rtc/mvebu_rtc.h                    |  59 +++++++++++
+ include/configs/armada8k.h                 |   4 +-
+ include/configs/mvebu-common.h             |   4 +-
+ include/fdtdec.h                           |   1 +
+ lib/fdtdec.c                               |   1 +
+ 11 files changed, 252 insertions(+), 4 deletions(-)
+ create mode 100644 doc/device-tree-bindings/rtc/mvebu-rtc.txt
+ create mode 100644 drivers/rtc/mvebu_rtc.c
+ create mode 100644 drivers/rtc/mvebu_rtc.h
+
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index b2fb765..7452da1 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -128,6 +128,10 @@ sar-reg {
+ 	reg = <0x400200 0x8>;
+ };
+ 
++rtc-reg {
++	compatible = "marvell,real-time-clock";
++	reg = <0x284000 104>;
++};
+ 
+ pcie-controller {
+ 	#address-cells = <1>;
+diff --git a/configs/mvebu_armada70x0_defconfig b/configs/mvebu_armada70x0_defconfig
+index eb0c418..fa885f6 100644
+--- a/configs/mvebu_armada70x0_defconfig
++++ b/configs/mvebu_armada70x0_defconfig
+@@ -43,6 +43,7 @@ CONFIG_MVEBU_PINCTL=y
+ CONFIG_MVEBU_MPP_BUS=y
+ CONFIG_USB=y
+ CONFIG_USB_XHCI_HCD=y
++CONFIG_MVEBU_RTC=y
+ CONFIG_MVEBU_COMPHY_SUPPORT=y
+ CONFIG_MVEBU_THERMAL_SENSOR=y
+ CONFIG_MVEBU_THERMAL_SENSOR_28NM_V2=y
+diff --git a/doc/device-tree-bindings/rtc/mvebu-rtc.txt b/doc/device-tree-bindings/rtc/mvebu-rtc.txt
+new file mode 100644
+index 0000000..3070f60
+--- /dev/null
++++ b/doc/device-tree-bindings/rtc/mvebu-rtc.txt
+@@ -0,0 +1,17 @@
++Marvell RTC bindings
++====================
++
++The RTC driver provides get / set time from RTC registers
++
++Mandatory properties:
++SoC specific:
++	- compatible
++		Should be "marvell,real-time-clock".
++	- reg
++		Base address and size of RTC.
++
++Example for RTC node:
++	rtc-reg {
++		compatible = "marvell,real-time-clock";
++		reg = <0x284000 0x104>;
++	};
+diff --git a/drivers/rtc/Kconfig b/drivers/rtc/Kconfig
+index e69de29..8d361bd 100644
+--- a/drivers/rtc/Kconfig
++++ b/drivers/rtc/Kconfig
+@@ -0,0 +1,12 @@
++menu "RTC Support"
++
++config MVEBU_RTC
++	bool "MVEBU RTC support"
++	default n
++	help
++	  Choose this option to add
++	  support for Marvell's MVEBU
++	  RTC driver, which is used
++	  by Armada8k.
++
++endmenu
+diff --git a/drivers/rtc/Makefile b/drivers/rtc/Makefile
+index fdcbc00..d2b73e1 100644
+--- a/drivers/rtc/Makefile
++++ b/drivers/rtc/Makefile
+@@ -50,3 +50,4 @@ obj-$(CONFIG_RTC_RV3029) += rv3029.o
+ obj-$(CONFIG_RTC_RX8025) += rx8025.o
+ obj-$(CONFIG_RTC_S3C24X0) += s3c24x0_rtc.o
+ obj-$(CONFIG_RTC_X1205) += x1205.o
++obj-$(CONFIG_MVEBU_RTC) += mvebu_rtc.o
+diff --git a/drivers/rtc/mvebu_rtc.c b/drivers/rtc/mvebu_rtc.c
+new file mode 100644
+index 0000000..bb567eb
+--- /dev/null
++++ b/drivers/rtc/mvebu_rtc.c
+@@ -0,0 +1,152 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2016 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <asm/io.h>
++#include <rtc.h>
++#include <asm/arch-mvebu/fdt.h>
++#include "mvebu_rtc.h"
++
++DECLARE_GLOBAL_DATA_PTR;
++
++void __attribute__((section(".data"))) __iomem *rtc_base = NULL;
++
++/*******************************************************/
++void rtc_init(void)
++{
++	int node;
++	unsigned long reg;
++
++	node = fdt_node_offset_by_compatible(gd->fdt_blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_RTC_REG));
++	if (node < 0) {
++		debug("No rtc node found in FDT blob\n");
++		return;
++	}
++
++	/* Get the rtc register base address */
++	rtc_base = (void *)fdt_get_regs_offs(gd->fdt_blob, node, "reg");
++
++	/* Update RTC-MBUS bridge timing parameters */
++#ifdef ERRATA_FE_3124064
++	/* Functional Errata Ref #: FE-3124064 -  WA for failing time read attempts.
++	 * Description:
++	 *	The device supports CPU write and read access to the RTC Time register.
++	 *	However, due to this erratum, Write to RTC TIME register may fail.
++	 *	Read from RTC TIME register may fail.
++	 * Workaround:
++	 * 1. Configure the RTC Mbus Bridge Timing Control register (offset 0x284080 and 0x284084)
++	 *	- Write RTC WRCLK Period 0x3FF (default value is 0xFA)
++	 *	- Write RTC WRCLK setup to 0x29 (default value is 0x53)
++	 *	- Write RTC Read Output Delay to 0x3F (default value is 0x10)
++	 *	- Write RTC WRCLK High Time to 0x53 (default value)
++	 *	- Mbus - Read All Byte Enable to 0x1 (default value)
++	 * 2. Configure the RTC Test Configuration Register (offset 0x28401C) bit3 to '1' (Reserved, Marvell internal)
++	 *
++	 * RTC Time register write operation:
++	 *	- Issue two dummy writes of 0x0 to the RTC Status register (offset 0x284000).
++	 *	- Write the time to the RTC Time register (offset 0x28400C).
++	*/
++	reg = readl(rtc_base + MV_RTC0_SOC_OFFSET);
++	reg &= ~RTC_WRCLK_PERIOD_MASK;
++	reg |= 0x3FF << RTC_WRCLK_PERIOD_OFFS;
++	reg &= ~RTC_WRCLK_SETUP_MASK;
++	reg |= 0x29 << RTC_WRCLK_SETUP_OFFS;
++	writel(reg, rtc_base + MV_RTC0_SOC_OFFSET);
++
++	reg = readl(rtc_base + MV_RTC1_SOC_OFFSET);
++	reg &= ~RTC_READ_OUTPUT_DELAY_MASK;
++	reg |= 0x3F << RTC_READ_OUTPUT_DELAY_OFFS;
++	writel(reg, rtc_base + MV_RTC1_SOC_OFFSET);
++
++	reg = RTC_READ_REG(RTC_TEST_CONFIG_REG_OFFS);
++	reg |= 0x8;
++	RTC_WRITE_REG(reg, RTC_TEST_CONFIG_REG_OFFS);
++#else
++	reg = readl(rtc_base + MV_RTC1_SOC_OFFSET);
++	reg &= ~RTC_READ_OUTPUT_DELAY_MASK;
++	reg |= 0x1F << RTC_READ_OUTPUT_DELAY_OFFS;
++	writel(reg, rtc_base + MV_RTC1_SOC_OFFSET);
++#endif
++}
++
++int rtc_get(struct rtc_time *tm)
++{
++	if (!rtc_base)
++		rtc_init();
++	to_tm(RTC_READ_REG(RTC_TIME_REG_OFFS), tm);
++	return 0;
++}
++
++int rtc_set(struct rtc_time *tm)
++{
++	unsigned long time;
++
++	if (!rtc_base)
++		rtc_init();
++
++	time = mktime(tm->tm_year, tm->tm_mon,
++				  tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
++
++#ifdef ERRATA_FE_3124064
++	RTC_WRITE_REG(0, RTC_STATUS_REG_OFFS);
++	RTC_WRITE_REG(0, RTC_STATUS_REG_OFFS);
++#endif
++	RTC_WRITE_REG(time, RTC_TIME_REG_OFFS);
++
++	return 0;
++}
++
++void rtc_reset(void)
++{
++	/* Reset Test register */
++	RTC_WRITE_REG(0, RTC_TEST_CONFIG_REG_OFFS);
++	mdelay(500); /* Oscillator startup time */
++
++	/* Reset time register */
++#ifdef ERRATA_FE_3124064
++	RTC_WRITE_REG(0, RTC_STATUS_REG_OFFS);
++	RTC_WRITE_REG(0, RTC_STATUS_REG_OFFS);
++#endif
++	RTC_WRITE_REG(0, RTC_TIME_REG_OFFS);
++	udelay(62);
++
++	/* Reset Status register */
++	RTC_WRITE_REG((RTC_SZ_STATUS_ALARM1_MASK | RTC_SZ_STATUS_ALARM2_MASK), RTC_STATUS_REG_OFFS);
++	udelay(62);
++
++	/* Turn off Int1 and Int2 sources & clear the Alarm count */
++	RTC_WRITE_REG(0, RTC_IRQ_1_CONFIG_REG_OFFS);
++	RTC_WRITE_REG(0, RTC_IRQ_2_CONFIG_REG_OFFS);
++	RTC_WRITE_REG(0, RTC_ALARM_1_REG_OFFS);
++	RTC_WRITE_REG(0, RTC_ALARM_2_REG_OFFS);
++
++	/* Setup nominal register access timing */
++	RTC_WRITE_REG(RTC_NOMINAL_TIMING, RTC_CLOCK_CORR_REG_OFFS);
++
++	/* Reset time register */
++#ifdef ERRATA_FE_3124064
++	RTC_WRITE_REG(0, RTC_STATUS_REG_OFFS);
++	RTC_WRITE_REG(0, RTC_STATUS_REG_OFFS);
++#endif
++	RTC_WRITE_REG(0, RTC_TIME_REG_OFFS);
++	udelay(10);
++
++	/* Reset Status register */
++	RTC_WRITE_REG((RTC_SZ_STATUS_ALARM1_MASK | RTC_SZ_STATUS_ALARM2_MASK), RTC_STATUS_REG_OFFS);
++	udelay(50);
++}
+diff --git a/drivers/rtc/mvebu_rtc.h b/drivers/rtc/mvebu_rtc.h
+new file mode 100644
+index 0000000..4d8c9d7
+--- /dev/null
++++ b/drivers/rtc/mvebu_rtc.h
+@@ -0,0 +1,59 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2016 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _MVEBU_RTC_H
++#define _MVEBU_RTC_H
++
++/* The RTC DRS revision 1.2 indicates that firmware should wait 5us after every register write
++   to the RTC hard macro, so that the required update can occur without holding off the system bus
++*/
++#define RTC_READ_REG(reg)		readl(rtc_base + reg)
++#define RTC_WRITE_REG(val, reg)		{ writel(val, rtc_base + reg); udelay(5); }
++
++#define RTC_NOMINAL_TIMING		0x2000
++
++#define RTC_STATUS_REG_OFFS		0x0
++#define RTC_IRQ_1_CONFIG_REG_OFFS	0x4
++#define RTC_IRQ_2_CONFIG_REG_OFFS	0x8
++#define RTC_TIME_REG_OFFS		0xC
++#define RTC_ALARM_1_REG_OFFS		0x10
++#define RTC_ALARM_2_REG_OFFS		0x14
++#define RTC_CLOCK_CORR_REG_OFFS		0x18
++#define RTC_TEST_CONFIG_REG_OFFS	0x1C
++#define MV_RTC0_SOC_OFFSET		0x80
++#define MV_RTC1_SOC_OFFSET		0x84
++
++#define RTC_WRCLK_PERIOD_OFFS		0
++#define RTC_WRCLK_PERIOD_MASK		(0xFFFF << RTC_WRCLK_PERIOD_OFFS)
++#define RTC_WRCLK_SETUP_OFFS		16
++#define RTC_WRCLK_SETUP_MASK		(0xFFFF << RTC_WRCLK_SETUP_OFFS)
++
++#define RTC_READ_OUTPUT_DELAY_OFFS	0
++#define RTC_READ_OUTPUT_DELAY_MASK	(0xFFFF << RTC_READ_OUTPUT_DELAY_OFFS)
++#define RTC_WRCLK_CLOCK_HIGH_OFFS	16
++#define RTC_WRCLK_CLOCK_HIGH_MASK	(0xFFFF << RTC_WRCLK_CLOCK_HIGH_OFFS)
++
++#define RTC_SZ_STATUS_ALARM1_MASK		0x1
++#define RTC_SZ_STATUS_ALARM2_MASK		0x2
++#define RTC_SZ_TIMING_RESERVED1_MASK		0xFFFF0000
++#define RTC_SZ_INTERRUPT1_INT1AE_MASK		0x1
++#define RTC_SZ_INTERRUPT1_RESERVED1_MASK	0xFFFFFFC0
++#define RTC_SZ_INTERRUPT2_INT2FE_MASK		0x2
++#define RTC_SZ_INTERRUPT2_RESERVED1_MASK	0xFFFFFFC0
++
++#endif /* _MVEBU_RTC_H */
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index e137921..bfdd274 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -36,7 +36,6 @@
+ #define CONFIG_MV_ETH_NETA
+ #define MV_INCLUDE_GPIO
+ #define MV_INCLUDE_I2C
+-#define MV_INCLUDE_RTC
+ #define MV_INCLUDE_PEX
+ */
+ #define CONFIG_GZIP_COMPRESSED
+@@ -56,6 +55,9 @@
+ #define COUNTER_FREQUENCY	(48000)
+ #define CONFIG_MSS_FREQUENCY	(384000)
+ #endif
++#if defined(CONFIG_MVEBU_RTC)
++#define ERRATA_FE_3124064
++#endif
+ 
+ #ifdef CONFIG_SPL_BUILD
+ /* SPL */
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index c3da21b..20ebebf 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -302,10 +302,8 @@
+ #endif
+ 
+ /* RTC */
+-#if defined(MV_INCLUDE_RTC)
++#if defined(CONFIG_MVEBU_RTC)
+ 	#define CONFIG_CMD_DATE
+-	#define CONFIG_RTC_MVEBU
+-	#define CONFIG_SYS_NVRAM_SIZE  0x00                     /* dummy */
+ 	#define CONFIG_SYS_NVRAM_BASE_ADDR DEVICE_CS1_BASE      /* dummy */
+ #endif
+ 
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 266cb8d..168e856 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -162,6 +162,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_SAR_REG_COMMON,
+ 	COMPAT_MVEBU_SAR_REG_AP806,
+ 	COMPAT_MVEBU_SAR_REG_CP110,
++	COMPAT_MVEBU_RTC_REG,
+ 
+ 	COMPAT_COUNT,
+ };
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 135b74c..28dadd4 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -124,6 +124,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_SAR_REG_COMMON, "marvell,sample-at-reset-common"),
+ 	COMPAT(MVEBU_SAR_REG_AP806, "marvell,sample-at-reset-ap806"),
+ 	COMPAT(MVEBU_SAR_REG_CP110, "marvell,sample-at-reset-cp110"),
++	COMPAT(MVEBU_RTC_REG, "marvell,real-time-clock"),
+ 
+ };
+ 
+-- 
+1.9.1
+

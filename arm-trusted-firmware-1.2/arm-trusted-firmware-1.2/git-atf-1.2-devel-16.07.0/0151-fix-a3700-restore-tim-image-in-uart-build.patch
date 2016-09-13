@@ -1,0 +1,44 @@
+From cfa22e2a01f226b9029ba257530ee1d86dafeb05 Mon Sep 17 00:00:00 2001
+From: Wilson Ding <dingwei@marvell.com>
+Date: Wed, 18 May 2016 10:51:37 +0800
+Subject: [PATCH 151/239] fix: a3700: restore tim image in uart build
+
+- The TIM image is missing in Armada3700 build folder,
+  which is one of the image components needed by the
+  recovery procedure. Makefile is supposed to get the
+  image filename from atf_ntim.txt and it defines a
+  variable to parse the filename in the atf_ntim.txt.
+  But the atf_ntim.txt is dynamically generated. It
+  doesn't exist when this variable is initialized (if
+  ATF performs a clean build).
+- This patch is to change this global variable as the
+  second-expansion of shell command in Makefile. So
+  that the shell will execute the enclosed command only
+  when the Makefile is referring this variable.
+
+Change-Id: Ifabb41a2255cb18b51310ca25d5a7a32a947328f
+Signed-off-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29775
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Victor Gu <xigu@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+---
+ Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index 40b1995..a8a2272 100644
+--- a/Makefile
++++ b/Makefile
+@@ -401,7 +401,7 @@ endif
+ 
+ SPL_BASENAME		:= $(shell basename $(SPL_IMAGE))
+ 
+-TIM_IMAGE		:= $(shell grep "Image Filename:" -m 1 $(DOIMAGE_CFG) | cut -c 17-)
++TIM_IMAGE		:= $$(grep "Image Filename:" -m 1 $(DOIMAGE_CFG) | cut -c 17-)
+ TIMBLDARGS		:= $(SECURE) $(BOOTDEV) $(IMAGESPATH) $(CLOCKSPATH) $(CLOCKSPRESET) \
+ 				$(PARTNUM) $(DOIMAGE_CFG) $(TIMNCFG) $(TIMNSIG)
+ TIMBLDUARTARGS		:= $(SECURE) UART $(IMAGESPATH) $(CLOCKSPATH) $(CLOCKSPRESET) \
+-- 
+1.9.1
+

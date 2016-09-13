@@ -1,0 +1,30 @@
+From 6b503f7e7a1eb8194762f90cd013ce1b0419ca7e Mon Sep 17 00:00:00 2001
+From: Victor Axelrod <victora@marvell.com>
+Date: Mon, 20 Jun 2016 20:59:19 +0300
+Subject: [PATCH 221/239] mv_ddr: Update version to 16.06.0
+
+Change-Id: I7ac02101c3a4ef3de25121ae55deab0f786c03f8
+Signed-off-by: Victor Axelrod <victora@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30591
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/ddr3_training_ip.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/marvell/mv_ddr/ddr3_training_ip.h b/drivers/marvell/mv_ddr/ddr3_training_ip.h
+index bb6c866..e1d2222 100644
+--- a/drivers/marvell/mv_ddr/ddr3_training_ip.h
++++ b/drivers/marvell/mv_ddr/ddr3_training_ip.h
+@@ -102,7 +102,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #include "ddr_topology_def.h"
+ #include "ddr_training_ip_db.h"
+ 
+-#define MV_DDR_VERSION "mv_ddr version: 16.05.0\n"
++#define MV_DDR_VERSION "mv_ddr version: 16.06.0\n"
+ 
+ #define MAX_CS_NUM		4
+ #define MAX_TOTAL_BUS_NUM	(MAX_INTERFACE_NUM * MAX_BUS_NUM)
+-- 
+1.9.1
+

@@ -1,0 +1,65 @@
+From 09c2c3b93804b12158cd92f2edc627deafd4726e Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 18 Mar 2015 18:14:41 +0200
+Subject: [PATCH 0155/1240] fdt: spl: a8k: enable fdt in SPL for armada-8k
+
+Change-Id: I565ff9ee8a599743154972b7a513d70e5c715f38
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17632
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/spl.c  | 4 +---
+ configs/mvebu_armada8k_defconfig | 6 +++---
+ 2 files changed, 4 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index b52ca02..9a6b30a 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -25,7 +25,6 @@ DECLARE_GLOBAL_DATA_PTR;
+ 
+ extern void static_dram_init(void);
+ 
+-#ifndef CONFIG_PALLADIUM
+ static int setup_fdt(void)
+ {
+ #ifdef CONFIG_OF_CONTROL
+@@ -38,7 +37,6 @@ static int setup_fdt(void)
+ #endif
+ 	return 0;
+ }
+-#endif
+ 
+ void board_init_f(ulong silent)
+ {
+@@ -48,8 +46,8 @@ void board_init_f(ulong silent)
+ 	if (silent)
+ 		gd->flags |= GD_FLG_SILENT;
+ 
+-#ifndef CONFIG_PALLADIUM
+ 	setup_fdt();
++#ifndef CONFIG_PALLADIUM
+ 	static_dram_init();
+ #endif
+ 	preloader_console_init();
+diff --git a/configs/mvebu_armada8k_defconfig b/configs/mvebu_armada8k_defconfig
+index a0d21b9..ce7e587 100644
+--- a/configs/mvebu_armada8k_defconfig
++++ b/configs/mvebu_armada8k_defconfig
+@@ -4,9 +4,9 @@ CONFIG_SPL=y
+ +S:CONFIG_TARGET_ARMADA_8K=y
+ +S:CONFIG_MVEBU_UART=y
+ +S:CONFIG_MVEBU_MK6_SUPPORT=y
+-CONFIG_OF_CONTROL=y
+-CONFIG_OF_EMBED=y
+-CONFIG_DEFAULT_DEVICE_TREE="armada-8k"
+++S:CONFIG_OF_CONTROL=y
+++S:CONFIG_OF_EMBED=y
+++S:CONFIG_DEFAULT_DEVICE_TREE="armada-8k"
+ CONFIG_ARMV8_PSCI=y
+ CONFIG_CMD_BDI
+ CONFIG_CMD_BOOTD
+-- 
+1.9.1
+

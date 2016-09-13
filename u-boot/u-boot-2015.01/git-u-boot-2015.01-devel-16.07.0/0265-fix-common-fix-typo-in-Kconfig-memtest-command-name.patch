@@ -1,0 +1,33 @@
+From 31f9cb7ef3e781bb22c410bdbd765351992307d1 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Mon, 27 Jul 2015 09:15:40 +0300
+Subject: [PATCH 0265/1240] fix: common: fix typo in Kconfig memtest command
+ name
+
+	Fixed command name to memtest instead of crc32
+
+Change-Id: If46ddfee3c282d41ce2266c9f86740dd5b97c5ff
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22183
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ common/Kconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/common/Kconfig b/common/Kconfig
+index 25f239a..639c249 100644
+--- a/common/Kconfig
++++ b/common/Kconfig
+@@ -134,7 +134,7 @@ config LOOPW
+ 	  Infinite write loop on address range
+ 
+ config CMD_MEMTEST
+-	bool "crc32"
++	bool "memtest"
+ 	help
+ 	  Simple RAM read/write test.
+ 
+-- 
+1.9.1
+

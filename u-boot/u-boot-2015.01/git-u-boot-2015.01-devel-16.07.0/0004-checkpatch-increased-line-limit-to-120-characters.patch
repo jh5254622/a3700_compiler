@@ -1,0 +1,27 @@
+From b783e46ae92fba1629b34d0a85d127153b09eb44 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 5 Feb 2014 13:38:45 +0200
+Subject: [PATCH 0004/1240] checkpatch: increased line limit to 120 characters
+
+Change-Id: I9dc44fd431d9771dfbb83afaa62420713395f74b
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ scripts/checkpatch.pl | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/scripts/checkpatch.pl b/scripts/checkpatch.pl
+index 74db2e2..c95f8e4 100755
+--- a/scripts/checkpatch.pl
++++ b/scripts/checkpatch.pl
+@@ -39,7 +39,7 @@ my %ignore_type = ();
+ my @ignore = ();
+ my $help = 0;
+ my $configuration_file = ".checkpatch.conf";
+-my $max_line_length = 80;
++my $max_line_length = 120;
+ my $ignore_perl_version = 0;
+ my $minimum_perl_version = 5.10.0;
+ 
+-- 
+1.9.1
+

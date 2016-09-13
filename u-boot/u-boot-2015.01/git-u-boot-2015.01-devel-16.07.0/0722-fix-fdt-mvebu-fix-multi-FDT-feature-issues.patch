@@ -1,0 +1,118 @@
+From cd165f513309e5d43abd8e30d4a1e1ebe54a421c Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Thu, 7 Jan 2016 04:36:28 +0800
+Subject: [PATCH 0722/1240] fix: fdt: mvebu: fix multi FDT feature issues
+
+	1. default board_id for multi FDT used to be value 0x10,
+	   which is only for A8K. for other SoC to use this feature
+	   this value need to be MV_DEFAULT_BOARD_ID, which is defined
+	   per SoC.
+	2. eeprom on different boards might use different address length,
+	   so eeprom address length need to be defined per SoC.
+	3. active_fdt_selection default value need to be updated per
+	   SoC, in case there is no valid multi FDT data in eeprom.
+
+Change-Id: I3bb8f18c2635b9c3392eb1fb35836d4721601d26
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26584
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Nitzan Zorea <nzorea@marvell.com>
+---
+ arch/arm/include/asm/arch-armada8k/board-info.h |  1 +
+ board/mvebu/common/fdt_eeprom.c                 | 23 +++++++++++++++--------
+ board/mvebu/common/fdt_eeprom.h                 |  2 +-
+ 3 files changed, 17 insertions(+), 9 deletions(-)
+
+diff --git a/arch/arm/include/asm/arch-armada8k/board-info.h b/arch/arm/include/asm/arch-armada8k/board-info.h
+index a0d0a94..f47fab5 100644
+--- a/arch/arm/include/asm/arch-armada8k/board-info.h
++++ b/arch/arm/include/asm/arch-armada8k/board-info.h
+@@ -29,6 +29,7 @@
+ #define MV_DEFAULT_BOARD_ID					 A8K_APN_806_DB
+ 
+ #define BOARD_DEV_TWSI_INIT_EEPROM 0x57
++#define MULTI_FDT_EEPROM_ADDR_LEN 2
+ #define DEFAULT_FDT_PER_BOARD { \
+ 				0x04,	/* default fdt configuration for apn-806-db board */		  \
+ 				0x01,	/* default fdt configuration for armada-8040-rz1-db board */      \
+diff --git a/board/mvebu/common/fdt_eeprom.c b/board/mvebu/common/fdt_eeprom.c
+index 0ab7b20..141e625 100644
+--- a/board/mvebu/common/fdt_eeprom.c
++++ b/board/mvebu/common/fdt_eeprom.c
+@@ -98,7 +98,8 @@ bool upload_fdt_from_eeprom(void)
+ 	if (!config_type_get(MV_CONFIG_FDT_FILE, &config_info))
+ 		debug("ERROR: Could not find MV_CONFIG_FDT_FILE\n");
+ 
+-	i2c_read(BOARD_DEV_TWSI_INIT_EEPROM, config_info.byte_num, 1,
++	i2c_read(BOARD_DEV_TWSI_INIT_EEPROM, config_info.byte_num,
++		 MULTI_FDT_EEPROM_ADDR_LEN,
+ 		 (uint8_t *)&fdt_config_val.fdt_blob, config_info.byte_cnt);
+ 	return true;
+ }
+@@ -112,11 +113,11 @@ void write_fdt_struct_to_eeprom(void)
+ 	reserve_length = fdt_config_val.length % I2C_PAGE_WRITE_SIZE;
+ 
+ 	/* i2c support on page write with size 32-byets */
+-	for (i = 0; i < size_of_loop; i++)
+-		i2c_write(BOARD_DEV_TWSI_INIT_EEPROM, i*I2C_PAGE_WRITE_SIZE, 1,
++	for (i = 0; i < size_of_loop; i++) {
++		i2c_write(BOARD_DEV_TWSI_INIT_EEPROM, i*I2C_PAGE_WRITE_SIZE, MULTI_FDT_EEPROM_ADDR_LEN,
+ 			  (uint8_t *)&(fdt_config_val) + i*I2C_PAGE_WRITE_SIZE, I2C_PAGE_WRITE_SIZE);
+-
+-	i2c_write(BOARD_DEV_TWSI_INIT_EEPROM, i*I2C_PAGE_WRITE_SIZE, 1,
++	}
++	i2c_write(BOARD_DEV_TWSI_INIT_EEPROM, i*I2C_PAGE_WRITE_SIZE, MULTI_FDT_EEPROM_ADDR_LEN,
+ 		  (uint8_t *)&(fdt_config_val) + i*I2C_PAGE_WRITE_SIZE, reserve_length);
+ }
+ 
+@@ -128,12 +129,17 @@ u8 *mvebu_fdt_config_init(void)
+ 	struct fdt_config_types_info config_info;
+ 	uint32_t calculate_checksum;
+ 
++	/* update default active_fdt_selection, just in case there is no valid data in eeprom,
++	 * and need to write default active_fdt_selection per SoC.
++	 */
++	board_cfg->active_fdt_selection = get_default_fdt_config_id(MV_DEFAULT_BOARD_ID);
++
+ 	init_func_i2c();
+ 	/* read pattern from EEPROM */
+ 	if (!config_type_get(MV_CONFIG_VERIFICATION_PATTERN, &config_info))
+ 		error("Could not find MV_CONFIG_VERIFICATION_PATTERN\n");
+ 
+-	i2c_read(BOARD_DEV_TWSI_INIT_EEPROM, config_info.byte_num, 1,
++	i2c_read(BOARD_DEV_TWSI_INIT_EEPROM, config_info.byte_num, MULTI_FDT_EEPROM_ADDR_LEN,
+ 		 (uint8_t *)&eeprom_buffer.pattern, config_info.byte_cnt);
+ 
+ 	/* check if pattern in EEPROM is valid */
+@@ -147,11 +153,12 @@ u8 *mvebu_fdt_config_init(void)
+ 	if (!config_type_get(MV_CONFIG_LENGTH, &config_info))
+ 		error("Could not find MV_CONFIG_LENGTH\n");
+ 
+-	i2c_read(BOARD_DEV_TWSI_INIT_EEPROM, config_info.byte_num, 1,
++	i2c_read(BOARD_DEV_TWSI_INIT_EEPROM, config_info.byte_num, MULTI_FDT_EEPROM_ADDR_LEN,
+ 		 (uint8_t *)&eeprom_buffer.length, config_info.byte_cnt);
+ 
+ 	/* read all the struct from EEPROM according to length field */
+-	i2c_read(BOARD_DEV_TWSI_INIT_EEPROM, 0, 1, (uint8_t *)&eeprom_buffer, eeprom_buffer.length);
++	i2c_read(BOARD_DEV_TWSI_INIT_EEPROM, 0, MULTI_FDT_EEPROM_ADDR_LEN,
++		 (uint8_t *)&eeprom_buffer, eeprom_buffer.length);
+ 	/* calculate checksum and compare with the checksum that we read */
+ 	calculate_checksum = mvebu_checksum8((uint8_t *)&eeprom_buffer.pattern, (uint32_t) eeprom_buffer.length - 4);
+ 
+diff --git a/board/mvebu/common/fdt_eeprom.h b/board/mvebu/common/fdt_eeprom.h
+index 0343fe1..94a6302 100644
+--- a/board/mvebu/common/fdt_eeprom.h
++++ b/board/mvebu/common/fdt_eeprom.h
+@@ -97,7 +97,7 @@ struct  fdt_config_types_info {
+ 				0x00000000,				     /* checksum */			  \
+ 				0xfecadefa,				     /* EEPROM pattern */		  \
+ 				0x002c,					     /* length = 44 bytes */		  \
+-				{0x10,					     /* board ID */			  \
++				{MV_DEFAULT_BOARD_ID,		/* board ID */			  \
+ 				{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,					  \
+ 				 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,				  \
+ 				 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00} },/* reserve_man_information */  \
+-- 
+1.9.1
+

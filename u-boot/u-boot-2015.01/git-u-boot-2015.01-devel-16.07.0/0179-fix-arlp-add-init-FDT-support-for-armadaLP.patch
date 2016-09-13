@@ -1,0 +1,62 @@
+From 63fb2813f16239135c2ae8fe11c587dbd1a648d0 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Mon, 13 Apr 2015 16:02:54 +0300
+Subject: [PATCH 0179/1240] fix: arlp: add init FDT support for armadaLP
+
+	add empty FDT file for armadaLP
+	modify armadalp_defconfig to support FDT feature
+
+Change-Id: I18bee29c68811fe86a14e4acd96686b5efe25d57
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/18287
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/Makefile            |  1 +
+ arch/arm/dts/armada-lp.dts       | 10 ++++++++++
+ configs/mvebu_armadalp_defconfig |  3 +++
+ 3 files changed, 14 insertions(+)
+ create mode 100644 arch/arm/dts/armada-lp.dts
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index 2b540fe..fe08ae6 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -52,6 +52,7 @@ dtb-$(CONFIG_AM33XX) += am335x-boneblack.dtb
+ dtb-$(CONFIG_SOCFPGA) += socfpga_cyclone5_socrates.dtb
+ 
+ dtb-$(CONFIG_MVEBU) += armada-385-db.dtb
++dtb-$(CONFIG_MVEBU) += armada-lp.dtb
+ dtb-$(CONFIG_MVEBU) += armada-8k.dtb
+ 
+ targets += $(dtb-y)
+diff --git a/arch/arm/dts/armada-lp.dts b/arch/arm/dts/armada-lp.dts
+new file mode 100644
+index 0000000..b31e450
+--- /dev/null
++++ b/arch/arm/dts/armada-lp.dts
+@@ -0,0 +1,10 @@
++
++/dts-v1/;
++
++/ {
++	model = "Marvell Armada_LP Development Board";
++	compatible = "marvell,armada-lp-db", "marvell,armada-lp";
++
++	#address-cells = <2>;
++	#size-cells = <1>;
++};
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index edd3f10..48d5cdb 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -8,3 +8,6 @@ CONFIG_CMD_RUN=y
+ CONFIG_CMD_EDITENV=y
+ CONFIG_CMD_SAVEENV=y
+ CONFIG_CMD_MEMORY=y
+++S:CONFIG_OF_CONTROL=y
+++S:CONFIG_OF_EMBED=y
+++S:CONFIG_DEFAULT_DEVICE_TREE="armada-lp"
+-- 
+1.9.1
+

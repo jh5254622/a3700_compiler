@@ -1,0 +1,33 @@
+From fb2460ce471afbb0e47bc5cfae6d920968a130d1 Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Tue, 14 Jun 2016 16:54:53 +0300
+Subject: [PATCH 1203/1240] fix: misc: add ethprime to default env params
+
+ethprime param was not defined by default (after resetenv command).
+This patch defined it so it will be added uopon env params reset.
+
+Change-Id: I9e33e6f9fa3fbb5a6cbbf2e8edb8578beec02f9d
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30466
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ include/configs/mvebu-common.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index f6de82f..5c5d86b 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -400,7 +400,7 @@
+ 	#define CONFIG_ETH1ADDR		00:00:00:00:51:82
+ 	#define CONFIG_HAS_ETH2
+ 	#define CONFIG_ETH2ADDR		00:00:00:00:51:83
+-	#define ENV_ETH_PRIME           "e1000#0"
++	#define CONFIG_ETHPRIME         "egiga0"
+ 	#define CONFIG_PHY_GIGE			/* Include GbE speed/duplex detection */
+ 
+ #endif /* CONFIG_CMD_NET */
+-- 
+1.9.1
+

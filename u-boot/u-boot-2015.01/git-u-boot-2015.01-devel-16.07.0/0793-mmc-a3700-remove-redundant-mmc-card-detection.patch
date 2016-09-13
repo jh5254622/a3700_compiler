@@ -1,0 +1,71 @@
+From da8ba124a91222b0017c38828c48555fcdea5174 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Fri, 29 Jan 2016 03:31:14 +0800
+Subject: [PATCH 0793/1240] mmc: a3700: remove redundant mmc card detection
+
+The Xenon MMC private card detection is removed because
+1. The mainline mmc will use "mmc rescan", "mmc info"
+or "mmc part" to scan the mmc devices.
+2. the user could use "mmc info" or "mmc part" directly to
+check if the scan is successful, or use them later after
+"mmc rescan".
+In general, the private Xenon MMC card detection is not
+needed, which is non-standard.
+
+Change-Id: I6384f54ed98d35ae0c41299566e086d1fd3362ec
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27066
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/mmc/xenon_mmc.c | 26 --------------------------
+ 1 file changed, 26 deletions(-)
+
+diff --git a/drivers/mmc/xenon_mmc.c b/drivers/mmc/xenon_mmc.c
+index 1200e76..1a59507 100644
+--- a/drivers/mmc/xenon_mmc.c
++++ b/drivers/mmc/xenon_mmc.c
+@@ -712,9 +712,6 @@ static void xenon_mmc_set_ios(struct mmc *mmc)
+ 
+ static int xenon_mmc_init(struct mmc *mmc)
+ {
+-	u32 status;
+-	u8  var;
+-	u32 timeout = 1000; /* Wait max 100ms */
+ 	struct xenon_mmc_cfg *mmc_cfg = mmc->priv;
+ 
+ 	debug_enter();
+@@ -732,29 +729,6 @@ static int xenon_mmc_init(struct mmc *mmc)
+ 		}
+ 	}
+ 
+-	/* Detect card */
+-	if (mmc_cfg->quirks & SDHCI_QUIRK_NO_CD) {
+-		var = xenon_mmc_readb(mmc_cfg, SDHCI_HOST_CONTROL);
+-		var |= SDHCI_CTRL_CD_TEST_INS | SDHCI_CTRL_CD_TEST;
+-		xenon_mmc_writeb(mmc_cfg, SDHCI_HOST_CONTROL, var);
+-
+-		status = xenon_mmc_readl(mmc_cfg, SDHCI_PRESENT_STATE);
+-		while (((!(status & SDHCI_CARD_PRESENT)) ||
+-		    (!(status & SDHCI_CARD_STATE_STABLE))) && timeout) {
+-			timeout--;
+-			udelay(100);
+-			status = xenon_mmc_readl(mmc_cfg, SDHCI_PRESENT_STATE);
+-		}
+-
+-		var &= ~(SDHCI_CTRL_CD_TEST_INS | SDHCI_CTRL_CD_TEST);
+-		xenon_mmc_writeb(mmc_cfg, SDHCI_HOST_CONTROL, var);
+-	}
+-
+-	if (timeout)
+-		printf("SD/eMMC card is detected\n");
+-	else
+-		printf("NO SD/eMMC card detected\n");
+-
+ 	/* Disable auto clock gating during init */
+ 	xenon_mmc_set_acg(mmc_cfg, false);
+ 
+-- 
+1.9.1
+

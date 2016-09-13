@@ -1,0 +1,35 @@
+From 63699da61aaa9727edebc69f95eefefc8bd39592 Mon Sep 17 00:00:00 2001
+From: Joe Zhou <shjzhou@marvell.com>
+Date: Tue, 4 Aug 2015 15:58:08 +0800
+Subject: [PATCH 0411/1240] fix: arlp: UART linux boot settings for Palladium
+
+	This string is used when uboot loading kernel. It is
+	inserted into kernel FDT file. Wrong setting can cause
+	kernel console problem.
+
+Change-Id: I9a9a324e9bb19710753be8182a5368231e1c1a4d
+Signed-off-by: Joe Zhou <shjzhou@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22490
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Lior Amsalem <alior@marvell.com>
+---
+ include/configs/armadalp.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/configs/armadalp.h b/include/configs/armadalp.h
+index 07c642d..c43eed6 100644
+--- a/include/configs/armadalp.h
++++ b/include/configs/armadalp.h
+@@ -106,7 +106,7 @@ extern char __end_of_spl[];
+ #define CONFIG_BAUDRATE                 4000
+ 
+ #undef CONFIG_BOOTARGS
+-#define CONFIG_BOOTARGS			"console=ttyS0,5652 earlycon=uart8250,mmio32,0xf0512000 mem=128M"
++#define CONFIG_BOOTARGS			"console=ttyS0,300 earlycon=arlp_uart,0xd0012000"
+ 
+ #undef  CONFIG_EXTRA_ENV_SETTINGS
+ #define CONFIG_EXTRA_ENV_SETTINGS	"kernel_addr=0x107ffc0\0"	\
+-- 
+1.9.1
+

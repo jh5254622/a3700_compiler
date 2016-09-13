@@ -1,0 +1,61 @@
+From e3d6b058bcf4ca625ccf8313fd152a4fcbf9437e Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 30 Aug 2015 10:09:40 +0300
+Subject: [PATCH 0379/1240] dram-pcie: added delay between mac/phy init and cfg
+ cycle
+
+Change-Id: I67745739e8fc2a2bfd38cd2c82059a33a0fbd765
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23295
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/dram_over_pci.c | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/arch/arm/cpu/mvebu-common/dram_over_pci.c b/arch/arm/cpu/mvebu-common/dram_over_pci.c
+index dbb69b0..1760ca7 100644
+--- a/arch/arm/cpu/mvebu-common/dram_over_pci.c
++++ b/arch/arm/cpu/mvebu-common/dram_over_pci.c
+@@ -69,6 +69,9 @@
+ #define RFU_WIN_PEX_CFG_ADDR_SHIFT	16
+ #define RFU_WIN_PEX_ALR_ADDR_OFFSET 4
+ 
++/* MAC regsisters */
++#define	PCIE_DEBUG_STATUS		(PCI_CONFIGURATION_OFFSET + 0x1A64)
++
+ void dram_over_pci_window_config(void)
+ {
+ 	u32 alr, ahr, val;
+@@ -118,6 +121,7 @@ void dram_over_pci_window_config(void)
+ 
+ void dram_over_pci_init(const void *fdt_blob)
+ {
++	int linkup_timeout_ms = 1000;
+ 	struct pci_controller *hose;
+ 
+ 	dram_over_pci_window_config();
+@@ -126,6 +130,20 @@ void dram_over_pci_init(const void *fdt_blob)
+ 	udelay(PCI_DEVICE_INIT_DELAY);
+ 	comphy_init(fdt_blob);
+ 
++	/* wait untill link training is done */
++	while (linkup_timeout_ms) {
++		if ((readl(PCIE_DEBUG_STATUS) & 0x7F) == 0x7E)
++			break;
++		udelay(1000);
++		linkup_timeout_ms--;
++	}
++
++	/* Check for linkup */
++	if (linkup_timeout_ms == 0) {
++		error("PCIe didn't reach linkup");
++		printf("LTSSM reg = 0x%08x\n", readl(PCIE_DEBUG_STATUS));
++	}
++
+ 	pci_init();
+ 
+ 	/* set device PCIE bars:
+-- 
+1.9.1
+

@@ -1,0 +1,161 @@
+From 41dccdfb4c56b95fe1af88f9ee01861e656a82a9 Mon Sep 17 00:00:00 2001
+From: Gustavo Zacarias <gustavo.zacarias@free-electrons.com>
+Date: Wed, 27 Jan 2016 08:40:38 -0300
+Subject: [PATCH 43/66] dt: pull from upstream
+
+this commit syncs the dt package to mainline BR2 and fixes unavailable
+source site to a site maintained by Fedora
+
+Change-Id: I3ae5f29e3ec431f9d4cfcae6a3e4129746771be4
+Signed-off-by: Gustavo Zacarias <gustavo.zacarias@free-electrons.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27522
+Reviewed-by: Lior Amsalem <alior@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ package/Config.in                       |  2 +-
+ package/dt/0001-adjust-os-symlink.patch | 20 ++++++++++++++
+ package/dt/Config.in                    |  8 ++++++
+ package/dt/dt.hash                      |  6 +++++
+ package/dt/dt.mk                        | 48 ++++++++++++++++++++-------------
+ 5 files changed, 64 insertions(+), 20 deletions(-)
+ create mode 100644 package/dt/0001-adjust-os-symlink.patch
+ create mode 100644 package/dt/dt.hash
+
+diff --git a/package/Config.in b/package/Config.in
+index eadd145..13c7473 100644
+--- a/package/Config.in
++++ b/package/Config.in
+@@ -64,8 +64,8 @@ menu "Debugging, profiling and benchmark"
+ 	source "package/cache-calibrator/Config.in"
+ 	source "package/dhrystone/Config.in"
+ 	source "package/dmalloc/Config.in"
+-        source "package/dt/Config.in"
+ 	source "package/dropwatch/Config.in"
++	source "package/dt/Config.in"
+ 	source "package/dstat/Config.in"
+ 	source "package/duma/Config.in"
+ 	source "package/fio/Config.in"
+diff --git a/package/dt/0001-adjust-os-symlink.patch b/package/dt/0001-adjust-os-symlink.patch
+new file mode 100644
+index 0000000..8702a79
+--- /dev/null
++++ b/package/dt/0001-adjust-os-symlink.patch
+@@ -0,0 +1,20 @@
++Don't force build-dir-in-build-dir logic, symlink the os-specific SCSI
++support file in place.
++
++Status: not suitable for upstream.
++
++Signed-off-by: Gustavo Zacarias <gustavo.zacarias@free-electrons.com>
++
++diff -Nura dt.v18.32.orig/Makefile.linux dt.v18.32/Makefile.linux
++--- a/dt.v18.32.orig/Makefile.linux	2016-01-26 09:10:03.939963780 -0300
+++++ b/dt.v18.32/Makefile.linux	2016-01-26 09:10:27.140763863 -0300
++@@ -129,7 +129,7 @@
++ 	    echo "Please specify OS={aix,linux,hpux,solaris,windows}"; \
++ 	    exit 1; \
++ 	fi; \
++-	ln -sf ../scsilib-$(OS).c scsilib.c
+++	ln -sf scsilib-$(OS).c scsilib.c
++ 
++ print:;
++ 		@$(PRINTER) $(PRINTFLAGS) $(ALL_CFILES)
++
+diff --git a/package/dt/Config.in b/package/dt/Config.in
+index 6728d07..848e251 100755
+--- a/package/dt/Config.in
++++ b/package/dt/Config.in
+@@ -1,5 +1,13 @@
++comment "dt needs a (e)glibc or uclibc toolchain w/ threads"
++	depends on BR2_USE_MMU
++	depends on !BR2_TOOLCHAIN_HAS_THREADS || BR2_TOOLCHAIN_USES_MUSL
++
+ config BR2_PACKAGE_DT
+ 	bool "dt"
++	depends on BR2_USE_MMU # fork()
++	depends on BR2_TOOLCHAIN_HAS_THREADS
++	# Build fails because of several BSDisms
++	depends on !BR2_TOOLCHAIN_USES_MUSL
+ 	help
+ 	  dt is a generic data test program used to verify proper
+ 	  operation of peripherals, file systems, device drivers,
+diff --git a/package/dt/dt.hash b/package/dt/dt.hash
+new file mode 100644
+index 0000000..30b783d
+--- /dev/null
++++ b/package/dt/dt.hash
+@@ -0,0 +1,6 @@
++# From http://pkgs.fedoraproject.org/repo/pkgs/dt/dt-source-v18.32.tar.gz
++# (directory name is md5 hash)
++md5	3054aeaaba047a1dbe90c2132a382ee2	dt-source-v18.32.tar.gz
++# Calculated based on the hash above
++sha256	10d164676e918a4d07f233bcd11e4cb6bfd1052c996182cd1827ccd0c063fcc6	dt-source-v18.32.tar.gz
++
+diff --git a/package/dt/dt.mk b/package/dt/dt.mk
+index 9b1e2fc..290ff91 100755
+--- a/package/dt/dt.mk
++++ b/package/dt/dt.mk
+@@ -1,30 +1,40 @@
+-#############################################################
++################################################################################
+ #
+ # dt
+ #
+-#############################################################
+-DT_VERSION:=15.14
+-DT_SOURCE:=dt-source.tar.gz
+-DT_SITE:=http://www.scsifaq.org/RMiller_Tools/ftp/dt
+-DT_SUBDIR = dt.d-WIP
++################################################################################
+ 
+-define DT_BUILD_CMDS
+-	$(MAKE) -C $(@D)/$(DT_SUBDIR) CC="$(TARGET_CC)" LD="$(TARGET_LD)" CFLAGS="$(TARGET_CFLAGS) -D__GNUC__ -DFIFO -DMMAP -D__linux__ -D_GNU_SOURCE" makedep
+-	$(MAKE) -C $(@D)/$(DT_SUBDIR) CC="$(TARGET_CC)" LD="$(TARGET_LD)" CFLAGS="$(TARGET_CFLAGS) -DFIFO -DMMAP -DTTY -D__linux__ -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64"
+-endef
++DT_VERSION = v18.32
++DT_SITE = http://pkgs.fedoraproject.org/repo/pkgs/dt/$(DT_SOURCE)/3054aeaaba047a1dbe90c2132a382ee2
++DT_SOURCE = dt-source-$(DT_VERSION).tar.gz
++DT_SUBDIR = dt.$(DT_VERSION)
++DT_LICENSE = ISC-like
++DT_LICENSE_FILES = $(DT_SUBDIR)/LICENSE
+ 
+-define DT_CONFIGURE_CMDS
+-	cd $(@D)/$(DT_SUBDIR); ln -sf Makefile.linux Makefile
+-endef
++DT_CFLAGS = \
++	-std=c99 \
++	-DMMAP \
++	-D__linux__ \
++	-D_GNU_SOURCE \
++	-D_FILE_OFFSET_BITS=64 \
++	-DTHREADS \
++	-DSCSI
+ 
+-define DT_INSTALL_TARGET_CMDS
+-	install -D $(@D)/${DT_SUBDIR}/dt $(TARGET_DIR)/usr/bin/dt
++# uClibc doesn't provide POSIX AIO
++ifeq ($(BR2_TOOLCHAIN_USES_UCLIBC),)
++DT_CFLAGS += -DAIO
++endif
++
++define DT_BUILD_CMDS
++	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D)/$(DT_SUBDIR) -f Makefile.linux \
++	$(TARGET_CONFIGURE_OPTS) \
++	CFLAGS="$(TARGET_CFLAGS) $(DT_CFLAGS)" \
++	OS=linux
+ endef
+ 
+-define DT_CLEAN_CMDS
+-	rm -f $(TARGET_DIR)/usr/bin/dt
+-	-$(MAKE) -C $(@D)/${DT_SUBDIR} clean
++define DT_INSTALL_TARGET_CMDS
++	$(INSTALL) -D -m 0755 $(@D)/$(DT_SUBDIR)/dt \
++		$(TARGET_DIR)/usr/bin/dt
+ endef
+ 
+ $(eval $(generic-package))
+-$(eval $(package,dt))
+-- 
+1.9.1
+

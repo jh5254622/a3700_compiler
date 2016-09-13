@@ -1,0 +1,108 @@
+From af5e9edbbf8f84178d75fed82cc3b655e3cc6676 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 28 Jul 2014 15:54:08 +0300
+Subject: [PATCH 0046/1240] a8k: gtc: Added initial support for generic timer
+
+	We only need to kick off the counter mechanism into action.
+	All the rest is handled by u-boot stack. The coutner frequency
+	is set at start.S.
+	We also consider the case where bootrom or a binary header is
+	previously intialized the counter
+
+Change-Id: I3a9fb06e24c6cd329b57603a891070da2fa82a08
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/9686
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Makefile             |  2 +-
+ arch/arm/cpu/mvebu-common/generic_timer.c      | 38 ++++++++++++++++++++++++++
+ arch/arm/include/asm/arch-armada8k/regs-base.h |  3 +-
+ include/configs/armada8k.h                     |  2 +-
+ 4 files changed, 42 insertions(+), 3 deletions(-)
+ create mode 100644 arch/arm/cpu/mvebu-common/generic_timer.c
+
+diff --git a/arch/arm/cpu/mvebu-common/Makefile b/arch/arm/cpu/mvebu-common/Makefile
+index 90efbbf..ce7f892 100644
+--- a/arch/arm/cpu/mvebu-common/Makefile
++++ b/arch/arm/cpu/mvebu-common/Makefile
+@@ -22,6 +22,6 @@ obj-y += soc-init.o
+ obj-y += misc.o
+ obj-y += mpp.o
+ obj-$(CONFIG_AURORA_TIMER) += timer_aurora.o
+-obj-$(CONFIG_AURORA_2_TIMER) += timer_aurora_2.o
++obj-$(CONFIG_GENERIC_TIMER) += generic_timer.o
+ obj-$(CONFIG_MVEBU_CA9) += platform.o
+ obj-$(CONFIG_ADEC) += adec.o
+diff --git a/arch/arm/cpu/mvebu-common/generic_timer.c b/arch/arm/cpu/mvebu-common/generic_timer.c
+new file mode 100644
+index 0000000..b3696bd
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/generic_timer.c
+@@ -0,0 +1,38 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <asm/io.h>
++
++#define GTC_CNTCR		0x0
++#define GTC_ENABLE_BIT		0x1
++
++/* Currently timer is not needed for ARMv8 */
++int timer_init(void)
++{
++	u32 gtc_cntcr = readl(MVEBU_GENERIC_TIMER_BASE + GTC_CNTCR);
++
++	/* Check if earlier SW enabled the generic timer */
++	if ((gtc_cntcr & GTC_ENABLE_BIT) == 0x0) {
++		gtc_cntcr |= GTC_ENABLE_BIT;
++		writel(gtc_cntcr, MVEBU_GENERIC_TIMER_BASE + GTC_CNTCR);
++	}
++
++	return 0;
++}
+diff --git a/arch/arm/include/asm/arch-armada8k/regs-base.h b/arch/arm/include/asm/arch-armada8k/regs-base.h
+index 19305e3..563cc63 100644
+--- a/arch/arm/include/asm/arch-armada8k/regs-base.h
++++ b/arch/arm/include/asm/arch-armada8k/regs-base.h
+@@ -37,5 +37,6 @@
+ #define MVEBU_GICD_BASE		(MVEBU_REGS_BASE + 210000)
+ #define MVEBU_GICC_BASE		(MVEBU_REGS_BASE + 220000)
+ 
++#define MVEBU_GENERIC_TIMER_BASE	(MVEBU_REGS_BASE + 0x581000)
+ 
+-#endif	/* _ARMADA8K_H_ */
++#endif	/* _REGS_BASE_H_ */
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index cc4d777..a11ea6b 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -44,7 +44,7 @@
+ #define MV_INCLUDE_PEX
+ */
+ 
+-#define CONFIG_AURORA_2_TIMER
++#define CONFIG_GENERIC_TIMER
+ #define CONFIG_REMAKE_ELF
+ 
+ /* Clock Definitions */
+-- 
+1.9.1
+

@@ -1,0 +1,59 @@
+From cb950c50abc50c1bee9d7d4d282a76cefa268331 Mon Sep 17 00:00:00 2001
+From: Terry Zhou <bjzhou@marvell.com>
+Date: Wed, 8 Jun 2016 16:10:39 +0800
+Subject: [PATCH 1198/1240] fix: usb: fix the bug when set value to GPIO VBUS
+ pin.
+
+- the definition of FDT_GPIO_ACTIVE_HIGH is 0, which will cause all
+  GPIOs failed when doing "gpio.flags & FDT_GPIO_ACTIVE_HIGH"
+- we should set the real value to the pin register, not use the flags
+
+Change-Id: I8987c926fc537c65d7a1e9430f31678b9009d0e2
+Signed-off-by: Terry Zhou <bjzhou@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30367
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/usb/host/xhci-mvebu.c | 10 ++--------
+ include/fdtdec.h              |  4 ++--
+ 2 files changed, 4 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/usb/host/xhci-mvebu.c b/drivers/usb/host/xhci-mvebu.c
+index 78ea086..d0357af 100644
+--- a/drivers/usb/host/xhci-mvebu.c
++++ b/drivers/usb/host/xhci-mvebu.c
+@@ -42,14 +42,8 @@ static void usb_vbus_init(int node)
+ 	struct fdt_gpio_state gpio;
+ 	fdtdec_decode_gpio(gd->fdt_blob, node, "gpio-vbus", &gpio);
+ 	fdtdec_setup_gpio(&gpio);
+-	if (fdt_gpio_isvalid(&gpio)) {
+-		if (gpio.flags & FDT_GPIO_ACTIVE_LOW)
+-			gpio_direction_output(gpio.gpio, FDT_GPIO_ACTIVE_LOW);
+-		else if (gpio.flags & FDT_GPIO_ACTIVE_HIGH)
+-			gpio_direction_output(gpio.gpio, FDT_GPIO_ACTIVE_HIGH);
+-		else
+-			error("Error: GPIO flag is wrong\n");
+-	}
++	if (fdt_gpio_isvalid(&gpio))
++		gpio_direction_output(gpio.gpio, (gpio.flags & FDT_GPIO_ACTIVE_LOW ? 0 : 1));
+ #endif
+ }
+ 
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index e4b9f00..6a9a867 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -174,8 +174,8 @@ enum fdt_compat_id {
+ enum {
+ 	FDT_GPIO_NONE = -1U,	/* an invalid GPIO used to end our list */
+ 
+-	FDT_GPIO_ACTIVE_HIGH = 0,
+-	FDT_GPIO_ACTIVE_LOW = 1 << 0,	/* input is active low (else high) */
++	FDT_GPIO_ACTIVE_LOW = 1 << 0,	/* input is active low */
++	FDT_GPIO_ACTIVE_HIGH = 1 << 1,	/* input is active high */
+ };
+ 
+ /* This is the state of a GPIO pin as defined by the fdt */
+-- 
+1.9.1
+

@@ -1,0 +1,32 @@
+From 3211c7c2a3af898246844e70da3b0ce491cdecce Mon Sep 17 00:00:00 2001
+From: Ahmad Abbas <ahmada@marvell.com>
+Date: Tue, 12 Jan 2016 18:24:17 +0200
+Subject: [PATCH 35/66] armv7: config: enabled using hard compiler for armv7
+ tiny le.
+
+enabled compiling with armv7 le hard compiler for
+armv7_tiny_le_defconfig.
+
+Change-Id: I9fbc8049be0bbadce60f11afca7c7d2b35897b67
+Signed-off-by: Ahmad Abbas <ahmada@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26742
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Tested-by: Shadi Ammouri <shadi@marvell.com>
+---
+ configs/mvebu_armv7_tiny_le_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/configs/mvebu_armv7_tiny_le_defconfig b/configs/mvebu_armv7_tiny_le_defconfig
+index 3f345c7..ec53662 100644
+--- a/configs/mvebu_armv7_tiny_le_defconfig
++++ b/configs/mvebu_armv7_tiny_le_defconfig
+@@ -1,5 +1,6 @@
+ BR2_arm=y
+ BR2_cortex_a9=y
++BR2_ARM_EABIHF=y
+ BR2_ARM_FPU_VFPV3=y
+ BR2_TOOLCHAIN_EXTERNAL=y
+ BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y
+-- 
+1.9.1
+

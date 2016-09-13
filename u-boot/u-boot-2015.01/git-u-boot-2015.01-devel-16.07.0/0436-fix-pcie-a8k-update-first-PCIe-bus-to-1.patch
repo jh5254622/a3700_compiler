@@ -1,0 +1,35 @@
+From 385041657b2ed89b11216fe39f45b7e8b5a4311e Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 15 Oct 2015 09:43:30 +0300
+Subject: [PATCH 0436/1240] fix: pcie: a8k: update first PCIe bus to 1
+
+- Set first PCIe bus to 1. Because when set to 0, Linux bus enumeration
+  for PCIe bridge does not work.
+
+Change-Id: I28c94b03b14e4caa16bc88ba404a9005bfda2774
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24021
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ drivers/pci/pci_mvebu.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/pci/pci_mvebu.c b/drivers/pci/pci_mvebu.c
+index bea98a0..c50a16a 100644
+--- a/drivers/pci/pci_mvebu.c
++++ b/drivers/pci/pci_mvebu.c
+@@ -85,7 +85,9 @@
+ #define PCIE_LINK_CTL_OFF(x)	(x + 0x70)
+ 
+ #define MAX_PCIE_PORTS		10
+-#ifdef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
++#ifdef CONFIG_TARGET_ARMADA_8K
++/* Set First PCIe Bus to 1. Because when set to 0, Linux bus enumeration
++** for PCIe bridge does not work. */
+ #define FIRST_PCI_BUS		1
+ #else
+ #define FIRST_PCI_BUS		0
+-- 
+1.9.1
+

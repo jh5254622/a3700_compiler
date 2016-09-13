@@ -1,0 +1,51 @@
+From 7bb17fc32838589cd783b1a330b8e9e649269ef2 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Wed, 3 Feb 2016 21:10:30 +0200
+Subject: [PATCH 0797/1240] nand: cp110: Fix compilation dependencies for
+ PXA3xx nand driver
+
+Change-Id: If53e70ab5699db4838a0ed3df746125afb39e112
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27205
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Kconfig | 4 +++-
+ include/configs/mvebu-common.h    | 4 +---
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index fbeacca..246977f 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -102,7 +102,9 @@ choice
+ 
+ config MVEBU_NAND_BOOT
+ 	bool "NAND flash boot"
+-	depends on MVEBU_NAND
++	depends on (MVEBU_NAND || NAND_PXA3XX)
++	help
++	  Enable boot from NAND
+ 
+ config MVEBU_SPI_BOOT
+ 	bool "SPI flash boot"
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 0fd5bef..26bd023 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -398,11 +398,9 @@
+ #endif
+ 
+ /* NAND */
+-#ifdef CONFIG_MVEBU_NAND
++#if defined(CONFIG_MVEBU_NAND) || defined(CONFIG_NAND_PXA3XX)
+ 	#define CONFIG_SYS_MAX_NAND_DEVICE 1
+ 	#define CONFIG_SYS_NAND_MAX_CHIPS 1
+-	#define CONFIG_NAND_ECC_STRENGTH 4
+-	#define CONFIG_NAND_ECC_STEP_SIZE 512
+ 	#define CONFIG_SYS_NAND_ONFI_DETECTION
+ 	#define CONFIG_SYS_NAND_USE_FLASH_BBT
+ #endif
+-- 
+1.9.1
+

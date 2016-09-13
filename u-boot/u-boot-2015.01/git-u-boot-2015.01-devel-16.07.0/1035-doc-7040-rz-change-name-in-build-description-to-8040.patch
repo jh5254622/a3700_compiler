@@ -1,0 +1,33 @@
+From feb0047d5088ca3837d9f11e1a11b32b4f3c9116 Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Wed, 13 Apr 2016 16:18:12 +0300
+Subject: [PATCH 1035/1240] doc: 7040-rz: change name in build description to
+ 8040-rz
+
+this is aligned with the ReleaseNotes naming
+
+Change-Id: I88ecb8283db2fe0203fded2251e8a874547bf844
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29003
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Neta Zur Hershkovits <neta@marvell.com>
+---
+ doc/mvebu/build.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/doc/mvebu/build.txt b/doc/mvebu/build.txt
+index f979dcb..f9770b7 100644
+--- a/doc/mvebu/build.txt
++++ b/doc/mvebu/build.txt
+@@ -33,7 +33,7 @@ Build Instruction:
+ 6. Configure the U-Boot:
+ 	# make <defconfig_file>
+ 	For AP806 stand-alone board use "make mvebu_apn806_defconfig"
+-	For the Armada-7040-RZ board use "make mvebu_armada70x0_rz_defconfig"
++	For the Armada-8040-RZ board use "make mvebu_armada70x0_rz_defconfig"
+ 	For the Armada-70x0 board use "make mvebu_armada70x0_defconfig"
+ 	For the Armada-3700 board use "make mvebu_armada3700_defconfig"
+ 7. Build the U-Boot (Armada-3700 builds required WTP tools installation -
+-- 
+1.9.1
+

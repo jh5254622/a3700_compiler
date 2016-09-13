@@ -1,0 +1,37 @@
+From 5957255ecccc2f8a21b58f3542973dfb578c3947 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 25 Nov 2015 19:51:01 +0200
+Subject: [PATCH 0535/1240] dts: mvebu: compile relevant DTB for SoC if the SOC
+ is compiled
+
+Change-Id: Ib8480b582740f6d1713c231aef1a699e28fdebaa
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25287
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/Makefile | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index 748de30..0c6762b 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -51,10 +51,10 @@ dtb-$(CONFIG_AM33XX) += am335x-boneblack.dtb
+ 
+ dtb-$(CONFIG_SOCFPGA) += socfpga_cyclone5_socrates.dtb
+ 
+-dtb-$(CONFIG_MVEBU) += armada-385-db.dtb
+-dtb-$(CONFIG_MVEBU) += armada-lp-db.dtb
+-dtb-$(CONFIG_MVEBU) += armada-lp-palladium.dtb
+-dtb-$(CONFIG_MVEBU) += apn-806-db.dtb \
++dtb-$(CONFIG_TARGET_ARMADA_38X) += armada-385-db.dtb
++dtb-$(CONFIG_TARGET_ARMADA_LP) += armada-lp-db.dtb \
++				  armada-lp-palladium.dtb
++dtb-$(CONFIG_TARGET_ARMADA_8K) += apn-806-db.dtb \
+ 		       apn-806-pd.dtb \
+ 		       apn-806-a0-pd.dtb \
+ 		       apn-806-db-dop.dtb \
+-- 
+1.9.1
+

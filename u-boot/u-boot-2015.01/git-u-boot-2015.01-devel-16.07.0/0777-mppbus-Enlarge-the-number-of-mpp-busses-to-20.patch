@@ -1,0 +1,30 @@
+From e406504c9ba8b84bc16cf1d7d261bcba391db8e9 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Tue, 2 Feb 2016 21:28:23 +0200
+Subject: [PATCH 0777/1240] mppbus: Enlarge the number of mpp busses to 20
+
+Change-Id: I01870c2eee587162107e75cee9e0df6855c239d1
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27159
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/include/asm/arch-mvebu/mpp.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/include/asm/arch-mvebu/mpp.h b/arch/arm/include/asm/arch-mvebu/mpp.h
+index aceebc8..217cf3c 100644
+--- a/arch/arm/include/asm/arch-mvebu/mpp.h
++++ b/arch/arm/include/asm/arch-mvebu/mpp.h
+@@ -19,7 +19,7 @@
+ #ifndef _MPP_BUS_H_
+ #define _MPP_BUS_H_
+ 
+-#define MAX_MPP_BUSES	10
++#define MAX_MPP_BUSES	20
+ 
+ struct mpp_pin {
+ 	u32 id;
+-- 
+1.9.1
+

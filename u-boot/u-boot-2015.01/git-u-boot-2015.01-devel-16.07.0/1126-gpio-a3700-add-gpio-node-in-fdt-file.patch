@@ -1,0 +1,71 @@
+From c4b049c10669e7ca59b8a2a0d4dd05140c554ac8 Mon Sep 17 00:00:00 2001
+From: Ken Ma <make@marvell.com>
+Date: Thu, 18 Feb 2016 23:33:39 +0800
+Subject: [PATCH 1126/1240] gpio: a3700: add gpio node in fdt file
+
+- add gpio node in a3700 fdt file so that generic mvebu gpio driver
+  can work with a3700 fdt file
+- gpio is implemented with uclass and it requires DM and
+  simple-bus entries
+
+Change-Id: I08e0894d8933e8cfecdb0a6aa146e400ccc62a19
+Signed-off-by: Ken Ma <make@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27667
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ arch/arm/dts/armada-3700.dtsi | 19 +++++++++++++++++--
+ 1 file changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/dts/armada-3700.dtsi b/arch/arm/dts/armada-3700.dtsi
+index 59f7f98..961bf5f 100644
+--- a/arch/arm/dts/armada-3700.dtsi
++++ b/arch/arm/dts/armada-3700.dtsi
+@@ -2,6 +2,7 @@
+ #define IO_ATTR(max_win, max_remap, remap_size, win_offset) (((max_win) << 24) | ((max_remap) << 16) | ((remap_size) << 8) | (win_offset))
+ 
+ #include <dt-bindings/comphy/comphy_data.h>
++#include <dt-bindings/gpio/armada-3700-gpio.h>
+ / {
+ 	model = "Marvell Armada 3700 Development Board";
+ 	compatible = "marvell,armada-3700";
+@@ -10,12 +11,12 @@
+ 	#size-cells = <2>;
+ 
+ 	soc {
+-	compatible = "marvell,armadalp-mbus";
++	compatible = "marvell,armadalp-mbus", "simple-bus";
+ 	#address-cells = <1>;
+ 	#size-cells = <0>;
+ 
+ 		internal-regs {
+-			compatible = "marvell,internal-regs";
++			compatible = "marvell,internal-regs", "simple-bus";
+ 			#address-cells = <1>;
+ 			#size-cells = <1>;
+ 			ranges = <0x0000 0xd0000000 0x2000000>;
+@@ -160,6 +161,20 @@
+ 				reg = <0x1000 0x1000>;
+ 				status = "okay";
+ 			};
++			gpio0: gpio@13800 {
++				compatible = "marvell,mvebu-gpio";
++				reg = <0x13800 0x800>;
++				bank-name = "armada-3700-north-bridge";
++				ngpios = <ARMADA_3700_BANK_0_GPIO_COUNT>;
++				status = "okay";
++			};
++			gpio1: gpio@18800 {
++				compatible = "marvell,mvebu-gpio";
++				reg = <0x18800 0x800>;
++				bank-name = "armada-3700-south-bridge";
++				ngpios = <ARMADA_3700_BANK_1_GPIO_COUNT>;
++				status = "okay";
++			};
+ 		};
+ 	};
+ };
+-- 
+1.9.1
+

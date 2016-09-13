@@ -1,0 +1,156 @@
+From 0d94f97bb828c1bc01db436e64917ccddb93335a Mon Sep 17 00:00:00 2001
+From: Ofir Fedida <ofedida@marvell.com>
+Date: Tue, 24 May 2016 14:25:41 +0300
+Subject: [PATCH 178/239] mv_ddr: Add temporary patch for static parameters
+ override
+
+this patch sets the static memory controller timing parameters
+again after the DFS procedure.
+This patch needs to be reverted once the dynamic memory controller
+is activated.
+
+Change-Id: Ia072daeed830ffe87962e4063ee5a5dcae6fe0b7
+Signed-off-by: Ofir Fedida <ofedida@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29932
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c      |  8 ++++
+ .../marvell/mv_ddr/apn806/mv_ddr_apn806_static.h   | 48 ++++++++++++++++------
+ drivers/marvell/mv_ddr/ddr3_training.c             |  7 ++++
+ 3 files changed, 51 insertions(+), 12 deletions(-)
+
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+index a45c161..d9db710 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+@@ -690,6 +690,14 @@ int mv_ddr_mc_static_config(void)
+ {
+ #if defined(a70x0) || defined(a70x0_cust) || defined(a80x0) || defined(a80x0_cust)
+ 	ddr_static_config();
++/* FIXME: remove this configuration which is needed because
++ * running over the static parameters when calling the timing function
++ * during the DFS algorithm
++ * add the two registers to the static configuration
++ * these registers initialize the dunit and the mc6
++ */
++	reg_write(0x11480, 0x1);
++	reg_write(0x20020, 0x13000001);
+ #else
+ 	mk6_mac_init();
+ #endif
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_static.h b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_static.h
+index aa213c0..731f46c 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_static.h
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_static.h
+@@ -2238,8 +2238,12 @@ struct mk6_reg_data ddr_static_setup[] = {
+ 	{0xf0011910, 0x00000000},
+ 	{0xf0011914, 0x000004a0},
+ 	{0xf0011918, 0x0000080a},
+-	{0xf0020020, 0x13000001},
+-	{0xf0011480, 0x00000001},
++	/* FIXME: add the two registers configuration below when fixing the timing
++	 * algorithm also remove it from the main flow function and from the
++	 * static function
++	 */
++	/* {0xF0011480, 0x1},		Tipinit */
++	/* {0xF0020020, 0x13000001},	MCinit */
+ 	{-1, -1},
+ };
+ #else /* ddr static configuratioin thru mk6 */
+@@ -2382,8 +2386,12 @@ struct mk6_reg_data ddr_static_setup[] = {
+ 	{0xf00203c0, 0x10400},
+ 	{0xf00203c4, 0x0},
+ 	{0xf00203cc, 0xf010345},
+-	{0xF0011480, 0x1},		/* Tipinit */
+-	{0xF0020020, 0x13000001},	/* MCinit */
++	/* FIXME: add the two registers configuration below when fixing the timing
++	 * algorithm also remove it from the main flow function and from the
++	 * static function
++	 */
++	/* {0xF0011480, 0x1},		Tipinit */
++	/* {0xF0020020, 0x13000001},	MCinit */
+ 	{-1, -1},
+ };
+ #endif /* CONFIG_DUNIT_STATIC */
+@@ -2470,8 +2478,12 @@ struct mk6_reg_data ddr_static_setup[] = {
+ 	{0xf0011910, 0x0},		/* MR4 */
+ 	{0xf0011914, 0x4a0},		/* MR5 */
+ 	{0xf0011918, 0x80a},		/* MR6 */
+-	{0xf0020020, 0x13000001},	/* mc init */
+-	{0xf0011480, 0x1},		/* init */
++	/* FIXME: add the two registers configuration below when fixing the timing
++	 * algorithm also remove it from the main flow function and from the
++	 * static function
++	 */
++	/* {0xF0011480, 0x1},		Tipinit */
++	/* {0xF0020020, 0x13000001},	MCinit */
+ 	{-1, -1},
+ };
+ #else /* ddr static configuration thru mk6 */
+@@ -2568,8 +2580,12 @@ struct mk6_reg_data ddr_static_setup[] = {
+ 	{0xf00203c0, 0x10400},
+ 	{0xf00203c4, 0x0},
+ 	{0xf00203cc, 0xf010345},
+-	{0xF0011480, 0x1},	/* Tipinit */
+-	{0xF0020020, 0x13000001},	/* MCinit */
++	/* FIXME: add the two registers configuration below when fixing the timing
++	 * algorithm also remove it from the main flow function and from the
++	 * static function
++	 */
++	/* {0xF0011480, 0x1},		Tipinit */
++	/* {0xF0020020, 0x13000001},	MCinit */
+ 	{-1, -1},
+ };
+ #endif
+@@ -2640,8 +2656,12 @@ struct mk6_reg_data ddr_static_setup[] = {
+ 	{0xF0011910, 0x0},	/* MR4 */
+ 	{0xF0011914, 0x5A0},	/* MR5 */
+ 	{0xF0011918, 0x806},	/* MR6 */
+-	{0xF0020020, 0x11000001},	/* MCinit */
+-	{0xF0011480, 0x1},	/* init */
++	/* FIXME: add the two registers configuration below when fixing the timing
++	 * algorithm also remove it from the main flow function and from the
++	 * static function
++	 */
++	/* {0xF0011480, 0x1},		Tipinit */
++	/* {0xF0020020, 0x13000001},	MCinit */
+ 	{-1, -1},
+ };
+ #else /* ddr static configuration thru mk6 */
+@@ -2790,8 +2810,12 @@ struct mk6_reg_data ddr_static_setup[] = {
+ 	{0xf00203c4, 0x0},
+ 	{0xf00203cc, 0xf010345},
+ 	/* {0xF06F8130, 0x1002A2A5},	AVS*/
+-	{0xF0011480, 0x1},		Tipinit
+-	{0xF0020020, 0x13000001},	MCinit
++	/* FIXME: add the two registers configuration below when fixing the timing
++	 * algorithm also remove it from the main flow function and from the
++	 * static function
++	 */
++	/* {0xF0011480, 0x1},		Tipinit */
++	/* {0xF0020020, 0x13000001},	MCinit */
+ 	{-1, -1},
+ };
+ #endif
+diff --git a/drivers/marvell/mv_ddr/ddr3_training.c b/drivers/marvell/mv_ddr/ddr3_training.c
+index ff9001b..c2b2763 100644
+--- a/drivers/marvell/mv_ddr/ddr3_training.c
++++ b/drivers/marvell/mv_ddr/ddr3_training.c
+@@ -2806,6 +2806,13 @@ static int ddr3_tip_ddr3_training_main_flow(u32 dev_num)
+ 					PARAM_NOT_CARE,
+ 					tm->interface_params[first_active_if].
+ 					memory_freq);
++#if defined(a70x0) || defined(a70x0_cust) || defined(a80x0) || defined(a80x0_cust)
++		/* FIXME: remove this configuration
++		 * this is a patch due to the DFS algorithm
++		 * which override the static parameters
++		 */
++		mv_ddr_mc_static_config();
++#endif /* #if defined(a70x0) || defined(a70x0_cust) || defined(a80x0) || defined(a80x0_cust) */
+ 		if (is_reg_dump != 0)
+ 			ddr3_tip_reg_dump(dev_num);
+ 		if (ret != MV_OK) {
+-- 
+1.9.1
+

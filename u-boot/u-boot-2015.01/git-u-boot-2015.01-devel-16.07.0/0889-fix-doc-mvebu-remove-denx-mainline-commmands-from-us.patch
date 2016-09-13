@@ -1,0 +1,40 @@
+From f629d8b579e4de4ba57ae420b36fd6709281773a Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Mon, 22 Feb 2016 18:45:09 +0200
+Subject: [PATCH 0889/1240] fix: doc: mvebu: remove denx mainline commmands
+ from user guide
+
+- The commands: mmc, usb, sata and fdt are refer to denx mainline,
+  and should not be described in Marvell user-guide.
+
+Change-Id: Idb77246f5478d976c41a71166ce51e31492fa0a9
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27762
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ doc/mvebu/user_guide.txt | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/doc/mvebu/user_guide.txt b/doc/mvebu/user_guide.txt
+index 1753e25..ed3b506 100644
+--- a/doc/mvebu/user_guide.txt
++++ b/doc/mvebu/user_guide.txt
+@@ -27,12 +27,10 @@ Table of contents:
+ 5. Commands:
+    ir - Display and change memory values: doc/mvebu/commands/ir.txt
+    fdt_config - Select & change board configuration: doc/mvebu/commands/fdt_config.txt
+-   fdt - Change and edit FDT file in memory: doc/mvebu/commands/fdt.txt
+    hw_info - Load or store HW manufacturing information: doc/mvebu/commands/hw_info.txt
+-   mmc - mmc usage: doc/mvebu/commands/mmc.txt
+-   usb - usb usage: doc/mvebu/commands/usb.txt
+-   sata - sata usage: doc/mvebu/commands/sata.txt
+    SatR - Toggle Sample at reset modes: doc/mvebu/commands/sar.txt
++   fdt - Change and edit FDT file in memory.
++   mmc, usb, sata, fdt - refer to denx mainline documentation.
+ 
+ 6. Board options:
+    List of board options of the development board.
+-- 
+1.9.1
+

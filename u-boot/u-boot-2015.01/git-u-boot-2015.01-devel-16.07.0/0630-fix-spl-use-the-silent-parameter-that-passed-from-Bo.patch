@@ -1,0 +1,38 @@
+From da5b1423a984517f18e07cfda8da389ade5a0eb3 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 4 Jan 2016 17:23:30 +0200
+Subject: [PATCH 0630/1240] fix: spl: use the silent parameter that passed from
+ BootRom
+
+- Re-enable usage of the silent parameter
+- Before this patch the SPL ignored the silent parameter that was passed by BootRom.
+- This patch re-checks the silent param and sets the SILENT flag for UART initialization.
+
+Change-Id: Ie805c3c5c637f502bc9fe1733de32bcaf892111d
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26515
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/spl.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index 6f42c61..d12a449 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -56,10 +56,9 @@ void board_init_f(ulong silent)
+ {
+ 	gd = &gdata;
+ 	gd->baudrate = CONFIG_BAUDRATE;
+-#if 0
++
+ 	if (silent)
+ 		gd->flags |= GD_FLG_SILENT;
+-#endif
+ 
+ 	/* Update the pointer to the default FDT, this is necessary only to config i2c*/
+ 	setup_fdt();
+-- 
+1.9.1
+

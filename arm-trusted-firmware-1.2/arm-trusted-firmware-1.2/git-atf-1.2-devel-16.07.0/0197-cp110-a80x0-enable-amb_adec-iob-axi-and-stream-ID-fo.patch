@@ -1,0 +1,105 @@
+From 4288940f202d3aae2b1443348ba830f136adfd73 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Mon, 30 May 2016 13:51:40 +0300
+Subject: [PATCH 197/239] cp110: a80x0: enable amb_adec, iob, axi, and stream
+ ID for 2nd CP
+
+enable the following initialization for 2nd CP, according to MCI status:
+- amb_adec: window access for device bus interfaces (i.e SPI, NOR, etc)
+- iob: window access for PCIe, NAND, RUNIT, etc
+- axi: Cache attributes for SATA,USB,SDIO,COMUNIT,Audio,Crypto, etc.
+- stream ID: set unique stream ID for all relevant interfaces
+
+Change-Id: I4de41859fc70d80e8f9c6d74e8851c9e6804118e
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30143
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ include/plat/marvell/a8k/a70x0/board/cp110_setup.h |  2 +-
+ plat/marvell/a8k/a70x0/cp110_setup.c               | 18 +++++++-----------
+ plat/marvell/a8k/a70x0/plat_bl31_setup.c           | 12 +++++-------
+ 3 files changed, 13 insertions(+), 19 deletions(-)
+
+diff --git a/include/plat/marvell/a8k/a70x0/board/cp110_setup.h b/include/plat/marvell/a8k/a70x0/board/cp110_setup.h
+index 70d4604..f30cc21 100644
+--- a/include/plat/marvell/a8k/a70x0/board/cp110_setup.h
++++ b/include/plat/marvell/a8k/a70x0/board/cp110_setup.h
+@@ -34,6 +34,6 @@
+ #ifndef __PLAT_CP110_H__
+ #define __PLAT_CP110_H__
+ 
+-void cp110_init(void);
++void cp110_init(int cp_index);
+ 
+ #endif /* __PLAT_CP110_H__ */
+diff --git a/plat/marvell/a8k/a70x0/cp110_setup.c b/plat/marvell/a8k/a70x0/cp110_setup.c
+index 7fffdf4..3436cae 100644
+--- a/plat/marvell/a8k/a70x0/cp110_setup.c
++++ b/plat/marvell/a8k/a70x0/cp110_setup.c
+@@ -185,18 +185,16 @@ void amb_bridge_init(int cp_index)
+ 	mmio_write_32(MVEBU_AMB_IP_BRIDGE_WIN_REG(cp_index, 0), reg);
+ }
+ 
+-void cp110_init(void)
++void cp110_init(int cp_index)
+ {
+-	uint32_t cp_index;
+-
+ 	/* configure AXI-MBUS windows for CP0*/
+-	init_amb_adec(0);
++	init_amb_adec(cp_index);
+ 
+ 	/* configure IOB windows for CP0*/
+-	init_iob(0);
++	init_iob(cp_index);
+ 
+ 	/* configure axi for CP0*/
+-	cp110_axi_attr_init(0);
++	cp110_axi_attr_init(cp_index);
+ 
+ 	/* configure icu for CP0 */
+ #ifdef PLAT_MARVELL_APN_806_Z
+@@ -205,14 +203,12 @@ void cp110_init(void)
+ 	/* ICU - Interrupt Consolidation unit
+ 	 * CP0: interrupt 0..63 mapped to ID 64..127 in AP
+ 	 * CP1: interrupt 64..127 mapped to ID 288..351 in AP */
+-	 for (cp_index = 0; cp_index < CP_COUNT; cp_index++)
+-		icu_init(MVEBU_CP_REGS_BASE(cp_index), 0, cp_index * 64);
++	icu_init(MVEBU_CP_REGS_BASE(cp_index), 0, cp_index * 64);
+ #endif /* PLAT_MARVELL_APN_806_Z */
+ 
+ 	/* configure stream id for CP0 */
+-	cp110_stream_id_init(MVEBU_CP_REGS_BASE(0));
++	cp110_stream_id_init(MVEBU_CP_REGS_BASE(cp_index));
+ 
+ 	/* Open AMB bridge for comphy for CP0 & CP1*/
+-	for (cp_index = 0; cp_index < CP_COUNT; cp_index++)
+-		amb_bridge_init(cp_index);
++	amb_bridge_init(cp_index);
+ }
+diff --git a/plat/marvell/a8k/a70x0/plat_bl31_setup.c b/plat/marvell/a8k/a70x0/plat_bl31_setup.c
+index 88e344d..ce972e0 100644
+--- a/plat/marvell/a8k/a70x0/plat_bl31_setup.c
++++ b/plat/marvell/a8k/a70x0/plat_bl31_setup.c
+@@ -57,12 +57,10 @@ void bl31_plat_arch_setup(void)
+ 	/* configure apn806 */
+ 	apn806_init();
+ 
+-	/* test MCI0 (CP1) status and disable indirect access.
+-	 * when all CP1 interfaces will be supported, they will be
+-	 * initialized by calling cp110_init again for 2nd CP */
+-	if (CP_COUNT > 1)
+-		mci_test_link(0); /* test MCI0 link */
++	/* configure cp110 for CP0*/
++	cp110_init(0);
+ 
+-	/* configure cp110 */
+-	cp110_init();
++	/* test MCI0 (CP1) link properties, and initialize CP1 accordingly */
++	if (CP_COUNT == 2 && mci_test_link(0))
++		cp110_init(1);
+ }
+-- 
+1.9.1
+

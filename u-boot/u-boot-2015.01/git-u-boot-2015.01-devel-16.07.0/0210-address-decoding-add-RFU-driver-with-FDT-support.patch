@@ -1,0 +1,425 @@
+From 6bf2672ae46bab501d934543384c29c82963226d Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 21 Jun 2015 14:03:28 +0300
+Subject: [PATCH 0210/1240] address decoding: add RFU driver, with FDT support
+
+Change-Id: If531a5014a83decddc75e9b24d195c0c0e84e8d0
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20310
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/soc-init.c        |   6 +
+ arch/arm/dts/armada-8k.dts                  |   6 +
+ arch/arm/include/asm/arch-mvebu/rfu.h       |  26 ++++
+ common/mvebu/cmd_misc.c                     |   6 +
+ configs/mvebu_armada8k_defconfig            |   1 +
+ doc/device-tree-bindings/misc/mvebu-rfu.txt |  31 +++++
+ drivers/misc/Kconfig                        |   9 ++
+ drivers/misc/Makefile                       |   1 +
+ drivers/misc/mvebu_rfu.c                    | 191 ++++++++++++++++++++++++++++
+ include/fdtdec.h                            |   1 +
+ lib/fdtdec.c                                |   1 +
+ 11 files changed, 279 insertions(+)
+ create mode 100644 arch/arm/include/asm/arch-mvebu/rfu.h
+ create mode 100644 doc/device-tree-bindings/misc/mvebu-rfu.txt
+ create mode 100644 drivers/misc/mvebu_rfu.c
+
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index dc9143a..1f48170 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -30,6 +30,9 @@
+ #ifdef CONFIG_MVEBU_CCU
+ #include <asm/arch-mvebu/ccu.h>
+ #endif
++#ifdef CONFIG_MVEBU_RFU
++#include <asm/arch-mvebu/rfu.h>
++#endif
+ #ifdef CONFIG_MVEBU_MBUS
+ #include <asm/arch-mvebu/mbus.h>
+ #endif
+@@ -99,6 +102,9 @@ int mvebu_soc_init()
+ #ifdef CONFIG_MVEBU_CCU
+ 	init_ccu();
+ #endif
++#ifdef CONFIG_MVEBU_RFU
++	init_rfu();
++#endif
+ #ifdef CONFIG_MVEBU_MBUS
+ 	init_mbus();
+ #endif
+diff --git a/arch/arm/dts/armada-8k.dts b/arch/arm/dts/armada-8k.dts
+index 808cc88..2edbbb4 100644
+--- a/arch/arm/dts/armada-8k.dts
++++ b/arch/arm/dts/armada-8k.dts
+@@ -59,6 +59,12 @@
+ 				max-win = <8>;
+ 				windows = <0xf8000000 0x2000000 0x00 /* IO window */>;
+ 			};
++			rfu {
++				compatible = "marvell,mvebu-rfu";
++				reg = <0x6f0000 0x50>;
++				windows = <0xf2000000 0x4000000 0x05 /* PCIe window */
++					0xf6000000 0x2000000 0x02 /* PCI-REG window */>;
++			};
+ 		};
+ 	};
+ };
+diff --git a/arch/arm/include/asm/arch-mvebu/rfu.h b/arch/arm/include/asm/arch-mvebu/rfu.h
+new file mode 100644
+index 0000000..35d43e1
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/rfu.h
+@@ -0,0 +1,26 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _RFU_H_
++#define _RFU_H_
++
++void dump_rfu(void);
++int init_rfu(void);
++
++#endif /* _RFU_H_ */
++
+diff --git a/common/mvebu/cmd_misc.c b/common/mvebu/cmd_misc.c
+index 374b36e..39398bb 100644
+--- a/common/mvebu/cmd_misc.c
++++ b/common/mvebu/cmd_misc.c
+@@ -28,6 +28,9 @@
+ #ifdef CONFIG_MVEBU_CCU
+ #include <asm/arch-mvebu/ccu.h>
+ #endif
++#ifdef CONFIG_MVEBU_RFU
++#include <asm/arch-mvebu/rfu.h>
++#endif
+ #ifdef CONFIG_MVEBU_MBUS
+ #include <asm/arch-mvebu/mbus.h>
+ #endif
+@@ -38,6 +41,9 @@ int do_map_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+ #ifdef CONFIG_MVEBU_CCU
+ 	dump_ccu();
+ #endif
++#ifdef CONFIG_MVEBU_RFU
++	dump_rfu();
++#endif
+ #ifdef CONFIG_MVEBU_MBUS
+ 	dump_mbus();
+ #endif
+diff --git a/configs/mvebu_armada8k_defconfig b/configs/mvebu_armada8k_defconfig
+index 2c51831..50f4e7b 100644
+--- a/configs/mvebu_armada8k_defconfig
++++ b/configs/mvebu_armada8k_defconfig
+@@ -18,4 +18,5 @@ CONFIG_CMD_TIMER=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-8k"
+ CONFIG_MVEBU_CCU=y
++CONFIG_MVEBU_RFU=y
+ +S:CONFIG_SYS_NS16550=y
+diff --git a/doc/device-tree-bindings/misc/mvebu-rfu.txt b/doc/device-tree-bindings/misc/mvebu-rfu.txt
+new file mode 100644
+index 0000000..88b43f0
+--- /dev/null
++++ b/doc/device-tree-bindings/misc/mvebu-rfu.txt
+@@ -0,0 +1,31 @@
++Marvell RFU address decoding bindings
++=====================================
++
++The RFU node include describtion about the address decoding configuration.
++Transactions that are decoded by CCU windows as IO peripheral, have an additional
++layer of decoding, this additional address decoding layer defines one of the
++following targets:
++	0x0 = BootRom
++	0x1 = STM (Serial Trace Macro-cell, a programmer’s port into trace stream)
++	0x2 = SPI direct access
++	0x3 = PCIe registers
++	0x4 = IHB Port
++	0x5 = PCIe port
++
++The RFU node requires the following properties:
++	- compatible: the compatible of the driver
++	- reg: the base address of the RFU window
++	- max-win: number of the max mbus windows
++	- windows: entry that include the configuration of the windows
++	  every window should have 3 parameters:
++	  - base address of the window
++	  - size of the window
++	  - target-id of the window
++
++Example:
++	rfu {
++		compatible = "marvell,mvebu-rfu";
++		reg = <0x6f0000 0x50>;
++		windows = <0xf2000000 0x40000000 0x05 /* PCIe window */
++			0xf6000000 0x20000000 0x02 /* SPI window */>;
++	};
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index 2ac20e0..601ad42 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -7,6 +7,15 @@ config MVEBU_CCU
+ 	  This driver initialize the CCU windows
+ 	  only.
+ 
++config MVEBU_RFU
++	bool "RFU address decoding driver"
++	default n
++	help
++	  Choose this option to add support
++	  for RFU address decoding driver.
++	  This driver initialize the RFU windows
++	  which come after the CCU window.
++
+ config MVEBU_MBUS
+ 	bool "MBUS address decoding driver"
+ 	default n
+diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
+index bedea26..d415af8 100644
+--- a/drivers/misc/Makefile
++++ b/drivers/misc/Makefile
+@@ -29,4 +29,5 @@ obj-$(CONFIG_STATUS_LED) += status_led.o
+ obj-$(CONFIG_TWL4030_LED) += twl4030_led.o
+ obj-$(CONFIG_FSL_IFC) += fsl_ifc.o
+ obj-$(CONFIG_MVEBU_CCU) += mvebu_ccu.o
++obj-$(CONFIG_MVEBU_RFU) += mvebu_rfu.o
+ obj-$(CONFIG_MVEBU_MBUS) += mvebu_mbus.o
+diff --git a/drivers/misc/mvebu_rfu.c b/drivers/misc/mvebu_rfu.c
+new file mode 100644
+index 0000000..2b995e7
+--- /dev/null
++++ b/drivers/misc/mvebu_rfu.c
+@@ -0,0 +1,191 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG */
++/* #define DEBUG_REG */
++
++#include <common.h>
++#include <asm/system.h>
++#include <asm/io.h>
++#include <fdtdec.h>
++#include <malloc.h>
++#include <asm/arch-mvebu/mvebu.h>
++#include <asm/arch-mvebu/fdt.h>
++#include <asm/arch-mvebu/rfu.h>
++
++/* common defines */
++#define WIN_ENABLE_BIT			(0x1)
++/* Physical address of the base of the window = {Addr[19:0],20`h0} */
++#define ADDRESS_SHIFT			(20 - 4)
++#define ADDRESS_MASK			(0xFFFFFFF0)
++#define RFU_WIN_ALIGNMENT		(0x100000)
++
++DECLARE_GLOBAL_DATA_PTR;
++
++void __iomem *rfu_base;
++
++struct rfu_win {
++	u32 base_addr;
++	u32 win_size;
++	u32 target_id;
++};
++
++enum rfu_target_ids {
++	BOOTROM_TID	= 0x0,
++	STM_TID		= 0x1,
++	SPI_TID		= 0x2,
++	PCIE_REGS_TID	= 0x3,
++	IHBPHY_TID	= 0x4,
++	PCIE_PORT_TID	= 0x5,
++	RFU_MAX_TID
++};
++
++static void rfu_win_check(struct rfu_win *win, u32 win_num)
++{
++	/* check if address is aligned to 1M */
++	if (IS_NOT_ALIGN(win->base_addr, RFU_WIN_ALIGNMENT)) {
++		win->base_addr = ALIGN_UP(win->base_addr, RFU_WIN_ALIGNMENT);
++		error("Window %d: base address unaligned to 0x%x\n", win_num, RFU_WIN_ALIGNMENT);
++		printf("Align up the base address to 0x%x\n", win->base_addr);
++	}
++
++	/* size parameter validity check */
++	if (IS_NOT_ALIGN(win->win_size, RFU_WIN_ALIGNMENT)) {
++		win->win_size = ALIGN_UP(win->win_size, RFU_WIN_ALIGNMENT);
++		error("Window %d: window size unaligned to 0x%x\n", win_num, RFU_WIN_ALIGNMENT);
++		printf("Aligning size to 0x%x\n", win->win_size);
++	}
++}
++
++static void *rfu_alr_offset_get(u32 trgt_id)
++{
++	u32 rfu_alr_offset[RFU_MAX_TID] = {0x0, 0x10, 0x20, 0x208, 0x210, 0x218};
++
++	if (trgt_id < 0 || trgt_id > RFU_MAX_TID) {
++		error("target ID is wrong");
++		return rfu_base;
++	}
++	return rfu_base + rfu_alr_offset[trgt_id];
++}
++
++static void *rfu_ahr_offset_get(u32 trgt_id)
++{
++	u32 rfu_ahr_offset[RFU_MAX_TID] = {0x0, 0x18, 0x28, 0x0, 0x214, 0x21c};
++
++	if (trgt_id < 0 || trgt_id > RFU_MAX_TID) {
++		error("target ID is wrong");
++		return rfu_base;
++	}
++	return rfu_base + rfu_ahr_offset[trgt_id];
++}
++
++static void rfu_enable_win(struct rfu_win *win, u32 trgt_id)
++{
++	u32 alr, ahr;
++	uintptr_t end_addr;
++
++	end_addr = (win->base_addr + win->win_size - 1);
++	alr = (u32)((win->base_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
++	alr |= WIN_ENABLE_BIT;
++	writel(alr, rfu_alr_offset_get(trgt_id));
++
++	/* there's no ahr for bootrom and pcie-regs windows */
++	if (trgt_id == BOOTROM_TID || trgt_id == PCIE_REGS_TID)
++		return;
++
++	ahr = (u32)((end_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
++	writel(ahr, rfu_ahr_offset_get(trgt_id));
++}
++
++void dump_rfu(void)
++{
++	u32 trgt_id;
++	u32 alr, ahr;
++	uintptr_t start, end;
++	char *rfu_target_name[RFU_MAX_TID] = {"BootRoom ", "STM      ", "SPI      ",
++					"PCIe-reg ", "IHB-Port ", "PCIe-Port"};
++
++	/* Dump all RFU windows */
++	printf("bank  target     start              end\n");
++	printf("----------------------------------------------------\n");
++	for (trgt_id = 0; trgt_id < RFU_MAX_TID; trgt_id++) {
++		alr = readl(rfu_alr_offset_get(trgt_id));
++		if (alr & WIN_ENABLE_BIT) {
++			alr &= ~WIN_ENABLE_BIT;
++			ahr = readl(rfu_ahr_offset_get(trgt_id));
++			start = (uintptr_t)(alr << ADDRESS_SHIFT);
++			end = (uintptr_t)((ahr + 0x10) << ADDRESS_SHIFT);
++			printf("rfu   %s  0x%016lx 0x%016lx\n", rfu_target_name[trgt_id], start, end);
++		}
++	}
++	printf("rfu   PIDI-port  - all other IO transactions\n");
++
++	return;
++}
++
++int init_rfu(void)
++{
++	struct rfu_win *memory_map, *win;
++	const void *blob = gd->fdt_blob;
++	u32 win_id, win_reg, trgt_id;
++	u32 node, win_count;
++
++	debug_enter();
++	debug("Initializing RFU Address decoding\n");
++
++	/* Get address decoding node from the FDT blob */
++	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_RFU));
++	if (node < 0) {
++		error("No RFU address decoding node found in FDT blob\n");
++		return -1;
++	}
++	/* Get the base address of the address decoding MBUS */
++	rfu_base = (void *)fdt_get_regs_offs(blob, node, "reg");
++
++	memory_map = malloc(RFU_MAX_TID * sizeof(struct rfu_win));
++	if (memory_map == 0) {
++		error("failed allocating struct to init windows configuration\n");
++		return -1;
++	}
++
++	/* Get the array of the windows and fill the map data */
++	win_count = fdtdec_get_int_array_count(blob, node, "windows", (u32 *)memory_map, RFU_MAX_TID * 3);
++	if (win_count <= 0) {
++		debug("no windows configurations found\n");
++		return 0;
++	}
++	win_count = win_count/3; /* every window had 3 variables in FDT (base, size, target id) */
++
++	/* disable all RFU windows */
++	for (trgt_id = 0; trgt_id < RFU_MAX_TID; trgt_id++) {
++		win_reg = readl(rfu_alr_offset_get(trgt_id));
++		win_reg &= ~WIN_ENABLE_BIT;
++		writel(win_reg, rfu_alr_offset_get(trgt_id));
++	}
++
++	for (win_id = 0, win = memory_map; win_id < win_count; win_id++, win++) {
++		rfu_win_check(win, win_id);
++		rfu_enable_win(win, win->target_id);
++	}
++
++	free(memory_map);
++	debug("Done RFU Address decoding Initializing\n");
++	debug_exit();
++
++	return 0;
++}
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index eba2dd9..fa73f86 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -130,6 +130,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_MPP_BUS,
+ 	COMPAT_MVEBU_MBUS,
+ 	COMPAT_MVEBU_CCU,
++	COMPAT_MVEBU_RFU,
+ 	COMPAT_COUNT,
+ };
+ 
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 0a9d020..0392125 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -92,6 +92,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_MPP_BUS, "marvell,mvebu-mpp-bus"),
+ 	COMPAT(MVEBU_MBUS, "marvell,mvebu-mbus"),
+ 	COMPAT(MVEBU_CCU, "marvell,mvebu-ccu"),
++	COMPAT(MVEBU_RFU, "marvell,mvebu-rfu"),
+ };
+ 
+ const char *fdtdec_get_compatible(enum fdt_compat_id id)
+-- 
+1.9.1
+

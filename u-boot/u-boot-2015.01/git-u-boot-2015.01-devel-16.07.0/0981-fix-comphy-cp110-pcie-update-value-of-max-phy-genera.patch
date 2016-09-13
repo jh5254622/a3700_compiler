@@ -1,0 +1,34 @@
+From f5e4238ab5298397aecbb9a71e8c0ee5842d8775 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Sun, 27 Mar 2016 14:47:45 +0300
+Subject: [PATCH 0981/1240] fix: comphy: cp110: pcie: update value of max phy
+ generation (to allow Gen 3)
+
+- Previous configuration limited the speed to 5G (Gen 2).
+- This patch enables also 8G (Gen 3)
+
+Change-Id: I1ead6ab652321ba28d72267eca229e3f5355fec2
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28545
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/phy/comphy_cp110.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/phy/comphy_cp110.c b/drivers/phy/comphy_cp110.c
+index ad8da56..08c0803 100644
+--- a/drivers/phy/comphy_cp110.c
++++ b/drivers/phy/comphy_cp110.c
+@@ -171,7 +171,7 @@ static int comphy_pcie_power_up(u32 lane, u32 pcie_by4, void __iomem *hpipe_base
+ 
+ 	/* Set Maximal PHY Generation Setting(8Gbps) */
+ 	mask = HPIPE_INTERFACE_GEN_MAX_MASK;
+-	data = 0x1 << HPIPE_INTERFACE_GEN_MAX_OFFSET;
++	data = 0x2 << HPIPE_INTERFACE_GEN_MAX_OFFSET;
+ 	/* Set Link Train Mode (Tx training control pins are used) */
+ 	mask |= HPIPE_INTERFACE_LINK_TRAIN_MASK;
+ 	data |= 0x1 << HPIPE_INTERFACE_LINK_TRAIN_OFFSET;
+-- 
+1.9.1
+

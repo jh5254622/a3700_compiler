@@ -1,0 +1,23 @@
+From c635582777dfeb101407ebdc32d194cf1b963fbf Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 18 Feb 2016 17:36:47 +0200
+Subject: [PATCH 017/239] Bump ATF v1.2 To release 16.02.1 ED
+
+Change-Id: I0c74ba25477e25cf56cf1b7e26d27353d14e06ec
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27656
+Tested-by: Star_Automation <star@marvell.com>
+---
+ version.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/version.mk b/version.mk
+index 11d12ef..d4b47f1 100644
+--- a/version.mk
++++ b/version.mk
+@@ -1 +1 @@
+-BUILD_STRING = 16.02.0 ED
++BUILD_STRING = 16.02.1 ED
+-- 
+1.9.1
+

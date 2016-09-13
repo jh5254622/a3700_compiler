@@ -1,0 +1,60 @@
+From 43afca1bace2256b679c57189aecbbe14e0b47e8 Mon Sep 17 00:00:00 2001
+From: Victor Gu <xigu@marvell.com>
+Date: Thu, 19 Nov 2015 17:07:31 +0800
+Subject: [PATCH 0556/1240] fix: mmc: a3700: fixed compilation issue in EMMC
+ driver
+
+issue: fail to pass compilation of emmc since one macro
+       is not available any more.
+fix: to remove this macro since XENON eMMC always supports
+      DDR50, no need to read capability 2 register any more
+
+Signed-off-by: Victor Gu <xigu@marvell.com>
+Change-Id: Ib8fb71e76331850261150b58c21942526ee1fbb6
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25054
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25301
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/mmc/xenon_mmc.c | 9 +--------
+ 1 file changed, 1 insertion(+), 8 deletions(-)
+
+diff --git a/drivers/mmc/xenon_mmc.c b/drivers/mmc/xenon_mmc.c
+index b006343..25225cb 100644
+--- a/drivers/mmc/xenon_mmc.c
++++ b/drivers/mmc/xenon_mmc.c
+@@ -824,9 +824,6 @@ static const struct mmc_ops xenon_mmc_ops = {
+ int xenon_mmc_create(int dev_idx, void __iomem *reg_base, u32 max_clk)
+ {
+ 	u32 caps;
+-#ifndef CONFIG_PALLADIUM
+-	u32 caps2;
+-#endif
+ 	struct xenon_mmc_cfg *mmc_cfg = NULL;
+ 
+ 	mmc_cfg = (struct xenon_mmc_cfg *)calloc(1, sizeof(struct xenon_mmc_cfg));
+@@ -848,9 +845,6 @@ int xenon_mmc_create(int dev_idx, void __iomem *reg_base, u32 max_clk)
+ 	mmc_cfg->cfg.ops = &xenon_mmc_ops;
+ 
+ 	caps = xenon_mmc_readl(mmc_cfg, SDHCI_CAPABILITIES);
+-#ifndef CONFIG_PALLADIUM
+-	caps2 = xenon_mmc_readl(mmc_cfg, SDHCI_CAPABILITIES_1);
+-#endif
+ 
+ #ifdef CONFIG_MMC_SDMA
+ 	if (!(caps & SDHCI_CAN_DO_SDMA)) {
+@@ -909,8 +903,7 @@ int xenon_mmc_create(int dev_idx, void __iomem *reg_base, u32 max_clk)
+ 
+ 	/* Do not enable DDR mode for palladium since it is quite slow */
+ #ifndef CONFIG_PALLADIUM
+-	if (caps2 & SDHCI_SUPPORT_DDR50)
+-		mmc_cfg->cfg.host_caps |= MMC_MODE_DDR_52MHz;
++	mmc_cfg->cfg.host_caps |= MMC_MODE_DDR_52MHz;
+ #endif
+ 	if (SDHCI_GET_VERSION(mmc_cfg) >= SDHCI_SPEC_300) {
+ 		if (caps & SDHCI_CAN_DO_8BIT)
+-- 
+1.9.1
+

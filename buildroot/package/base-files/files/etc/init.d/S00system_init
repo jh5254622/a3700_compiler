@@ -1,0 +1,47 @@
+#!/bin/sh
+
+create_dir()
+{
+    if [ ! -d $1 ];then
+        mkdir -m 755 $1
+    fi
+}
+
+rebuild_usrdata()
+{
+    flash_erase -j $1 0 19
+    mount -t jffs2 $2 $3
+#    cp /usr/share/data/* usr/data/ -a
+}
+
+echo "system init ..."
+echo "Mounting all filesystems ... "
+
+echo "Starting mdev ..."
+echo /sbin/mdev > /proc/sys/kernel/hotplug
+mdev -s
+
+echo "Mounting /usr/factory as rw filesystem..."
+mount -t jffs2 /dev/mtdblock1 /usr/factory/
+if [ $? -ne 0 ]; then
+    rebuild_usrdata /dev/mtd1 /dev/mtdblock1 /usr/factory/
+fi
+
+echo "Mounting /usr/data as rw filesystem..."
+mount -t jffs2 /dev/mtdblock2 /usr/data/
+if [ $? -ne 0 ]; then
+    rebuild_usrdata /dev/mtd1 /dev/mtdblock2 /usr/data/
+fi
+
+echo "nameserver 114.114.114.114" >>/tmp/resolv.conf
+echo "nameserver 8.8.8.8" >>/tmp/resolv.conf
+
+ifconfig lo up
+ifconfig eth0 down
+ifconfig eth0 hw ether 84:5d:d7:dd:ee:ff
+ifconfig eth0 up
+#enable wan
+udhcpc -t 0 -i eth0 -H airdiskNAS -b -O rootpath -R
+
+#mkfs.vfat /dev/mmcblk0p4
+#mount -t vfat -o fmask=000,dmask=000,iocharset=utf8 /dev/mmcblk0p4 /tmp/mnt/SD-disk-p4

@@ -1,0 +1,560 @@
+From 53b078124a4fa39a9aba536317411e2c28e9651e Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Tue, 22 Dec 2015 17:59:28 +0200
+Subject: [PATCH 0608/1240] mvebu: cleanup of unused command
+
+	- cleanup of unused config command from u-boot code.
+
+Change-Id: I3b6fc08a5b444f7478a2ce3698da22241d84b40a
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26232
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ board/mvebu/common/config.c | 157 -------------------------
+ board/mvebu/common/config.h |  58 ----------
+ common/mvebu/Kconfig        |   7 --
+ common/mvebu/Makefile       |   1 -
+ common/mvebu/cmd_config.c   | 271 --------------------------------------------
+ 5 files changed, 494 deletions(-)
+ delete mode 100644 board/mvebu/common/config.c
+ delete mode 100644 board/mvebu/common/config.h
+ delete mode 100644 common/mvebu/cmd_config.c
+
+diff --git a/board/mvebu/common/config.c b/board/mvebu/common/config.c
+deleted file mode 100644
+index 8162a3f..0000000
+--- a/board/mvebu/common/config.c
++++ /dev/null
+@@ -1,157 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#define DEBUG
+-
+-#include <common.h>
+-#include <errno.h>
+-#include <asm/io.h>
+-#include <asm/bitops.h>
+-#include <linux/compiler.h>
+-#include "devel-board.h"
+-#include "config.h"
+-
+-DECLARE_GLOBAL_DATA_PTR;
+-
+-#define I2C_DUMMY_BASE ((int)0x91000000)
+-
+-/* I2C interface commands */
+-static int i2c_write_dummy(uchar chip, uint addr, int alen, uchar *buffer, int len)
+-{
+-	uintptr_t reg = (uintptr_t)(I2C_DUMMY_BASE) + addr;
+-	writeb(*buffer, reg);
+-	return 0;
+-}
+-
+-static int i2c_read_dummy(uchar chip, uint addr, int alen, uchar *buffer, int len)
+-{
+-	uintptr_t reg = (uintptr_t)(I2C_DUMMY_BASE) + addr;
+-	(*buffer) = (uchar)readb(reg);
+-	return 0;
+-}
+-
+-int cfg_is_var_active(int id)
+-{
+-	struct cfg_var *cfg_table = board_get_cfg_table();
+-	return cfg_table[id].active;
+-}
+-
+-struct var_opts *cfg_get_var_opts(int id, int *cnt)
+-{
+-	struct cfg_var *cfg_table = board_get_cfg_table();
+-
+-	(*cnt) = cfg_table[id].option_cnt;
+-
+-	return cfg_table[id].option_desc;
+-}
+-
+-struct cfg_var *cfg_id_to_var(int id)
+-{
+-	struct cfg_var *cfg_table = board_get_cfg_table();
+-	cfg_table += id;
+-	return cfg_table;
+-}
+-
+-int cfg_is_available(void)
+-{
+-	if (board_get_cfg_table() == NULL)
+-		return 0;
+-	else
+-		return 1;
+-}
+-
+-int cfg_write_var(int id, int val)
+-{
+-	struct cfg_data *cfg = board_get_cfg();
+-	struct cfg_var *var = cfg_id_to_var(id);
+-	uchar reg;
+-	u32 var_mask = (1 << var->bit_length) - 1;
+-
+-	if (i2c_read_dummy(cfg->chip_addr, var->reg_offset, 1, &reg, 1))
+-		return -1;
+-
+-	/* Update the bitfield inside the register */
+-	val &= var_mask;
+-	reg &= ~(var_mask << var->start_bit);
+-	reg |= (val << var->start_bit);
+-
+-	/* Write the full cfg register back to i2c */
+-	if (i2c_write_dummy(cfg->chip_addr, var->reg_offset, 1, &reg, 1))
+-		return -1;
+-
+-	return 0;
+-}
+-
+-int cfg_read_var(int id, int *val)
+-{
+-	struct cfg_data *cfg = board_get_cfg();
+-	struct cfg_var *var = cfg_id_to_var(id);
+-	uchar reg;
+-	u32 var_mask = (1 << var->bit_length) - 1;
+-
+-	if (i2c_read_dummy(cfg->chip_addr, var->reg_offset, 1, &reg, 1))
+-		return -1;
+-
+-	(*val) = (reg >> var->start_bit) & var_mask;
+-
+-	debug("var offet = %d len = %d val = 0x%x\n", var->start_bit, var->bit_length, (*val));
+-
+-	return 0;
+-}
+-
+-int cfg_default_var(int id)
+-{
+-	struct cfg_var	*var = cfg_id_to_var(id);
+-	struct var_opts *opts;
+-	struct var_opts *dflt =	NULL;
+-	int i;
+-
+-	opts = var->option_desc;
+-	for (i = 0; i < var->option_cnt; i++, opts++) {
+-		if (opts->flags & VAR_IS_DEFUALT)
+-			dflt = opts;
+-	}
+-
+-	if (dflt == NULL) {
+-		printf("Error: Failed to find default option");
+-		return 1;
+-	}
+-
+-	if (cfg_write_var(id, dflt->value)) {
+-		printf("Error: Failed to write default value");
+-		return 1;
+-	}
+-
+-	debug("Wrote default value 0x%x = %s\n", dflt->value, dflt->desc);
+-	return 0;
+-}
+-
+-int cfg_default_all(void)
+-{
+-	int id;
+-	int ret = 0;
+-
+-	for (id = 0; id < MAX_CFG; id++) {
+-		if (cfg_is_var_active(id))
+-			ret |= cfg_default_var(id);
+-	}
+-
+-	return ret;
+-}
+-
+-
+diff --git a/board/mvebu/common/config.h b/board/mvebu/common/config.h
+deleted file mode 100644
+index 8dfec81..0000000
+--- a/board/mvebu/common/config.h
++++ /dev/null
+@@ -1,58 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#ifndef _CONFIG_H_
+-#define _CONFIG_H_
+-
+-#include <common.h>
+-#include <asm/arch-mvebu/mvebu.h>
+-#include <linux/compiler.h>
+-#include "var.h"
+-
+-
+-struct cfg_var {
+-	u8 reg_offset;
+-	u8 start_bit;
+-	u8 bit_length;
+-	u8 option_cnt;
+-	u8 active;
+-	struct var_opts option_desc[MAX_VAR_OPTIONS];
+-};
+-
+-struct cfg_data {
+-	u32	chip_addr;
+-	struct cfg_var *cfg_lookup;
+-};
+-
+-enum cfg_variables {
+-	BOARD_ID_CFG = 0,
+-	SERDES_0_CFG,
+-	SERDES_1_CFG,
+-	MAX_CFG
+-};
+-
+-int  cfg_default_all(void);
+-int  cfg_default_var(int id);
+-int  cfg_write_var(int id, int val);
+-int  cfg_read_var(int id, int *val);
+-int  cfg_is_available(void);
+-int  cfg_is_var_active(int id);
+-
+-struct var_opts *cfg_get_var_opts(int id, int *cnt);
+-
+-#endif /* _CONFIG_H_ */
+diff --git a/common/mvebu/Kconfig b/common/mvebu/Kconfig
+index 48feb92..c837e5c 100644
+--- a/common/mvebu/Kconfig
++++ b/common/mvebu/Kconfig
+@@ -17,13 +17,6 @@ config CMD_MVEBU_SAR
+ 	help
+ 	  SatR - Modify SOC's sample at reset (SAR) values
+ 
+-config CMD_MVEBU_CONFIG
+-	bool "config"
+-	depends on DEVEL_BOARD
+-	default n
+-	help
+-	  config - Modify SOC and board configuration
+-
+ config CMD_MVEBU_MPP
+ 	depends on (DEVEL_BOARD && MVEBU_MPP_BUS)
+ 	bool "mpp, mppbus"
+diff --git a/common/mvebu/Makefile b/common/mvebu/Makefile
+index c57b594..99d351d 100644
+--- a/common/mvebu/Makefile
++++ b/common/mvebu/Makefile
+@@ -18,7 +18,6 @@
+ 
+ obj-$(CONFIG_CMD_MVEBU_MISC) += cmd_misc.o
+ obj-$(CONFIG_CMD_MVEBU_SAR) += cmd_sar.o
+-obj-$(CONFIG_CMD_MVEBU_CONFIG) += cmd_config.o
+ obj-$(CONFIG_CMD_MVEBU_MPP) += cmd_mpp.o
+ obj-$(CONFIG_CMD_MVEBU_BUBT) += cmd_bubt.o
+ obj-$(CONFIG_CMD_MVEBU_MSS_BOOT) += cmd_mss.o
+diff --git a/common/mvebu/cmd_config.c b/common/mvebu/cmd_config.c
+deleted file mode 100644
+index df542c4..0000000
+--- a/common/mvebu/cmd_config.c
++++ /dev/null
+@@ -1,271 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#include <config.h>
+-#include <common.h>
+-#include <command.h>
+-#include <vsprintf.h>
+-#include <errno.h>
+-
+-#include "../../board/mvebu/common/config.h"
+-
+-
+-struct var_desc cfg_desc_table[MAX_CFG] = {
+-	[BOARD_ID_CFG] =	{ "board_id", "Board ID of current board"},
+-	[SERDES_0_CFG] =	{ "serdes_0", "Configurations on SERDES lane 0"},
+-	[SERDES_1_CFG] =	{ "serdes_1", "Configurations on SERDES lane 1"},
+-};
+-
+-static int cmd_cfg_key_to_id(const char *key)
+-{
+-	int id = -1;
+-
+-	for (id = 0; id < MAX_CFG; id++) {
+-		if (strcmp(key, cfg_desc_table[id].key) == 0)
+-			return id;
+-	}
+-
+-	if (id  == -1) {
+-		printf("Satr: Error: Unknown key \"%s\"\n", key);
+-		return -1;
+-	}
+-	if (cfg_is_var_active(id) == 0) {
+-		printf("Satr: Error: Key \"%s\" is inactive on this board\n", key);
+-		return -1;
+-	}
+-	return id;
+-}
+-
+-static void cmd_cfg_list_var(int id, bool print_opts)
+-{
+-	int cnt;
+-	struct var_opts *opts;
+-
+-	printf("%-10s %s\n", cfg_desc_table[id].key,
+-	       cfg_desc_table[id].description);
+-
+-	if (print_opts) {
+-		opts = cfg_get_var_opts(id, &cnt);
+-		while (cnt--) {
+-			printf("\t0x%-2x %s ", opts->value, opts->desc);
+-			if (opts->flags & VAR_IS_DEFUALT)
+-				printf("[Default]");
+-			printf("\n");
+-			opts++;
+-		}
+-	}
+-}
+-
+-static int cmd_cfg_print_key(const char *key)
+-{
+-	int id = cmd_cfg_key_to_id(key);
+-	struct var_opts *opts;
+-	char *desc = NULL;
+-	int val, ret, cnt;
+-
+-	if (id == -1)
+-		return -EINVAL;
+-
+-	ret = cfg_read_var(id, &val);
+-	if (ret)
+-		return ret;
+-
+-	opts = cfg_get_var_opts(id, &cnt);
+-	while (cnt--) {
+-		if (opts->value == val)
+-			desc = opts->desc;
+-		opts++;
+-	}
+-
+-	if (desc == NULL)
+-		printf("%s = 0x%x  ERROR: UNKNOWN OPTION\n", key, val);
+-	else
+-		printf("%s = 0x%x  %s\n", key, val, desc);
+-
+-	return 0;
+-}
+-
+-static void cmd_cfg_print_all(void)
+-{
+-	int id;
+-
+-	printf("\n");
+-	for (id = 0; id < MAX_CFG; id++) {
+-		if (cfg_is_var_active(id))
+-			cmd_cfg_print_key(cfg_desc_table[id].key);
+-	}
+-	printf("\n");
+-}
+-
+-static int cmd_cfg_write_key(const char *key, int val)
+-{
+-	int id = cmd_cfg_key_to_id(key);
+-	struct var_opts *opts;
+-	char *desc = NULL;
+-	int cnt;
+-
+-	if (id == -1)
+-		return -EINVAL;
+-
+-	opts = cfg_get_var_opts(id, &cnt);
+-	while (cnt--) {
+-		if (opts->value == val)
+-			desc = opts->desc;
+-		opts++;
+-	}
+-
+-	if (desc == NULL) {
+-		printf("ERROR: value 0x%x not supported for key %s\n", val, key);
+-		printf("use \"SatR list %s\" to print supported values\n", key);
+-	}
+-
+-	if (cfg_write_var(id, val))
+-		return -1;
+-
+-	/* Display the updated variable */
+-	cmd_cfg_print_key(key);
+-
+-	return 0;
+-}
+-
+-static int cmd_cfg_default_all(void)
+-{
+-	int id;
+-	int ret = 0;
+-
+-	cfg_default_all();
+-
+-	for (id = 0; id < MAX_CFG; id++) {
+-		if (cfg_is_var_active(id))
+-			cmd_cfg_print_key(cfg_desc_table[id].key);
+-	}
+-
+-	return ret;
+-}
+-
+-static int cmd_cfg_default_key(const char *key)
+-{
+-	int id = cmd_cfg_key_to_id(key);
+-	int ret;
+-
+-	if (id == -1)
+-		return -EINVAL;
+-
+-	ret = cfg_default_var(id);
+-	if (ret)
+-		return ret;
+-
+-	/* Display the updated variable */
+-	cmd_cfg_print_key(key);
+-
+-	return 0;
+-}
+-
+-static void cmd_cfg_list_all(void)
+-{
+-	int id;
+-
+-	printf("\n");
+-	for (id = 0; id < MAX_CFG; id++) {
+-		if (cfg_is_var_active(id))
+-			cmd_cfg_list_var(id, 0);
+-	}
+-	printf("\n");
+-}
+-
+-static int cmd_cfg_list_key(const char *key)
+-{
+-	int id = cmd_cfg_key_to_id(key);
+-
+-	if (id == -1)
+-		return -EINVAL;
+-
+-	printf("\n");
+-	cmd_cfg_list_var(id, 1);
+-	printf("\n");
+-
+-	return 0;
+-}
+-
+-int do_config_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+-			char * const argv[])
+-{
+-	const char *cmd = argv[1];
+-	const char *key = NULL;
+-	int value = 0;
+-
+-	if (cfg_is_available() == 0) {
+-		printf("Error: Config variables not available for this board\n");
+-		return 1;
+-	}
+-
+-	if ((strcmp(cmd, "write") == 0) && (argc < 4)) {
+-		printf("Error: Please specify config key and value\n");
+-		return 1;
+-	}
+-
+-	if (argc > 2)
+-		key = argv[2];
+-	if (argc > 3)
+-		value = (int)simple_strtoul(argv[3], NULL, 16);
+-
+-	if (strcmp(cmd, "list") == 0) {
+-		if (argc < 3) {
+-			cmd_cfg_list_all();
+-		} else {
+-			if (cmd_cfg_list_key(key))
+-				return -EINVAL;
+-		}
+-	} else if (strcmp(cmd, "default") == 0) {
+-		if (argc < 3) {
+-			cmd_cfg_default_all();
+-		} else {
+-			if (cmd_cfg_default_key(key))
+-				return -EINVAL;
+-		}
+-	} else if (strcmp(cmd, "read") == 0) {
+-		if (argc < 3) {
+-			cmd_cfg_print_all();
+-		} else {
+-			if (cmd_cfg_print_key(key))
+-				return -EINVAL;
+-		}
+-	} else if (strcmp(cmd, "write") == 0) {
+-		if (cmd_cfg_write_key(key, value))
+-			return -EINVAL;
+-	} else {
+-		printf("ERROR: unknown command to config: \"%s\"\n", cmd);
+-		return -EINVAL;
+-	}
+-
+-	return 0;
+-}
+-
+-U_BOOT_CMD(
+-	config,    6,     1,      do_config_cmd,
+-	"config - Modify SOC and board configuration\n",
+-	"\n"
+-	"Modify SOC and board configuration\n"
+-	"\tlist		- Display all availble config variables\n"
+-	"\tlist <x>	- Display options for config variable x\n"
+-	"\tdefault	- Set all config variable to default value\n"
+-	"\tdefault <x>	- Set config variable x default value\n"
+-	"\tread		- Read all config variables\n"
+-	"\tread <x>	- Read config variable x\n"
+-	"\twrite <x> <y>- Write y to config variable x\n"
+-);
+-- 
+1.9.1
+

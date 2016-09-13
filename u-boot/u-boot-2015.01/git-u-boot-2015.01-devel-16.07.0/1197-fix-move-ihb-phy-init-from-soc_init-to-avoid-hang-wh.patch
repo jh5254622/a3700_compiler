@@ -1,0 +1,84 @@
+From 9790e04353690cd5cb24053fd526551ea85a75a4 Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Tue, 31 May 2016 14:39:22 +0300
+Subject: [PATCH 1197/1240] fix: move ihb phy init from soc_init to avoid hang
+ when SD is connected
+
+- When SD is connected and power off/on is performed u-boot hangs in
+  ihb phy init.
+- WA for this issue is to move the ihb phy init to the ihb phy access
+  so the init won't be performed in boot time.
+- Fixes JIRA SYSTEMSW-2559
+
+Change-Id: I60dce7be7e6c0f551f6b9cd785e1ade47214642c
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30217
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/soc-init.c |  4 ----
+ drivers/misc/mvebu_phy_indirect.c    | 13 +++++++++++++
+ 2 files changed, 13 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index 620cf58..8160880 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -94,10 +94,6 @@ int mvebu_soc_init()
+ 	mvebu_sar_init(gd->fdt_blob);
+ #endif
+ 
+-#ifdef CONFIG_MVEBU_PHY_INDIRECT
+-	mvebu_phy_indirect_init();
+-#endif
+-
+ 	mvebu_thermal_sensor_probe();
+ 
+ 	/* Soc specific init */
+diff --git a/drivers/misc/mvebu_phy_indirect.c b/drivers/misc/mvebu_phy_indirect.c
+index 66ce389..3b7c7a6 100644
+--- a/drivers/misc/mvebu_phy_indirect.c
++++ b/drivers/misc/mvebu_phy_indirect.c
+@@ -71,6 +71,8 @@
+ 
+ #define	MVEBU_IHB_BASE_HIGH_BYTE_OFF		24
+ 
++int __attribute__((section(".data"))) ihb_init_done = 0; /* inidicates whether IHB PHY access was initialized */
++
+ enum ihb_access_type {
+ 	IHB_WRITE = 0,
+ 	IHB_READ  = 1
+@@ -152,6 +154,10 @@ static int mvebu_ihb_command_set(enum ihb_access_type access_type, int reg_ofs,
+ 
+ static int mvebu_ihb_read(int reg_ofs, u32 *val, int unit_id)
+ {
++	/* initialize access to ihb phy (incase it wasn't already) */
++	if (!ihb_init_done)
++		mvebu_phy_indirect_init();
++
+ 	/* set read command */
+ 	if (mvebu_ihb_command_set(IHB_READ, reg_ofs, 0 /* dummy */, unit_id)) {
+ 		error("IHB read: set command failed\n");
+@@ -169,6 +175,10 @@ static int mvebu_ihb_read(int reg_ofs, u32 *val, int unit_id)
+ 
+ static int mvebu_ihb_write(int reg_ofs, u32 data, int unit_id)
+ {
++	/* initialize access to ihb phy (incase it wasn't already) */
++	if (!ihb_init_done)
++		mvebu_phy_indirect_init();
++
+ 	/* set write command */
+ 	if (mvebu_ihb_command_set(IHB_WRITE, reg_ofs, data, unit_id)) {
+ 		error("IHB write: set command failed\n");
+@@ -232,5 +242,8 @@ int mvebu_phy_indirect_init(void)
+ 		ihb_cmd_reg = MVEBU_IHB_CMD_GET(IHB_WRITE, IHB_CTRL_REGION, MVEBU_IHB_PHY_CTRL_REG_OFF);
+ 		writel(ihb_cmd_reg, MVEBU_IHB_PHY_BASE(i) | MVEBU_IHB_PHY_CMD_REG_OFF);
+ 	}
++
++	ihb_init_done = 1; /* inidcate that IHB PHY access was initialized */
++
+ 	return 0;
+ }
+-- 
+1.9.1
+

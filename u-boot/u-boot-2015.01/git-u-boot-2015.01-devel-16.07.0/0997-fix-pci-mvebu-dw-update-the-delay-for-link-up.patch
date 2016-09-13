@@ -1,0 +1,33 @@
+From 68c85d68ace7a83284e32657caaa1a65ecc4dcd9 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Mon, 4 Apr 2016 10:29:47 +0300
+Subject: [PATCH 0997/1240] fix: pci: mvebu: dw: update the delay for link up
+
+Without this change the mvebu_pcie_link_up function returns
+link down for some cases when the link is up
+
+Change-Id: Idcc44c6890502124144c10293facfe497d104896
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28751
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/pci/pcie_mvebu_dw.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/pci/pcie_mvebu_dw.c b/drivers/pci/pcie_mvebu_dw.c
+index 00b7010..a6fa698 100644
+--- a/drivers/pci/pcie_mvebu_dw.c
++++ b/drivers/pci/pcie_mvebu_dw.c
+@@ -63,7 +63,7 @@ static int mvebu_pcie_link_up(uintptr_t regs_base)
+ 		if ((reg & mask) == mask)
+ 			return 1;
+ 
+-		udelay(1);
++		udelay(5);
+ 		timeout--;
+ 	}
+ 
+-- 
+1.9.1
+

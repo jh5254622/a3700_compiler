@@ -1,0 +1,50 @@
+From f1268b5532d6b865bd68960d9b25606886dfb9db Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 13 Mar 2016 16:40:54 +0200
+Subject: [PATCH 053/239] make: add support for platform specific build
+
+Change-Id: I796e09bb8f0bed34a0840e56de3a6553ee529a26
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ drivers/marvell/dram/Makefile        | 2 +-
+ drivers/marvell/dram/ddr_mckinley6.c | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/marvell/dram/Makefile b/drivers/marvell/dram/Makefile
+index 4949af7..d5a1bcf 100644
+--- a/drivers/marvell/dram/Makefile
++++ b/drivers/marvell/dram/Makefile
+@@ -42,7 +42,7 @@ INCPATH  = $(SRCDIRS) ./include
+ INCLUDE	  = $(addprefix -I, $(INCPATH))
+ 
+ CFLAGS   = -Wall -Werror -Os -ffreestanding -mlittle-endian -g -gdwarf-2
+-CFLAGS   += -march=armv8-a -fpie $(INCLUDE)
++CFLAGS   += -march=armv8-a -fpie $(INCLUDE) -D$(PLATFORM)
+ LDFLAGS  = -Xlinker --discard-all -Wl,--build-id=none -static -nostartfiles
+ 
+ CSRC = $(foreach DIR, $(SRCDIRS), $(wildcard $(DIR)/*.c))
+diff --git a/drivers/marvell/dram/ddr_mckinley6.c b/drivers/marvell/dram/ddr_mckinley6.c
+index 9feba56..09d8895 100644
+--- a/drivers/marvell/dram/ddr_mckinley6.c
++++ b/drivers/marvell/dram/ddr_mckinley6.c
+@@ -24,7 +24,7 @@ struct mk6_reg_data {
+ 	uint32_t value;
+ };
+ 
+-#if (PLATFROM == a7040_rz)
++#if defined(a7040_rz)
+ struct mk6_reg_data mk6_mac_setup[] = {
+ 	{ 0x000, 0x06501140},
+ 	{ 0x004, 0x000f9fff},
+@@ -1026,7 +1026,7 @@ struct mk6_reg_data mk6_phy_setup[] = {
+ 	{-1, -1},
+ };
+ 
+-#elif (PLATFROM == apn806)
++#elif defined (apn806)
+ 
+ struct mk6_reg_data mk6_mac_setup[] = {
+ 	{ 0x000, 0x06501140},
+-- 
+1.9.1
+

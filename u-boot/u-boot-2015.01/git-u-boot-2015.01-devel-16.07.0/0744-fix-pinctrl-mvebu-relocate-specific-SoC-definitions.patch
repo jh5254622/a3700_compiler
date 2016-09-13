@@ -1,0 +1,92 @@
+From 777bb9c898a38af6e0cc01405e34c2a873428e74 Mon Sep 17 00:00:00 2001
+From: Terry Zhou <bjzhou@marvell.com>
+Date: Thu, 21 Jan 2016 16:16:01 +0800
+Subject: [PATCH 0744/1240] fix: pinctrl: mvebu: relocate specific SoC
+ definitions
+
+relocate soc related definition into soc-info.h to make
+driver more generic.
+
+Change-Id: I0ce9b68ca913f6879492d2a8b4082e3df3215fd4
+Signed-off-by: Terry Zhou <bjzhou@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26980
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ arch/arm/include/asm/arch-armada38x/soc-info.h | 7 +++++++
+ arch/arm/include/asm/arch-armada8k/soc-info.h  | 6 ++++++
+ arch/arm/include/asm/arch-armadalp/soc-info.h  | 6 ++++++
+ drivers/gpio/mvebu_pinctl.c                    | 6 +-----
+ 4 files changed, 20 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/include/asm/arch-armada38x/soc-info.h b/arch/arm/include/asm/arch-armada38x/soc-info.h
+index 8ec55c2..0a6ee77 100644
+--- a/arch/arm/include/asm/arch-armada38x/soc-info.h
++++ b/arch/arm/include/asm/arch-armada38x/soc-info.h
+@@ -36,4 +36,11 @@
+ #define MPPS_PER_REG		(32 / MPP_BIT_CNT)
+ #define MAX_MPP_REGS		((MAX_MPP_ID + MPPS_PER_REG) / MPPS_PER_REG)
+ 
++/* Pin Ctrl driver definitions */
++#define BITS_PER_PIN		4
++#define PIN_FUNC_MASK		((1 << BITS_PER_PIN) - 1)
++#define PIN_REG_SHIFT		3
++#define PIN_FIELD_MASK		((1 << PIN_REG_SHIFT) - 1)
++
++
+ #endif	/* _SOC_INFO_H_ */
+diff --git a/arch/arm/include/asm/arch-armada8k/soc-info.h b/arch/arm/include/asm/arch-armada8k/soc-info.h
+index 6068032..f49b4cd 100644
+--- a/arch/arm/include/asm/arch-armada8k/soc-info.h
++++ b/arch/arm/include/asm/arch-armada8k/soc-info.h
+@@ -31,4 +31,10 @@
+ #define MPPS_PER_REG		(32 / MPP_BIT_CNT)
+ #define MAX_MPP_REGS		((MAX_MPP_ID + MPPS_PER_REG) / MPPS_PER_REG)
+ 
++/* Pin Ctrl driver definitions */
++#define BITS_PER_PIN		4
++#define PIN_FUNC_MASK		((1 << BITS_PER_PIN) - 1)
++#define PIN_REG_SHIFT		3
++#define PIN_FIELD_MASK		((1 << PIN_REG_SHIFT) - 1)
++
+ #endif	/* _SOC_INFO_H_ */
+diff --git a/arch/arm/include/asm/arch-armadalp/soc-info.h b/arch/arm/include/asm/arch-armadalp/soc-info.h
+index 54bea6c..68c3e51 100644
+--- a/arch/arm/include/asm/arch-armadalp/soc-info.h
++++ b/arch/arm/include/asm/arch-armadalp/soc-info.h
+@@ -36,4 +36,10 @@
+ #define MPPS_PER_REG		(32 / MPP_BIT_CNT)
+ #define MAX_MPP_REGS		((MAX_MPP_ID + MPPS_PER_REG) / MPPS_PER_REG)
+ 
++/* Pin Ctrl driver definitions */
++#define BITS_PER_PIN		1
++#define PIN_FUNC_MASK		((1 << BITS_PER_PIN) - 1)
++#define PIN_REG_SHIFT		5
++#define PIN_FIELD_MASK		((1 << PIN_REG_SHIFT) - 1)
++
+ #endif	/* _SOC_INFO_H_ */
+diff --git a/drivers/gpio/mvebu_pinctl.c b/drivers/gpio/mvebu_pinctl.c
+index 828466d..2644e3c 100644
+--- a/drivers/gpio/mvebu_pinctl.c
++++ b/drivers/gpio/mvebu_pinctl.c
+@@ -23,16 +23,12 @@
+ #include <fdtdec.h>
+ #include <errno.h>
+ #include <asm/arch-mvebu/fdt.h>
++#include <asm/arch/soc-info.h>
+ 
+ #define CONFIG_MAX_PINCTL_BANKS		4
+ #define CONFIG_MAX_PINS_PER_BANK	100
+ #define CONFIG_MAX_FUNC			0xF
+ 
+-#define BITS_PER_PIN		4
+-#define PIN_FUNC_MASK		((1 << BITS_PER_PIN) - 1)
+-#define PIN_REG_SHIFT		3
+-#define PIN_FIELD_MASK		((1 << PIN_REG_SHIFT) - 1)
+-
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+ struct pinctl_data {
+-- 
+1.9.1
+

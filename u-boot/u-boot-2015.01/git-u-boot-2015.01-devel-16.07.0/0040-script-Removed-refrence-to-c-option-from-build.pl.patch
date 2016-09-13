@@ -1,0 +1,32 @@
+From bc31372213f5e7277da59e0a2c731d66a9e6194d Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 16 Jul 2014 11:51:32 +0300
+Subject: [PATCH 0040/1240] script: Removed refrence to -c option from build.pl
+
+Change-Id: I1d9fcea2ebbf0438ead709c57dcf9378e65ed660
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/9342
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ build.pl | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/build.pl b/build.pl
+index 27be557..f5b0964 100755
+--- a/build.pl
++++ b/build.pl
+@@ -57,8 +57,8 @@ ERROR:
+ 
+ sub usage
+ {
+-	print "\nUsage  : build.pl -f \"Flash type\" -b \"board name\" [-c] [-o \"Output file\"]\n";
+-	print "Example: build.pl -f spi -b armada8k -c\n";
++	print "\nUsage  : build.pl -f \"Flash type\" -b \"board name\" [-o \"Output file\"]\n";
++	print "Example: build.pl -f spi -b armada8k\n";
+ 	print "\n";
+ 	print "Options:\n";
+ 	print "\t-f\tBoot device. Accepts spi, nor, nand\n";
+-- 
+1.9.1
+

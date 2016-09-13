@@ -1,0 +1,63 @@
+From a58da300759845516d62c3aa4be234ed0ec4629e Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Thu, 7 Jan 2016 15:05:19 +0200
+Subject: [PATCH 0656/1240] nand: dts: Add nand entries to a38x and cp110 dts
+ files
+
+Change-Id: I9b71852ab9a5e46d6e9a9c2eeac2f594b426e353
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26621
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/armada-385-db.dts | 11 +++++++++++
+ arch/arm/dts/cp110.dtsi        | 11 +++++++++++
+ 2 files changed, 22 insertions(+)
+
+diff --git a/arch/arm/dts/armada-385-db.dts b/arch/arm/dts/armada-385-db.dts
+index 8355ad3..53a2bce 100644
+--- a/arch/arm/dts/armada-385-db.dts
++++ b/arch/arm/dts/armada-385-db.dts
+@@ -157,6 +157,17 @@
+ 					status = "okay";
+ 				};
+ 			};
++			nand@D0000 {
++				compatible = "marvell,mvebu-pxa3xx-nand";
++				reg = <0xD0000 0x100>;
++				#address-cells = <1>;
++
++				nand-enable-arbiter;
++				num-cs = <1>;
++				nand-ecc-strength = <4>;
++				nand-ecc-step-size = <512>;
++		        };
++
+ 		};
+ 	};
+ 
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index 0a8e7d8..eb848f9 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -74,6 +74,17 @@ pinctl@440000 {
+ 	max-func = <0xf>;
+ };
+ 
++nand@720000 {
++	compatible = "marvell,mvebu-pxa3xx-nand";
++	reg = <0x720000 0x100>;
++	#address-cells = <1>;
++
++	nand-enable-arbiter;
++	num-cs = <1>;
++	nand-ecc-strength = <4>;
++	nand-ecc-step-size = <512>;
++};
++
+ pcie-controller {
+ 	#address-cells = <1>;
+ 	#size-cells = <1>;
+-- 
+1.9.1
+

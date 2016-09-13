@@ -1,0 +1,83 @@
+From 942bd36e60cf8872e6dde0358f2eccd07272ab37 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 16 Aug 2015 09:44:14 +0300
+Subject: [PATCH 0320/1240] e1000: releasing semaphore once no longer needed
+
+Once the hwsw semaphore is acquired, it must be released when access to the
+hw is completed. Without this subsequent calls to acquire will timeout
+obtaining the semaphore.
+
+Change-Id: Idec132d9cb0f154305916a51c4622b6a150891b5
+Signed-off-by: Tim Harvey <tharvey at gateworks.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22853
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/net/e1000.c | 22 ++++++++++++++++++++++
+ 1 file changed, 22 insertions(+)
+
+diff --git a/drivers/net/e1000.c b/drivers/net/e1000.c
+index d750a02..4becb7e 100644
+--- a/drivers/net/e1000.c
++++ b/drivers/net/e1000.c
+@@ -130,6 +130,7 @@ static int e1000_detect_gig_phy(struct e1000_hw *hw);
+ static void e1000_set_media_type(struct e1000_hw *hw);
+ 
+ static int32_t e1000_swfw_sync_acquire(struct e1000_hw *hw, uint16_t mask);
++static void e1000_swfw_sync_release(struct e1000_hw *hw, uint16_t mask);
+ static int32_t e1000_check_phy_reset_block(struct e1000_hw *hw);
+ 
+ #ifndef CONFIG_E1000_NO_NVM
+@@ -733,7 +734,10 @@ void e1000_release_eeprom(struct e1000_hw *hw)
+ 		eecd &= ~E1000_EECD_REQ;
+ 		E1000_WRITE_REG(hw, EECD, eecd);
+ 	}
++
++	e1000_swfw_sync_release(hw, E1000_SWFW_EEP_SM);
+ }
++
+ /******************************************************************************
+  * Reads a 16 bit word from the EEPROM.
+  *
+@@ -1106,6 +1110,7 @@ e1000_get_hw_eeprom_semaphore(struct e1000_hw *hw)
+ 	return E1000_SUCCESS;
+ }
+ 
++/* Take ownership of the PHY */
+ static int32_t
+ e1000_swfw_sync_acquire(struct e1000_hw *hw, uint16_t mask)
+ {
+@@ -1145,6 +1150,21 @@ e1000_swfw_sync_acquire(struct e1000_hw *hw, uint16_t mask)
+ 	return E1000_SUCCESS;
+ }
+ 
++static void e1000_swfw_sync_release(struct e1000_hw *hw, uint16_t mask)
++{
++	uint32_t swfw_sync = 0;
++
++	DEBUGFUNC();
++	while (e1000_get_hw_eeprom_semaphore(hw))
++		; /* Empty */
++
++	swfw_sync = E1000_READ_REG(hw, SW_FW_SYNC);
++	swfw_sync &= ~mask;
++	E1000_WRITE_REG(hw, SW_FW_SYNC, swfw_sync);
++
++	e1000_put_hw_eeprom_semaphore(hw);
++}
++
+ static bool e1000_is_second_port(struct e1000_hw *hw)
+ {
+ 	switch (hw->mac_type) {
+@@ -4466,6 +4486,8 @@ e1000_phy_hw_reset(struct e1000_hw *hw)
+ 		E1000_WRITE_REG(hw, LEDCTL, led_ctrl);
+ 	}
+ 
++	e1000_swfw_sync_release(hw, swfw);
++
+ 	/* Wait for FW to finish PHY configuration. */
+ 	ret_val = e1000_get_phy_cfg_done(hw);
+ 	if (ret_val != E1000_SUCCESS)
+-- 
+1.9.1
+

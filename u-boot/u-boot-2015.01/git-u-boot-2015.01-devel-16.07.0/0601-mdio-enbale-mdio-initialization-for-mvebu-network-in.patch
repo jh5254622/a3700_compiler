@@ -1,0 +1,39 @@
+From 21f7c1eeccda0a024af488fa8bb31e5c91488b69 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 15 Dec 2015 11:39:24 +0200
+Subject: [PATCH 0601/1240] mdio: enbale mdio initialization for mvebu network
+ initialization
+
+Change-Id: I80474fe25f3d5955746083a8297413db598a55ed
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25910
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ board/mvebu/common/eth_init.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/board/mvebu/common/eth_init.c b/board/mvebu/common/eth_init.c
+index 4510966..25d62e4 100644
+--- a/board/mvebu/common/eth_init.c
++++ b/board/mvebu/common/eth_init.c
+@@ -22,8 +22,16 @@
+ #include <spi.h>
+ #include <asm/arch-mvebu/driver_interface.h>
+ 
++DECLARE_GLOBAL_DATA_PTR;
++
+ int board_eth_init(bd_t *bis)
+ {
++
++#ifdef CONFIG_MVEBU_MDIO
++	mvebu_mdio_initialize(gd->fdt_blob);
++	miiphy_set_current_dev("mvebu_mdio");
++#endif
++
+ #if defined(CONFIG_SK98)
+ 	skge_initialize(bis);
+ #endif
+-- 
+1.9.1
+

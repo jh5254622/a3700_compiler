@@ -1,0 +1,49 @@
+From 087ed8afc626e38cb90409e5735678d77bf71dff Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 2 Jun 2016 15:42:37 +0300
+Subject: [PATCH 195/239] fix: aurora: set cache line clean & invalidate in
+ Aurora2 configuration
+
+Set cache line & invalidate instead of cache line invalidate only
+This change avoid system hang, because of memory coherency issue
+
+Change-Id: I58cfca8ed480650c3df7880a41363626fa1eecca
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30297
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ plat/marvell/a8k/a70x0/apn806_setup.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/plat/marvell/a8k/a70x0/apn806_setup.c b/plat/marvell/a8k/a70x0/apn806_setup.c
+index 5be808b..1a7f7e8 100644
+--- a/plat/marvell/a8k/a70x0/apn806_setup.c
++++ b/plat/marvell/a8k/a70x0/apn806_setup.c
+@@ -49,6 +49,9 @@
+ #define CCU_HTC_CR				(MVEBU_CCU_BASE + 0x200)
+ #define CCU_SET_POC_OFFSET			5
+ 
++#define CCU_LTC_CR				(MVEBU_CCU_BASE + 0x300)
++#define CCU_CLEAN_INV_WRITE_OFFSET		8
++
+ /* MCI indirect access definitions */
+ #define MCI_MAX_UNIT_ID				2
+ #define MCIX4_REG_START_ADDRESS_REG(unit_id)	(MVEBU_REGS_BASE + 0x6F4218 + (unit_id * 0x20))
+@@ -206,6 +209,13 @@ void init_aurora2(void)
+ 	reg = mmio_read_32(CCU_HTC_CR);
+ 	reg |= (0x1 << CCU_SET_POC_OFFSET);
+ 	mmio_write_32(CCU_HTC_CR, reg);
++
++	/* cache line clean & invalidate instead of
++	** cache line invalidate only - to avoid system hang
++	** due to memory coherency issue */
++	reg = mmio_read_32(CCU_LTC_CR);
++	reg |= (0x1 << CCU_CLEAN_INV_WRITE_OFFSET);
++	mmio_write_32(CCU_LTC_CR, reg);
+ }
+ 
+ void apn806_init(void)
+-- 
+1.9.1
+

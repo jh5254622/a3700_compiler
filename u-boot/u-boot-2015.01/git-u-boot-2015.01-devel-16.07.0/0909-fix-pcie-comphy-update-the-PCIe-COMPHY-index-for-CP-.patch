@@ -1,0 +1,66 @@
+From 29e9a0f16cbce49076361da218ad610445b5c01d Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 1 Mar 2016 14:47:44 +0200
+Subject: [PATCH 0909/1240] fix: pcie: comphy: update the PCIe COMPHY index for
+ CP-110
+
+- Fix the PCIe index for CP-110
+- PCIe0 is x4 or x1, PCIe1x1, and PCIe2x1
+
+Change-Id: Iece4cc6d04301f0024a6ba31d7c5f37300139415
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27960
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/armada-7040-rz-db_router.dts    | 2 +-
+ doc/mvebu/a7k-a8k/armada7040-rz-db-setup.txt | 4 ++--
+ drivers/phy/comphy_cp110.c                   | 4 ++--
+ 3 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/dts/armada-7040-rz-db_router.dts b/arch/arm/dts/armada-7040-rz-db_router.dts
+index a420f6d..0046dbf 100644
+--- a/arch/arm/dts/armada-7040-rz-db_router.dts
++++ b/arch/arm/dts/armada-7040-rz-db_router.dts
+@@ -122,7 +122,7 @@
+ 					phy-speed = <PHY_SPEED_5G>;
+ 				};
+ 				phy5 {
+-					phy-type = <PHY_TYPE_PEX1>;
++					phy-type = <PHY_TYPE_PEX2>;
+ 					phy-speed = <PHY_SPEED_5G>;
+ 				};
+ 			};
+diff --git a/doc/mvebu/a7k-a8k/armada7040-rz-db-setup.txt b/doc/mvebu/a7k-a8k/armada7040-rz-db-setup.txt
+index a7bf8c6..9ed759f 100644
+--- a/doc/mvebu/a7k-a8k/armada7040-rz-db-setup.txt
++++ b/doc/mvebu/a7k-a8k/armada7040-rz-db-setup.txt
+@@ -72,8 +72,8 @@ SerDes:	lane0	| sgmii2	| pex_x4_l0	| pex_x4_l0	| pex_x4_l0	| pex_x4_l0	| sata1
+ 	lane1	| usb3h0	| pex_x4_l1	| sata0		| usb3h0	| usb3h0	| sata0		| sata0		|
+ 	lane2	| sgmii0	| pex_x4_l2	| kr		| kr		| sata0		| sgmii0	| sgmii0	|
+ 	lane3	| sata1		| pex_x4_l3	| sata1		| sata1		| sata1		| sgmii2	| sgmii2	|
+-	lane4	| usb3h1	| pex_x1_0	| pex_x1_0	| usb3h1	| usb3h1	| rxauil0	| rxauil0	|
+-	lane5	| pex_x1_1	| pex_x1_1	| pex_x1_1	| pex_x1_1	| pex_x1_1	| rxauil1	| rxauil1	|
++	lane4	| usb3h1	| pex_x1_1	| pex_x1_1	| usb3h1	| usb3h1	| rxauil0	| rxauil0	|
++	lane5	| pex_x1_2	| pex_x1_2	| pex_x1_2	| pex_x1_2	| pex_x1_2	| rxauil1	| rxauil1	|
+ ---------------------------------------------------------------------------------------------------------------------------------
+ 
+ 
+diff --git a/drivers/phy/comphy_cp110.c b/drivers/phy/comphy_cp110.c
+index 48810ca..54f732c 100644
+--- a/drivers/phy/comphy_cp110.c
++++ b/drivers/phy/comphy_cp110.c
+@@ -68,8 +68,8 @@ struct comphy_mux_data cp110_comphy_pipe_mux_data[] = {
+ /* Lane 3 */ {3, {{PHY_TYPE_UNCONNECTED, 0x0}, {PHY_TYPE_USB3_HOST1, 0x1},
+ 			{PHY_TYPE_PEX0, 0x4} } },
+ /* Lane 4 */ {4, {{PHY_TYPE_UNCONNECTED, 0x0}, {PHY_TYPE_USB3_HOST1, 0x1},
+-			{PHY_TYPE_USB3_DEVICE, 0x2}, {PHY_TYPE_PEX0, 0x4} } },
+-/* Lane 5 */ {2, {{PHY_TYPE_UNCONNECTED, 0x0}, {PHY_TYPE_PEX1, 0x4} } },
++			{PHY_TYPE_USB3_DEVICE, 0x2}, {PHY_TYPE_PEX1, 0x4} } },
++/* Lane 5 */ {2, {{PHY_TYPE_UNCONNECTED, 0x0}, {PHY_TYPE_PEX2, 0x4} } },
+ };
+ 
+ static int comphy_pcie_power_up(u32 lane, u32 pcie_by4, void __iomem *hpipe_base, void __iomem *comphy_base)
+-- 
+1.9.1
+

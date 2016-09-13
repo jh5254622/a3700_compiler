@@ -1,0 +1,38 @@
+From 3496f9c52168ae3b8b371be179b1796c10d88e7e Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Sun, 13 Mar 2016 19:40:00 +0200
+Subject: [PATCH 0938/1240] fix: hw_info: mvebu: fix 'hw_info' help command
+
+Change-Id: Ieae068bbf8e126304b938fd627c637444f569b6d
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28207
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ common/mvebu/cmd_hw_info.c | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/common/mvebu/cmd_hw_info.c b/common/mvebu/cmd_hw_info.c
+index 14195fd..77b6b23 100644
+--- a/common/mvebu/cmd_hw_info.c
++++ b/common/mvebu/cmd_hw_info.c
+@@ -225,10 +225,12 @@ U_BOOT_CMD(
+ 	hw_info,      3,     0,      do_hw_info,
+ 	"hw_info\n",
+ 	"\n"
+-	"Load or store HW information such as board ID, PCB SLM number, MAC addresses between EEPROM and env variables\n"
+-	"\tdump  <name>            - Dump all or specific HW parameter from EEPROM\n"
+-	"\tload  <name>            - Load all or specific HW parameter from EEPROM to env variables\n"
+-	"\tstore <name>            - Store all or specific HW parameter from env variables to EEPROM\n"
++	"Load/Store HW information environment variables from/to EEPROM\n"
++	"HW information includes predefined list of Env. variables (such as board ID, PCB SLM number, MAC addresses, etc).\n"
++	"\tdump  <evn_name>            - Dump all (or specific <env_name>) HW parameter from EEPROM\n"
++	"\tload  <env_name>            - Load all (or specific <env_name>) HW parameter from EEPROM to env variables\n"
++	"\tstore <env_name>            - Store all or specific HW parameter from env variables to EEPROM\n"
++	"\t				 usage of 'hw_info store' requires proper values to be set for the variables listed below\n"
+ 	"Supported HW information parameters\n"
+ 	"\tboard_id      board ID\n"
+ 	"\tpcb_slm       PCB SLM number\n"
+-- 
+1.9.1
+

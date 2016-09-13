@@ -1,0 +1,207 @@
+From f5351cc502948d272280c1d8a9d4278a528375f2 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 8 Mar 2015 19:22:52 +0200
+Subject: [PATCH 0134/1240] defconfig: moved commands config to defconfig files
+
+	- Moved commands config to defconfig files
+	  because the MVEBU config is enabled for SPL also
+	  and this commands is not relevant for SPL
+
+Change-Id: I77f360702b90a2d26cdcaf07e1c5372d5937f85d
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17313
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Kconfig | 23 -----------------------
+ common/mvebu/Kconfig              |  4 ++--
+ configs/mvebu_armada38x_defconfig | 32 +++++++++++++++++++++++++++++---
+ configs/mvebu_armada8k_defconfig  | 26 ++++++++++++++++++++++++++
+ configs/mvebu_armadalp_defconfig  | 26 ++++++++++++++++++++++++++
+ 5 files changed, 83 insertions(+), 28 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index 4397ff0..a277e7e 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -7,27 +7,6 @@ config MVEBU
+ 	bool "Support MVEBU devices"
+ 	depends on $SYS_VENDOR="mvebu"
+ 	default y
+-	select CMD_BDI
+-	select CMD_BOOTD
+-	select CMD_ECHO
+-	select CMD_EDITENV
+-	select CMD_FPGA
+-	select CMD_IMI
+-	select CMD_ITEST
+-	select CMD_IMLS
+-	select CMD_LOADB
+-	select CMD_LOADS
+-	select CMD_MEMORY
+-	select CMD_MISC
+-	select CMD_FLASH
+-	select CMD_NET
+-	select CMD_DHCP
+-	select CMD_PING
+-	select CMD_NFS
+-	select CMD_RUN
+-	select CMD_SAVEENV
+-	select CMD_SOURCE
+-	select CMD_XIMG
+ 
+ menu "IO support"
+ 
+@@ -67,7 +46,6 @@ config MVEBU_PCI
+ config MVEBU_UART
+ 	bool "UART support"
+ 	default n
+-	select CMD_CONSOLE
+ 	help
+ 	  Choose this option to add support
+ 	  for UART driver, using COM1 NS16550
+@@ -77,7 +55,6 @@ config MVEBU_UART
+ config MVEBU_I2C
+ 	bool "I2C support"
+ 	default n
+-	select CMD_I2C
+ 	help
+ 	  Choose this option to add support
+ 	  for I2C driver, using Marvell mvebu_i2c.c
+diff --git a/common/mvebu/Kconfig b/common/mvebu/Kconfig
+index 52cdf76..8184c3d 100644
+--- a/common/mvebu/Kconfig
++++ b/common/mvebu/Kconfig
+@@ -23,14 +23,14 @@ config CMD_MVEBU_CONFIG
+ 
+ config CMD_MVEBU_MPP
+ 	bool "mpp, mppbus"
+-	default y
++	default n
+ 	help
+ 	  mpp - Display or modify MPP values
+ 	  mppbus - Display or modify MPP bus info
+ 
+ config CMD_MVEBU_BUBT
+ 	bool "bubt"
+-	default y
++	default n
+ 	help
+ 	  bubt - Burn a u-boot image to flash
+ 
+diff --git a/configs/mvebu_armada38x_defconfig b/configs/mvebu_armada38x_defconfig
+index cf6e628..65ee816 100644
+--- a/configs/mvebu_armada38x_defconfig
++++ b/configs/mvebu_armada38x_defconfig
+@@ -1,10 +1,36 @@
+ CONFIG_ARM=y
+ CONFIG_TARGET_ARMADA_38X=y
+-CONFIG_MVEBU_NAND=y
+-CONFIG_MVEBU_SPI=y
+-CONFIG_MVEBU_PCI=y
+ CONFIG_MVEBU_UART=y
+ CONFIG_MVEBU_I2C=y
+ CONFIG_OF_CONTROL=y
+ CONFIG_OF_EMBED=y
+ CONFIG_DEFAULT_DEVICE_TREE="armada-385-db"
++CONFIG_MVEBU_NAND=y
++CONFIG_MVEBU_SPI=y
++CONFIG_MVEBU_PCI=y
++CONFIG_CMD_BDI
++CONFIG_CMD_BOOTD
++CONFIG_CMD_ECHO
++CONFIG_CMD_EDITENV
++CONFIG_CMD_FPGA
++CONFIG_CMD_IMI
++CONFIG_CMD_ITEST
++CONFIG_CMD_IMLS
++CONFIG_CMD_LOADB
++CONFIG_CMD_LOADS
++CONFIG_CMD_MEMORY
++CONFIG_CMD_MISC
++CONFIG_CMD_FLASH
++CONFIG_CMD_NET
++CONFIG_CMD_DHCP
++CONFIG_CMD_PING
++CONFIG_CMD_NFS
++CONFIG_CMD_RUN
++CONFIG_CMD_SAVEENV
++CONFIG_CMD_SOURCE
++CONFIG_CMD_XIMG
++CONFIG_CMD_I2C
++CONFIG_CMD_CONSOLE
++CONFIG_CMD_MVEBU_BUBT
++CONFIG_CMD_MVEBU_MPP
++CONFIG_CMD_MVEBU_MISC
+\ No newline at end of file
+diff --git a/configs/mvebu_armada8k_defconfig b/configs/mvebu_armada8k_defconfig
+index 7335545..52ab222 100644
+--- a/configs/mvebu_armada8k_defconfig
++++ b/configs/mvebu_armada8k_defconfig
+@@ -3,3 +3,29 @@ CONFIG_ARM=y
+ CONFIG_TARGET_ARMADA_8K=y
+ CONFIG_MVEBU_UART=y
+ CONFIG_ARMV8_PSCI=y
++CONFIG_CMD_BDI
++CONFIG_CMD_BOOTD
++CONFIG_CMD_ECHO
++CONFIG_CMD_EDITENV
++CONFIG_CMD_FPGA
++CONFIG_CMD_IMI
++CONFIG_CMD_ITEST
++CONFIG_CMD_IMLS
++CONFIG_CMD_LOADB
++CONFIG_CMD_LOADS
++CONFIG_CMD_MEMORY
++CONFIG_CMD_MISC
++CONFIG_CMD_FLASH
++CONFIG_CMD_NET
++CONFIG_CMD_DHCP
++CONFIG_CMD_PING
++CONFIG_CMD_NFS
++CONFIG_CMD_RUN
++CONFIG_CMD_SAVEENV
++CONFIG_CMD_SOURCE
++CONFIG_CMD_XIMG
++CONFIG_CMD_I2C
++CONFIG_CMD_CONSOLE
++CONFIG_CMD_MVEBU_BUBT
++CONFIG_CMD_MVEBU_MPP
++CONFIG_CMD_MVEBU_MISC
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index 82beec4..e2e9931 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -1,3 +1,29 @@
+ CONFIG_ARM=y
+ CONFIG_TARGET_ARMADA_LP=y
+ CONFIG_MVEBU_UART=y
++CONFIG_CMD_BDI
++CONFIG_CMD_BOOTD
++CONFIG_CMD_ECHO
++CONFIG_CMD_EDITENV
++CONFIG_CMD_FPGA
++CONFIG_CMD_IMI
++CONFIG_CMD_ITEST
++CONFIG_CMD_IMLS
++CONFIG_CMD_LOADB
++CONFIG_CMD_LOADS
++CONFIG_CMD_MEMORY
++CONFIG_CMD_MISC
++CONFIG_CMD_FLASH
++CONFIG_CMD_NET
++CONFIG_CMD_DHCP
++CONFIG_CMD_PING
++CONFIG_CMD_NFS
++CONFIG_CMD_RUN
++CONFIG_CMD_SAVEENV
++CONFIG_CMD_SOURCE
++CONFIG_CMD_XIMG
++CONFIG_CMD_I2C
++CONFIG_CMD_CONSOLE
++CONFIG_CMD_MVEBU_BUBT
++CONFIG_CMD_MVEBU_MPP
++CONFIG_CMD_MVEBU_MISC
+\ No newline at end of file
+-- 
+1.9.1
+

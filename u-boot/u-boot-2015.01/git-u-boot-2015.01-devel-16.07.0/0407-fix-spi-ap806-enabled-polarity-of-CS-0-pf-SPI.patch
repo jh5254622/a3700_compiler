@@ -1,0 +1,31 @@
+From 5de227ce1aab000662f937054f9bc53a6f02b663 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 3 Sep 2015 17:08:05 +0300
+Subject: [PATCH 0407/1240] fix: spi: ap806: enabled polarity of CS-0 pf SPI
+
+- When the polarity is down, part of the SPI is not working.
+
+Change-Id: Ic188998875510650073c14497bace3f026e5308c
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23413
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/apn-806.dtsi | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/arm/dts/apn-806.dtsi b/arch/arm/dts/apn-806.dtsi
+index 5d8e51b..ce7b7c8 100644
+--- a/arch/arm/dts/apn-806.dtsi
++++ b/arch/arm/dts/apn-806.dtsi
+@@ -59,6 +59,8 @@
+ 				reg = <0x510600 0x50>;
+ 				spi-max-frequency = <10000000>;
+ 				clock = <&tclk>;
++				cpol-cs-bitmap = <1>; /* bit i is set if the CPOL of
++							 CS-i is enabled or not */
+ 				status = "okay";
+ 			};
+ 
+-- 
+1.9.1
+

@@ -1,0 +1,113 @@
+From 7fee38e9e526acea45bffe659fd4600e899fda32 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Sun, 10 Jan 2016 12:04:12 +0200
+Subject: [PATCH 0660/1240] fix: usb3: a3700: update USB32 PHY initialization
+ according to ETP measurements
+
+According to ETP:
+set correct De-Emphasis configuration, and restore default burst size limit.
+
+Change-Id: If10795a7ed002930d76f8811aedccc196b8ac79d
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26665
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Reviewed-by: Hua Jing <jinghua@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/phy/comphy_a3700.c | 31 +++++++++++++++++++++++++++++--
+ drivers/phy/comphy_a3700.h | 16 ++++++++++++++++
+ 2 files changed, 45 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/phy/comphy_a3700.c b/drivers/phy/comphy_a3700.c
+index 0420cf8..a3d49d5 100644
+--- a/drivers/phy/comphy_a3700.c
++++ b/drivers/phy/comphy_a3700.c
+@@ -310,9 +310,36 @@ static int comphy_usb3_power_up(enum phy_speed speed)
+ 
+ 	/*
+ 	 * 2. Set counter for 100us pulse in USB3 Host and Device
+-	 */
++	 * restore default burst size limit (Reference Clock 31:24) */
+ 	reg_set((void __iomem *)USB3_CTRPUL_VAL_REG, 0x8 << 24, rb_usb3_ctr_100ns);
+-	reg_set((void __iomem *)USB3H_CTRPUL_VAL_REG, 0x8 << 24, rb_usb3_ctr_100ns);
++
++
++	/* 0xd005c300 = 0x1001 */
++	/* set PRD_TXDEEMPH (3.5db de-emph) */
++	reg_set16((void __iomem *)LANE_CFG0_ADDR(USB3), 0x1, 0xFF);
++
++	/* unset BIT0: set Tx Electrical Idle Mode: Transmitter is in low impedance mode during electrical idle */
++	/* unset BIT4: set G2 Tx Datapath with no Delayed Latency */
++	/* unset BIT6: set Tx Detect Rx Mode at LoZ mode */
++	reg_set16((void __iomem *)LANE_CFG1_ADDR(USB3), 0x0, 0xFFFF);
++
++
++	/* 0xd005c310 = 0x93: set Spread Spectrum Clock Enabled  */
++	reg_set16((void __iomem *)LANE_CFG4_ADDR(USB3), bf_spread_spectrum_clock_en, 0x80);
++
++	/* set Override Margining Controls From the MAC: Use margining signals from lane configuration */
++	reg_set16((void __iomem *)TEST_MODE_CTRL_ADDR(USB3), rb_mode_margin_override, 0xFFFF);
++
++	/* set Lane-to-Lane Bundle Clock Sampling Period = per PCLK cycles */
++	/* set Mode Clock Source = PCLK is generated from REFCLK */
++	reg_set16((void __iomem *)GLOB_CLK_SRC_LO_ADDR(USB3), 0x0, 0xFF);
++
++	/* set G2 Spread Spectrum Clock Amplitude at 4K */
++	reg_set16((void __iomem *)GEN2_SETTING_2_ADDR(USB3), g2_tx_ssc_amp, 0xF000);
++
++	/* unset G3 Spread Spectrum Clock Amplitude & set G3 TX and RX Register Master Current Select */
++	reg_set16((void __iomem *)GEN2_SETTING_3_ADDR(USB3), 0x0, 0xFFFF);
++
+ 
+ 	/*
+ 	 * 3. Check crystal jumper setting and program the Power and PLL Control accordingly
+diff --git a/drivers/phy/comphy_a3700.h b/drivers/phy/comphy_a3700.h
+index b05cc17..d0200fb 100644
+--- a/drivers/phy/comphy_a3700.h
++++ b/drivers/phy/comphy_a3700.h
+@@ -111,6 +111,14 @@
+ #define UNIT_CTRL_ADDR(unit)		(PHY_REG_UNIT_CTRL_ADDR * PHY_SHFT(unit) + PHY_BASE(unit))
+ #define rb_idle_sync_en			BIT12
+ 
++#define PHY_REG_GEN2_SETTINGS_2		0x3e	/* for phy_read16 and phy_write16 */
++#define GEN2_SETTING_2_ADDR(unit)	(PHY_REG_GEN2_SETTINGS_2 * PHY_SHFT(unit) + PHY_BASE(unit))
++#define g2_tx_ssc_amp			BIT14
++
++#define PHY_REG_GEN2_SETTINGS_3		0x3f	/* for phy_read16 and phy_write16 */
++#define GEN2_SETTING_3_ADDR(unit)	(PHY_REG_GEN2_SETTINGS_3 * PHY_SHFT(unit) + PHY_BASE(unit))
++
++
+ #define PHY_MISC_REG0_ADDR		0x4F	/* for phy_read16 and phy_write16 */
+ #define MISC_REG0_ADDR(unit)		(PHY_MISC_REG0_ADDR * PHY_SHFT(unit) + PHY_BASE(unit))
+ #define rb_clk100m_125m_en		BIT4
+@@ -131,18 +139,26 @@
+ #define bf_sel_bits_pcie_force		BIT15
+ 
+ #define LANE_CFG0_ADDR(unit)		(0x180 * PHY_SHFT(unit) + PHY_BASE(unit))
++#define bf_use_max_pll_rate		BIT9
+ #define LANE_CFG1_ADDR(unit)		(0x181 * PHY_SHFT(unit) + PHY_BASE(unit))
+ #define bf_use_max_pll_rate		BIT9
++#define LANE_CFG4_ADDR(unit)		(0x188 * PHY_SHFT(unit) + PHY_BASE(unit)) /* 0x5c310 = 0x93 (set BIT7) */
++#define bf_spread_spectrum_clock_en	BIT7
++
+ 
+ #define LANE_STAT1_ADDR(unit)		(0x183 * PHY_SHFT(unit) + PHY_BASE(unit))
+ #define rb_txdclk_pclk_en		BIT0
+ 
++
+ #define GLOB_PHY_CTRL0_ADDR(unit)	(0x1C1 * PHY_SHFT(unit) + PHY_BASE(unit))
+ #define bf_soft_rst			BIT0
+ #define bf_mode_refdiv			0x30
+ #define rb_mode_core_clk_freq_sel	BIT9
+ #define rb_mode_pipe_width_32		BIT3
+ 
++#define TEST_MODE_CTRL_ADDR(unit)	(0x1C2 * PHY_SHFT(unit) + PHY_BASE(unit))
++#define rb_mode_margin_override		BIT2
++
+ #define GLOB_CLK_SRC_LO_ADDR(unit)	(0x1C3 * PHY_SHFT(unit) + PHY_BASE(unit))
+ #define bf_cfg_sel_20b			BIT15
+ 
+-- 
+1.9.1
+

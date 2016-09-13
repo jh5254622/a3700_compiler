@@ -1,0 +1,43 @@
+From da36da8ab58bbe90247843259b103ac9bbd963dc Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Wed, 4 Mar 2015 09:13:08 +0200
+Subject: [PATCH 03/66] aarch64: defconfig: Rename mvebu_armv8_tiny_defconfig
+ to mvebu_armv8_tiny_le_defconfig
+
+Change-Id: Ib2eb9b7dd7412b3a53215b7c848741bbf223a012
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17223
+---
+ configs/mvebu_armv8_tiny_defconfig    | 6 ------
+ configs/mvebu_armv8_tiny_le_defconfig | 6 ++++++
+ 2 files changed, 6 insertions(+), 6 deletions(-)
+ delete mode 100644 configs/mvebu_armv8_tiny_defconfig
+ create mode 100644 configs/mvebu_armv8_tiny_le_defconfig
+
+diff --git a/configs/mvebu_armv8_tiny_defconfig b/configs/mvebu_armv8_tiny_defconfig
+deleted file mode 100644
+index 53d8b6f..0000000
+--- a/configs/mvebu_armv8_tiny_defconfig
++++ /dev/null
+@@ -1,6 +0,0 @@
+-BR2_aarch64=y
+-BR2_TOOLCHAIN_EXTERNAL=y
+-BR2_TARGET_GENERIC_GETTY_PORT="ttyAMA0"
+-BR2_TARGET_ROOTFS_CPIO=y
+-BR2_TARGET_ROOTFS_TAR_GZIP=y
+-BR2_PACKAGE_HOST_MKE2IMG=y
+diff --git a/configs/mvebu_armv8_tiny_le_defconfig b/configs/mvebu_armv8_tiny_le_defconfig
+new file mode 100644
+index 0000000..53d8b6f
+--- /dev/null
++++ b/configs/mvebu_armv8_tiny_le_defconfig
+@@ -0,0 +1,6 @@
++BR2_aarch64=y
++BR2_TOOLCHAIN_EXTERNAL=y
++BR2_TARGET_GENERIC_GETTY_PORT="ttyAMA0"
++BR2_TARGET_ROOTFS_CPIO=y
++BR2_TARGET_ROOTFS_TAR_GZIP=y
++BR2_PACKAGE_HOST_MKE2IMG=y
+-- 
+1.9.1
+

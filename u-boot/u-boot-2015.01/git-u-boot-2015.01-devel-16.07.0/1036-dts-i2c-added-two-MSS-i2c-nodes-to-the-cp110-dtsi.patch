@@ -1,0 +1,78 @@
+From 116fef34a602f36743ec784bca6dfabdb954964b Mon Sep 17 00:00:00 2001
+From: Ahmad Abbas <ahmada@marvell.com>
+Date: Wed, 13 Apr 2016 17:35:03 +0300
+Subject: [PATCH 1036/1240] dts: i2c: added two MSS i2c nodes to the cp110 dtsi
+
+added i2c mss nodes to the cp110 device tree.
+
+Change-Id: I2109cd4b051507fe4764b6688ed2c02e72c9de5a
+Signed-off-by: Ahmad Abbas <ahmada@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29000
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/armada-70x0-customer0.dts |  6 ++++++
+ arch/arm/dts/armada-70x0-db_router.dts |  6 ++++++
+ arch/arm/dts/cp110.dtsi                | 12 ++++++++++++
+ 3 files changed, 24 insertions(+)
+
+diff --git a/arch/arm/dts/armada-70x0-customer0.dts b/arch/arm/dts/armada-70x0-customer0.dts
+index 2c679a1..cc2683c 100644
+--- a/arch/arm/dts/armada-70x0-customer0.dts
++++ b/arch/arm/dts/armada-70x0-customer0.dts
+@@ -57,6 +57,12 @@
+ 			i2c@701000 {
+ 				status = "okay";
+ 			};
++			i2c@211000 { /* MSS_i2c0 */
++				status = "disabled";
++			};
++			i2c@211100 { /* MSS_i2c1 */
++				status = "disabled";
++			};
+ 			usb3@500000 {
+ 				status = "okay";
+ 			};
+diff --git a/arch/arm/dts/armada-70x0-db_router.dts b/arch/arm/dts/armada-70x0-db_router.dts
+index 7bdcd7b..6bb42a8 100644
+--- a/arch/arm/dts/armada-70x0-db_router.dts
++++ b/arch/arm/dts/armada-70x0-db_router.dts
+@@ -58,6 +58,12 @@
+ 			i2c@701000 {
+ 				status = "okay";
+ 			};
++			i2c@211000 { /* MSS_i2c0 */
++				status = "disabled";
++			};
++			i2c@211100 { /* MSS_i2c1 */
++				status = "disabled";
++			};
+ 			usb3@500000 {
+ 				status = "okay";
+ 			};
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index 7452da1..ed4b503 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -59,6 +59,18 @@ i2c@701100 { /* i2c1 */
+ 	clock = <&refclk>;
+ 	status = "disabled";
+ };
++i2c@211000 { /* MSS_i2c0 */
++	compatible = "marvell,mvebu-i2c";
++	reg = <0x211000 0x100>;
++	clock = <&refclk>;
++	status = "disabled";
++};
++i2c@211100 { /* MSS_i2c1 */
++	compatible = "marvell,mvebu-i2c";
++	reg = <0x211100 0x100>;
++	clock = <&refclk>;
++	status = "disabled";
++};
+ sata@540000 {
+ 	compatible = "marvell,mvebu-sata";
+ 	reg = <0x540000 0x30000>;
+-- 
+1.9.1
+

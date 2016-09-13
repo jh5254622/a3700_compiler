@@ -1,0 +1,41 @@
+From 7660a6c13bf851605d981bf136e5ad20ece189ca Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Thu, 19 May 2016 13:53:20 +0300
+Subject: [PATCH 162/239] amb: 80x0: add support for AMB bridge on CP1 for
+ comphy access
+
+Change-Id: I4bff3e86396599b459a369c1d15f3a9ec473e374
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29858
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ plat/marvell/a8k/a70x0/cp110_setup.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/plat/marvell/a8k/a70x0/cp110_setup.c b/plat/marvell/a8k/a70x0/cp110_setup.c
+index f4a0960..dca9c76 100644
+--- a/plat/marvell/a8k/a70x0/cp110_setup.c
++++ b/plat/marvell/a8k/a70x0/cp110_setup.c
+@@ -187,6 +187,8 @@ void amb_bridge_init(int cp_index)
+ 
+ void cp110_init(void)
+ {
++	uint32_t cp_index;
++
+ 	/* configure AXI-MBUS windows for CP0*/
+ 	init_amb_adec(0);
+ 
+@@ -206,6 +208,7 @@ void cp110_init(void)
+ 	/* configure stream id for CP0 */
+ 	cp110_stream_id_init(MVEBU_CP_REGS_BASE(0));
+ 
+-	/* Open AMB bridge for comphy for CP0*/
+-	amb_bridge_init(0);
++	/* Open AMB bridge for comphy for CP0 & CP1*/
++	for (cp_index = 0; cp_index < CP_COUNT; cp_index++)
++		amb_bridge_init(cp_index);
+ }
+-- 
+1.9.1
+

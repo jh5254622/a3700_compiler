@@ -1,0 +1,379 @@
+From 3434762af1975d2ff765a004ba1853ca5c3dde8b Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Mon, 20 Jul 2015 17:05:15 +0300
+Subject: [PATCH 0260/1240] spl: pci: mvebu: add dram over pcie support
+
+When dram over pcie is enabled, do the following updates to the init sequence:
+At SPL stage:
+	- remove dram init
+	- add pcie init
+	- update pcie windows and bar
+- At u-boot stage:
+	- at dram init - set statically the dram size
+	- remove pcie init
+
+Change-Id: I6f2f1ba5869b2f7a4cd92a0de9af3ba4db309ee8
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22013
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv7/armada38x/soc-init.c         |   6 +
+ arch/arm/cpu/armv8/armada8k/soc-init.c          |   5 +-
+ arch/arm/cpu/mvebu-common/Kconfig               |  11 ++
+ arch/arm/cpu/mvebu-common/Makefile              |   1 +
+ arch/arm/cpu/mvebu-common/dram_over_pci.c       | 143 ++++++++++++++++++++++++
+ arch/arm/cpu/mvebu-common/spl.c                 |  11 ++
+ arch/arm/include/asm/arch-mvebu/dram_over_pci.h |  27 +++++
+ common/board_r.c                                |   2 +
+ drivers/misc/Kconfig                            |   3 +
+ scripts/Makefile.spl                            |   1 +
+ 10 files changed, 209 insertions(+), 1 deletion(-)
+ create mode 100644 arch/arm/cpu/mvebu-common/dram_over_pci.c
+ create mode 100644 arch/arm/include/asm/arch-mvebu/dram_over_pci.h
+
+diff --git a/arch/arm/cpu/armv7/armada38x/soc-init.c b/arch/arm/cpu/armv7/armada38x/soc-init.c
+index 24e9603..6cefe1d 100644
+--- a/arch/arm/cpu/armv7/armada38x/soc-init.c
++++ b/arch/arm/cpu/armv7/armada38x/soc-init.c
+@@ -48,6 +48,10 @@ struct mvebu_soc_family *soc_init(void)
+ 
+ int dram_init(void)
+ {
++#ifdef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
++	/* set static dram size 256MB*/
++	gd->ram_size = 0x10000000;
++#else
+ 	int cs;
+ 	u32 ctrl, size, base;
+ 
+@@ -76,6 +80,8 @@ int dram_init(void)
+ 		return 1;
+ 	}
+ 
++#endif
++
+ 	return 0;
+ }
+ 
+diff --git a/arch/arm/cpu/armv8/armada8k/soc-init.c b/arch/arm/cpu/armv8/armada8k/soc-init.c
+index 3f57054..5294ecc 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc-init.c
++++ b/arch/arm/cpu/armv8/armada8k/soc-init.c
+@@ -85,7 +85,10 @@ struct mvebu_soc_family *soc_init(void)
+ 
+ int dram_init(void)
+ {
+-#ifdef CONFIG_PALLADIUM
++#ifdef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
++	/* set static dram size 256MB*/
++	gd->ram_size = 0x10000000;
++#elif defined(CONFIG_PALLADIUM)
+ 	gd->ram_size = 0x20000000;
+ #else
+ 	u32 alr, ahr;
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index 05f0d22..6e00b08 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -85,6 +85,17 @@ config MVEBU_I2C
+ 	  driver.
+ 	  base address is configured under MVEBU_I2C_BASE
+ 
++config MVEBU_SPL_DDR_OVER_PCI_SUPPORT
++	bool "DDR over PCIE support in SPL"
++	depends on SPL
++	default n
++	select MVEBU_PCI
++	help
++	  To add this option need to edit the defconfig and add the following line:
++	  +S:CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT=y
++	  Choose this option to add support
++	  for DDR over PCIE support
++
+ menu "DDR support"
+ 
+ config MVEBU_SPL_DDR_SUPPORT
+diff --git a/arch/arm/cpu/mvebu-common/Makefile b/arch/arm/cpu/mvebu-common/Makefile
+index 4dad398..1d2fafc 100644
+--- a/arch/arm/cpu/mvebu-common/Makefile
++++ b/arch/arm/cpu/mvebu-common/Makefile
+@@ -25,3 +25,4 @@ obj-$(CONFIG_MVEBU_TIMER) += timer_mvebu.o
+ obj-$(CONFIG_GENERIC_TIMER) += generic_timer.o
+ obj-$(CONFIG_MVEBU_CA9) += platform.o
+ obj-$(CONFIG_SPL_BUILD) += spl.o
++obj-$(CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT) += dram_over_pci.o
+diff --git a/arch/arm/cpu/mvebu-common/dram_over_pci.c b/arch/arm/cpu/mvebu-common/dram_over_pci.c
+new file mode 100644
+index 0000000..77f79df
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/dram_over_pci.c
+@@ -0,0 +1,143 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <pci.h>
++#include <asm/io.h>
++#include <asm/arch-mvebu/comphy.h>
++
++/* mapping addresses */
++#define DRAM_OFFSET					0
++#define PCI_CONFIGURATION_OFFSET	0x50000000
++#define DRAM_WIN_SIZE				0x10000000
++
++/* BARs offset */
++#define BAR0_LOW_ADDR_OFFSET	0x10
++#define BAR0_HIGH_ADDR_OFFSET	0x14
++#define BAR1_LOW_ADDR_OFFSET	0x18
++#define BAR1_HIGH_ADDR_OFFSET	0x1c
++
++#define	PCI_DEVICE_INIT_DELAY	3000000
++
++#ifdef CONFIG_TARGET_ARMADA_8K
++
++/* common defines */
++#define WIN_ENABLE_BIT			(0x1)
++#define WIN_DISABLE_BIT			(0x0)
++
++/* Physical address of the base of the window = {AddrLow[19:0],20’h0} */
++#define ADDRESS_SHIFT			(20 - 4)
++#define ADDRESS_MASK			(0xFFFFFFF0)
++#define CCU_WIN_ALIGNMENT		(0x100000)
++
++/* AP registers */
++#define SPL_AP_BASE				0xF0000000
++#define CCU_BASE				(SPL_AP_BASE + 0x4000)
++#define CCU_DDR_WIN				(2)
++#define	CCU_IO0_TARGET_ID		(0)
++#define CCU_WIN_CR_OFFSET(win)		(CCU_BASE + 0x0 + (0x10 * win))
++#define CCU_TARGET_ID_OFFSET		(8)
++#define CCU_TARGET_ID_MASK			(0x7F)
++
++#define CCU_WIN_SCR_OFFSET(win)		(CCU_BASE + 0x4 + (0x10 * win))
++#define CCU_WIN_ENA_READ_SECURE		(0x1)
++#define CCU_WIN_ENA_WRITE_SECURE	(0x2)
++
++#define CCU_WIN_ALR_OFFSET(win)		(CCU_BASE + 0x8 + (0x10 * win))
++#define CCU_WIN_AHR_OFFSET(win)		(CCU_BASE + 0xC + (0x10 * win))
++
++/* RFU defines */
++#define RFU_WIN_PEX_CFG			(SPL_AP_BASE + 0x6F0208)
++#define RFU_WIN_PEX_ALR			(SPL_AP_BASE + 0x6F0218)
++#define RFU_WIN_PEX_AHR			(SPL_AP_BASE + 0x6F021c)
++#define RFU_WIN_PEX_CFG_ADDR_SHIFT	16
++#define RFU_WIN_PEX_ALR_ADDR_OFFSET 4
++
++void dram_over_pci_window_config(void)
++{
++	u32 alr, ahr, val;
++
++	alr = (u32)((DRAM_OFFSET >> ADDRESS_SHIFT) & ADDRESS_MASK);
++	ahr = (u32)(((DRAM_OFFSET + DRAM_WIN_SIZE - 1) >> ADDRESS_SHIFT)
++				& ADDRESS_MASK);
++
++	/* disable DDR window opened by BootROM */
++	writel(WIN_DISABLE_BIT, CCU_WIN_CR_OFFSET(CCU_DDR_WIN));
++
++	/* set PEX RFU - enable, base address = 0 */
++	val = (WIN_ENABLE_BIT | (alr << RFU_WIN_PEX_ALR_ADDR_OFFSET));
++	writel(val, RFU_WIN_PEX_ALR);
++
++	/* high address = 0xfffffff */
++	writel(ahr, RFU_WIN_PEX_AHR);
++
++	/* configuration address = 0x50000000 */
++	val = (PCI_CONFIGURATION_OFFSET >> RFU_WIN_PEX_CFG_ADDR_SHIFT);
++	writel(val, RFU_WIN_PEX_CFG);
++}
++
++#elif defined(CONFIG_TARGET_ARMADA_38X)
++
++void dram_over_pci_window_config(void)
++{
++	/* disable DRAM */
++	writel(0, 0xd0020184);
++
++	/* L2 filtering - enable access PCAC dram from address 0 */
++	writel(0x40000001, 0xd0008c00);
++	writel(0x4ff00000, 0xd0008c04);
++
++	/* open window */
++	writel(0x3fffe881, 0xd0020000);
++	writel(0, 0xd0020004);
++	writel(0, 0xd0020008);
++
++	/* close 0xf0 window to avoid collision */
++	writel(0, 0xd00200b0);
++
++	/* reset global timer - required by the BootROM */
++	writel(1, 0xd0020300);
++}
++#endif
++
++void dram_over_pci_init(const void *fdt_blob)
++{
++	struct pci_controller *hose;
++
++	/* wait until the PCIE card finises */
++	udelay(PCI_DEVICE_INIT_DELAY);
++	comphy_init(fdt_blob);
++	udelay(PCI_DEVICE_INIT_DELAY);
++
++	dram_over_pci_window_config();
++
++	pci_init();
++
++	/* set PCIE bars,
++	   bar 0 configuration address = 0x50000000
++	   bar 1  address = 0x0 - dram address */
++	hose = pci_bus_to_hose(0);
++	hose->write_dword(hose, 0, BAR0_LOW_ADDR_OFFSET,
++					  PCI_CONFIGURATION_OFFSET);
++	hose->write_dword(hose, 0, BAR0_HIGH_ADDR_OFFSET, 0);
++
++	hose->write_dword(hose, 0, BAR1_LOW_ADDR_OFFSET, DRAM_OFFSET);
++	hose->write_dword(hose, 0, BAR1_HIGH_ADDR_OFFSET, 0);
++
++	udelay(PCI_DEVICE_INIT_DELAY);
++}
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index 5c636a4..25aea32 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -21,6 +21,9 @@
+ #include <fdtdec.h>
+ #include <asm/arch-mvebu/fdt.h>
+ #include <asm/arch-mvebu/comphy.h>
++#ifdef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
++#include <asm/arch-mvebu/dram_over_pci.h>
++#endif
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+@@ -51,6 +54,11 @@ void board_init_f(ulong silent)
+ 
+ 	setup_fdt();
+ 	preloader_console_init();
++
++#ifndef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
++/* when DDR over PCIE is enabled, add delay before and after the comphy_init
++   to verify that the PCIE card init done, before setting the comphy to avoid
++   collisions. and no ddr init require */
+ #if CONFIG_MVEBU_COMPHY_SUPPORT
+ 	if (comphy_init(gd->fdt_blob))
+ 		error("COMPHY initialization failed\n");
+@@ -58,4 +66,7 @@ void board_init_f(ulong silent)
+ #ifndef CONFIG_PALLADIUM
+ 	static_dram_init();
+ #endif
++#else
++	dram_over_pci_init(gd->fdt_blob);
++#endif /* CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT */
+ }
+diff --git a/arch/arm/include/asm/arch-mvebu/dram_over_pci.h b/arch/arm/include/asm/arch-mvebu/dram_over_pci.h
+new file mode 100644
+index 0000000..61fe4df
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/dram_over_pci.h
+@@ -0,0 +1,27 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _DRAMOVERPCI_H_
++#define _DRAMOVERPCI_H_
++
++#include <fdtdec.h>
++
++void dram_over_pci_init(const void *fdt_blob);
++
++#endif /* _DRAMOVERPCI_H_ */
++
+diff --git a/common/board_r.c b/common/board_r.c
+index 7a1b4d30..81ca9d33 100644
+--- a/common/board_r.c
++++ b/common/board_r.c
+@@ -224,7 +224,9 @@ static int initr_unlock_ram_in_cache(void)
+ #ifdef CONFIG_PCI
+ static int initr_pci(void)
+ {
++#ifndef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+ 	pci_init();
++#endif
+ 
+ 	return 0;
+ }
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index ec01255..756571f 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -1,6 +1,7 @@
+ config MVEBU_CCU
+ 	bool "CCU address decoding driver"
+ 	default n
++	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+ 	help
+ 	  Choose this option to add support
+ 	  for CCU address decoding driver.
+@@ -19,6 +20,7 @@ config MVEBU_IOB
+ config MVEBU_RFU
+ 	bool "RFU address decoding driver"
+ 	default n
++	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+ 	help
+ 	  Choose this option to add support
+ 	  for RFU address decoding driver.
+@@ -27,6 +29,7 @@ config MVEBU_RFU
+ 
+ config MVEBU_MBUS
+ 	bool "MBUS address decoding driver"
++	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+ 	default n
+ 	help
+ 	  Choose this option to add support
+diff --git a/scripts/Makefile.spl b/scripts/Makefile.spl
+index 3ac9155..4bb941c 100644
+--- a/scripts/Makefile.spl
++++ b/scripts/Makefile.spl
+@@ -82,6 +82,7 @@ libs-$(CONFIG_SPL_SATA_SUPPORT) += drivers/block/
+ libs-$(CONFIG_MVEBU_SPL_DDR_SUPPORT) += drivers/ddr/
+ libs-$(CONFIG_MVEBU_COMPHY_SUPPORT) += drivers/phy/
+ libs-$(CONFIG_OF_EMBED) += dts/
++libs-$(CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT) += drivers/pci/
+ 
+ head-y		:= $(addprefix $(obj)/,$(head-y))
+ libs-y		:= $(addprefix $(obj)/,$(libs-y))
+-- 
+1.9.1
+

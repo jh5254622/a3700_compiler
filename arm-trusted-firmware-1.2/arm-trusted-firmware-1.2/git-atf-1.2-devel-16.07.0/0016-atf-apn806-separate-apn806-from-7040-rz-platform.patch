@@ -1,0 +1,112 @@
+From d6de23c14d66eca45bf02511e5e1864629f4d467 Mon Sep 17 00:00:00 2001
+From: "hayim@marvell.com" <hayim@marvell.com>
+Date: Thu, 18 Feb 2016 12:29:11 +0200
+Subject: [PATCH 016/239] atf: apn806: separate apn806 from 7040-rz platform
+
+- Till now those 2 platform used the same source tree.
+  since AXI configuration needs to be moved to ATF, it
+  will affect apn806 (since it's a CP110 configuration).
+- Therefore, those 2 platform needed to be separated.
+- apn806 uses 7040-rz sources but omits CP110
+  configuration files.
+
+Change-Id: If6441923be424457bc18a573716afb0616b46d44
+Signed-off-by: hayim@marvell.com <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27621
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ plat/marvell/a8k/apn806/platform.mk | 80 +++++++++++++++++++++++++++++++++++++
+ 1 file changed, 80 insertions(+)
+ create mode 100644 plat/marvell/a8k/apn806/platform.mk
+
+diff --git a/plat/marvell/a8k/apn806/platform.mk b/plat/marvell/a8k/apn806/platform.mk
+new file mode 100644
+index 0000000..065aba1
+--- /dev/null
++++ b/plat/marvell/a8k/apn806/platform.mk
+@@ -0,0 +1,80 @@
++#
++# ***************************************************************************
++# Copyright (C) 2016 Marvell International Ltd.
++# ***************************************************************************
++#
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions are met:
++#
++# Redistributions of source code must retain the above copyright notice, this
++# list of conditions and the following disclaimer.
++#
++# Redistributions in binary form must reproduce the above copyright notice,
++# this list of conditions and the following disclaimer in the documentation
++# and/or other materials provided with the distribution.
++#
++# Neither the name of Marvell nor the names of its contributors may be used
++# to endorse or promote products derived from this software without specific
++# prior written permission.
++#
++# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
++# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
++# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
++# OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
++# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
++# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
++# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
++# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++# POSSIBILITY OF SUCH DAMAGE.
++#
++
++# Use a7040_rz platform sources since apn806 uses the same code excepting the CP110 configurations
++PLAT_SRC			:= a7040_rz
++PLAT_FAMILY			:= a8k
++PLAT_FAMILY_BASE	:= plat/marvell/$(PLAT_FAMILY)
++PLAT_SRC_BASE		:= $(PLAT_FAMILY_BASE)/$(PLAT_SRC)
++PLAT_INCLUDE_BASE	:= include/plat/marvell/$(PLAT_FAMILY)
++
++CALL_DOIMAGE		:= y
++# This define is used in BL31 linker script to make sure
++# the PSCI code is aligned to 64KB
++$(eval $(call add_define,PLAT_MARVELL_7040_RZ1))
++
++MARVELL_GIC_SOURCES	:=	drivers/arm/gic/common/gic_common.c	\
++				drivers/arm/gic/v2/gicv2_main.c				\
++				drivers/arm/gic/v2/gicv2_helpers.c			\
++				plat/common/plat_gicv2.c
++
++ATF_INCLUDES		:=	-Iinclude/common/tbbr
++
++PLAT_INCLUDES		:=	-I$(PLAT_FAMILY_BASE)/$(PLAT_SRC)			\
++				-I$(PLAT_FAMILY_BASE)/$(PLAT_SRC)/include			\
++				-I$(PLAT_INCLUDE_BASE)/$(PLAT_SRC)/board/common		\
++				-I$(PLAT_INCLUDE_BASE)/common					\
++				-I$(PLAT_INCLUDE_BASE)/common/aarch64			\
++				-I$(PLAT_SRC_BASE)								\
++				${ATF_INCLUDES}
++
++PLAT_BL_COMMON_SOURCES	:=	$(PLAT_SRC_BASE)/aarch64/a7040_rz_common.c	\
++				drivers/console/console.S							\
++				drivers/ti/uart/16550_console.S
++
++BL1_SOURCES		+=	$(PLAT_SRC_BASE)/aarch64/plat_helpers.S	\
++				lib/cpus/aarch64/cortex_a72.S
++
++BL31_SOURCES		+=	lib/cpus/aarch64/cortex_a72.S		\
++				$(PLAT_SRC_BASE)/aarch64/plat_helpers.S		\
++				$(PLAT_SRC_BASE)/aarch64/plat_psci.S		\
++				$(PLAT_SRC_BASE)/plat_pm.c					\
++				$(PLAT_SRC_BASE)/plat_topology.c			\
++				plat/marvell/common/marvell_gicv2.c			\
++				${MARVELL_GIC_SOURCES}
++
++# Disable the PSCI platform compatibility layer (allows porting from Old Platform APIs
++# to the new APIs).
++# It is not needed since Marvell platform already uses the new platform APIs.
++ENABLE_PLAT_COMPAT	:= 	0
++
++include plat/marvell/common/marvell_common.mk
+-- 
+1.9.1
+

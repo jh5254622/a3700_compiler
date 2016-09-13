@@ -1,0 +1,46 @@
+From 760e26d78a163af53e13cd93d99d46c073c68dfa Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 28 Jul 2014 15:47:56 +0300
+Subject: [PATCH 0044/1240] a8k: bootcmd: Added a specifc boot command for
+ palladium
+
+Change-Id: I72a4426d67db710d94d59e328a21544951bdcd7e
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/9684
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/armada8k.h | 11 ++++++++++-
+ 1 file changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index 8d78a79..cc4d777 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -61,6 +61,8 @@
+  * Add here all config values that differ
+  * from the generic value in mvebu-common.h
+  */
++#ifdef CONFIG_PALLADIUM
++
+ #undef CONFIG_BOOTDELAY
+ #define CONFIG_BOOTDELAY                -1
+ 
+@@ -68,6 +70,13 @@
+ #define CONFIG_BAUDRATE                 4000
+ 
+ #undef CONFIG_BOOTARGS
+-#define CONFIG_BOOTARGS			"console=ttyS0,63000 earlyprintk root=/dev/ram0"
++#define CONFIG_BOOTARGS			"console=ttyS0,4000 earlyprintk root=/dev/ram0"
++
++#undef  CONFIG_EXTRA_ENV_SETTINGS
++#define CONFIG_EXTRA_ENV_SETTINGS	"kernel_addr=0x107ffc0\0"	\
++					"fdt_addr=0x1000000\0"		\
++					"fdt_high=0xa0000000\0"
++#endif /*CONFIG_PALLADIUM*/
++
+ 
+ #endif /* __ARMADA_8K_H */
+-- 
+1.9.1
+

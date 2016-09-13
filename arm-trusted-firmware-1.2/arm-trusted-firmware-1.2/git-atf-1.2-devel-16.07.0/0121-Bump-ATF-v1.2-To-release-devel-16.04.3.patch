@@ -1,0 +1,24 @@
+From 1a69482aea2d2949fe983eedbe0dda8b45b7c201 Mon Sep 17 00:00:00 2001
+From: Wilson Ding <dingwei@marvell.com>
+Date: Sun, 17 Apr 2016 15:11:53 +0800
+Subject: [PATCH 121/239] Bump ATF v1.2 To release devel-16.04.3
+
+Change-Id: Ia11319e90a61b5865c19b52a31f359c458cf2028
+Signed-off-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29098
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ version.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/version.mk b/version.mk
+index 736199f..be467ed 100644
+--- a/version.mk
++++ b/version.mk
+@@ -1 +1 @@
+-BUILD_STRING = devel-16.04.2
++BUILD_STRING = devel-16.04.3
+-- 
+1.9.1
+

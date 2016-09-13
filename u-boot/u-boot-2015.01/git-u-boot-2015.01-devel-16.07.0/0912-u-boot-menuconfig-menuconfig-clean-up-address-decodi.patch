@@ -1,0 +1,131 @@
+From 8d3d31859349381a5fbf0907299f1eae009a7424 Mon Sep 17 00:00:00 2001
+From: Ahmad Abbas <ahmada@marvell.com>
+Date: Thu, 11 Feb 2016 20:39:52 +0200
+Subject: [PATCH 0912/1240] u-boot: menuconfig: menuconfig clean up - address
+ decoding
+
+- Moved all address decoding related configs from arm architucture to a
+  new address decoding category.
+
+Change-Id: I9beb49bf4ebea73d43b5a322887266dcf4fc2ce7
+Signed-off-by: Ahmad Abbas <ahmada@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27460
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/Kconfig | 28 -------------------
+ drivers/misc/Kconfig                | 54 ++++++++++++++++++++++++++++++-------
+ 2 files changed, 44 insertions(+), 38 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/Kconfig b/arch/arm/cpu/armv8/armada8k/Kconfig
+index 4c6f966..f40c4ef 100644
+--- a/arch/arm/cpu/armv8/armada8k/Kconfig
++++ b/arch/arm/cpu/armv8/armada8k/Kconfig
+@@ -45,34 +45,6 @@ config MVEBU_LLC_EXCLUSIVE_EN
+ 	  1. Upon a Read hit, the CL is evicted from the LLC
+ 	  2. Read Allocate directive is ignored (i.e. no Linefilll done into LLC as a result of a read that misses)
+ 
+-config MVEBU_CCU
+-	bool "CCU address decoding driver"
+-	default n
+-	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+-	help
+-	  Choose this option to add support
+-	  for CCU address decoding driver.
+-	  This driver initialize the CCU windows
+-	  only.
+-
+-config MVEBU_IOB
+-	bool "IOB address decoding driver"
+-	default n
+-	help
+-	  Choose this option to add support
+-	  for IOB address decoding driver.
+-	  This driver initialize the IOB windows
+-	  only.
+-
+-config MVEBU_RFU
+-	bool "RFU address decoding driver"
+-	default n
+-	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+-	help
+-	  Choose this option to add support
+-	  for RFU address decoding driver.
+-	  This driver initialize the RFU windows
+-	  which come after the CCU window.
+ 
+ config MVEBU_FLC
+ 	bool "MBUS Final Level Cache driver"
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index 8bbd7c6..df8abdb 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -1,15 +1,5 @@
+ menu "Misc drivers"
+ 
+-config MVEBU_MBUS
+-	bool "MBUS address decoding driver"
+-	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+-	default n
+-	help
+-	  Choose this option to add support
+-	  for MBUS address decoding driver.
+-	  This driver initialize the MBUS windows
+-	  only.
+-
+ config MVEBU_MBUS_SPL_ONLY
+ 	bool "MBUS address decoding driver in SPL only"
+ 	depends on MVEBU_MBUS
+@@ -68,5 +58,49 @@ config MVEBU_SPL_CHIP_SAR_DUMP
+ 	  Choose this option to dump sample at
+ 	  reset registers
+ 
++endmenu
++
++menu "Address Decoding"
++depends on MVEBU
++
++config MVEBU_CCU
++	bool "CCU address decoding driver"
++	default n
++	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT && TARGET_ARMADA_8K
++	help
++	  Choose this option to add support
++	  for CCU address decoding driver.
++	  This driver initialize the CCU windows
++	  only.
++
++config MVEBU_IOB
++	bool "IOB address decoding driver"
++	default n
++	depends on TARGET_ARMADA_8K
++	help
++	  Choose this option to add support
++	  for IOB address decoding driver.
++	  This driver initialize the IOB windows
++	  only.
++
++config MVEBU_RFU
++	bool "RFU address decoding driver"
++	default n
++	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT && TARGET_ARMADA_8K
++	help
++	  Choose this option to add support
++	  for RFU address decoding driver.
++	  This driver initialize the RFU windows
++	  which come after the CCU window.
++
++config MVEBU_MBUS
++	bool "MBUS address decoding driver"
++	depends on !MVEBU_SPL_DDR_OVER_PCI_SUPPORT
++	default n
++	help
++	  Choose this option to add support
++	  for MBUS address decoding driver.
++	  This driver initialize the MBUS windows
++	  only.
+ 
+ endmenu
+-- 
+1.9.1
+

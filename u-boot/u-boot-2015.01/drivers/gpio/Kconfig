@@ -1,0 +1,38 @@
+menu "GPIO Support"
+
+config DM_GPIO
+	bool "Enable Driver Model for GPIO drivers"
+	depends on DM
+	help
+	  If you want to use driver model for GPIO drivers, say Y.
+	  To use legacy GPIO drivers, say N.
+
+config MVEBU_PINCTL
+	bool "MVEBU Pin control support"
+	default n
+	help
+	  Choose this option to add support
+	  for pinctl driver. This drive implements
+	  the lowlevel control that allows changing
+	  the function of a multi purpose pin
+
+config MVEBU_GPIO
+	bool "MVEBU GPIO support"
+	select DM_GPIO
+	default n
+	help
+	  Choose this option to add
+	  support for mvebu GPIO.
+	  This drive implements the
+	  high level interfaces of GPIO.
+
+config MVEBU_MPP_BUS
+	bool "MPP bus support"
+	depends on (DEVEL_BOARD && MVEBU_PINCTL)
+	default n
+	help
+	  Choose this option to add support
+	  for the mpp-bus driver. This driver
+	  is used for enabling or disabling mpp
+	  buses at runtime
+endmenu

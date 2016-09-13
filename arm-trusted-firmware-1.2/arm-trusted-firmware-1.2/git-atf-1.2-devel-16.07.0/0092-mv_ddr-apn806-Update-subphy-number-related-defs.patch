@@ -1,0 +1,47 @@
+From 5e2603f73c5c7d3c08ca3713fef483e2b3d7902a Mon Sep 17 00:00:00 2001
+From: Nadav Haklai <nadavh@marvell.com>
+Date: Tue, 29 Mar 2016 21:54:10 +0300
+Subject: [PATCH 092/239] mv_ddr: apn806: Update subphy number related defs
+
+This patch updates subphy number related defines.
+apn806 has 9 (8 data + 1 ecc) subphys.
+
+Change-Id: I83a752e350602e5464b6977d830a789cea589f3f
+Signed-off-by: Nadav Haklai <nadavh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28648
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28848
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c | 2 +-
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+index c29ac5a..7f9d7d4 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+@@ -102,7 +102,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #endif
+ 
+ #define DDR_INTERFACES_NUM		1
+-#define DDR_INTERFACE_OCTETS_NUM	5
++#define DDR_INTERFACE_OCTETS_NUM	9
+ 
+ #if defined(CONFIG_DDR4)
+ u16 apn806_odt_slope[] = {
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
+index 2310b9c..3e22088 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
+@@ -102,7 +102,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ #define IF_ID_0				0
+ #define DEV_NUM_0			0
+ #define MAX_INTERFACE_NUM		1
+-#define MAX_BUS_NUM			5
++#define MAX_BUS_NUM			9
+ #define DDR_IF_CTRL_SUBPHYS_NUM		3
+ 
+ #define MEM_TO_MC6_FREQ_RATIO		2
+-- 
+1.9.1
+

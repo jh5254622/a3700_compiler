@@ -1,0 +1,30 @@
+From 2877c5227913460b2e7a271cb50a2c1060f4ecf3 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 25 Nov 2015 10:52:35 +0200
+Subject: [PATCH 0532/1240] bootargs: pd: increase memory limit to 256 MB
+
+Change-Id: I68290b2649b46786f0e02435407854f09e7daff7
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25258
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/armada8k.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index 09238b9..f120e51 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -92,7 +92,7 @@ extern char __end_of_spl[];
+ 
+ #undef CONFIG_BOOTARGS
+ #define CONFIG_BOOTARGS		"console=ttyS0,24000 earlycon=uart8250,mmio32,0xf0512000 " \
+-				"mem=128M init=/bin/sh root=/dev/ram0 rw"
++				"mem=256M init=/bin/sh root=/dev/ram0 rw"
+ 
+ #undef CONFIG_EXTRA_ENV_SETTINGS
+ #define CONFIG_EXTRA_ENV_SETTINGS	"kernel_addr=0x180000\0"	\
+-- 
+1.9.1
+

@@ -1,0 +1,48 @@
+From ef96f4b2bc164b2ceccde798bf753bbe6cbc9a11 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Thu, 7 Apr 2016 22:29:50 +0800
+Subject: [PATCH 1140/1240] fix: fdt: a3700: update the compatible string in
+ dtsi file
+
+- correct the model string in dtsi file, since dtsi
+  represents the SoC instead of the board.
+- remove useless mbus compatible string in soc node.
+
+Change-Id: Ibf2544eda295663ff9eba0e83928bb2fed820063
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28866
+Reviewed-by: Victor Gu <xigu@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/dts/armada-3700.dtsi | 9 ++++-----
+ 1 file changed, 4 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm/dts/armada-3700.dtsi b/arch/arm/dts/armada-3700.dtsi
+index 961bf5f..b01322c 100644
+--- a/arch/arm/dts/armada-3700.dtsi
++++ b/arch/arm/dts/armada-3700.dtsi
+@@ -4,16 +4,15 @@
+ #include <dt-bindings/comphy/comphy_data.h>
+ #include <dt-bindings/gpio/armada-3700-gpio.h>
+ / {
+-	model = "Marvell Armada 3700 Development Board";
++	model = "Marvell Armada 3700 SoC";
+ 	compatible = "marvell,armada-3700";
+-
+ 	#address-cells = <2>;
+ 	#size-cells = <2>;
+ 
+ 	soc {
+-	compatible = "marvell,armadalp-mbus", "simple-bus";
+-	#address-cells = <1>;
+-	#size-cells = <0>;
++		compatible = "simple-bus";
++		#address-cells = <1>;
++		#size-cells = <0>;
+ 
+ 		internal-regs {
+ 			compatible = "marvell,internal-regs", "simple-bus";
+-- 
+1.9.1
+

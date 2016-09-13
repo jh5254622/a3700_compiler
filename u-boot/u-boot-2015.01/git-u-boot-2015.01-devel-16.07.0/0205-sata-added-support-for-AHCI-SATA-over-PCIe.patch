@@ -1,0 +1,155 @@
+From 527a5332f1155c2be84f19bb83b16bc5f0391175 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 18 Jun 2015 17:20:55 +0300
+Subject: [PATCH 0205/1240] sata: added support for AHCI SATA over PCIe
+
+Currently we only support 2 magni card flavours: 9215 and 9235
+
+Change-Id: I5e3f620b0fc0a66f3e7a0b5a2adc2ce2697b4e9e
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20279
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/pci/pci_mvebu.c        | 42 -------------------------------
+ include/configs/mvebu-common.h | 56 ++++++++++++++----------------------------
+ 2 files changed, 18 insertions(+), 80 deletions(-)
+
+diff --git a/drivers/pci/pci_mvebu.c b/drivers/pci/pci_mvebu.c
+index f75598b..6a4fae7 100644
+--- a/drivers/pci/pci_mvebu.c
++++ b/drivers/pci/pci_mvebu.c
+@@ -232,48 +232,6 @@ static void mvebu_pcie_hw_init(int host_id, int first_busno)
+ 	writew(cmd, PCIE_CMD_OFF(host_id));
+ }
+ 
+-/* TODO - consider removing this when testing IDE */
+-#if CONFIG_CMD_IDE
+-static void mvebu_setup_ide(struct pci_controller *hose,
+-			 pci_dev_t dev, struct pci_config_table *entry)
+-{
+-	static const int ide_bar[] = { 8, 4, 8, 4, 16, 1024 };
+-	u32 bar_response, bar_value;
+-	int bar;
+-
+-	for (bar = 0; bar < 6; bar++) {
+-		unsigned int offset = (bar < 2) ? bar * 8 : 0x100 + (bar - 2) * 8;
+-
+-		pci_write_config_dword(dev, PCI_BASE_ADDRESS_0 + offset, 0x0);
+-		pci_read_config_dword(dev, PCI_BASE_ADDRESS_0 + offset, &bar_response);
+-
+-		pciauto_region_allocate(bar_response & PCI_BASE_ADDRESS_SPACE_IO ?
+-					hose->pci_io : hose->pci_mem, ide_bar[bar], &bar_value);
+-
+-		pci_write_config_dword(dev, PCI_BASE_ADDRESS_0 + bar * 4, bar_value);
+-	}
+-}
+-
+-static void mvebu_setup_host(struct pci_controller *hose,
+-			  pci_dev_t dev, struct pci_config_table *entry)
+-{
+-	/* No need to configure host */
+-	return;
+-}
+-
+-
+-struct pci_config_table mvebu_config_table[] = {
+-	/* Storage controllers */
+-	{ PCI_ANY_ID, PCI_ANY_ID, PCI_CLASS_STORAGE_IDE,
+-	  PCI_ANY_ID, PCI_ANY_ID, PCI_ANY_ID, mvebu_setup_ide },
+-
+-	/* Storage controllers */
+-	{ PCI_ANY_ID, PCI_ANY_ID, PCI_ANY_ID,
+-	  PCI_ANY_ID, PCI_ANY_ID, PCI_ANY_ID, mvebu_setup_host },
+-	{}
+-};
+-#endif
+-
+ /*
+  * We dont use a host bridge so don't let the
+  * stack skip CFG cycle for dev = 0 func = 0
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 7d4e542..831201c 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -290,59 +290,39 @@
+ 
+ #endif /* CONFIG_MVEBU_NET */
+ 
+-/* IDE / SATA */
+-#ifdef MV_INCLUDE_SATA
+-	#define __io
++/* SATA AHCI over PCIe */
++#if defined(CONFIG_DEVEL_BOARD) && defined(CONFIG_MVEBU_PCI)
+ 
+ 	#define CONFIG_CMD_SCSI
+ 	#define CONFIG_CMD_EXT2
+ 	#define CONFIG_CMD_EXT4
+-	#define CONFIG_FS_EXT4
+ 	#define CONFIG_CMD_EXT4_WRITE
+-	#define CONFIG_EXT4_WRITE
+ 	#define CONFIG_CMD_JFFS2
+ 	#define CONFIG_CMD_FAT
++
++	#define CONFIG_EXT4_WRITE
+ 	#define CONFIG_FS_FAT
++	#define CONFIG_FS_EXT4
+ 	#define CONFIG_SUPPORT_VFAT
+-	#define CONFIG_CMD_IDE
+-
+-	#define CONFIG_SYS_ATA_BASE_ADDR        0x20000000
+-	#define CONFIG_SYS_ATA_REG_OFFSET       0x0000          /* Offset for normal register accesses*/
+-	#define CONFIG_SYS_ATA_DATA_OFFSET      0x0000          /* Offset for data I/O */
+-
+-	#undef CONFIG_IDE_8xx_PCCARD		/* Use IDE with PC Card	Adapter	*/
+-
+-	#undef	CONFIG_IDE_8xx_DIRECT		/* Direct IDE    not supported	*/
+-	#undef	CONFIG_IDE_LED			/* LED   for ide not supported	*/
+-	#undef	CONFIG_IDE_RESET		/* reset for ide not supported	*/
+-
+-	#define CONFIG_SYS_IDE_MAXBUS		4				/* max. 1 IDE bus		*/
+-	#define CONFIG_SYS_IDE_MAXDEVICE	CONFIG_SYS_IDE_MAXBUS * 8	/* max. 1 drive per IDE bus	*/
+-
+-	#define CONFIG_SYS_ATA_IDE0_OFFSET	0x0000
+ 
+ 	#undef CONFIG_MAC_PARTITION
+ 	#define CONFIG_DOS_PARTITION
+ 	#define CONFIG_EFI_PARTITION
+ 
+-	#define CONFIG_SYS_64BIT_LBA			/*    Support disk over 2TB        */
+-
++	#define CONFIG_SYS_64BIT_LBA	/* Support disk over 2TB */
+ 	#define CONFIG_LBA48
+-	/* #define CONFIG_SCSI_AHCI */
+-	#ifdef CONFIG_SCSI_AHCI
+-		#define CONFIG_SATA_6121
+-		#define CONFIG_SYS_SCSI_MAX_SCSI_ID	4
+-		#define CONFIG_SYS_SCSI_MAX_LUN	1
+-		#define CONFIG_SYS_SCSI_MAX_DEVICE	(CONFIG_SYS_SCSI_MAX_SCSI_ID * CONFIG_SYS_SCSI_MAX_LUN)
+-	#endif /* CONFIG_SCSI_AHCI */
+-
+-	#define CONFIG_SCSI_MV94XX
+-	#ifdef CONFIG_SCSI_MV94XX
+-		#define CONFIG_SYS_SCSI_MAX_SCSI_ID	40 /*8 PM * 5 sata port*/
+-		#define CONFIG_SYS_SCSI_MAX_LUN	1
+-		#define CONFIG_SYS_SCSI_MAX_DEVICE	(CONFIG_SYS_SCSI_MAX_SCSI_ID * CONFIG_SYS_SCSI_MAX_LUN)
+-	#endif /* CONFIG_SCSI_AHCI */
+-#endif /* MV_INCLUDE_SATA */
++
++	#define __io
++	#define CONFIG_LIBATA
++	#define CONFIG_SCSI_AHCI
++	#define CONFIG_SCSI_MAX_CONTROLLERS	2
++	#define CONFIG_SYS_SCSI_MAX_SCSI_ID	(4 * CONFIG_SCSI_MAX_CONTROLLERS)
++	#define CONFIG_SYS_SCSI_MAX_LUN		1
++	#define CONFIG_SYS_SCSI_MAX_DEVICE	(CONFIG_SYS_SCSI_MAX_SCSI_ID * CONFIG_SYS_SCSI_MAX_LUN)
++
++	/* Add support for Magni 9215 and Magni 9235 */
++	#define CONFIG_SCSI_DEV_LIST		{ 0x1B4B, 0x9215 }, { 0x1B4B, 0x9235 }, { 0, 0 }
++#endif
+ 
+ /* NAND */
+ #ifdef CONFIG_MVEBU_NAND
+-- 
+1.9.1
+

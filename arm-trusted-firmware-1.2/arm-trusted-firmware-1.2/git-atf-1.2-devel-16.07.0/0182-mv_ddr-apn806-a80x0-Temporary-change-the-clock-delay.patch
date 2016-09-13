@@ -1,0 +1,63 @@
+From b3bec7bfebdccfc6c8a9887082ff5b3d74d53901 Mon Sep 17 00:00:00 2001
+From: Ofir Fedida <ofedida@marvell.com>
+Date: Tue, 24 May 2016 14:48:30 +0300
+Subject: [PATCH 182/239] mv_ddr: apn806: a80x0: Temporary change the clock
+ delay value
+
+This patch temporarily changes the clock delay value to overcome
+algorithm failures in the write leveling stage.
+This issue will be resolved once the WL supplementary stage is enabled
+in the algorithm
+
+Change-Id: I9c4bd376215219eee61590a8050cb6b0abfbbc8a
+Signed-off-by: Ofir Fedida <ofedida@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29935
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+---
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h        | 9 +++++++++
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_static.h | 7 ++++++-
+ 2 files changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
+index cfc2b20..4a457a9 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
+@@ -192,7 +192,16 @@ enum{
+ #define DDR_CONTROLLER_BUS_WIDTH_MULTIPLIER	1
+ 
+ /* Tune internal training params values */
++#if defined(a80x0) || defined(a80x0_cust)
++/* FIXME: remove the configuration below for a80x0
++ * and set the correct value for the clk delay after implementing
++ * the supplementary algorithm
++ */
++#define TUNE_TRAINING_PARAMS_CK_DELAY		80
++#else
+ #define TUNE_TRAINING_PARAMS_CK_DELAY		160
++#endif /* defined(a80x0) || defined(a80x0_cust) */
++
+ #define TUNE_TRAINING_PARAMS_PHYREG3VAL		0xA
+ #define TUNE_TRAINING_PARAMS_PRI_DATA		123
+ #define TUNE_TRAINING_PARAMS_NRI_DATA		123
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_static.h b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_static.h
+index 39260dc..eb66509 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_static.h
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806_static.h
+@@ -2690,7 +2690,12 @@ struct mk6_reg_data ddr_static_setup[] = {
+ 	{0xF00210c0, 0x81000001},
+ 	{0xF00202c8, 0xfefe},
+ 
+-	{0xf00116a0, 0xcc000000},	/* CKdelayADLL */
++	/* FIXME: unremark the register below "0xf00116a0, 0xcc000000"
++	 * and set the correct value for the clk delay after implementing
++	 * the supplementary algorithm
++	 */
++	/* {0xf00116a0, 0xcc000000},	CKdelayADLL */
++
+ 	{0xf00116a0, 0xc0009c5f},
+ 	{0xf00116a0, 0xc0405c8f},
+ 	{0xf00116a0, 0xc0804c4b},
+-- 
+1.9.1
+

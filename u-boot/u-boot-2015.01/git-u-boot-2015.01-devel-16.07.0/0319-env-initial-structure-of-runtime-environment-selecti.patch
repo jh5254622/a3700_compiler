@@ -1,0 +1,320 @@
+From 9d7fffdbb209978ec0c84a3e7bf13e916e3ea847 Mon Sep 17 00:00:00 2001
+From: Ahmad Abbas <ahmada@marvell.com>
+Date: Thu, 30 Jul 2015 20:53:16 +0300
+Subject: [PATCH 0319/1240] env: initial structure of runtime environment
+ selection
+
+preperation and initial sturcture of dynamic environment location
+selection, this option will be enabled using: CONFIG_ENV_IS_IN_BOOTDEV,
+otherwise no changes will be done to the env
+selection. This patch adds support for SPI only.
+
+Signed-off-by: Ahmad Abbas <ahmada@marvell.com>
+
+Change-Id: I91fa2369c0e0cf0eb6cb9b600fd41b7b28793deb
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22383
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/Kconfig  | 12 +++++++++-
+ arch/arm/include/asm/global_data.h |  7 ++++++
+ common/env_sf.c                    | 31 +++++++++++++++++++++++++
+ common/mvebu/Makefile              |  1 +
+ common/mvebu/cmd_bubt.c            |  2 ++
+ common/mvebu/env_bootdev.c         | 47 ++++++++++++++++++++++++++++++++++++++
+ include/configs/mvebu-common.h     | 12 +++++++++-
+ include/env_bootdev.h              | 35 ++++++++++++++++++++++++++++
+ 8 files changed, 145 insertions(+), 2 deletions(-)
+ create mode 100644 common/mvebu/env_bootdev.c
+ create mode 100644 include/env_bootdev.h
+
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index 86b2151..a0d51c8 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -108,7 +108,7 @@ endmenu
+ 
+ 
+ choice
+-	prompt "Flash for environment and image"
++	prompt "Flash for image"
+ 	default MVEBU_SPI_BOOT
+ 
+ config MVEBU_NAND_BOOT
+@@ -125,6 +125,16 @@ config MVEBU_NOR_BOOT
+ 
+ endchoice
+ 
++config ENV_IS_IN_BOOTDEV
++	bool "Boot-time Environment Selection"
++	depends on (MVEBU_SPI || MVEBU_NAND)
++	help
++	  Choose this option to add support
++	  for boot-time environment selection.
++	  the boot-time environment is decided
++	  according to the boot source value
++	  in sample at reset register.
++
+ config MVEBU_TOOLS_SUPPORT
+ 	bool "MVEBU tools functions for U-Boot"
+ 	default y
+diff --git a/arch/arm/include/asm/global_data.h b/arch/arm/include/asm/global_data.h
+index feb228a..74682f6 100644
+--- a/arch/arm/include/asm/global_data.h
++++ b/arch/arm/include/asm/global_data.h
+@@ -12,6 +12,10 @@
+ #include <asm/omap_boot.h>
+ #endif
+ 
++#ifdef CONFIG_ENV_IS_IN_BOOTDEV
++#include <env_bootdev.h>
++#endif
++
+ /* Architecture-specific global data */
+ struct arch_global_data {
+ #if defined(CONFIG_FSL_ESDHC)
+@@ -52,6 +56,9 @@ struct arch_global_data {
+ 	void *soc_family;
+ 	void *board_family;
+ 	void *reg_base;
++#ifdef CONFIG_ENV_IS_IN_BOOTDEV
++	struct env_func_ptr env_func;
++#endif
+ #endif
+ 
+ };
+diff --git a/common/env_sf.c b/common/env_sf.c
+index 5e3729c..2682550 100644
+--- a/common/env_sf.c
++++ b/common/env_sf.c
+@@ -40,12 +40,18 @@ static ulong env_new_offset	= CONFIG_ENV_OFFSET_REDUND;
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+ 
++#ifndef CONFIG_ENV_IS_IN_BOOTDEV
+ char *env_name_spec = "SPI Flash";
++#endif
+ 
+ static struct spi_flash *env_flash;
+ 
+ #if defined(CONFIG_ENV_OFFSET_REDUND)
++#ifdef CONFIG_ENV_IS_IN_BOOTDEV
++static int spi_saveenv(void)
++#else
+ int saveenv(void)
++#endif
+ {
+ 	env_t	env_new;
+ 	char	*saved_buffer = NULL, flag = OBSOLETE_FLAG;
+@@ -134,7 +140,11 @@ int saveenv(void)
+ 	return ret;
+ }
+ 
++#ifdef CONFIG_ENV_IS_IN_BOOTDEV
++static void spi_env_relocate_spec(void)
++#else
+ void env_relocate_spec(void)
++#endif
+ {
+ 	int ret;
+ 	int crc1_ok = 0, crc2_ok = 0;
+@@ -218,7 +228,11 @@ out:
+ 	free(tmp_env2);
+ }
+ #else
++#ifdef CONFIG_ENV_IS_IN_BOOTDEV
++static int spi_saveenv(void)
++#else
+ int saveenv(void)
++#endif
+ {
+ 	u32	saved_size, saved_offset, sector = 1;
+ 	char	*saved_buffer = NULL;
+@@ -288,7 +302,11 @@ int saveenv(void)
+ 	return ret;
+ }
+ 
++#ifdef CONFIG_ENV_IS_IN_BOOTDEV
++static void spi_env_relocate_spec(void)
++#else
+ void env_relocate_spec(void)
++#endif
+ {
+ 	int ret;
+ 	char *buf = NULL;
+@@ -321,7 +339,11 @@ out:
+ }
+ #endif
+ 
++#ifdef CONFIG_ENV_IS_IN_BOOTDEV
++static int spi_env_init(void)
++#else
+ int env_init(void)
++#endif
+ {
+ 	/* SPI flash isn't usable before relocation */
+ 	gd->env_addr = (ulong)&default_environment[0];
+@@ -329,3 +351,12 @@ int env_init(void)
+ 
+ 	return 0;
+ }
++
++#ifdef CONFIG_ENV_IS_IN_BOOTDEV
++void sf_env_init(void)
++{
++	gd->arch.env_func.save_env = spi_saveenv;
++	gd->arch.env_func.init_env = spi_env_init;
++	gd->arch.env_func.reloc_env = spi_env_relocate_spec;
++}
++#endif
+diff --git a/common/mvebu/Makefile b/common/mvebu/Makefile
+index a76d42e..c57b594 100644
+--- a/common/mvebu/Makefile
++++ b/common/mvebu/Makefile
+@@ -22,3 +22,4 @@ obj-$(CONFIG_CMD_MVEBU_CONFIG) += cmd_config.o
+ obj-$(CONFIG_CMD_MVEBU_MPP) += cmd_mpp.o
+ obj-$(CONFIG_CMD_MVEBU_BUBT) += cmd_bubt.o
+ obj-$(CONFIG_CMD_MVEBU_MSS_BOOT) += cmd_mss.o
++obj-$(CONFIG_ENV_IS_IN_BOOTDEV) += env_bootdev.o
+diff --git a/common/mvebu/cmd_bubt.c b/common/mvebu/cmd_bubt.c
+index 7afd994..e4dcb91 100644
+--- a/common/mvebu/cmd_bubt.c
++++ b/common/mvebu/cmd_bubt.c
+@@ -434,6 +434,7 @@ struct bubt_dev *find_bubt_dev(char *dev_name)
+ 
+ #define DEFAULT_BUBT_SRC "tftp"
+ 
++#ifndef DEFAULT_BUBT_DST
+ #ifdef CONFIG_MVEBU_SPI_BOOT
+ #define DEFAULT_BUBT_DST "spi"
+ #elif defined(CONFIG_MVEBU_NAND_BOOT)
+@@ -443,6 +444,7 @@ struct bubt_dev *find_bubt_dev(char *dev_name)
+ #else
+ #define DEFAULT_BUBT_DST "error"
+ #endif
++#endif /* DEFAULT_BUBT_DST */
+ 
+ int do_bubt_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+ 			char * const argv[])
+diff --git a/common/mvebu/env_bootdev.c b/common/mvebu/env_bootdev.c
+new file mode 100644
+index 0000000..4b77109
+--- /dev/null
++++ b/common/mvebu/env_bootdev.c
+@@ -0,0 +1,47 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <environment.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++char *env_name_spec = "SPI Flash";
++
++int saveenv(void)
++{
++	return gd->arch.env_func.save_env();
++}
++
++/* this has an initial support for SPI only,
++ * other API's will be supported in the future.
++ */
++int env_init(void)
++{
++	sf_env_init();
++	return gd->arch.env_func.init_env();
++}
++
++void env_relocate_spec(void)
++{
++	/* sf_env_init is called again here because of the
++	 * address relocation, the addreses need to be corrected
++	 */
++	sf_env_init();
++	gd->arch.env_func.reloc_env();
++}
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index e11793d..ee02a6e 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -144,8 +144,18 @@
+ #define CONFIG_SYS_ALT_MEMTEST	/* More comprehensive mtest algorithm */
+ #endif
+ 
++
++#if defined(CONFIG_ENV_IS_IN_BOOTDEV)
++	#define CONFIG_ENV_IS_IN_SPI_FLASH
++	#define DEFAULT_BUBT_DST "spi"
++	#define CONFIG_DOIMAGE_TYPE     "flash"
++	#define CONFIG_DOIMAGE_SUFFIX   "dynamic"
++#endif  /* CONIFG_ENV_IS_IN_BOOTDEV */
++
++
+ /* Flash env setup */
+-#if !defined(MV_INCLUDE_NOR) && !defined(CONFIG_MVEBU_NAND_BOOT) && !defined(CONFIG_MVEBU_SPI_BOOT)
++#if !defined(MV_INCLUDE_NOR) && !defined(CONFIG_MVEBU_NAND_BOOT) &&		\
++	!defined(CONFIG_MVEBU_SPI_BOOT) && !defined(CONFIG_ENV_IS_IN_BOOTDEV)
+ 	#undef CONFIG_CMD_FLASH
+ 	#undef CONFIG_CMD_IMLS
+ 	#define CONFIG_ENV_IS_NOWHERE
+diff --git a/include/env_bootdev.h b/include/env_bootdev.h
+new file mode 100644
+index 0000000..433b939
+--- /dev/null
++++ b/include/env_bootdev.h
+@@ -0,0 +1,35 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _ENV_BOOTDEV_H_
++#define _ENV_BOOTDEV_H_
++
++
++typedef int (*init_env_func)(void);
++typedef int (*save_env_func)(void);
++typedef void (*relocate_spec_func)(void);
++
++struct env_func_ptr {
++	init_env_func init_env;
++	save_env_func save_env;
++	relocate_spec_func reloc_env;
++};
++
++void sf_env_init(void);
++
++#endif /* _ENV_BOOTDEV_H_ */
+-- 
+1.9.1
+

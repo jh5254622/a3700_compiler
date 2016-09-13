@@ -1,0 +1,135 @@
+From 46a08f27857d08570d17cf05a7dc9cfc0f4744c2 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 30 Jun 2015 13:43:01 +0300
+Subject: [PATCH 0232/1240] fix: ccu: added support for size with 64Bit
+
+Change-Id: I8025b8a587998e795b07c1f8cfb1ba679192f7d4
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20593
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/apn-806.dtsi                   |  2 +-
+ doc/device-tree-bindings/misc/mvebu-ccu.txt | 14 ++++++++++----
+ drivers/misc/mvebu_ccu.c                    | 21 +++++++++++++--------
+ 3 files changed, 24 insertions(+), 13 deletions(-)
+
+diff --git a/arch/arm/dts/apn-806.dtsi b/arch/arm/dts/apn-806.dtsi
+index 51f9719..f09eec4 100644
+--- a/arch/arm/dts/apn-806.dtsi
++++ b/arch/arm/dts/apn-806.dtsi
+@@ -73,7 +73,7 @@
+ 				compatible = "marvell,mvebu-ccu";
+ 				reg = <0x4000 0x50>;
+ 				max-win = <8>;
+-				windows = <0x0 0xf2000000 0xe000000 0x00 /* IO window */>;
++				windows = <0x0 0xf2000000 0x0 0xe000000 0x00 /* IO window */>;
+ 			};
+ 
+ 			rfu {
+diff --git a/doc/device-tree-bindings/misc/mvebu-ccu.txt b/doc/device-tree-bindings/misc/mvebu-ccu.txt
+index 9dfbaba..a63e692 100644
+--- a/doc/device-tree-bindings/misc/mvebu-ccu.txt
++++ b/doc/device-tree-bindings/misc/mvebu-ccu.txt
+@@ -9,23 +9,29 @@ The CCU node requires the following properties:
+ 	- reg: the base address of the CCU unit
+ 	- max-win: number of the max mbus windows
+ 	- windows: entry that include the configuration of the windows
+-	  every window should have 4 parameters:
++	  every window should have 5 parameters:
+ 	  - high base address of the window
+ 	  - low base address of the window
+-	  - size of the window
++	  - high size of the window
++	  - low size of the window
+ 	  - target-id of the window
+ 
+ Note: if the base address is more than 32bit, it divided into high and low,
+-	Example:
++	same for size field, if it more that 32bit, it divided for high and low.
++	Base example:
+ 		base address: 0x10f0000000 should divided into:
+ 		base address high: 0x10
+ 		base address low: 0xf0000000
++	Size example:
++		size: 0x1E00F00000 should divided into:
++		size high: 0x1E
++		size low: 0x00F00000
+ 
+ Example:
+ 	map-ccu {
+ 		compatible = "marvell,mvebu-ccu";
+ 		reg = <0x0 0x50>;
+ 		max-win = <8>;
+-		windows = <0x0 0xf8000000 0x2000000 0x00 /* IO window */>;
++		windows = <0x0 0xf8000000 0x0 0x2000000 0x00 /* IO window */>;
+ 	};
+ 
+diff --git a/drivers/misc/mvebu_ccu.c b/drivers/misc/mvebu_ccu.c
+index 27fbe00..0d598cd 100644
+--- a/drivers/misc/mvebu_ccu.c
++++ b/drivers/misc/mvebu_ccu.c
+@@ -64,7 +64,8 @@ struct ccu_configuration __attribute__((section(".data")))*ccu_info = &ccu_confi
+ struct ccu_win {
+ 	u32 base_addr_high;
+ 	u32 base_addr_low;
+-	u32 win_size;
++	u32 win_size_high;
++	u32 win_size_low;
+ 	u32 target_id;
+ };
+ 
+@@ -108,7 +109,7 @@ static char *ccu_target_name_get(enum ccu_target_ids trgt_id)
+ 
+ static void ccu_win_check(struct ccu_win *win, u32 win_num)
+ {
+-	u64 start_addr;
++	u64 start_addr, win_size;
+ 	/* check if address is aligned to 1M */
+ 	start_addr = ((u64)win->base_addr_high << 32) + win->base_addr_low;
+ 	if (IS_NOT_ALIGN(start_addr, CCU_WIN_ALIGNMENT)) {
+@@ -120,10 +121,13 @@ static void ccu_win_check(struct ccu_win *win, u32 win_num)
+ 	}
+ 
+ 	/* size parameter validity check */
+-	if (IS_NOT_ALIGN(win->win_size, CCU_WIN_ALIGNMENT)) {
+-		win->win_size = ALIGN_UP(win->win_size, CCU_WIN_ALIGNMENT);
++	win_size = ((u64)win->win_size_high << 32) + win->win_size_low;
++	if (IS_NOT_ALIGN(win_size, CCU_WIN_ALIGNMENT)) {
++		win_size = ALIGN_UP(win_size, CCU_WIN_ALIGNMENT);
+ 		error("Window %d: window size unaligned to 0x%x\n", win_num, CCU_WIN_ALIGNMENT);
+-		printf("Aligning size to 0x%x\n", win->win_size);
++		printf("Aligning size to 0x%llx\n", win_size);
++		win->win_size_high = (u32)(win_size >> 32);
++		win->win_size_low = (u32)(win_size);
+ 	}
+ }
+ 
+@@ -138,7 +142,7 @@ static void ccu_enable_win(struct ccu_win *win, u32 win_id)
+ 	writel(ccu_win_reg, CCU_WIN_CR_OFFSET(win_id));
+ 
+ 	start_addr = ((u64)win->base_addr_high << 32) + win->base_addr_low;
+-	end_addr = (start_addr + (u64)win->win_size - 1);
++	end_addr = (start_addr + (((u64)win->win_size_high << 32) + win->win_size_low) - 1);
+ 	alr = (u32)((start_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
+ 	ahr = (u32)((end_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
+ 
+@@ -207,12 +211,13 @@ int init_ccu(void)
+ 	}
+ 
+ 	/* Get the array of the windows and fill the map data */
+-	win_count = fdtdec_get_int_array_count(blob, node, "windows", (u32 *)memory_map, ccu_info->max_win * 4);
++	win_count = fdtdec_get_int_array_count(blob, node, "windows", (u32 *)memory_map, ccu_info->max_win * 5);
+ 	if (win_count <= 0) {
+ 		debug("no windows configurations found\n");
+ 		return 0;
+ 	}
+-	win_count = win_count/4; /* every window had 3 variables in FDT (base, size, target id) */
++	win_count = win_count/5; /* every window had 5 variables in FDT:
++				    base high, base low, size high, size low, target id) */
+ 
+ 	/* Set the default target ID to DRAM 0 */
+ 	win_reg = (DRAM_0_TID & CCU_GCR_TARGET_MASK) << CCU_GCR_TARGET_OFFSET;
+-- 
+1.9.1
+

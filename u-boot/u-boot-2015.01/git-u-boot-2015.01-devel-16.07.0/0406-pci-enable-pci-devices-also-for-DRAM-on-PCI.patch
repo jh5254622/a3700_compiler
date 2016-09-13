@@ -1,0 +1,54 @@
+From ebaf973aace5199c55046e1d42f027518c34e7c1 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Thu, 3 Sep 2015 11:11:09 +0300
+Subject: [PATCH 0406/1240] pci: enable pci devices also for DRAM on PCI
+
+Also remove E100PRO device since it's too old
+and not 64bit compatible
+
+Change-Id: Id00b13672ae0ca97ee789a817b761a29f7f44116
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23405
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/mvebu-common.h | 5 -----
+ 1 file changed, 5 deletions(-)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index aadccfb..36c039b 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -284,13 +284,10 @@
+ 	#define CONFIG_PCI_PNP  /* Enable plug-and-play */
+ 	/*#define CONFIG_MVEBU_PCI_EP*/ /* Set PCI host as end point */
+ 
+-#ifndef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+ 	/* Enable PCIE NIC for devel boards */
+ 	#ifdef CONFIG_DEVEL_BOARD
+-		#define CONFIG_EEPRO100
+ 		#define CONFIG_E1000
+ 	#endif
+-#endif
+ 
+ #endif /* CONFIG_MVEBU_PCI */
+ 
+@@ -312,7 +309,6 @@
+ #endif /* CONFIG_CMD_NET */
+ 
+ /* SATA AHCI over PCIe */
+-#ifndef CONFIG_MVEBU_SPL_DDR_OVER_PCI_SUPPORT
+ #if defined(CONFIG_DEVEL_BOARD) && (defined(CONFIG_MVEBU_PCI) || defined(CONFIG_MVEBU_DW_PCIE))
+ 
+ 	#define CONFIG_CMD_SCSI
+@@ -345,7 +341,6 @@
+ 	/* Add support for Magni 9215 and Magni 9235 */
+ 	#define CONFIG_SCSI_DEV_LIST		{ 0x1B4B, 0x9215 }, { 0x1B4B, 0x9235 }, { 0, 0 }
+ #endif
+-#endif
+ 
+ /* NAND */
+ #ifdef CONFIG_MVEBU_NAND
+-- 
+1.9.1
+

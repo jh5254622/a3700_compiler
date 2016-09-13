@@ -1,0 +1,51 @@
+From 3efb5519c3868f18c725c96b25edc49044100258 Mon Sep 17 00:00:00 2001
+From: Omri Itach <omrii@marvell.com>
+Date: Mon, 11 Jan 2016 13:25:30 +0200
+Subject: [PATCH 0661/1240] fix: usb: set proper USB_MAX_XFER_BLK limit for
+ eHCI & xHCI usage
+
+originally eHCI stack uses maximum transfer block limit of 65535.
+But the xHCI stack functions properly only up tp limit of 4000 blocks.
+(Values > 4000 cause failures when reading files with xHCI stack)
+
+this patch sets limit of 3800 blocks whien xHCI is defined
+
+Change-Id: Ic3137bcc569cfec22ca8b3e9c099c47ca2b74f43
+Signed-off-by: Omri Itach <omrii@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26699
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+Reviewed-by: Hua Jing <jinghua@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ common/usb_storage.c | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/common/usb_storage.c b/common/usb_storage.c
+index a1dfc58..da63c93 100644
+--- a/common/usb_storage.c
++++ b/common/usb_storage.c
+@@ -132,12 +132,19 @@ struct us_data {
+ 	trans_cmnd	transport;		/* transport routine */
+ };
+ 
+-#ifdef CONFIG_USB_EHCI
++/*
++ * The U-Boot XHCI driver can not handle the EHCI transfer length limit
++ * Successfully tested transfer length <= 4000
++ * Values > 4000 cause failures when reading files with XHCI
++ */
++#if defined(CONFIG_USB_XHCI)
++#define USB_MAX_XFER_BLK	3800
+ /*
+  * The U-Boot EHCI driver can handle any transfer length as long as there is
+  * enough free heap space left, but the SCSI READ(10) and WRITE(10) commands are
+  * limited to 65535 blocks.
+  */
++#elif defined(CONFIG_USB_EHCI)
+ #define USB_MAX_XFER_BLK	65535
+ #else
+ #define USB_MAX_XFER_BLK	20
+-- 
+1.9.1
+

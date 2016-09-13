@@ -1,0 +1,223 @@
+From 1bfadf57a1699c289f8da649f0715d73851595d6 Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Mon, 28 Mar 2016 17:53:42 +0300
+Subject: [PATCH 1050/1240] scsi: Add support for boot from SATA
+
+- Add MVEBU_SATA_BOOT configration option
+  This configuration will use file on FAT partition
+  for saving and retrieving the u-boot environment.
+- Move the environment initialization to later stages
+  in board_r() when boot from SATA is defined.
+  The SATA/SCSI device should be detected and the device
+  partitions to be ready prior to initialization of u-boot
+  environment
+- Add SATA device option to the Makefile for A3700.
+- Add definitions for SATA boot to the common header
+  (device, partition, environment file name).
+- Extend the build document for including SATA boot mode
+  configuration and usage.
+- The "boot from SATA" mode cannot be tested on A3700 DB
+  board without HW modification since the SATA TX line
+  polarity is swapped and BootROM is not aware of it.
+  In order to test the SATA boot on this platform, boot
+  into UART mode and swap SATA TX polarity using UART
+  commands, then switch BootROM into SATA boot mode:
+  >w c00e0178 00000224
+  >w c00e017c 00000400
+  >x 32
+
+Change-Id: Ie534d3e3f2c8ff78b53cd47b46f4f3f096ec8f38
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28606
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Wilson Ding <dingwei@marvell.com>
+---
+ Makefile                          |  3 +++
+ arch/arm/cpu/mvebu-common/Kconfig |  8 +++++++
+ common/board_r.c                  | 15 ++++++++++++-
+ doc/mvebu/build.txt               | 44 +++++++++++++++++++++++++++++++++++++--
+ include/configs/mvebu-common.h    | 11 +++++++++-
+ 5 files changed, 77 insertions(+), 4 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index fdad187..644c179 100644
+--- a/Makefile
++++ b/Makefile
+@@ -869,6 +869,9 @@ PARTNUM		:= 0
+ else ifeq ($(CONFIG_MVEBU_MMC_BOOT),y)
+ BOOTDEV		:= EMMCNORM
+ PARTNUM		:= $(CONFIG_SYS_MMC_ENV_PART)
++else ifeq ($(CONFIG_MVEBU_SATA_BOOT),y)
++BOOTDEV		:= SATA
++PARTNUM		:= 0
+ else
+ BOOTDEV		:= UART
+ PARTNUM		:= 0
+diff --git a/arch/arm/cpu/mvebu-common/Kconfig b/arch/arm/cpu/mvebu-common/Kconfig
+index 4e643d2..043163d 100644
+--- a/arch/arm/cpu/mvebu-common/Kconfig
++++ b/arch/arm/cpu/mvebu-common/Kconfig
+@@ -50,6 +50,14 @@ config MVEBU_MMC_BOOT
+ 	help
+ 	  Enable boot from eMMC boot partition
+ 
++config MVEBU_SATA_BOOT
++	bool "SATA device boot"
++	depends on MV_INCLUDE_SATA
++	help
++	  Enable boot from SATA device boot partition
++	  For details about image placement on the
++	  boot device please refer to the BootROM manual
++
+ endchoice
+ 
+ config SYS_MMC_ENV_PART
+diff --git a/common/board_r.c b/common/board_r.c
+index 7a1b4d30..1816b80 100644
+--- a/common/board_r.c
++++ b/common/board_r.c
+@@ -553,7 +553,12 @@ static int initr_scsi(void)
+ {
+ 	puts("SCSI:  ");
+ 	scsi_init();
+-
++#if defined(CONFIG_MVEBU_SATA_BOOT)
++	/* BootROM SATA device requres FAT partition
++	   to be ready for the environment file access
++	*/
++	scsi_scan(0);
++#endif
+ 	return 0;
+ }
+ #endif
+@@ -781,8 +786,12 @@ init_fnc_t init_sequence_r[] = {
+ #ifdef CONFIG_HAS_DATAFLASH
+ 	initr_dataflash,
+ #endif
++	/* SATA boot mode assumes the environment is on FAT
++	   Therefore SCSI init should be executed before ENV init */
++#if !defined(CONFIG_MVEBU_SATA_BOOT)
+ 	initr_env,
+ 	INIT_FUNC_WATCHDOG_RESET
++#endif
+ 	initr_secondary_cpu,
+ #ifdef CONFIG_SC3
+ 	initr_sc3_read_eeprom,
+@@ -837,6 +846,10 @@ init_fnc_t init_sequence_r[] = {
+ 	INIT_FUNC_WATCHDOG_RESET
+ 	initr_scsi,
+ #endif
++#if defined(CONFIG_MVEBU_SATA_BOOT)
++	initr_env,
++	INIT_FUNC_WATCHDOG_RESET
++#endif
+ #ifdef CONFIG_CMD_DOC
+ 	INIT_FUNC_WATCHDOG_RESET
+ 	initr_doc,
+diff --git a/doc/mvebu/build.txt b/doc/mvebu/build.txt
+index f9770b7..69e7008 100644
+--- a/doc/mvebu/build.txt
++++ b/doc/mvebu/build.txt
+@@ -54,13 +54,15 @@ Configuration update:
+ 
+ Boot device selection note for Armada-3700 builds:
+ --------------------------------------------------
++	eMMC boot device:
++	-----------------
+ 	The Armada-3700 supports eMMC as the boot device on the target.
+ 	The default boot device on this platform is SPI NOR flash.
+ 	In order to change the boot device to eMMC, set the following parameter
+ 	the default configuration:
+ 	CONFIG_MVEBU_MMC_BOOT=y
+ 	If "menuconfig" is used, navigate to the following location:
+-	-> ARM architecture
++	-> Marvell Platform Options
+ 	  -> Flash for image
+ 	and select "eMMC flash boot".
+ 	The eMMC has 2 boot partitions (BOOT0 and BOOT1) and a user data partition (DATA).
+@@ -73,7 +75,7 @@ Boot device selection note for Armada-3700 builds:
+ 	Valid values for this parameter are 1 for BOOT0 and 2 for BOOT1.
+ 	Please never use partition number 0 here!
+ 	It can be changed in the "menuconfig" location:
+-	-> ARM architecture
++	-> Marvell Platform Options
+ 	  -> eMMC Boot Partition
+ 	Please note that this configuration is only available when "Flash for image"
+ 	selects "eMMC flash boot" device as described above.
+@@ -88,6 +90,44 @@ Boot device selection note for Armada-3700 builds:
+ 	ID in the above commands from mmcblk0boot0 to mmcblk0boot1.
+ 
+ 
++	SATA boot device:
++	-----------------
++	The Armada-3700 supports SATA as the boot device on the target.
++	In order to change the boot device to SATA, set the following parameter
++	the default configuration:
++	CONFIG_MVEBU_SATA_BOOT=y
++	If "menuconfig" is used, navigate to the following location:
++	-> Marvell Platform Options
++	  -> Flash for image
++	and select "SATA device boot".
++	The SATA boot image uses FAT partition for storing the U-Boot environment.
++	The internal BootROM looks for a special partition in order to load U-Boot binary.
++	So normally 2 partitions are required for using the SATA boot option.
++	The boot partition has to have ID 0x4D, or ASCII "M". The environment partition can
++	be FAT32 with ID 0xB. In order to change the default environment partition location
++	and number, please change the value of FAT_ENV_DEVICE_AND_PART constant defined
++	in mvebu-common.h file. The default value of this constant assumes that environment
++	stored on SATA device 0, partition number 2 (the boot image itself is stored on
++	partition number 1).
++	Follow the BootROM manual for details about GPT boot partition selection.
++	Partitioning example for 500GB hard disk using MBR scheme:
++	Part    Start Sector    Num Sectors     UUID            Type
++	1       4096            524288          9c1661a5-01     4d
++	2       528384          524288          9c1661a5-02     0b
++	3       1052672         975720496       9c1661a5-03     83
++	Using the example above, the boot image can be placed into the boot partition using
++	the following Linux command (assuming that SATA device is /dev/sda)
++	# sudo dd if=u-boot-spl.img of=/dev/sda1
++
++	Special note:
++	-------------
++	A3700 Z0 BootROM does not support SATA SERDES lines polarity swap. Therefore the A3700 DB
++	equipped with this SoC cannot be used for directly booting from SATA device without
++	board modification (the board has reverse polarity on SATA TX line).
++	Future A3700 revisions will include a special eFuse fields for instructing the BootROM
++	to swap polarity on SATA RX and/or TX lines.
++
++
+ Tools installation for Armada-3700 builds:
+ ------------------------------------------
+ 1. Extract the tools/wtp/WTPTP_TOOLS_x_x_xx.zip into a temporary directory
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 46eb0b5..fe2b94f 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -198,7 +198,7 @@
+ /* Flash env setup */
+ #if !defined(MV_INCLUDE_NOR) && !defined(CONFIG_MVEBU_NAND_BOOT) &&		\
+ 	!defined(CONFIG_MVEBU_SPI_BOOT) && !defined(CONFIG_MVEBU_MMC_BOOT) &&	\
+-	!defined(CONFIG_ENV_IS_IN_BOOTDEV)
++	!defined(CONFIG_MVEBU_SATA_BOOT) && !defined(CONFIG_ENV_IS_IN_BOOTDEV)
+ 	#undef CONFIG_CMD_FLASH
+ 	#undef CONFIG_CMD_IMLS
+ 	#define CONFIG_ENV_IS_NOWHERE
+@@ -240,6 +240,15 @@
+ 	#define CONFIG_DOIMAGE_SUFFIX	"emmc"
+ #endif /* CONFIG_MVEBU_MMC_BOOT */
+ 
++/* Boot from SATA settings */
++#if defined(CONFIG_MVEBU_SATA_BOOT) && !defined(CONFIG_ENV_IS_IN_BOOTDEV)
++	#define CONFIG_ENV_IS_IN_FAT
++	#define FAT_ENV_INTERFACE	"scsi"
++	#define FAT_ENV_DEVICE_AND_PART	"0:2"
++	#define FAT_ENV_FILE		"uboot.env"
++	#define CONFIG_FAT_WRITE
++	#define CONFIG_DOIMAGE_SUFFIX	"sata"
++#endif /* CONFIG_MVEBU_SATA_BOOT */
+ 
+ /* Generic Interrupt Controller Definitions */
+ #define GICD_BASE                       MVEBU_GICD_BASE
+-- 
+1.9.1
+

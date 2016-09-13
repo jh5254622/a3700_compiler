@@ -1,0 +1,118 @@
+From b720c6c96b87443b15cae40ac558e164efd142f0 Mon Sep 17 00:00:00 2001
+From: Ahmad Abbas <ahmada@marvell.com>
+Date: Wed, 25 May 2016 20:34:45 +0300
+Subject: [PATCH 186/239] fix: ihb: resolve conflict of IHB mapping with CP1
+ mapping
+
+- By default, IHB0 indirect access is based on 0xf4000000.
+- RFU driver configures CP1 window (internal registers) at 0xf4000000.
+- To avoid the conflict, remap IHB0 indirect access to be based at
+  0xfb000000, and IHB1 indirect access to be based at 0xfd000000,
+  prior to RFU init.
+
+Change-Id: I9bae2293c44e8759c88b5f22391a1e1068629bf7
+Signed-off-by: Ahmad Abbas <ahmada@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30001
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ plat/marvell/a8k/a70x0/apn806_setup.c              | 16 ++++++++++++++++
+ plat/marvell/a8k/a70x0/board/marvell_plat_config.c |  4 ++--
+ plat/marvell/a8k/a70x0/plat_def.h                  |  2 ++
+ plat/marvell/a8k/a80x0/board/marvell_plat_config.c |  4 +++-
+ plat/marvell/a8k/a80x0/plat_def.h                  |  2 ++
+ 5 files changed, 25 insertions(+), 3 deletions(-)
+
+diff --git a/plat/marvell/a8k/a70x0/apn806_setup.c b/plat/marvell/a8k/a70x0/apn806_setup.c
+index 1271cd9..985f678 100644
+--- a/plat/marvell/a8k/a70x0/apn806_setup.c
++++ b/plat/marvell/a8k/a70x0/apn806_setup.c
+@@ -45,6 +45,19 @@
+ #define CCU_GSPMU_CR		(MVEBU_CCU_BASE + 0x3F0)
+ #define GSPMU_CPU_CONTROL	(0x1 << 0)
+ 
++#define IHB_MAX_UNIT_ID		2
++#define IHBX4_REG_START_ADDRESS_REG(unit_id)	(MVEBU_REGS_BASE + 0x6F4218 + (unit_id * 0x20))
++#define IHB_REMAP_OFF_SHIFT	8
++
++
++void setup_ihb(void)
++{
++	uint32_t i;
++
++	for (i = 0; i < IHB_MAX_UNIT_ID; ++i)
++		mmio_write_32(IHBX4_REG_START_ADDRESS_REG(i), MVEBU_IHB_REG_BASE_REMAP(i) >> IHB_REMAP_OFF_SHIFT);
++}
++
+ void setup_smmu(void)
+ {
+ 	uint32_t reg;
+@@ -80,6 +93,9 @@ void apn806_init(void)
+ 	/* Setup Aurora2. */
+ 	init_aurora2();
+ 
++	/* configure IHB mapping */
++	setup_ihb();
++
+ 	/* configure RFU windows */
+ 	init_rfu();
+ 
+diff --git a/plat/marvell/a8k/a70x0/board/marvell_plat_config.c b/plat/marvell/a8k/a70x0/board/marvell_plat_config.c
+index 3da4340..5e34265 100644
+--- a/plat/marvell/a8k/a70x0/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a70x0/board/marvell_plat_config.c
+@@ -62,8 +62,8 @@ int marvell_get_amb_memory_map(struct amb_win **win, uint32_t *size)
+ 
+ 
+ struct rfu_win rfu_memory_map[] = {
+-	{0x0,	0xf4000000,	0x0,	0x2000000,	IHB_0_TID},
+-	{0x0,	0xf6000000,	0x0,	0x2000000,	IHB_1_TID},
++	{0x0,	MVEBU_IHB_REG_BASE_REMAP(0),	0x0,	0x2000000,	IHB_0_TID}, /* IHB 0 indirect window */
++	{0x0,	MVEBU_IHB_REG_BASE_REMAP(1),	0x0,	0x2000000,	IHB_1_TID}, /* IHB 1 indirect window */
+ };
+ 
+ 
+diff --git a/plat/marvell/a8k/a70x0/plat_def.h b/plat/marvell/a8k/a70x0/plat_def.h
+index 3d1610a..4c62e53 100644
+--- a/plat/marvell/a8k/a70x0/plat_def.h
++++ b/plat/marvell/a8k/a70x0/plat_def.h
+@@ -61,6 +61,8 @@
+ #define MVEBU_SMMU_BASE			(MVEBU_REGS_BASE + 0x100000)
+ #define MVEBU_CP_MPP_REGS(cp_index, n)	(MVEBU_CP_REGS_BASE(cp_index) + 0x440000 + ((n) << 2))
+ 
++#define MVEBU_IHB_REG_BASE_REMAP(index) (0xFB000000 + (index * 0x2000000))
++
+ /*******************************************************************************
+  * MVEBU memory map related constants
+  ******************************************************************************/
+diff --git a/plat/marvell/a8k/a80x0/board/marvell_plat_config.c b/plat/marvell/a8k/a80x0/board/marvell_plat_config.c
+index 407ffb4..91a7913 100644
+--- a/plat/marvell/a8k/a80x0/board/marvell_plat_config.c
++++ b/plat/marvell/a8k/a80x0/board/marvell_plat_config.c
+@@ -61,7 +61,9 @@ int marvell_get_amb_memory_map(struct amb_win **win, uint32_t *size)
+  ******************************************************************************/
+ 
+ struct rfu_win rfu_memory_map[] = {
+-	{0x0,	0xf4000000,	0x0,	0x2000000,	IHB_0_TID},
++	{0x0,	0xf4000000,			0x0,	0x2000000,	IHB_0_TID}, /* IHB 0 CP1 window */
++	{0x0,	MVEBU_IHB_REG_BASE_REMAP(0),	0x0,	0x2000000,	IHB_0_TID}, /* IHB 0 indirect window */
++	{0x0,	MVEBU_IHB_REG_BASE_REMAP(1),	0x0,	0x2000000,	IHB_1_TID}, /* IHB 1 indirect window */
+ };
+ 
+ uintptr_t marvell_get_rfu_reg_offs(void)
+diff --git a/plat/marvell/a8k/a80x0/plat_def.h b/plat/marvell/a8k/a80x0/plat_def.h
+index 6f6671c..aaadffb 100644
+--- a/plat/marvell/a8k/a80x0/plat_def.h
++++ b/plat/marvell/a8k/a80x0/plat_def.h
+@@ -60,6 +60,8 @@
+ #define MVEBU_SMMU_BASE			(MVEBU_REGS_BASE + 0x100000)
+ #define MVEBU_CP_MPP_REGS(cp_index, n)	(MVEBU_CP_REGS_BASE(cp_index) + 0x440000 + ((n) << 2))
+ 
++#define MVEBU_IHB_REG_BASE_REMAP(index) (0xFB000000 + (index * 0x2000000))
++
+ /*******************************************************************************
+  * MVEBU memory map related constants
+  ******************************************************************************/
+-- 
+1.9.1
+

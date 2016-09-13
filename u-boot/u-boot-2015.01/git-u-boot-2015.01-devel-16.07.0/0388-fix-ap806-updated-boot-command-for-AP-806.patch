@@ -1,0 +1,48 @@
+From a05b0bfa0ee36f6a0f9a9de4f302877c1000b22f Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 30 Aug 2015 07:05:07 +0300
+Subject: [PATCH 0388/1240] fix: ap806: updated boot command for AP-806
+
+- Updated boot command to tftp rootfs, kernel, and dtb
+
+Change-Id: I94e581ceb03f710138be3bbde1526b1c02ebb4e0
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23318
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ include/configs/armada8k.h | 18 +++++++++++-------
+ 1 file changed, 11 insertions(+), 7 deletions(-)
+
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index 368abee..37d94e8 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -109,13 +109,17 @@ extern char __end_of_spl[];
+ #else /* Real SOC settings */
+ #define CONFIG_BOOTARGS		"console=ttyS0,115200 earlycon=uart8250,mmio32,0xf0512000 root=/dev/ram0 rw"
+ 
+-#define CONFIG_EXTRA_ENV_SETTINGS	"kernel_addr=0x2000000\0"	\
+-					"fdt_addr=0x1000000\0"		\
+-					"fdt_high=0xa0000000\0"		\
+-					"ramfs_addr=0x3000000\0"	\
+-					"initrd_high=0xffffffffffffffff\0"
+-
+-#define CONFIG_BOOTCOMMAND		"booti $kernel_addr $ramfs_addr $fdt_addr"
++#define CONFIG_EXTRA_ENV_SETTINGS	"kernel_addr=0x2000000\0"		\
++					"fdt_addr=0x1000000\0"			\
++					"fdt_high=0xa0000000\0"			\
++					"ramfs_addr=0x3000000\0"		\
++					"initrd_high=0xffffffffffffffff\0"	\
++					"image_name=Image\0"			\
++					"ramfs_name=u_rootfs.ext2.gz\0"		\
++					"fdt_file=armada-apn806-db.dtb\0"
++
++#define CONFIG_BOOTCOMMAND		"tftp $kernel_addr $image_name; tftp $ramfs_addr $ramfs_name;"\
++					"tftp $fdt_addr $fdt_file; booti $kernel_addr $ramfs_addr $fdt_addr"
+ 
+ #endif /*CONFIG_PALLADIUM*/
+ 
+-- 
+1.9.1
+

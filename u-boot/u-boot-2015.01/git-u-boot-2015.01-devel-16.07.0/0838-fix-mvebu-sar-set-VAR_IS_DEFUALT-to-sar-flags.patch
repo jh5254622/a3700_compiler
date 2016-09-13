@@ -1,0 +1,41 @@
+From 07a9041cc460682419213c0769195d3e637711bc Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Tue, 9 Feb 2016 10:15:45 +0200
+Subject: [PATCH 0838/1240] fix: mvebu: sar: set VAR_IS_DEFUALT to sar flags
+
+Need to set sar structure flags to VAR_IS_DEFUALT
+for defaut parameters and not use the default value.
+
+Change-Id: Ic4764b4c2a88bd1984ce36b491ec604a0810d415
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27370
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ board/mvebu/common/sar.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/board/mvebu/common/sar.c b/board/mvebu/common/sar.c
+index 41032b0..f4906c8 100644
+--- a/board/mvebu/common/sar.c
++++ b/board/mvebu/common/sar.c
+@@ -139,6 +139,7 @@ static int sar_default_var(struct sar_var *var)
+ 	int i;
+ 
+ 	opts = var->option_desc;
++
+ 	for (i = 0; i < var->option_cnt; i++, opts++) {
+ 		if (opts->flags & VAR_IS_DEFUALT)
+ 			dflt = opts;
+@@ -461,7 +462,7 @@ void sar_init(void)
+ 			fdt_get_string_index(blob, var, "options", i + 1, (const char **)
+ 					&sar_var->option_desc[i/2].desc);
+ 			if (sar_var->option_desc[i/2].value == var_default)
+-				sar_var->option_desc[i/2].flags = var_default;
++				sar_var->option_desc[i/2].flags = VAR_IS_DEFUALT;
+ 		}
+ 		/* Get the offset of the next subnode */
+ 		var = fdt_next_subnode(blob, var);
+-- 
+1.9.1
+

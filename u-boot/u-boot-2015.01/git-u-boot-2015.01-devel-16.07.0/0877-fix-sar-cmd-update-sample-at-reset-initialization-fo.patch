@@ -1,0 +1,51 @@
+From 016256cf9971804c35f4d682b33c17b35d177cc8 Mon Sep 17 00:00:00 2001
+From: Neta Zur <neta@marvell.com>
+Date: Mon, 8 Feb 2016 08:56:14 +0200
+Subject: [PATCH 0877/1240] fix: sar: cmd: update sample at reset
+ initialization for command usage
+
+- Update the sample at reset init loop.
+- When fdt entry is disabled, need to increment the entry index before continue the loop.
+
+Change-Id: Ifad4796db63e71abe342d096be9dd242b43e341b
+Signed-off-by: Neta Zur <neta@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27330
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ board/mvebu/common/sar.c | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/board/mvebu/common/sar.c b/board/mvebu/common/sar.c
+index f4906c8..19fbe45 100644
+--- a/board/mvebu/common/sar.c
++++ b/board/mvebu/common/sar.c
+@@ -434,10 +434,14 @@ void sar_init(void)
+ 	}
+ 	sar_var = sar->sar_lookup;
+ 	/* Find the variables under sample at reset node */
+-	do {
++	while (var > 0) {
+ 		/* if the variable is disabled skip it */
+-		if (!fdtdec_get_is_enabled(blob, var))
++		if (!fdtdec_get_is_enabled(blob, var)) {
++			/* Get the offset of the next subnode */
++			var = fdt_next_subnode(blob, var);
++			sar_var++;
+ 			continue;
++		}
+ 		/* Get the key of the var option */
+ 		fdt_get_string(blob, var, "key", (const char **)&sar_var->key);
+ 		/* Get the descrition of the var */
+@@ -467,7 +471,7 @@ void sar_init(void)
+ 		/* Get the offset of the next subnode */
+ 		var = fdt_next_subnode(blob, var);
+ 		sar_var++;
+-	} while (var > 0);
++	}
+ 
+ 	sar_dump();
+ 	debug_exit();
+-- 
+1.9.1
+

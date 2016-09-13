@@ -1,0 +1,39 @@
+From a4650a9a96b04cdadc799405ba561028ec508313 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Wed, 4 May 2016 17:50:35 +0800
+Subject: [PATCH 174/239] fix: doc: a3700: update build.txt for description of
+ SPL and CM3 compiler
+
+- add cross compiler description for CM3.
+- remove all SPL relevant description.
+
+Change-Id: I78d3ade9eb5ddca51268327ff9b513cd4aba7199
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29484
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Wilson Ding <dingwei@marvell.com>
+---
+ docs/marvell/build.txt | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/docs/marvell/build.txt b/docs/marvell/build.txt
+index d90d0f4..7fa3d37 100644
+--- a/docs/marvell/build.txt
++++ b/docs/marvell/build.txt
+@@ -31,10 +31,9 @@ Build Instruction:
+ 	For example: if U-Boot project (and its images) is located at ~/project/u-boot, BL33
+ 				 should be ~/project/u-boot/u-boot.bin
+ 	Note: u-boot.bin should be used and not u-boot-spl.bin
+-6. A3700 Only: Set SPL image location (relativly to ATF root or absolute path)
+-	# export SPL_IMAGE=path/to/u-boot-spl.bin
+-	For example: if U-Boot project (and its images) is located at ~/project/u-boot, SPL_IMAGE
+-				 should be ~/project/u-boot/spl/u-boot-spl.bin
++6. A3700 Only:
++	install ARM 32-bit cross compiler, which is required by building WTMI image for CM3.
++	#sudo apt-get install gcc-arm-linux-gnueabi
+ 7. Clean build residuals: (for non fresh builds)
+ 	# make distclean
+ 8. Build ATF:
+-- 
+1.9.1
+

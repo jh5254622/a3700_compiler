@@ -1,0 +1,28 @@
+From f4e62475d6791fca42ff8444daaf8f620fd7facb Mon Sep 17 00:00:00 2001
+From: Ken Ma <make@marvell.com>
+Date: Thu, 18 Feb 2016 09:02:48 +0200
+Subject: [PATCH 0952/1240] Revert "fix: compilation error when enable FDT in
+ config"
+
+- This reverts commit 5e9f0eed206425afed5bc0ea365afa5d8cd4bab5.
+- It can be reverted since the issue was fixed in patch:
+  63db7e510cda380359a7052eb01947307199539b
+
+Change-Id: I4d3a016a9253685b14760adcb0f3d4c4a0a825b7
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27614
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/include/asm/gpio.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm/include/asm/gpio.h b/arch/arm/include/asm/gpio.h
+index 306ab4c..d49ad08 100644
+--- a/arch/arm/include/asm/gpio.h
++++ b/arch/arm/include/asm/gpio.h
+@@ -1 +1,2 @@
++#include <asm/arch/gpio.h>
+ #include <asm-generic/gpio.h>
+-- 
+1.9.1
+

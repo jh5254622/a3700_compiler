@@ -1,0 +1,50 @@
+From c0c3c0e95a151d1125ecfb59d6ff0f6be085344d Mon Sep 17 00:00:00 2001
+From: Eli Nidam <elini@marvell.com>
+Date: Wed, 2 Apr 2014 18:06:11 +0300
+Subject: [PATCH 0809/1240] fix: mmc: fixed mmc card scan failure & crash
+
+This patch checks if data == NULL when perform the
+memcpy, otherwise it leads to crash when copy to
+the destination with NULL address.
+This is a bug of SDHCI code, it will leads to crash
+in case only send command and pass NULL to "data"
+input parameter when calling routine sdhci_send_command.
+
+Fixed NULL pointer access when scan mmc card
+JIRA SYSTEMSW-441
+
+Change-Id: Ie919a35f1bda2a0562959acac652117180b79fb4
+Signed-off-by: Eli Nidam <elini@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/6873
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27185
+---
+ drivers/mmc/sdhci.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/mmc/sdhci.c b/drivers/mmc/sdhci.c
+index de88e19..1af78f1 100644
+--- a/drivers/mmc/sdhci.c
++++ b/drivers/mmc/sdhci.c
+@@ -182,7 +182,7 @@ static int sdhci_send_command(struct mmc *mmc, struct mmc_cmd *cmd,
+ 		flags |= SDHCI_CMD_DATA;
+ 
+ 	/* Set Transfer mode regarding to data flag */
+-	if (data != 0) {
++	if (data != NULL) {
+ 		sdhci_writeb(host, 0xe, SDHCI_TIMEOUT_CONTROL);
+ 		mode = SDHCI_TRNS_BLK_CNT_EN;
+ 		trans_bytes = data->blocks * data->blocksize;
+@@ -252,7 +252,7 @@ static int sdhci_send_command(struct mmc *mmc, struct mmc_cmd *cmd,
+ 	stat = sdhci_readl(host, SDHCI_INT_STATUS);
+ 	sdhci_writel(host, SDHCI_INT_ALL_MASK, SDHCI_INT_STATUS);
+ 	if (!ret) {
+-		if ((host->quirks & SDHCI_QUIRK_32BIT_DMA_ADDR) &&
++		if (data && (host->quirks & SDHCI_QUIRK_32BIT_DMA_ADDR) &&
+ 				!is_aligned && (data->flags == MMC_DATA_READ))
+ 			memcpy(data->dest, aligned_buffer, trans_bytes);
+ 		return 0;
+-- 
+1.9.1
+

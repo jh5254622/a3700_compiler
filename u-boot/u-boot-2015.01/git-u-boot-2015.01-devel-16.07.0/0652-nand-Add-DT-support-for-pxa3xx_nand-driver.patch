@@ -1,0 +1,186 @@
+From 5742ed77fe8baa468be92a8e48c129ecb8d5621e Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Thu, 7 Jan 2016 14:58:24 +0200
+Subject: [PATCH 0652/1240] nand: Add DT support for pxa3xx_nand driver
+
+Change-Id: Ib801bd04d6489b67b95dab69a3e5589ce8df9dcf
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26620
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/include/asm/arch-armada38x/regs-base.h    |  2 --
+ arch/arm/include/asm/arch-armada8k/regs-base.h     |  2 --
+ .../nand/marvell-pxa3xx-nand.txt                   | 32 +++++++++++++++++
+ drivers/mtd/nand/pxa3xx_nand.c                     | 40 +++++++++++++++++++---
+ include/fdtdec.h                                   |  1 +
+ lib/fdtdec.c                                       |  1 +
+ 6 files changed, 69 insertions(+), 9 deletions(-)
+ create mode 100644 doc/device-tree-bindings/nand/marvell-pxa3xx-nand.txt
+
+diff --git a/arch/arm/include/asm/arch-armada38x/regs-base.h b/arch/arm/include/asm/arch-armada38x/regs-base.h
+index 44c47c1..682765f 100644
+--- a/arch/arm/include/asm/arch-armada38x/regs-base.h
++++ b/arch/arm/include/asm/arch-armada38x/regs-base.h
+@@ -36,6 +36,4 @@
+ 
+ #define MVEBU_IO_ERR_CTL_REG	(MVEBU_REGS_BASE + 0x20200)
+ 
+-#define MVEBU_NAND_BASE		(MVEBU_REGS_BASE + 0xD0000)
+-
+ #endif	/* _REGS_BASE_H_ */
+diff --git a/arch/arm/include/asm/arch-armada8k/regs-base.h b/arch/arm/include/asm/arch-armada8k/regs-base.h
+index a469c4a..6b5c9e7 100644
+--- a/arch/arm/include/asm/arch-armada8k/regs-base.h
++++ b/arch/arm/include/asm/arch-armada8k/regs-base.h
+@@ -43,6 +43,4 @@
+ 
+ #define MVEBU_LLC_BASE		(MVEBU_REGS_BASE + 0x8000)
+ 
+-#define MVEBU_NAND_BASE		(MVEBU_REGS_BASE + 0x720000)
+-
+ #endif	/* _REGS_BASE_H_ */
+diff --git a/doc/device-tree-bindings/nand/marvell-pxa3xx-nand.txt b/doc/device-tree-bindings/nand/marvell-pxa3xx-nand.txt
+new file mode 100644
+index 0000000..f7f0adb
+--- /dev/null
++++ b/doc/device-tree-bindings/nand/marvell-pxa3xx-nand.txt
+@@ -0,0 +1,32 @@
++PXA3xx NAND DT bindings
++-----------------------
++
++Required properties:
++- compatible:          Should be set to: marvell,mvebu-pxa3xx-nand
++- reg:                 The register base for the controller
++- #address-cells:      Set to <1> if the node includes partitions
++
++Optional properties:
++- nand-enable-arbiter: Set to enable the bus arbiter
++- nand-keep-config:    Set to keep the NAND controller config as set by the bootrom.
++- num-cs:              Number of chipselect lines to use
++- nand-ecc-strength:   Number of bits to correct per ECC step
++- nand-ecc-step-size:  Number of data bytes covered by a single ECC step
++
++The following ECC strength and step size are currently supported:
++- nand-ecc-strength = <1>, nand-ecc-step-size = <512>
++- nand-ecc-strength = <4>, nand-ecc-step-size = <512>
++- nand-ecc-strength = <8>, nand-ecc-step-size = <512>
++
++Example:
++	nand0: nand@43100000 {
++		compatible = "marvell,mvebu-nand";
++		reg = <0x43100000 90>;
++		#address-cells = <1>;
++		marvell,nand-enable-arbiter;
++		num-cs = <1>;
++
++		/* partitions (optional) */
++		nand-ecc-strength = <4>;
++		nand-ecc-step-size = <512>;
++	};
+diff --git a/drivers/mtd/nand/pxa3xx_nand.c b/drivers/mtd/nand/pxa3xx_nand.c
+index f3c6237..d5e493d 100644
+--- a/drivers/mtd/nand/pxa3xx_nand.c
++++ b/drivers/mtd/nand/pxa3xx_nand.c
+@@ -9,6 +9,7 @@
+ 
+ #include <common.h>
+ #include <malloc.h>
++#include <fdtdec.h>
+ #include <nand.h>
+ #include <asm/errno.h>
+ #include <asm/io.h>
+@@ -16,9 +17,10 @@
+ #include <linux/mtd/nand.h>
+ #include <linux/types.h>
+ #include <asm/arch-mvebu/clock.h>
+-
++#include <asm/arch-mvebu/fdt.h>
+ #include "pxa3xx_nand.h"
+ 
++DECLARE_GLOBAL_DATA_PTR;
+ /* Some U-Boot compatibility macros */
+ #define writesl(a, d, s)	__raw_writesl((unsigned long)a, d, s)
+ #define readsl(a, d, s)		__raw_readsl((unsigned long)a, d, s)
+@@ -1510,8 +1512,6 @@ static int alloc_nand_resource(struct pxa3xx_nand_info *info)
+ 		chip->cmdfunc		= nand_cmdfunc;
+ 	}
+ 
+-	info->mmio_base = (void __iomem *)MVEBU_NAND_BASE;
+-
+ 	/* Allocate a buffer to allow flash detection */
+ 	info->buf_size = INIT_BUFFER_SIZE;
+ 	info->data_buff = kmalloc(info->buf_size, GFP_KERNEL);
+@@ -1533,13 +1533,43 @@ fail_disable_clk:
+ static int pxa3xx_nand_probe_dt(struct pxa3xx_nand_info *info)
+ {
+ 	struct pxa3xx_nand_platform_data *pdata;
++	const void *blob = gd->fdt_blob;
++	int node;
+ 
+ 	pdata = kzalloc(sizeof(*pdata), GFP_KERNEL);
+ 	if (!pdata)
+ 		return -ENOMEM;
+ 
+-	pdata->enable_arbiter = 1;
+-	pdata->num_cs = 1;
++
++	/* Get address decoding node from the FDT blob */
++	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_PXA3XX_NAND));
++	if (node < 0) {
++		error("No Nand node found in FDT blob\n");
++		return -1;
++	}
++
++	/* Get the NAND controler base address */
++	info->mmio_base = (void *)fdt_get_regs_offs(blob, node, "reg");
++
++	pdata->num_cs = fdtdec_get_int(blob, node, "num-cs", 1);
++	if (pdata->num_cs != 1) {
++		error("Current pxa3xx driver supports only a single CS.\n");
++		return -EINVAL;
++	}
++
++	if (fdtdec_get_bool(blob, node, "nand-enable-arbiter"))
++		pdata->enable_arbiter = 1;
++
++	if (fdtdec_get_bool(blob, node, "nand-keep-config"))
++		pdata->keep_config = 1;
++
++	/* ECC parameters, If these are not set, they will be selected according
++	** to the detected flash type. */
++	/* ECC strength */
++	pdata->ecc_strength = fdtdec_get_int(blob, node, "nand-ecc-strength", 0);
++
++	/* ECC step size */
++	pdata->ecc_strength = fdtdec_get_int(blob, node, "nand-ecc-step-size", 0);
+ 
+ 	info->pdata = pdata;
+ 
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index 6fcfb6b..8adb208 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -155,6 +155,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_XENON_MMC,
+ 	COMPAT_MVEBU_A3700_FREQ,
+ 	COMPAT_MVEBU_MDIO,
++	COMPAT_MVEBU_PXA3XX_NAND,
+ 
+ 	COMPAT_COUNT,
+ };
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index fc2b3a1..a42a069 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -117,6 +117,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_XENON_MMC, "marvell,xenon-sdhci"),
+ 	COMPAT(COMPAT_MVEBU_A3700_FREQ, "marvell,a3700-freq"),
+ 	COMPAT(MVEBU_MDIO, "marvell,mvebu-mdio"),
++	COMPAT(MVEBU_PXA3XX_NAND, "marvell,mvebu-pxa3xx-nand")
+ 
+ };
+ 
+-- 
+1.9.1
+

@@ -1,0 +1,84 @@
+From 21adfc5ed24bce330a764912f60143cfbe3cbae6 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Mon, 8 Feb 2016 10:27:31 +0200
+Subject: [PATCH 0843/1240] fix: clk: cp110: Set clock source for CP-110 units
+ to refclk in Device Tree
+
+Change-Id: I9f45db6851ef60ccd95fa9a55ecc950e34f4d713
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27333
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/cp110-master.dtsi |  7 +++++++
+ arch/arm/dts/cp110.dtsi        | 15 +++++++++++----
+ 2 files changed, 18 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/dts/cp110-master.dtsi b/arch/arm/dts/cp110-master.dtsi
+index 2b00474..abaa8aa 100644
+--- a/arch/arm/dts/cp110-master.dtsi
++++ b/arch/arm/dts/cp110-master.dtsi
+@@ -34,4 +34,11 @@
+ 			#include "cp110.dtsi"
+ 		};
+ 	};
++
++	cp110-master {
++		internal-regs {
++			refclk: refclk {
++			};
++		};
++	};
+ };
+diff --git a/arch/arm/dts/cp110.dtsi b/arch/arm/dts/cp110.dtsi
+index dd7410e..3b70778 100644
+--- a/arch/arm/dts/cp110.dtsi
++++ b/arch/arm/dts/cp110.dtsi
+@@ -25,11 +25,18 @@ map-iob {
+ 		0x0 0xf6000000 0x0 0x1000000 0x4 /* PEX0_X4 window */
+ 		0x0 0xf9000000 0x0 0x1000000 0x5 /* NAND window */>;
+ };
++
++refclk {
++	compatible = "marvell,refclk";
++	#clock-cells = <0>;
++	clock-frequency = <250000000>;
++};
++
+ spi0@700600 {
+ 	compatible = "marvell,orion-spi";
+ 	reg = <0x700600 0x50>;
+ 	spi-max-frequency = <10000000>;
+-	clock = <&tclk>;
++	clock = <&refclk>;
+ 	cpol-cs-bitmap = <0>; /* bit i is set if the CPOL of
+ 				CS-i is enabled or not */
+ 	status = "disable";
+@@ -39,7 +46,7 @@ spi1@700680 {
+ 	compatible = "marvell,orion-spi";
+ 	reg = <0x700680 0x50>;
+ 	spi-max-frequency = <10000000>;
+-	clock = <&tclk>;
++	clock = <&refclk>;
+ 	cpol-cs-bitmap = <0>; /* bit i is set if the CPOL of
+ 				CS-i is enabled or not */
+ 	status = "disable";
+@@ -47,13 +54,13 @@ spi1@700680 {
+ i2c@701000 { /* i2c0 */
+ 	compatible = "marvell,mvebu-i2c";
+ 	reg = <0x701000 0x100>;
+-	clock = <&tclk>;
++	clock = <&refclk>;
+ 	status = "disabled";
+ };
+ i2c@701100 { /* i2c1 */
+ 	compatible = "marvell,mvebu-i2c";
+ 	reg = <0x701100 0x100>;
+-	clock = <&tclk>;
++	clock = <&refclk>;
+ 	status = "disabled";
+ };
+ sata@540000 {
+-- 
+1.9.1
+

@@ -1,0 +1,91 @@
+From e5a3828f601e0d8ff7ae8c7b904f06d69c16cff0 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Mon, 6 Oct 2014 17:18:10 +0300
+Subject: [PATCH 0087/1240] a8k: smp: added WA to resolve SMP affinity
+
+Change-Id: Iea8284e75bddd6fd1ca7ff7a645bb08252a24781
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/13512
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/start.S | 59 +++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 58 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/armv8/start.S b/arch/arm/cpu/armv8/start.S
+index af1a4f9..89fbad3 100644
+--- a/arch/arm/cpu/armv8/start.S
++++ b/arch/arm/cpu/armv8/start.S
+@@ -21,7 +21,7 @@
+ .globl	_start
+ _start:
+ #ifdef CONFIG_PALLADIUM
+-	b .
++	bl	fixup_affinity
+ #endif
+ 	b	reset
+ 
+@@ -177,3 +177,60 @@ ENTRY(c_runtime_cpu_setup)
+ 
+ 	ret
+ ENDPROC(c_runtime_cpu_setup)
++
++#ifdef CONFIG_PALLADIUM
++ENTRY(fixup_affinity)
++
++/*
++ * Configure snoop affinity.
++ * in UP each master snoops only itself
++ * For cpu 0 set DVM affiinity with SMMU & self
++ */
++	ldr	x0, =0xf0004210
++	ldr	w1, =0x2030003
++	str	w1, [x0]
++
++	ldr     x0, =0xf0004214
++	ldr	w1, =0x2030003
++	str     w1, [x0]
++
++	ldr     x0, =0xf0004218
++	ldr     w1, =0x4
++	str     w1, [x0]
++
++	ldr     x0, =0xf000421c
++	ldr     w1, =0x8
++	str     w1, [x0]
++
++	ldr     x0, =0xf0004220
++	ldr     w1, =0x0
++	str     w1, [x0]
++
++	ldr     x0, =0xf0004224
++	ldr     w1, =0x0
++	str     w1, [x0]
++
++	ldr     x0, =0xf0004228
++	ldr     w1, =0x0
++	str     w1, [x0]
++
++	ldr     x0, =0xf000422c
++	ldr     w1, =0x0
++	str     w1, [x0]
++
++	ldr     x0, =0xf0004230
++	ldr     w1, =0x0
++	str     w1, [x0]
++
++	ldr     x0, =0xf0004234
++	ldr     w1, =0x0
++	str     w1, [x0]
++
++	ldr     x0, =0xf00040b0
++	ldr     w1, =0xf0080401
++	str     w1, [x0]
++
++	ret
++
++ENDPROC(fixup_affinity)
++#endif /* CONFIG_PALLADIUM */
+-- 
+1.9.1
+

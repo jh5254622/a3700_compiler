@@ -1,0 +1,42 @@
+From 96f6ec6105a80bd6ceea283666fe908de5147b30 Mon Sep 17 00:00:00 2001
+From: zachary <zhangzg@marvell.com>
+Date: Fri, 8 Apr 2016 02:31:23 +0800
+Subject: [PATCH 1106/1240] fix: tool: a3700: correct soc name in buildtim
+ script
+
+- Rename processor-type in TIM config file to Armada3700.
+
+Change-Id: Ic48d4029b20b1dad307c331742f4da2a6d130447
+Signed-off-by: zachary <zhangzg@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28859
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ scripts/buildtim.sh | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/scripts/buildtim.sh b/scripts/buildtim.sh
+index a77163a..ecd0c90 100755
+--- a/scripts/buildtim.sh
++++ b/scripts/buildtim.sh
+@@ -158,7 +158,7 @@ echo "Trusted:                        $TRUSTED" >> $OUTFILE
+ echo "Issue Date:                     0x$DATE		; today's date" >> $OUTFILE
+ echo "OEM UniqueID:                   0x4D52564C		; MRVL" >> $OUTFILE
+ echo "Stepping:                       0x00000000" >> $OUTFILE
+-echo "Processor Type:                 <undefined>		; ARMADALP" >> $OUTFILE
++echo "Processor Type:                 <undefined>		; ARMADA3700" >> $OUTFILE
+ echo "Boot Flash Signature:           $FLASH" >> $OUTFILE
+ if [ "$TRUSTED" = "0x00000000" ]; then
+ 	echo "Number of Images:               $IMGSNUM" >> $OUTFILE
+@@ -317,7 +317,7 @@ if [ "$TRUSTED" = "0x00000001" ]; then
+ 	echo "Issue Date:                     0x$DATE		; today's date" >> $TIMNOUTFILE
+ 	echo "OEM UniqueID:                   0x4D52564C		; MRVL" >> $TIMNOUTFILE
+ 	echo "Stepping:                       0x00000000" >> $TIMNOUTFILE
+-	echo "Processor Type:                 <undefined>		; ARMADALP" >> $TIMNOUTFILE
++	echo "Processor Type:                 <undefined>		; ARMADA3700" >> $TIMNOUTFILE
+ 	echo "Boot Flash Signature:           $FLASH" >> $TIMNOUTFILE
+ 	echo "Number of Images:               $IMGSNUM" >> $TIMNOUTFILE
+ 	echo "Number of Keys:                 0			; DSIG key is not counted" >> $TIMNOUTFILE
+-- 
+1.9.1
+

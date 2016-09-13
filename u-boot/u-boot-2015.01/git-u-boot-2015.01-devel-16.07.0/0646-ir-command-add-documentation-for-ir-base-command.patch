@@ -1,0 +1,242 @@
+From 88b747f62f1cfd6311d4344a0eeb83674237cbae Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 6 Jan 2016 17:52:44 +0200
+Subject: [PATCH 0646/1240] ir: command: add documentation for ir & base
+ command
+
+Change-Id: I8d7f623d5288627186866ec6f77e13f5418683bc
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26600
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+---
+ doc/mvebu/a8k/board_options       | 32 ----------------------------
+ doc/mvebu/a8k/board_options.txt   | 32 ++++++++++++++++++++++++++++
+ doc/mvebu/commands/fdt_config     | 44 ---------------------------------------
+ doc/mvebu/commands/fdt_config.txt | 44 +++++++++++++++++++++++++++++++++++++++
+ doc/mvebu/commands/ir.txt         | 33 +++++++++++++++++++++++++++++
+ 5 files changed, 109 insertions(+), 76 deletions(-)
+ delete mode 100644 doc/mvebu/a8k/board_options
+ create mode 100644 doc/mvebu/a8k/board_options.txt
+ delete mode 100644 doc/mvebu/commands/fdt_config
+ create mode 100644 doc/mvebu/commands/fdt_config.txt
+ create mode 100644 doc/mvebu/commands/ir.txt
+
+diff --git a/doc/mvebu/a8k/board_options b/doc/mvebu/a8k/board_options
+deleted file mode 100644
+index a829577..0000000
+--- a/doc/mvebu/a8k/board_options
++++ /dev/null
+@@ -1,32 +0,0 @@
+-Board options:
+---------------
+-
+-The below describes the board options for Armada-8k/7k
+-For each board, the below defines the list of configurations that U-Boot support, using device tree blob.
+-
+-Option list of Armada-8040-RZ:
+-
+-option #	|	1	|	2	|	3	|	4	|	5	|	6	|	7	|
+----------------------------------------------------------------------------------------------------------------------------------
+-SLM #		| SML1524	| SLM1521	| SLM1521	| SLM1521	| SLM1521	| SLM1522	| SLM1522	|
+----------------------------------------------------------------------------------------------------------------------------------
+-SerDes:	lane0	| sgmii2	| pex_x4_l0	| pex_x4_l0	| pex_x4_l0	| pex_x4_l0	| sata1		| pex_x4_l0	|
+-	lane1	| usb3h0	| pex_x4_l1	| sata0		| usb3h0	| usb3h0	| sata0		| sata0		|
+-	lane2	| sgmii0	| pex_x4_l2	| kr		| kr		| sata0		| sgmii0	| sgmii0	|
+-	lane3	| sata1		| pex_x4_l3	| sata1		| sata1		| sata1		| sgmii2	| sgmii2	|
+-	lane4	| usb3h1	| pex_x1_0	| pex_x1_0	| usb3h1	| usb3h1	| rxauil0	| rxauil0	|
+-	lane5	| pex_x1_1	| pex_x1_1	| pex_x1_1	| pex_x1_1	| pex_x1_1	| rxauil1	| rxauil1	|
+----------------------------------------------------------------------------------------------------------------------------------
+-MPPs: 	SPI0	| N/C		| N/C		| N/C		| N/C		| N/C		| N/C		| N/C		|
+-	SPI1	| [13-16]	| [13-16]	| [13-16]	| N/C		| [13-16]	| [13-16]	| [13-16]	|
+-	NAND	| N/C		| N/C		| N/C		| [13,17-27]	| N/C		| N/C		| N/C		|
+-	RGMII0	| N/C		| [0-12]	| [0-12]	| [0-12]	| [0-12]	| N/C		| N/C		|
+-	RGMII1	| N/C		| [44-55]	| [44-55]	| [44-55]	| [44-55]	| N/C		| N/C		|
+-	UART0	| [29-30]	| [29-30]	| [29-30]	| [29-30]	| [29-30]	| [29-30]	| [29-30]	|
+-	UART1	| [40-41]	| [40-41]	| [40-41]	| [40-41]	| [40-41]	| [40-41]	| [40-41]	|
+-	SD	| [56-62]	| [56-62]	| [56-62]	| [56-62]	| [56-62]	| [56-62]	| [56-62]	|
+-	TDM	| [0-11]	| N/C		| N/C		| N/C		| N/C		| N/C		| N/C		|
+-	TWSI	| [37-38]	| [37-38]	| [37-38]	| [37-38]	| [37-38]	| [37-38]	| [37-38]	|
+-	SATA0	| [36]		| N/C		| [36]		| N/C		| [36]		| [36]		| [36]		|
+-	SATA1	| [28]		| N/C		| [28]		| [28]		| [28]		| [28]		| N/C		|
+----------------------------------------------------------------------------------------------------------------------------------
+diff --git a/doc/mvebu/a8k/board_options.txt b/doc/mvebu/a8k/board_options.txt
+new file mode 100644
+index 0000000..a829577
+--- /dev/null
++++ b/doc/mvebu/a8k/board_options.txt
+@@ -0,0 +1,32 @@
++Board options:
++--------------
++
++The below describes the board options for Armada-8k/7k
++For each board, the below defines the list of configurations that U-Boot support, using device tree blob.
++
++Option list of Armada-8040-RZ:
++
++option #	|	1	|	2	|	3	|	4	|	5	|	6	|	7	|
++---------------------------------------------------------------------------------------------------------------------------------
++SLM #		| SML1524	| SLM1521	| SLM1521	| SLM1521	| SLM1521	| SLM1522	| SLM1522	|
++---------------------------------------------------------------------------------------------------------------------------------
++SerDes:	lane0	| sgmii2	| pex_x4_l0	| pex_x4_l0	| pex_x4_l0	| pex_x4_l0	| sata1		| pex_x4_l0	|
++	lane1	| usb3h0	| pex_x4_l1	| sata0		| usb3h0	| usb3h0	| sata0		| sata0		|
++	lane2	| sgmii0	| pex_x4_l2	| kr		| kr		| sata0		| sgmii0	| sgmii0	|
++	lane3	| sata1		| pex_x4_l3	| sata1		| sata1		| sata1		| sgmii2	| sgmii2	|
++	lane4	| usb3h1	| pex_x1_0	| pex_x1_0	| usb3h1	| usb3h1	| rxauil0	| rxauil0	|
++	lane5	| pex_x1_1	| pex_x1_1	| pex_x1_1	| pex_x1_1	| pex_x1_1	| rxauil1	| rxauil1	|
++---------------------------------------------------------------------------------------------------------------------------------
++MPPs: 	SPI0	| N/C		| N/C		| N/C		| N/C		| N/C		| N/C		| N/C		|
++	SPI1	| [13-16]	| [13-16]	| [13-16]	| N/C		| [13-16]	| [13-16]	| [13-16]	|
++	NAND	| N/C		| N/C		| N/C		| [13,17-27]	| N/C		| N/C		| N/C		|
++	RGMII0	| N/C		| [0-12]	| [0-12]	| [0-12]	| [0-12]	| N/C		| N/C		|
++	RGMII1	| N/C		| [44-55]	| [44-55]	| [44-55]	| [44-55]	| N/C		| N/C		|
++	UART0	| [29-30]	| [29-30]	| [29-30]	| [29-30]	| [29-30]	| [29-30]	| [29-30]	|
++	UART1	| [40-41]	| [40-41]	| [40-41]	| [40-41]	| [40-41]	| [40-41]	| [40-41]	|
++	SD	| [56-62]	| [56-62]	| [56-62]	| [56-62]	| [56-62]	| [56-62]	| [56-62]	|
++	TDM	| [0-11]	| N/C		| N/C		| N/C		| N/C		| N/C		| N/C		|
++	TWSI	| [37-38]	| [37-38]	| [37-38]	| [37-38]	| [37-38]	| [37-38]	| [37-38]	|
++	SATA0	| [36]		| N/C		| [36]		| N/C		| [36]		| [36]		| [36]		|
++	SATA1	| [28]		| N/C		| [28]		| [28]		| [28]		| [28]		| N/C		|
++---------------------------------------------------------------------------------------------------------------------------------
+diff --git a/doc/mvebu/commands/fdt_config b/doc/mvebu/commands/fdt_config
+deleted file mode 100644
+index 5d83d32..0000000
+--- a/doc/mvebu/commands/fdt_config
++++ /dev/null
+@@ -1,44 +0,0 @@
+-fdt_config command:
+-====================
+-Dynamic board configurations handled by using a set of pre-defined SoC/Board configurations.
+-This command allows the user to decide which configurations to boot with.
+-In addition, this command gives us the ability to edit the FDT using FDT generic command of U-Boot,
+-and save it to EEPROM.
+-
+-notes:
+-------
+-1. To enable/disable the option to read FDT from EEPROM use on/off.
+-2. To use "fdt_config read" or "fdt_config select" needed to run "fdt_config list" command before,
+-   because the option_id received from this list.
+-3. All changes will be relevant only after running the save command ("fdt_config save") and reset the board.
+-4. The list of all the configuration located under "doc/mvebu/a8k/board_options"
+-
+-
+-"fdt_config on" -   enable the option to read Device Tree from eeprom at boot time.
+-
+-"fdt_config off" -  disable the option to read Device Tree from eeprom at boot time.
+-
+-"fdt_config list" - show all Device Tree that suitable to the board.
+-                    print the list of fdt_config_id and fdt name for all the suitable FDT.
+-
+-"fdt_config read flash <option_id>"
+-		  - read Device Tree from flash and save it to DRAM using address 'fdt_addr' enviorment variable
+-		    as default.
+-		  example:
+-			$ fdt_config read flash 3
+-			**read the FDT with from flash (u-boot image) with id=3 and save it to DRAM.
+-			**note: to read fdt from flash needed to run "fdt_config list" command before.
+-			        because the option_id received from this list.
+-"fdt_config read eeprom"
+-		  - read Device Tree from EEPROM and save it to DRAM using address 'fdt_addr' enviorment variable
+-		    as default.
+-		  example:
+-			$ fdt_config read eeprom
+-
+-"fdt_config select <option_id>"
+-		  - select Device Tree from flash to loading in bootloader at the next time.
+-		    If the user want to use this option its necessary to disable read FDT from EEPROM (by runnig "fdt_config off").
+-		    **note: to select fdt from flash needed to run "fdt_config list" command before.
+-			    because the option_id received from this list.
+-
+-"fdt_config save" - write Device Tree changes from RAM to EEPROM.
+diff --git a/doc/mvebu/commands/fdt_config.txt b/doc/mvebu/commands/fdt_config.txt
+new file mode 100644
+index 0000000..5d83d32
+--- /dev/null
++++ b/doc/mvebu/commands/fdt_config.txt
+@@ -0,0 +1,44 @@
++fdt_config command:
++====================
++Dynamic board configurations handled by using a set of pre-defined SoC/Board configurations.
++This command allows the user to decide which configurations to boot with.
++In addition, this command gives us the ability to edit the FDT using FDT generic command of U-Boot,
++and save it to EEPROM.
++
++notes:
++------
++1. To enable/disable the option to read FDT from EEPROM use on/off.
++2. To use "fdt_config read" or "fdt_config select" needed to run "fdt_config list" command before,
++   because the option_id received from this list.
++3. All changes will be relevant only after running the save command ("fdt_config save") and reset the board.
++4. The list of all the configuration located under "doc/mvebu/a8k/board_options"
++
++
++"fdt_config on" -   enable the option to read Device Tree from eeprom at boot time.
++
++"fdt_config off" -  disable the option to read Device Tree from eeprom at boot time.
++
++"fdt_config list" - show all Device Tree that suitable to the board.
++                    print the list of fdt_config_id and fdt name for all the suitable FDT.
++
++"fdt_config read flash <option_id>"
++		  - read Device Tree from flash and save it to DRAM using address 'fdt_addr' enviorment variable
++		    as default.
++		  example:
++			$ fdt_config read flash 3
++			**read the FDT with from flash (u-boot image) with id=3 and save it to DRAM.
++			**note: to read fdt from flash needed to run "fdt_config list" command before.
++			        because the option_id received from this list.
++"fdt_config read eeprom"
++		  - read Device Tree from EEPROM and save it to DRAM using address 'fdt_addr' enviorment variable
++		    as default.
++		  example:
++			$ fdt_config read eeprom
++
++"fdt_config select <option_id>"
++		  - select Device Tree from flash to loading in bootloader at the next time.
++		    If the user want to use this option its necessary to disable read FDT from EEPROM (by runnig "fdt_config off").
++		    **note: to select fdt from flash needed to run "fdt_config list" command before.
++			    because the option_id received from this list.
++
++"fdt_config save" - write Device Tree changes from RAM to EEPROM.
+diff --git a/doc/mvebu/commands/ir.txt b/doc/mvebu/commands/ir.txt
+new file mode 100644
+index 0000000..926e014
+--- /dev/null
++++ b/doc/mvebu/commands/ir.txt
+@@ -0,0 +1,33 @@
++ir command:
++-----------
++Reading and changing internal register values.
++
++Displays the contents of the internal register in 2 forms, hex and binary.
++Its possible to change the value by writing a hex value beginning with 0x
++or by writing 0 or 1 in the required place.
++Pressing enter without any value keeps the value unchanged.
++the IR command use the default base address of the SoC:
++Armada3700	-	0xd0000000
++AP806		-	0xf0000000
++
++example:
++Marvell>> ir 50000
++Internal register 0x50000 value : 0x6501140
++
++    31      24        16         8         0
++     |       |         |         |         |
++OLD: 0000-0110-0101-0000-0001-0001-0100-0000
++NEW:
++Marvell>>
++
++base command:
++-------------
++Base command provides the ability to change the base address of memory command (ir, md, mm, etc..)
++to show the current base address use "base"
++to change the base address use "base 0xf2000000"
++
++example:
++Marvell>> base
++Base Address: 0x00000000
++Marvell>> base 0xf2000000
++Base Address: 0xf2000000
+-- 
+1.9.1
+

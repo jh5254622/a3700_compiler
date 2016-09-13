@@ -1,0 +1,56 @@
+From e4df79432247314cbb6632794cca6a37c7741ab5 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Tue, 18 Aug 2015 16:44:55 +0300
+Subject: [PATCH 0328/1240] config: added initial defconfig for 7040 emulation
+ target
+
+this defconfig is based on ap806_pd defconfig and adds support
+of DW PCIe driver and IOB driver
+
+Change-Id: I78a8bcfaf163421fe8d14d2b4a3865099e6cbb17
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22916
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ configs/mvebu_armada7040_pd_defconfig | 28 ++++++++++++++++++++++++++++
+ 1 file changed, 28 insertions(+)
+ create mode 100644 configs/mvebu_armada7040_pd_defconfig
+
+diff --git a/configs/mvebu_armada7040_pd_defconfig b/configs/mvebu_armada7040_pd_defconfig
+new file mode 100644
+index 0000000..bf1868b
+--- /dev/null
++++ b/configs/mvebu_armada7040_pd_defconfig
+@@ -0,0 +1,28 @@
++CONFIG_SPL=y
++CONFIG_SYS_EXTRA_OPTIONS="ARM64"
+++S:CONFIG_ARM=y
+++S:CONFIG_TARGET_ARMADA_8K=y
++CONFIG_MVEBU_MPP_BUS=y
+++S:CONFIG_DEVEL_BOARD=y
++CONFIG_APN_806_DB=y
++CONFIG_CMD_BOOTD=y
++CONFIG_CMD_RUN=y
++CONFIG_CMD_EDITENV=y
++CONFIG_CMD_SAVEENV=y
++CONFIG_CMD_MEMORY=y
++CONFIG_CMD_MEMTEST=y
++CONFIG_CMD_PCI=y
++CONFIG_CMD_TIME=y
++CONFIG_CMD_MISC=y
++CONFIG_CMD_TIMER=y
++CONFIG_CMD_MVEBU_MPP=y
+++S:CONFIG_OF_CONTROL=y
+++S:CONFIG_OF_EMBED=y
+++S:CONFIG_DEFAULT_DEVICE_TREE="apn-806-db"
++CONFIG_MVEBU_DW_PCIE=y
++CONFIG_MVEBU_CCU=y
++CONFIG_MVEBU_IOB=y
++CONFIG_MVEBU_RFU=y
+++S:CONFIG_SYS_NS16550=y
++CONFIG_MVEBU_PINCTL=y
+++S:CONFIG_MVEBU_MK6_SUPPORT=y
+-- 
+1.9.1
+

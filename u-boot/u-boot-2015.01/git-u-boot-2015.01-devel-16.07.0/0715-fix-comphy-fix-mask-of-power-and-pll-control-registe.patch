@@ -1,0 +1,29 @@
+From b7693debe21eeb9df840ea026530fe22cc007fbf Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 19 Jan 2016 14:44:11 +0200
+Subject: [PATCH 0715/1240] fix: comphy: fix mask of power and pll control
+ register in comphy register definitions
+
+Change-Id: I0c3cf59e6422fb9e9dd5ea99370e69518b4e7312
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26894
+---
+ arch/arm/include/asm/arch-mvebu/comphy_hpipe.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h b/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h
+index 0769d9f..4f1467a 100644
+--- a/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h
++++ b/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h
+@@ -23,7 +23,7 @@
+ #define HPIPE_PWR_PLL_REF_FREQ_OFFSET		0
+ #define HPIPE_PWR_PLL_REF_FREQ_MASK		(0x1f << HPIPE_PWR_PLL_REF_FREQ_OFFSET)
+ #define HPIPE_PWR_PLL_PHY_MODE_OFFSET		5
+-#define HPIPE_PWR_PLL_PHY_MODE_MASK		(0xe << HPIPE_PWR_PLL_PHY_MODE_OFFSET)
++#define HPIPE_PWR_PLL_PHY_MODE_MASK		(0x7 << HPIPE_PWR_PLL_PHY_MODE_OFFSET)
+ 
+ #define HPIPE_KVCO_CALIB_CTRL_REG		0x8
+ #define HPIPE_KVCO_CALIB_CTRL_MAX_PLL_OFFSET	12
+-- 
+1.9.1
+

@@ -1,0 +1,39 @@
+From 51599f92292b532d277a90ace534edee86015c31 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Fri, 22 Apr 2016 00:21:53 +0800
+Subject: [PATCH 1066/1240] fix: i2c: a3700: validate read length in I2C
+ command
+
+- I2C bus will get stuck when reading 0 byte. So we
+  add validation of read length in i2c_read routine.
+- This issue only occurs on read operation.
+- JIRA bug: SYSTEMSW-2402
+
+Change-Id: I538b24e3adaf2081578c8f3b93a8eb8c6e94c90a
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29252
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+Tested-by: Wilson Ding <dingwei@marvell.com>
+---
+ drivers/i2c/mv_i2c.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/drivers/i2c/mv_i2c.c b/drivers/i2c/mv_i2c.c
+index 8b4fba3..4b4a399 100644
+--- a/drivers/i2c/mv_i2c.c
++++ b/drivers/i2c/mv_i2c.c
+@@ -392,6 +392,11 @@ int i2c_read(uchar chip, uint addr, int alen, uchar *buffer, int len)
+ 	PRINTD(("i2c_read(chip=0x%02x, addr=0x%02x, alen=0x%02x, "
+ 		"len=0x%02x)\n", chip, addr, alen, len));
+ 
++	if (len == 0) {
++		printf("reading zero byte is invalid\n");
++		return -1;
++	}
++
+ 	i2c_reset();
+ 
+ 	/* dummy chip address write */
+-- 
+1.9.1
+

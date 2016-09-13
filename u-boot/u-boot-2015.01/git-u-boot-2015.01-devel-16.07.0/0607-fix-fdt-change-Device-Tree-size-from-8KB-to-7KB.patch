@@ -1,0 +1,63 @@
+From fd8185ba74c883e634d4bb5dba10aa7590a58e21 Mon Sep 17 00:00:00 2001
+From: Nizan Zorea <nzorea@marvell.com>
+Date: Thu, 17 Dec 2015 13:35:22 +0200
+Subject: [PATCH 0607/1240] fix: fdt: change Device Tree size from 8KB to 7KB
+
+	- This change is necessary because Eeprom size is 8KB.
+	  and for future support of writing FDT in eeprom, it's necessary
+	  to save room for structure manager.
+
+Change-Id: I225bd2dab63b34875a0c0444901c25e34620dadb
+Signed-off-by: Nizan Zorea <nzorea@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26209
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/Makefile          | 2 +-
+ dts/Kconfig                    | 4 ++--
+ include/configs/mvebu-common.h | 2 +-
+ 3 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index 1a2d459..c078939 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -66,7 +66,7 @@ targets += $(dtb-y)
+ 
+ # alignment fdt file to 8k. this is helpful to support multi fdt.
+ # This alignment allows selecting DT files easily by skipping over a predefined DT size.
+-DTC_FLAGS += -R 4 -S 0x2000
++DTC_FLAGS += -R 4 -S 0x1C00
+ 
+ PHONY += dtbs
+ dtbs: $(addprefix $(obj)/, $(dtb-y))
+diff --git a/dts/Kconfig b/dts/Kconfig
+index 84fc949..3b201ed 100644
+--- a/dts/Kconfig
++++ b/dts/Kconfig
+@@ -55,7 +55,7 @@ config MULTI_DT_FILE
+ 	depends on OF_CONTROL
+ 	help
+ 	  If this option is enabled, U-Boot will support different DT files.
+-	  Each FDT has a fixed size of 8KB, so to choose between them in u-boot,
+-	  it will be executerd by a jump of 8KB.
++	  Each FDT has a fixed size of 7KB, so to choose between them in u-boot,
++	  it will be executerd by a jump of 7KB.
+ 	  The u-boot separates between the DTB by the flavor/board id
+ endmenu
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 757bf4b..346dd37 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -218,7 +218,7 @@
+ 
+ /* Flat Device Tree Definitions */
+ #define CONFIG_OF_LIBFDT
+-#define MVEBU_FDT_SIZE 0x2000
++#define MVEBU_FDT_SIZE 0x1C00
+ 
+ /* SMP Spin Table Definitions */
+ #define CPU_RELEASE_ADDR               (CONFIG_SYS_SDRAM_BASE + 0x2000000)
+-- 
+1.9.1
+

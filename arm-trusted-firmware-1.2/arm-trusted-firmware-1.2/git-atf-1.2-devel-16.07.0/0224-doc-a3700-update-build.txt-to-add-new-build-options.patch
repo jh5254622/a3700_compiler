@@ -1,0 +1,59 @@
+From eb77aaff6ac8c0f28fac75580faf6502b0686847 Mon Sep 17 00:00:00 2001
+From: Ken Ma <make@marvell.com>
+Date: Tue, 21 Jun 2016 17:13:42 +0800
+Subject: [PATCH 224/239] doc: a3700: update build.txt to add new build options
+
+- Since we have added new build options to remove dependency on u-boot
+  .config, "docs/marvell/build.txt" should be updated meanwhile.
+
+Change-Id: I04ffdbb90d6336d2cef4ac838530159f387fd5ca
+Signed-off-by: Ken Ma <make@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30595
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Gina Tadmore <gina@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ docs/marvell/build.txt | 24 ++++++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+
+diff --git a/docs/marvell/build.txt b/docs/marvell/build.txt
+index 7fa3d37..5ecd5b2 100644
+--- a/docs/marvell/build.txt
++++ b/docs/marvell/build.txt
+@@ -48,9 +48,33 @@ Build Instruction:
+ 				LOG_LEVEL_VERBOSE	50
+ 	- USE_COHERENT_MEM: This flag determines whether to include the coherent memory region in the
+ 						BL memory map or not. It should be set to 0.
++	- SECURE: For a3700 only, trusted(=1)/non trusted(=0) in wtp, default is non trusted.
++	- CLOCKSPRESET: For a3700 only, the clock tree configuration preset
++			including cpu and ddr frequency, default is CPU_800_DDR_800
++				CPU_600_DDR_600		-	CPU at 600 MHz, DDR at 600 MHz
++				CPU_800_DDR_800		-	CPU at 800 MHz, DDR at 800 MHz
++				CPU_1000_DDR_800	-	CPU at 1000 MHz, DDR at 800 MHz
++	- BOOTDEV: For a3700 only, the flash boot device, default is SPINOR,
++			now a3700 only supports	SPINOR, SPINAND, EMMCNORM and SATA.
++				SPINOR		- SPI NOR flash boot
++				SPINAND		- SPI NAND flash boot
++				EMMCNORM	- eMMC Download Mode
++						Download boot loader or program code from eMMC flash into CM3 or CA53
++						Requires full initialization and command sequence
++				EMMCALT		- eMMC Alternate Download Mode
++						Download boot loader or program code from eMMC flash into CM3 or CA53
++						For cases when the eMMC Device is pre-programmed to support eMMC
++						Alternate Boot Mode.
++				SATA		- SATA device boot
++	- PARTNUM: For a3700 only, the boot partition number, default is 0
+ 
+ 	For example: in order to build the image in debug mode with log level up to 'notice' level run:
+ 	# make DEBUG=1 USE_COHERENT_MEM=0 LOG_LEVEL=20 PLAT=<MARVELL_PLATFORM> all fip
++	And if we want to build a a3700 image in debug mode with log level up to 'notice' level run,
++	the image has the preset CPU at 600 MHz, preset DDR at 600 MHz, the image boot from SPI NOR
++	flash partition 0, and the image is non trusted in wtp, the command line is as following:
++	# make DEBUG=1 USE_COHERENT_MEM=0 LOG_LEVEL=20 SECURE=0 CLOCKSPRESET=CPU_600_DDR_600 BOOTDEV=SPINOR
++	PARTNUM=0 PLAT=<MARVELL_PLATFORM> all fip
+ 
+ 	Supported MARVELL_PLATFORM are:
+ 		apn806
+-- 
+1.9.1
+

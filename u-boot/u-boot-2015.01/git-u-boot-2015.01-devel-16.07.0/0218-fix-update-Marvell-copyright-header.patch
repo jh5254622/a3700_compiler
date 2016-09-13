@@ -1,0 +1,3234 @@
+From 78f73310ebbe2dbf1976219d3b2eec3e77cb6ca8 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 15 Jun 2015 19:18:55 +0300
+Subject: [PATCH 0218/1240] fix: update Marvell copyright header
+
+Change-Id: I978dfc742140104025e76d58871b6d92425e7840
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20209
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/cpu/armv7/armada38x/Makefile              |  29 ++-
+ arch/arm/cpu/armv7/armada38x/clock.c               |  23 ++-
+ arch/arm/cpu/armv7/armada38x/soc-init.c            |  23 ++-
+ arch/arm/cpu/armv7/armada38x/tables.c              |  23 ++-
+ arch/arm/cpu/armv8/armada8k/Makefile               |  29 ++-
+ arch/arm/cpu/armv8/armada8k/cache_llc.c            |  32 ++--
+ arch/arm/cpu/armv8/armada8k/clock.c                |  23 ++-
+ arch/arm/cpu/armv8/armada8k/soc-init.c             |  23 ++-
+ arch/arm/cpu/armv8/armada8k/tables.c               |  23 ++-
+ arch/arm/cpu/mvebu-common/Makefile                 |  29 ++-
+ arch/arm/cpu/mvebu-common/clock.c                  |  23 ++-
+ arch/arm/cpu/mvebu-common/fdt.c                    |  23 ++-
+ arch/arm/cpu/mvebu-common/generic_timer.c          |  23 ++-
+ arch/arm/cpu/mvebu-common/misc.c                   |  23 ++-
+ arch/arm/cpu/mvebu-common/mpp-bus.c                |  22 +--
+ arch/arm/cpu/mvebu-common/mpp.c                    | 197 +++++++++++++++++++++
+ arch/arm/cpu/mvebu-common/platform.S               |  23 ++-
+ arch/arm/cpu/mvebu-common/soc-init.c               |  23 ++-
+ arch/arm/cpu/mvebu-common/spl.c                    |  32 ++--
+ arch/arm/cpu/mvebu-common/timer_mvebu.c            |  23 ++-
+ arch/arm/cpu/mvebu-common/timer_mvebu_2.c          |  23 ++-
+ arch/arm/cpu/mvebu-common/unit-info.c              |  23 ++-
+ arch/arm/include/asm/arch-armada38x/armada38x.h    |  23 ++-
+ arch/arm/include/asm/arch-armada38x/memory-map.h   |  23 ++-
+ arch/arm/include/asm/arch-armada38x/regs-base.h    |  23 ++-
+ arch/arm/include/asm/arch-armada38x/soc-info.h     |  23 ++-
+ arch/arm/include/asm/arch-armada8k/armada8k.h      |  23 ++-
+ arch/arm/include/asm/arch-armada8k/memory-map.h    |  23 ++-
+ arch/arm/include/asm/arch-armada8k/regs-base.h     |  23 ++-
+ arch/arm/include/asm/arch-armada8k/soc-info.h      |  23 ++-
+ arch/arm/include/asm/arch-mvebu/clock.h            |  23 ++-
+ arch/arm/include/asm/arch-mvebu/driver_interface.h |  23 ++-
+ arch/arm/include/asm/arch-mvebu/fdt.h              |  23 ++-
+ arch/arm/include/asm/arch-mvebu/mpp.h              |  23 ++-
+ arch/arm/include/asm/arch-mvebu/mvebu.h            |  23 ++-
+ arch/arm/include/asm/arch-mvebu/pinctl.h           |  22 +--
+ arch/arm/include/asm/arch-mvebu/soc.h              |  23 ++-
+ arch/arm/include/asm/arch-mvebu/tables.h           |  23 ++-
+ arch/arm/include/asm/arch-mvebu/unit-info.h        |  23 ++-
+ board/mvebu/armada38x/Makefile                     |  29 ++-
+ board/mvebu/armada38x/armada38x.c                  |  23 ++-
+ board/mvebu/armada38x/board-info.c                 |  23 ++-
+ board/mvebu/armada38x/board-info.h                 |  23 ++-
+ board/mvebu/armada38x/customer-board.c             |  23 ++-
+ board/mvebu/armada38x/db-88f6820-info.c            |  23 ++-
+ board/mvebu/armada38x/rd-88f6820-info.c            |  23 ++-
+ board/mvebu/armada8k/Makefile                      |  29 ++-
+ board/mvebu/armada8k/armada8021-pxp.c              |  23 ++-
+ board/mvebu/armada8k/board-info.c                  |  23 ++-
+ board/mvebu/armada8k/board-info.h                  |  23 ++-
+ board/mvebu/armada8k/db-8210-info.c                |  23 ++-
+ board/mvebu/armada8k/rd-8210-info.c                |  23 ++-
+ board/mvebu/common/Makefile                        |  29 ++-
+ board/mvebu/common/board-common.c                  |  23 ++-
+ board/mvebu/common/board.h                         |  23 ++-
+ board/mvebu/common/config.c                        |  23 ++-
+ board/mvebu/common/config.h                        |  23 ++-
+ board/mvebu/common/devel-board.c                   |  23 ++-
+ board/mvebu/common/devel-board.h                   |  23 ++-
+ board/mvebu/common/entry.c                         |  23 ++-
+ board/mvebu/common/eth_init.c                      |  23 ++-
+ board/mvebu/common/init.c                          |  23 ++-
+ board/mvebu/common/nand_init.c                     |  23 ++-
+ board/mvebu/common/pcie_init.c                     |  23 ++-
+ board/mvebu/common/sar.c                           |  23 ++-
+ board/mvebu/common/sar.h                           |  23 ++-
+ board/mvebu/common/var.h                           |  23 ++-
+ common/mvebu/Makefile                              |  29 ++-
+ common/mvebu/cmd_bubt.c                            |  23 ++-
+ common/mvebu/cmd_config.c                          |  23 ++-
+ common/mvebu/cmd_misc.c                            |  23 ++-
+ common/mvebu/cmd_mpp.c                             |  23 ++-
+ common/mvebu/cmd_sar.c                             |  23 ++-
+ drivers/gpio/mvebu_pinctl.c                        |  22 +--
+ drivers/i2c/mvebu_i2c.c                            |  23 ++-
+ drivers/mtd/nand/pxa3xx_nand.c                     |  24 ++-
+ drivers/pci/pci_mvebu.c                            |  23 ++-
+ drivers/spi/mvebu_spi.c                            |  23 ++-
+ include/configs/armada38x.h                        |  33 +---
+ include/configs/armada8k.h                         |  23 ++-
+ include/configs/armadalp.h                         |  32 ++--
+ include/configs/mvebu-common.h                     |  23 ++-
+ tools/doimage.c                                    |  22 +--
+ 83 files changed, 1131 insertions(+), 1028 deletions(-)
+ create mode 100644 arch/arm/cpu/mvebu-common/mpp.c
+
+diff --git a/arch/arm/cpu/armv7/armada38x/Makefile b/arch/arm/cpu/armv7/armada38x/Makefile
+index 6530bf5..c99db44 100644
+--- a/arch/arm/cpu/armv7/armada38x/Makefile
++++ b/arch/arm/cpu/armv7/armada38x/Makefile
+@@ -1,20 +1,19 @@
+ #
+-# *****************************************************************************
+-#  Copyright (C) Marvell International Ltd. and its affiliates
+-# *****************************************************************************
+-# Marvell GPL License Option
+-# If you received this File from Marvell, you may opt to use, redistribute
+-# and/or modify this File in accordance with the terms and conditions of the
+-# General Public License Version 2, June 1991 (the "GPL License"), a copy of
+-# which is available along with the File in the license.txt file or by writing
+-# to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+-# MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++# ***************************************************************************
++# Copyright (C) 2015 Marvell International Ltd.
++# ***************************************************************************
++# This program is free software: you can redistribute it and/or modify it
++# under the terms of the GNU General Public License as published by the Free
++# Software Foundation, either version 2 of the License, or any later version.
+ #
+-# THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+-# WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+-# EXPRESSLY DISCLAIMED.  The GPL License provides additional details about this
+-# warranty disclaimer.
+-# *****************************************************************************
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program.  If not, see <http://www.gnu.org/licenses/>.
++# ***************************************************************************
+ #
+ 
+ obj-y += soc-init.o
+diff --git a/arch/arm/cpu/armv7/armada38x/clock.c b/arch/arm/cpu/armv7/armada38x/clock.c
+index c0717f9..ca43c94 100644
+--- a/arch/arm/cpu/armv7/armada38x/clock.c
++++ b/arch/arm/cpu/armv7/armada38x/clock.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/cpu/armv7/armada38x/soc-init.c b/arch/arm/cpu/armv7/armada38x/soc-init.c
+index 421fd84..a88c83f 100644
+--- a/arch/arm/cpu/armv7/armada38x/soc-init.c
++++ b/arch/arm/cpu/armv7/armada38x/soc-init.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/cpu/armv7/armada38x/tables.c b/arch/arm/cpu/armv7/armada38x/tables.c
+index 2d1b734..dd7e000 100644
+--- a/arch/arm/cpu/armv7/armada38x/tables.c
++++ b/arch/arm/cpu/armv7/armada38x/tables.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/cpu/armv8/armada8k/Makefile b/arch/arm/cpu/armv8/armada8k/Makefile
+index 993245b..230caf8 100644
+--- a/arch/arm/cpu/armv8/armada8k/Makefile
++++ b/arch/arm/cpu/armv8/armada8k/Makefile
+@@ -1,20 +1,19 @@
+ #
+-# *****************************************************************************
+-#  Copyright (C) Marvell International Ltd. and its affiliates
+-# *****************************************************************************
+-# Marvell GPL License Option
+-# If you received this File from Marvell, you may opt to use, redistribute
+-# and/or modify this File in accordance with the terms and conditions of the
+-# General Public License Version 2, June 1991 (the "GPL License"), a copy of
+-# which is available along with the File in the license.txt file or by writing
+-# to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+-# MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++# ***************************************************************************
++# Copyright (C) 2015 Marvell International Ltd.
++# ***************************************************************************
++# This program is free software: you can redistribute it and/or modify it
++# under the terms of the GNU General Public License as published by the Free
++# Software Foundation, either version 2 of the License, or any later version.
+ #
+-# THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+-# WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+-# EXPRESSLY DISCLAIMED.  The GPL License provides additional details about this
+-# warranty disclaimer.
+-# *****************************************************************************
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program.  If not, see <http://www.gnu.org/licenses/>.
++# ***************************************************************************
+ #
+ 
+ obj-y += soc-init.o
+diff --git a/arch/arm/cpu/armv8/armada8k/cache_llc.c b/arch/arm/cpu/armv8/armada8k/cache_llc.c
+index 824fffd..7c27f0f 100644
+--- a/arch/arm/cpu/armv8/armada8k/cache_llc.c
++++ b/arch/arm/cpu/armv8/armada8k/cache_llc.c
+@@ -1,20 +1,20 @@
+ /*
+-* ***************************************************************************
+-* Copyright (C) 2015 Marvell International Ltd.
+-* ***************************************************************************
+-* This program is free software: you can redistribute it and/or modify it
+-* under the terms of the GNU General Public License as published by the Free
+-* Software Foundation, either version 2 of the License, or any later version.
+-*
+-* This program is distributed in the hope that it will be useful,
+-* but WITHOUT ANY WARRANTY; without even the implied warranty of
+-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-* GNU General Public License for more details.
+-*
+-* You should have received a copy of the GNU General Public License
+-* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-* ***************************************************************************
+-*/
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
+ 
+ #include <asm/io.h>
+ #include <common.h>
+diff --git a/arch/arm/cpu/armv8/armada8k/clock.c b/arch/arm/cpu/armv8/armada8k/clock.c
+index 9c203de..6c7aa30 100644
+--- a/arch/arm/cpu/armv8/armada8k/clock.c
++++ b/arch/arm/cpu/armv8/armada8k/clock.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/cpu/armv8/armada8k/soc-init.c b/arch/arm/cpu/armv8/armada8k/soc-init.c
+index 0381a83..cb1d0b7 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc-init.c
++++ b/arch/arm/cpu/armv8/armada8k/soc-init.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/cpu/armv8/armada8k/tables.c b/arch/arm/cpu/armv8/armada8k/tables.c
+index 8e14bf4..7ec9349 100644
+--- a/arch/arm/cpu/armv8/armada8k/tables.c
++++ b/arch/arm/cpu/armv8/armada8k/tables.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/cpu/mvebu-common/Makefile b/arch/arm/cpu/mvebu-common/Makefile
+index 7449646..0791c21 100644
+--- a/arch/arm/cpu/mvebu-common/Makefile
++++ b/arch/arm/cpu/mvebu-common/Makefile
+@@ -1,20 +1,19 @@
+ #
+-# *****************************************************************************
+-#  Copyright (C) Marvell International Ltd. and its affiliates
+-# *****************************************************************************
+-# Marvell GPL License Option
+-# If you received this File from Marvell, you may opt to use, redistribute
+-# and/or modify this File in accordance with the terms and conditions of the
+-# General Public License Version 2, June 1991 (the "GPL License"), a copy of
+-# which is available along with the File in the license.txt file or by writing
+-# to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+-# MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++# ***************************************************************************
++# Copyright (C) 2015 Marvell International Ltd.
++# ***************************************************************************
++# This program is free software: you can redistribute it and/or modify it
++# under the terms of the GNU General Public License as published by the Free
++# Software Foundation, either version 2 of the License, or any later version.
+ #
+-# THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+-# WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+-# EXPRESSLY DISCLAIMED.  The GPL License provides additional details about this
+-# warranty disclaimer.
+-# *****************************************************************************
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program.  If not, see <http://www.gnu.org/licenses/>.
++# ***************************************************************************
+ #
+ 
+ obj-y += unit-info.o
+diff --git a/arch/arm/cpu/mvebu-common/clock.c b/arch/arm/cpu/mvebu-common/clock.c
+index 20a82c5..74d6fc4 100644
+--- a/arch/arm/cpu/mvebu-common/clock.c
++++ b/arch/arm/cpu/mvebu-common/clock.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., on the worldwide web at
+- * http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/cpu/mvebu-common/fdt.c b/arch/arm/cpu/mvebu-common/fdt.c
+index 175942e..13fe3f9 100644
+--- a/arch/arm/cpu/mvebu-common/fdt.c
++++ b/arch/arm/cpu/mvebu-common/fdt.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., on the worldwide web at
+- * http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/cpu/mvebu-common/generic_timer.c b/arch/arm/cpu/mvebu-common/generic_timer.c
+index b3696bd..d7eaa56 100644
+--- a/arch/arm/cpu/mvebu-common/generic_timer.c
++++ b/arch/arm/cpu/mvebu-common/generic_timer.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/cpu/mvebu-common/misc.c b/arch/arm/cpu/mvebu-common/misc.c
+index 34afbc6..f3e1d2d 100644
+--- a/arch/arm/cpu/mvebu-common/misc.c
++++ b/arch/arm/cpu/mvebu-common/misc.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/cpu/mvebu-common/mpp-bus.c b/arch/arm/cpu/mvebu-common/mpp-bus.c
+index 5b1881a..b379016 100644
+--- a/arch/arm/cpu/mvebu-common/mpp-bus.c
++++ b/arch/arm/cpu/mvebu-common/mpp-bus.c
+@@ -1,18 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt  on the worldwide
+- * web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/cpu/mvebu-common/mpp.c b/arch/arm/cpu/mvebu-common/mpp.c
+new file mode 100644
+index 0000000..3332501
+--- /dev/null
++++ b/arch/arm/cpu/mvebu-common/mpp.c
+@@ -0,0 +1,197 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#include <config.h>
++#include <common.h>
++#include <asm/system.h>
++#include <asm/bitops.h>
++#include <asm/io.h>
++#include <asm/arch-mvebu/mpp.h>
++#include <asm/arch-mvebu/soc.h>
++
++char **mpp_get_desc_table(void)
++{
++	return soc_get_mpp_desc_table();
++}
++
++static void set_field(int mpp_id, int value, u32 *base_ptr)
++{
++	int reg_offset;
++	int field_offset;
++	u32 reg, mask;
++
++	/* Calculate register address and bit in register */
++	reg_offset   = 4 * (mpp_id >> (MPP_FIELD_BITS));
++	field_offset = (MPP_BIT_CNT) * (mpp_id & MPP_FIELD_MASK);
++	mask = ~(MPP_VAL_MASK << field_offset);
++
++	/* Clip value to bit resolution */
++	value &= MPP_VAL_MASK;
++
++	reg = readl(base_ptr + reg_offset);
++	reg = (reg & mask) | (value << field_offset);
++	writel(reg, base_ptr + reg_offset);
++}
++
++static u8 get_field(int mpp_id, u32 *base_ptr)
++{
++	u32 reg_offset;
++	int field_offset;
++	u32 reg;
++	u8 value;
++
++	/* Calculate register address and bit in register */
++	reg_offset   = mpp_id >> (MPP_FIELD_BITS);
++	field_offset = (MPP_BIT_CNT) * (mpp_id & MPP_FIELD_MASK);
++
++	reg = readl(base_ptr + reg_offset);
++	value = (reg >> field_offset) & MPP_VAL_MASK;
++
++	return value;
++}
++
++void mpp_set_pin(int mpp_id, int value)
++{
++	if (value > MAX_MPP_OPTS)
++		printf("Warning: MPP value %d > max value %d\n", value, MAX_MPP_OPTS);
++
++	/* Set the new MPP to HW registers */
++	set_field(mpp_id, value, (u32 *)MPP_REGS_BASE);
++}
++
++u8 mpp_get_pin(int mpp_id)
++{
++	u8 value;
++
++	/* Calculate register address and bit in register */
++	value = get_field(mpp_id, (u32 *)MPP_REGS_BASE);
++
++	if (value > MAX_MPP_OPTS)
++		printf("Warning: MPP value %d > max value %d\n", value, MAX_MPP_OPTS);
++
++	return value;
++}
++
++void mpp_set_reg(u32 *mpp_reg, int first_reg, int last_reg)
++{
++	int reg;
++	u32 *base = (u32 *)MPP_REGS_BASE;
++
++	for (reg = first_reg; reg < last_reg; reg++, mpp_reg++)
++		writel(*mpp_reg, base + reg);
++}
++
++void mpp_set_and_update(u32 *mpp_reg)
++{
++	int i;
++	u32 *update_mask = soc_get_mpp_update_mask();
++	u32 *update_val = soc_get_mpp_update_val();
++	u32 *protect_mask = soc_get_mpp_protect_mask();
++	u32 *base = (u32 *)MPP_REGS_BASE;
++
++	for (i = 0; i < MAX_MPP_REGS; i++) {
++		/* Disable modifying protected MPPs */
++		update_mask[i] &= ~protect_mask[i];
++		update_val[i]  &= ~protect_mask[i];
++
++		/* Make sure the mask and val are synced */
++		update_val[i] &= update_mask[i];
++
++		/* Now update the required MPP fields */
++		mpp_reg[i] &= ~update_mask[i];
++		mpp_reg[i] |= update_val[i];
++
++		debug("Set mpp reg 0x%08x\n", mpp_reg[i]);
++
++		/* Write to register */
++		if (soc_get_id() == CONFIG_ARMADA_8K_SOC_ID)
++			writel(mpp_reg[i], base - i);
++		else
++			writel(mpp_reg[i], base + i);
++	}
++}
++
++int mpp_is_bus_enabled(struct mpp_bus *bus)
++{
++	int bus_alt;
++	int pin;
++	int bus_active = 0;
++
++	for (bus_alt = 0; bus_alt < bus->bus_cnt; bus_alt++) {
++		for (pin = 0; pin < bus->pin_cnt; pin++) {
++			u8 id = bus->pin_data[bus_alt][pin].id;
++			u8 val = bus->pin_data[bus_alt][pin].val;
++			if (mpp_get_pin(id) != val)
++				break;
++		}
++		if (pin == bus->pin_cnt) {
++			bus_active = 1;
++			break;
++		}
++	}
++
++	return bus_active;
++}
++
++int mpp_is_bus_valid(struct mpp_bus *bus)
++{
++	int valid = (bus->pin_cnt > 0);
++	return valid;
++}
++
++int mpp_enable_bus(u32 *mpp_reg, int bus_id, int bus_alt)
++{
++	int i, reg_offset, field_offset, value;
++	u32 mask;
++	struct mpp_pin *pin;
++	struct mpp_bus *bus = soc_get_mpp_bus(bus_id);
++	u32 *update_mask = soc_get_mpp_update_mask();
++
++	debug("Enabling MPP bus %s\n", bus->name);
++
++	if (bus_alt < (bus->bus_cnt - 1)) {
++		error("Bus alternative %d doesn't exist for bus %s\n", bus_alt, bus->name);
++		return 1;
++	}
++
++	/* Check if someone already modified one of the pins */
++	for (i = 0; i < bus->pin_cnt; i++) {
++		pin = &bus->pin_data[bus_alt][i];
++		if (get_field(pin->id, update_mask) == MPP_VAL_MASK) {
++			error("Pin %d of Bus %s already modified\n", pin->id, bus->name);
++			return 1;
++		}
++	}
++
++	/* Update the mask and value */
++	for (i = 0; i < bus->pin_cnt; i++) {
++		pin = &bus->pin_data[bus_alt][i];
++		debug("Setting [pin, val] = [%d, 0x%x]\n", pin->id, pin->val);
++
++		value =  MPP_VAL_MASK & pin->val;
++		/* Calculate register address and bit in register */
++		reg_offset   = pin->id >> (MPP_FIELD_BITS);
++		field_offset = (MPP_BIT_CNT) * (pin->id & MPP_FIELD_MASK);
++		mask = ~(MPP_VAL_MASK << field_offset);
++
++		mpp_reg[reg_offset] = (mpp_reg[reg_offset] & mask) | (value << field_offset);
++	}
++
++	return 0;
++}
++
+diff --git a/arch/arm/cpu/mvebu-common/platform.S b/arch/arm/cpu/mvebu-common/platform.S
+index 07e616a..a221a0e 100644
+--- a/arch/arm/cpu/mvebu-common/platform.S
++++ b/arch/arm/cpu/mvebu-common/platform.S
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index 26acd16..59c7138 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/cpu/mvebu-common/spl.c b/arch/arm/cpu/mvebu-common/spl.c
+index 9a6b30a..21f8b69 100644
+--- a/arch/arm/cpu/mvebu-common/spl.c
++++ b/arch/arm/cpu/mvebu-common/spl.c
+@@ -1,20 +1,20 @@
+ /*
+-* ***************************************************************************
+-* Copyright (C) 2015 Marvell International Ltd.
+-* ***************************************************************************
+-* This program is free software: you can redistribute it and/or modify it
+-* under the terms of the GNU General Public License as published by the Free
+-* Software Foundation, either version 2 of the License, or any later version.
+-*
+-* This program is distributed in the hope that it will be useful,
+-* but WITHOUT ANY WARRANTY; without even the implied warranty of
+-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-* GNU General Public License for more details.
+-*
+-* You should have received a copy of the GNU General Public License
+-* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-* ***************************************************************************
+-*/
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
+ 
+ #include <common.h>
+ #include <spl.h>
+diff --git a/arch/arm/cpu/mvebu-common/timer_mvebu.c b/arch/arm/cpu/mvebu-common/timer_mvebu.c
+index c2dba9e..de46bed 100644
+--- a/arch/arm/cpu/mvebu-common/timer_mvebu.c
++++ b/arch/arm/cpu/mvebu-common/timer_mvebu.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/cpu/mvebu-common/timer_mvebu_2.c b/arch/arm/cpu/mvebu-common/timer_mvebu_2.c
+index da2723e..8fee317 100644
+--- a/arch/arm/cpu/mvebu-common/timer_mvebu_2.c
++++ b/arch/arm/cpu/mvebu-common/timer_mvebu_2.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/cpu/mvebu-common/unit-info.c b/arch/arm/cpu/mvebu-common/unit-info.c
+index f93093c..aadd99b 100644
+--- a/arch/arm/cpu/mvebu-common/unit-info.c
++++ b/arch/arm/cpu/mvebu-common/unit-info.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/include/asm/arch-armada38x/armada38x.h b/arch/arm/include/asm/arch-armada38x/armada38x.h
+index 1ca8635..5bb43c0 100644
+--- a/arch/arm/include/asm/arch-armada38x/armada38x.h
++++ b/arch/arm/include/asm/arch-armada38x/armada38x.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/include/asm/arch-armada38x/memory-map.h b/arch/arm/include/asm/arch-armada38x/memory-map.h
+index 7a560ff..deb137f 100644
+--- a/arch/arm/include/asm/arch-armada38x/memory-map.h
++++ b/arch/arm/include/asm/arch-armada38x/memory-map.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/include/asm/arch-armada38x/regs-base.h b/arch/arm/include/asm/arch-armada38x/regs-base.h
+index 4e3a1ab..682765f 100644
+--- a/arch/arm/include/asm/arch-armada38x/regs-base.h
++++ b/arch/arm/include/asm/arch-armada38x/regs-base.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/include/asm/arch-armada38x/soc-info.h b/arch/arm/include/asm/arch-armada38x/soc-info.h
+index 5d2885e..8ec55c2 100644
+--- a/arch/arm/include/asm/arch-armada38x/soc-info.h
++++ b/arch/arm/include/asm/arch-armada38x/soc-info.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/include/asm/arch-armada8k/armada8k.h b/arch/arm/include/asm/arch-armada8k/armada8k.h
+index d21083c..602c4ad 100644
+--- a/arch/arm/include/asm/arch-armada8k/armada8k.h
++++ b/arch/arm/include/asm/arch-armada8k/armada8k.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/include/asm/arch-armada8k/memory-map.h b/arch/arm/include/asm/arch-armada8k/memory-map.h
+index c6af011..ee703b3 100644
+--- a/arch/arm/include/asm/arch-armada8k/memory-map.h
++++ b/arch/arm/include/asm/arch-armada8k/memory-map.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/include/asm/arch-armada8k/regs-base.h b/arch/arm/include/asm/arch-armada8k/regs-base.h
+index d6ae608..2e1f87b 100644
+--- a/arch/arm/include/asm/arch-armada8k/regs-base.h
++++ b/arch/arm/include/asm/arch-armada8k/regs-base.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/include/asm/arch-armada8k/soc-info.h b/arch/arm/include/asm/arch-armada8k/soc-info.h
+index 7b4cb4a..6068032 100644
+--- a/arch/arm/include/asm/arch-armada8k/soc-info.h
++++ b/arch/arm/include/asm/arch-armada8k/soc-info.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/include/asm/arch-mvebu/clock.h b/arch/arm/include/asm/arch-mvebu/clock.h
+index fd46637..944be53 100644
+--- a/arch/arm/include/asm/arch-mvebu/clock.h
++++ b/arch/arm/include/asm/arch-mvebu/clock.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/include/asm/arch-mvebu/driver_interface.h b/arch/arm/include/asm/arch-mvebu/driver_interface.h
+index 06aded2..8fe7492 100644
+--- a/arch/arm/include/asm/arch-mvebu/driver_interface.h
++++ b/arch/arm/include/asm/arch-mvebu/driver_interface.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/include/asm/arch-mvebu/fdt.h b/arch/arm/include/asm/arch-mvebu/fdt.h
+index 67aa1d5..ba803a8 100644
+--- a/arch/arm/include/asm/arch-mvebu/fdt.h
++++ b/arch/arm/include/asm/arch-mvebu/fdt.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., on the worldwide web at
+- * http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/include/asm/arch-mvebu/mpp.h b/arch/arm/include/asm/arch-mvebu/mpp.h
+index a1551fc..aceebc8 100644
+--- a/arch/arm/include/asm/arch-mvebu/mpp.h
++++ b/arch/arm/include/asm/arch-mvebu/mpp.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/include/asm/arch-mvebu/mvebu.h b/arch/arm/include/asm/arch-mvebu/mvebu.h
+index fc21006..b8cfd80 100644
+--- a/arch/arm/include/asm/arch-mvebu/mvebu.h
++++ b/arch/arm/include/asm/arch-mvebu/mvebu.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/include/asm/arch-mvebu/pinctl.h b/arch/arm/include/asm/arch-mvebu/pinctl.h
+index f6d7dfc..12c2134 100644
+--- a/arch/arm/include/asm/arch-mvebu/pinctl.h
++++ b/arch/arm/include/asm/arch-mvebu/pinctl.h
+@@ -1,18 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt or on the worldwide
+- * web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/include/asm/arch-mvebu/soc.h b/arch/arm/include/asm/arch-mvebu/soc.h
+index 06865d4..7f6a6e6 100644
+--- a/arch/arm/include/asm/arch-mvebu/soc.h
++++ b/arch/arm/include/asm/arch-mvebu/soc.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/include/asm/arch-mvebu/tables.h b/arch/arm/include/asm/arch-mvebu/tables.h
+index f4be7ba..99cd277 100644
+--- a/arch/arm/include/asm/arch-mvebu/tables.h
++++ b/arch/arm/include/asm/arch-mvebu/tables.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/arch/arm/include/asm/arch-mvebu/unit-info.h b/arch/arm/include/asm/arch-mvebu/unit-info.h
+index fc15a45..d000f09 100644
+--- a/arch/arm/include/asm/arch-mvebu/unit-info.h
++++ b/arch/arm/include/asm/arch-mvebu/unit-info.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/armada38x/Makefile b/board/mvebu/armada38x/Makefile
+index b9f26b1..0ff433b 100644
+--- a/board/mvebu/armada38x/Makefile
++++ b/board/mvebu/armada38x/Makefile
+@@ -1,20 +1,19 @@
+ #
+-# *****************************************************************************
+-#  Copyright (C) Marvell International Ltd. and its affiliates
+-# *****************************************************************************
+-# Marvell GPL License Option
+-# If you received this File from Marvell, you may opt to use, redistribute
+-# and/or modify this File in accordance with the terms and conditions of the
+-# General Public License Version 2, June 1991 (the "GPL License"), a copy of
+-# which is available along with the File in the license.txt file or by writing
+-# to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+-# MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++# ***************************************************************************
++# Copyright (C) 2015 Marvell International Ltd.
++# ***************************************************************************
++# This program is free software: you can redistribute it and/or modify it
++# under the terms of the GNU General Public License as published by the Free
++# Software Foundation, either version 2 of the License, or any later version.
+ #
+-# THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+-# WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+-# EXPRESSLY DISCLAIMED.  The GPL License provides additional details about this
+-# warranty disclaimer.
+-# *****************************************************************************
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program.  If not, see <http://www.gnu.org/licenses/>.
++# ***************************************************************************
+ #
+ 
+ obj-y	+= armada38x.o
+diff --git a/board/mvebu/armada38x/armada38x.c b/board/mvebu/armada38x/armada38x.c
+index 4bc9459..6517caa 100644
+--- a/board/mvebu/armada38x/armada38x.c
++++ b/board/mvebu/armada38x/armada38x.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/armada38x/board-info.c b/board/mvebu/armada38x/board-info.c
+index a0ed9a6..4a210b3 100644
+--- a/board/mvebu/armada38x/board-info.c
++++ b/board/mvebu/armada38x/board-info.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/armada38x/board-info.h b/board/mvebu/armada38x/board-info.h
+index 641bf32..0a16ee0 100644
+--- a/board/mvebu/armada38x/board-info.h
++++ b/board/mvebu/armada38x/board-info.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/armada38x/customer-board.c b/board/mvebu/armada38x/customer-board.c
+index 09bc0be..f4bfcba 100644
+--- a/board/mvebu/armada38x/customer-board.c
++++ b/board/mvebu/armada38x/customer-board.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/armada38x/db-88f6820-info.c b/board/mvebu/armada38x/db-88f6820-info.c
+index 3fe13c1..34dd04f 100644
+--- a/board/mvebu/armada38x/db-88f6820-info.c
++++ b/board/mvebu/armada38x/db-88f6820-info.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/armada38x/rd-88f6820-info.c b/board/mvebu/armada38x/rd-88f6820-info.c
+index 50ec40d..28636bb 100644
+--- a/board/mvebu/armada38x/rd-88f6820-info.c
++++ b/board/mvebu/armada38x/rd-88f6820-info.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/armada8k/Makefile b/board/mvebu/armada8k/Makefile
+index 2610972..5870a81 100644
+--- a/board/mvebu/armada8k/Makefile
++++ b/board/mvebu/armada8k/Makefile
+@@ -1,20 +1,19 @@
+ #
+-# *****************************************************************************
+-#  Copyright (C) Marvell International Ltd. and its affiliates
+-# *****************************************************************************
+-# Marvell GPL License Option
+-# If you received this File from Marvell, you may opt to use, redistribute
+-# and/or modify this File in accordance with the terms and conditions of the
+-# General Public License Version 2, June 1991 (the "GPL License"), a copy of
+-# which is available along with the File in the license.txt file or by writing
+-# to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+-# MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++# ***************************************************************************
++# Copyright (C) 2015 Marvell International Ltd.
++# ***************************************************************************
++# This program is free software: you can redistribute it and/or modify it
++# under the terms of the GNU General Public License as published by the Free
++# Software Foundation, either version 2 of the License, or any later version.
+ #
+-# THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+-# WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+-# EXPRESSLY DISCLAIMED.  The GPL License provides additional details about this
+-# warranty disclaimer.
+-# *****************************************************************************
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program.  If not, see <http://www.gnu.org/licenses/>.
++# ***************************************************************************
+ #
+ 
+ obj-y	+= armada8021-pxp.o
+diff --git a/board/mvebu/armada8k/armada8021-pxp.c b/board/mvebu/armada8k/armada8021-pxp.c
+index 2d54a92..fc960fb 100644
+--- a/board/mvebu/armada8k/armada8021-pxp.c
++++ b/board/mvebu/armada8k/armada8021-pxp.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/armada8k/board-info.c b/board/mvebu/armada8k/board-info.c
+index e46bcf9..b6377de 100644
+--- a/board/mvebu/armada8k/board-info.c
++++ b/board/mvebu/armada8k/board-info.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/armada8k/board-info.h b/board/mvebu/armada8k/board-info.h
+index be7a7bf..0b20f50 100644
+--- a/board/mvebu/armada8k/board-info.h
++++ b/board/mvebu/armada8k/board-info.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/armada8k/db-8210-info.c b/board/mvebu/armada8k/db-8210-info.c
+index e5626d8..6062fd0 100644
+--- a/board/mvebu/armada8k/db-8210-info.c
++++ b/board/mvebu/armada8k/db-8210-info.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/armada8k/rd-8210-info.c b/board/mvebu/armada8k/rd-8210-info.c
+index f934a56..815615e 100644
+--- a/board/mvebu/armada8k/rd-8210-info.c
++++ b/board/mvebu/armada8k/rd-8210-info.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/common/Makefile b/board/mvebu/common/Makefile
+index 936e21c..baf6bf4 100644
+--- a/board/mvebu/common/Makefile
++++ b/board/mvebu/common/Makefile
+@@ -1,20 +1,19 @@
+ #
+-# *****************************************************************************
+-#  Copyright (C) Marvell International Ltd. and its affiliates
+-# *****************************************************************************
+-# Marvell GPL License Option
+-# If you received this File from Marvell, you may opt to use, redistribute
+-# and/or modify this File in accordance with the terms and conditions of the
+-# General Public License Version 2, June 1991 (the "GPL License"), a copy of
+-# which is available along with the File in the license.txt file or by writing
+-# to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+-# MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++# ***************************************************************************
++# Copyright (C) 2015 Marvell International Ltd.
++# ***************************************************************************
++# This program is free software: you can redistribute it and/or modify it
++# under the terms of the GNU General Public License as published by the Free
++# Software Foundation, either version 2 of the License, or any later version.
+ #
+-# THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+-# WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+-# EXPRESSLY DISCLAIMED.  The GPL License provides additional details about this
+-# warranty disclaimer.
+-# *****************************************************************************
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program.  If not, see <http://www.gnu.org/licenses/>.
++# ***************************************************************************
+ #
+ 
+ obj-y	+= board-common.o
+diff --git a/board/mvebu/common/board-common.c b/board/mvebu/common/board-common.c
+index 28ad917..3d8c762 100644
+--- a/board/mvebu/common/board-common.c
++++ b/board/mvebu/common/board-common.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/common/board.h b/board/mvebu/common/board.h
+index 571ed6b..0012326 100644
+--- a/board/mvebu/common/board.h
++++ b/board/mvebu/common/board.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/common/config.c b/board/mvebu/common/config.c
+index 85fc64e..8162a3f 100644
+--- a/board/mvebu/common/config.c
++++ b/board/mvebu/common/config.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/common/config.h b/board/mvebu/common/config.h
+index e78d49a..8dfec81 100644
+--- a/board/mvebu/common/config.h
++++ b/board/mvebu/common/config.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/common/devel-board.c b/board/mvebu/common/devel-board.c
+index 3c3fe27..81c7bad 100644
+--- a/board/mvebu/common/devel-board.c
++++ b/board/mvebu/common/devel-board.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/common/devel-board.h b/board/mvebu/common/devel-board.h
+index af3fb3e..df04f42 100644
+--- a/board/mvebu/common/devel-board.h
++++ b/board/mvebu/common/devel-board.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/common/entry.c b/board/mvebu/common/entry.c
+index 585c735..d751e4f 100644
+--- a/board/mvebu/common/entry.c
++++ b/board/mvebu/common/entry.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/common/eth_init.c b/board/mvebu/common/eth_init.c
+index b159186..4986ff2 100644
+--- a/board/mvebu/common/eth_init.c
++++ b/board/mvebu/common/eth_init.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/common/init.c b/board/mvebu/common/init.c
+index 63fb52b..927eb97 100644
+--- a/board/mvebu/common/init.c
++++ b/board/mvebu/common/init.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/common/nand_init.c b/board/mvebu/common/nand_init.c
+index 365dc6c..0ad9b46 100644
+--- a/board/mvebu/common/nand_init.c
++++ b/board/mvebu/common/nand_init.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/common/pcie_init.c b/board/mvebu/common/pcie_init.c
+index b8f1061..aa1e742 100644
+--- a/board/mvebu/common/pcie_init.c
++++ b/board/mvebu/common/pcie_init.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/common/sar.c b/board/mvebu/common/sar.c
+index 679948d..25fd5fd 100644
+--- a/board/mvebu/common/sar.c
++++ b/board/mvebu/common/sar.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/common/sar.h b/board/mvebu/common/sar.h
+index 0c8fbf2..f4d8186 100644
+--- a/board/mvebu/common/sar.h
++++ b/board/mvebu/common/sar.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/board/mvebu/common/var.h b/board/mvebu/common/var.h
+index 82b94e3..fb5dc3f 100644
+--- a/board/mvebu/common/var.h
++++ b/board/mvebu/common/var.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/common/mvebu/Makefile b/common/mvebu/Makefile
+index b453ffb..a76d42e 100644
+--- a/common/mvebu/Makefile
++++ b/common/mvebu/Makefile
+@@ -1,20 +1,19 @@
+ #
+-# *****************************************************************************
+-#  Copyright (C) Marvell International Ltd. and its affiliates
+-# *****************************************************************************
+-# Marvell GPL License Option
+-# If you received this File from Marvell, you may opt to use, redistribute
+-# and/or modify this File in accordance with the terms and conditions of the
+-# General Public License Version 2, June 1991 (the "GPL License"), a copy of
+-# which is available along with the File in the license.txt file or by writing
+-# to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+-# MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++# ***************************************************************************
++# Copyright (C) 2015 Marvell International Ltd.
++# ***************************************************************************
++# This program is free software: you can redistribute it and/or modify it
++# under the terms of the GNU General Public License as published by the Free
++# Software Foundation, either version 2 of the License, or any later version.
+ #
+-# THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+-# WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+-# EXPRESSLY DISCLAIMED.  The GPL License provides additional details about this
+-# warranty disclaimer.
+-# *****************************************************************************
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program.  If not, see <http://www.gnu.org/licenses/>.
++# ***************************************************************************
+ #
+ 
+ obj-$(CONFIG_CMD_MVEBU_MISC) += cmd_misc.o
+diff --git a/common/mvebu/cmd_bubt.c b/common/mvebu/cmd_bubt.c
+index 177eb97..630b36e 100644
+--- a/common/mvebu/cmd_bubt.c
++++ b/common/mvebu/cmd_bubt.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/common/mvebu/cmd_config.c b/common/mvebu/cmd_config.c
+index 45157c5..df542c4 100644
+--- a/common/mvebu/cmd_config.c
++++ b/common/mvebu/cmd_config.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/common/mvebu/cmd_misc.c b/common/mvebu/cmd_misc.c
+index 12880a1..015e8b0 100644
+--- a/common/mvebu/cmd_misc.c
++++ b/common/mvebu/cmd_misc.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/common/mvebu/cmd_mpp.c b/common/mvebu/cmd_mpp.c
+index acea2fc..d17b8c7 100644
+--- a/common/mvebu/cmd_mpp.c
++++ b/common/mvebu/cmd_mpp.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/common/mvebu/cmd_sar.c b/common/mvebu/cmd_sar.c
+index 29dce08..0e40e92 100644
+--- a/common/mvebu/cmd_sar.c
++++ b/common/mvebu/cmd_sar.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/drivers/gpio/mvebu_pinctl.c b/drivers/gpio/mvebu_pinctl.c
+index ac151e3..08fad2b 100644
+--- a/drivers/gpio/mvebu_pinctl.c
++++ b/drivers/gpio/mvebu_pinctl.c
+@@ -1,18 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt or on the worldwide
+- * web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/drivers/i2c/mvebu_i2c.c b/drivers/i2c/mvebu_i2c.c
+index 4869a07..f047f4a 100644
+--- a/drivers/i2c/mvebu_i2c.c
++++ b/drivers/i2c/mvebu_i2c.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., on the worldwide web at
+- * http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/drivers/mtd/nand/pxa3xx_nand.c b/drivers/mtd/nand/pxa3xx_nand.c
+index 5fa6262..678b82d 100644
+--- a/drivers/mtd/nand/pxa3xx_nand.c
++++ b/drivers/mtd/nand/pxa3xx_nand.c
+@@ -1,25 +1,21 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
+  *
+- * This driver is based on linux 3.16.1 drivers/mtd/nand/pxa3xx-nand.c.
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+-
+ #include <common.h>
+ #include <linux/mtd/mtd.h>
+ #include <linux/mtd/nand.h>
+diff --git a/drivers/pci/pci_mvebu.c b/drivers/pci/pci_mvebu.c
+index 0fcecd8..172220c 100644
+--- a/drivers/pci/pci_mvebu.c
++++ b/drivers/pci/pci_mvebu.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/drivers/spi/mvebu_spi.c b/drivers/spi/mvebu_spi.c
+index 87d66ac..4e25325 100644
+--- a/drivers/spi/mvebu_spi.c
++++ b/drivers/spi/mvebu_spi.c
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/include/configs/armada38x.h b/include/configs/armada38x.h
+index 5a44cdb..849aa46 100644
+--- a/include/configs/armada38x.h
++++ b/include/configs/armada38x.h
+@@ -1,8 +1,10 @@
+ /*
+- * This program is free software; you can redistribute it and/or
+- * modify it under the terms of the GNU General Public License as
+- * published by the Free Software Foundation; either version 2 of
+- * the License, or (at your option) any later version.
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+  * This program is distributed in the hope that it will be useful,
+  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+@@ -10,28 +12,9 @@
+  * GNU General Public License for more details.
+  *
+  * You should have received a copy of the GNU General Public License
+- * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 USA
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
+  */
+-/*******************************************************************************
+-   Copyright (C) Marvell International Ltd. and its affiliates
+-
+-********************************************************************************
+-   Marvell GPL License Option
+-
+-   If you received this File from Marvell, you may opt to use, redistribute and/or
+-   modify this File in accordance with the terms and conditions of the General
+-   Public License Version 2, June 1991 (the "GPL License"), a copy of which is
+-   available along with the File in the license.txt file or by writing to the Free
+-   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 or
+-   on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
+-
+-   THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+-   WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE EXPRESSLY
+-   DISCLAIMED.  The GPL License provides additional details about this warranty
+-   disclaimer.
+-*******************************************************************************/
+ 
+ #ifndef __CONFIG_H
+ #define __CONFIG_H
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index 6eec7f3..4ffe9ea 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/include/configs/armadalp.h b/include/configs/armadalp.h
+index 0034a12..362c768 100644
+--- a/include/configs/armadalp.h
++++ b/include/configs/armadalp.h
+@@ -1,20 +1,20 @@
+ /*
+-* ***************************************************************************
+-* Copyright (C) 2015 Marvell International Ltd.
+-* ***************************************************************************
+-* This program is free software: you can redistribute it and/or modify it
+-* under the terms of the GNU General Public License as published by the Free
+-* Software Foundation, either version 2 of the License, or any later version.
+-*
+-* This program is distributed in the hope that it will be useful,
+-* but WITHOUT ANY WARRANTY; without even the implied warranty of
+-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-* GNU General Public License for more details.
+-*
+-* You should have received a copy of the GNU General Public License
+-* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-* ***************************************************************************
+-*/
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
+ 
+ #ifndef __ARMADA_LP_H
+ #define __ARMADA_LP_H
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 831201c..48d016e 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -1,19 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+diff --git a/tools/doimage.c b/tools/doimage.c
+index a91911a..ac05023 100644
+--- a/tools/doimage.c
++++ b/tools/doimage.c
+@@ -1,18 +1,18 @@
+ /*
+  * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
++ * Copyright (C) 2015 Marvell International Ltd.
+  * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc.
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
+  *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  * ***************************************************************************
+  */
+ 
+-- 
+1.9.1
+

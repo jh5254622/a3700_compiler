@@ -1,0 +1,148 @@
+From 6f5f5e774da9c25f785c0ee508b31d4fae10ac9a Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 17 Jan 2016 18:30:58 +0200
+Subject: [PATCH 0698/1240] kconfig: mvebu: set multi device tree feature
+ according to CONFIG_DEVEL
+
+- move MULTI_FDT_SUPPORT config to specific development board configuration
+  (CONFIG_DEVEL)
+- disable multi FDT feature for all projects except AP-806 & A70x0
+
+Change-Id: I1ade1a337ee1aa3ee26ac6853f32576aff4ed5c2
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Conflicts:
+	configs/mvebu_armada70x0_defconfig
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26834
+Reviewed-by: Haim Boot <hayim@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ board/mvebu/common/Kconfig                 | 10 ++++++++++
+ configs/mvebu_apn806_defconfig             |  1 -
+ configs/mvebu_apn806_dop_defconfig         |  1 +
+ configs/mvebu_apn806_pd_defconfig          |  1 +
+ configs/mvebu_armada38x_defconfig          |  1 +
+ configs/mvebu_armada70x0_defconfig         |  1 -
+ configs/mvebu_armada70x0_pd_defconfig      |  1 +
+ configs/mvebu_armadalp_defconfig           |  1 +
+ configs/mvebu_armadalp_palladium_defconfig |  1 +
+ dts/Kconfig                                |  9 +--------
+ 10 files changed, 17 insertions(+), 10 deletions(-)
+
+diff --git a/board/mvebu/common/Kconfig b/board/mvebu/common/Kconfig
+index 6ddcb07..5abd488 100644
+--- a/board/mvebu/common/Kconfig
++++ b/board/mvebu/common/Kconfig
+@@ -10,4 +10,14 @@ config MVEBU_SAR
+ 	  you work on a Marvell development board.
+ 	  If not, keep this off to reduce code size
+ 
++config MULTI_DT_FILE
++	bool "Support multi DT files in U-boot image"
++	depends on OF_CONTROL
++	default y
++	help
++	  If this option is enabled, U-Boot will support different DT files.
++	  Each FDT has a fixed size of 7KB, so to choose between them in u-boot,
++	  it will be executerd by a jump of 7KB.
++	  The u-boot separates between the DTB by the flavor/board id
++
+ endmenu
+diff --git a/configs/mvebu_apn806_defconfig b/configs/mvebu_apn806_defconfig
+index 3ab4488..232ff20 100644
+--- a/configs/mvebu_apn806_defconfig
++++ b/configs/mvebu_apn806_defconfig
+@@ -23,7 +23,6 @@ CONFIG_CMD_MVEBU_BUBT=y
+ CONFIG_CMD_MVEBU_TSEN=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+-+S:CONFIG_MULTI_DT_FILE=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="apn-806-db"
+ CONFIG_MVEBU_PCI=y
+ CONFIG_MVEBU_CCU=y
+diff --git a/configs/mvebu_apn806_dop_defconfig b/configs/mvebu_apn806_dop_defconfig
+index 0bd9049..d029385 100644
+--- a/configs/mvebu_apn806_dop_defconfig
++++ b/configs/mvebu_apn806_dop_defconfig
+@@ -36,3 +36,4 @@ CONFIG_MVEBU_PINCTL=y
+ CONFIG_MVEBU_THERMAL_SENSOR=y
+ CONFIG_MVEBU_THERMAL_SENSOR_28NM_V2=y
+ +S:CONFIG_MVEBU_ROM_SILENCE_FLAG_SUPPORT=y
+++S:# CONFIG_MULTI_DT_FILE is not set
+diff --git a/configs/mvebu_apn806_pd_defconfig b/configs/mvebu_apn806_pd_defconfig
+index e919c73..35b6125 100644
+--- a/configs/mvebu_apn806_pd_defconfig
++++ b/configs/mvebu_apn806_pd_defconfig
+@@ -25,3 +25,4 @@ CONFIG_CMD_MVEBU_MPP=y
+ CONFIG_MVEBU_PINCTL=y
+ +S:# CONFIG_MVEBU_SPL_DDR_SUPPORT is not set
+ +S:CONFIG_MVEBU_ROM_SILENCE_FLAG_SUPPORT=y
+++S:# CONFIG_MULTI_DT_FILE is not set
+diff --git a/configs/mvebu_armada38x_defconfig b/configs/mvebu_armada38x_defconfig
+index 9032e3c..5045c62 100644
+--- a/configs/mvebu_armada38x_defconfig
++++ b/configs/mvebu_armada38x_defconfig
+@@ -38,3 +38,4 @@ CONFIG_MVEBU_SPI=y
+ CONFIG_MVEBU_PINCTL=y
+ +S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+ CONFIG_MVEBU_THERMAL_SENSOR=y
+++S:# CONFIG_MULTI_DT_FILE is not set
+diff --git a/configs/mvebu_armada70x0_defconfig b/configs/mvebu_armada70x0_defconfig
+index ac936fe..ae953e7 100644
+--- a/configs/mvebu_armada70x0_defconfig
++++ b/configs/mvebu_armada70x0_defconfig
+@@ -23,7 +23,6 @@ CONFIG_CMD_MVEBU_BUBT=y
+ CONFIG_CMD_MVEBU_TSEN=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+-+S:CONFIG_MULTI_DT_FILE=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-7040-rz-db_router"
+ CONFIG_MVEBU_PCI=y
+ CONFIG_MVEBU_CCU=y
+diff --git a/configs/mvebu_armada70x0_pd_defconfig b/configs/mvebu_armada70x0_pd_defconfig
+index 27111fe..32c30f9 100644
+--- a/configs/mvebu_armada70x0_pd_defconfig
++++ b/configs/mvebu_armada70x0_pd_defconfig
+@@ -37,3 +37,4 @@ CONFIG_MVEBU_PINCTL=y
+ +S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+ +S:# CONFIG_MVEBU_SPL_DDR_SUPPORT is not set
+ +S:CONFIG_MVEBU_ROM_SILENCE_FLAG_SUPPORT=y
+++S:# CONFIG_MULTI_DT_FILE is not set
+diff --git a/configs/mvebu_armadalp_defconfig b/configs/mvebu_armadalp_defconfig
+index 092cf5d..b13a83b 100644
+--- a/configs/mvebu_armadalp_defconfig
++++ b/configs/mvebu_armadalp_defconfig
+@@ -39,3 +39,4 @@ CONFIG_CMD_MVEBU_BUBT=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-lp-db"
+ +S:CONFIG_MVEBU_COMPHY_SUPPORT=y
+ +S:CONFIG_MVEBU_MK6_SUPPORT=y
+++S:# CONFIG_MULTI_DT_FILE is not set
+diff --git a/configs/mvebu_armadalp_palladium_defconfig b/configs/mvebu_armadalp_palladium_defconfig
+index 7a1cbe7..6ef44fb 100644
+--- a/configs/mvebu_armadalp_palladium_defconfig
++++ b/configs/mvebu_armadalp_palladium_defconfig
+@@ -33,3 +33,4 @@ CONFIG_CMD_PING=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-lp-palladium"
+ +S:# CONFIG_MVEBU_SPL_DDR_SUPPORT is not set
+++S:# CONFIG_MULTI_DT_FILE is not set
+diff --git a/dts/Kconfig b/dts/Kconfig
+index 3b201ed..ca5bd6f 100644
+--- a/dts/Kconfig
++++ b/dts/Kconfig
+@@ -50,12 +50,5 @@ config DEFAULT_DEVICE_TREE
+ 	  This option specifies the default Device Tree used for DT control.
+ 	  It can be overridden from the command line:
+ 	  $ make DEVICE_TREE=<device-tree-name>
+-config MULTI_DT_FILE
+-	bool "Support multi DT files in U-boot image"
+-	depends on OF_CONTROL
+-	help
+-	  If this option is enabled, U-Boot will support different DT files.
+-	  Each FDT has a fixed size of 7KB, so to choose between them in u-boot,
+-	  it will be executerd by a jump of 7KB.
+-	  The u-boot separates between the DTB by the flavor/board id
++
+ endmenu
+-- 
+1.9.1
+

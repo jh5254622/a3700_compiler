@@ -1,0 +1,632 @@
+From 993689b405c2237ed299c28b266d69a39370b3bd Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 21 Jun 2015 14:01:13 +0300
+Subject: [PATCH 0209/1240] address decoding: add CCU driver, with FDT support
+
+Change-Id: I2955defcd0f512008ed107833f7efc2b4cb17071
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20309
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/soc-init.c      |  37 +++++
+ arch/arm/cpu/mvebu-common/soc-init.c        |   6 +
+ arch/arm/dts/armada-8k.dts                  |   6 +
+ arch/arm/include/asm/arch-mvebu/adec_ccu.h  | 111 -------------
+ arch/arm/include/asm/arch-mvebu/ccu.h       |  26 +++
+ common/mvebu/cmd_misc.c                     |   6 +
+ configs/mvebu_armada8k_defconfig            |   1 +
+ doc/device-tree-bindings/misc/mvebu-ccu.txt |  24 +++
+ drivers/misc/Kconfig                        |   9 ++
+ drivers/misc/Makefile                       |   1 +
+ drivers/misc/mvebu_ccu.c                    | 236 ++++++++++++++++++++++++++++
+ include/fdtdec.h                            |   1 +
+ lib/fdtdec.c                                |   1 +
+ 13 files changed, 354 insertions(+), 111 deletions(-)
+ delete mode 100644 arch/arm/include/asm/arch-mvebu/adec_ccu.h
+ create mode 100644 arch/arm/include/asm/arch-mvebu/ccu.h
+ create mode 100644 doc/device-tree-bindings/misc/mvebu-ccu.txt
+ create mode 100644 drivers/misc/mvebu_ccu.c
+
+diff --git a/arch/arm/cpu/armv8/armada8k/soc-init.c b/arch/arm/cpu/armv8/armada8k/soc-init.c
+index 8e180ab..0381a83 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc-init.c
++++ b/arch/arm/cpu/armv8/armada8k/soc-init.c
+@@ -25,6 +25,15 @@
+ #include <asm/arch-mvebu/unit-info.h>
+ #include <asm/arch-armada8k/armada8k.h>
+ 
++#define ADDRESS_SHIFT			(20)
++#define MAX_CCU_WINDOWS			(8)
++#define DRAM_0_TID			0x03
++#define CCU_WIN_CR_OFFSET(win)		(MVEBU_ADEC_AP_BASE + 0x0 + (0x10 * win))
++#define CCU_TARGET_ID_OFFSET		(8)
++#define CCU_TARGET_ID_MASK		(0x7F)
++#define CCU_WIN_ALR_OFFSET(win)		(MVEBU_ADEC_AP_BASE + 0x8 + (0x10 * win))
++#define CCU_WIN_AHR_OFFSET(win)		(MVEBU_ADEC_AP_BASE + 0xC + (0x10 * win))
++
+ int soc_early_init_f(void)
+ {
+ 	return 0;
+@@ -46,3 +55,31 @@ struct mvebu_soc_family *soc_init(void)
+ {
+ 	return &a8k_family_info;
+ }
++
++int dram_init(void)
++{
++#ifdef CONFIG_PALLADIUM
++	gd->ram_size = 0x20000000;
++#else
++	u32 alr, ahr;
++	u32 target_id, ctrl;
++	u32 win;
++
++	for (win = 0; win < MAX_CCU_WINDOWS; win++) {
++		ctrl = readl(CCU_WIN_CR_OFFSET(win));
++		target_id = (ctrl >> CCU_TARGET_ID_OFFSET) & CCU_TARGET_ID_MASK;
++
++		if (target_id == DRAM_0_TID) {
++			alr = readl(CCU_WIN_ALR_OFFSET(win)) << ADDRESS_SHIFT;
++			ahr = readl(CCU_WIN_AHR_OFFSET(win)) << ADDRESS_SHIFT;
++			gd->ram_size = ahr - alr + 1;
++			gd->bd->bi_dram[0].size = gd->ram_size;
++			gd->bd->bi_dram[0].start = alr;
++
++			debug("DRAM base 0x%08x size 0x%x\n", alr, (uint)gd->ram_size);
++		}
++	}
++#endif
++
++	return 0;
++}
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index 74d06e3..dc9143a 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -27,6 +27,9 @@
+ #include <asm/arch-mvebu/soc.h>
+ #include <asm/arch-mvebu/tables.h>
+ 
++#ifdef CONFIG_MVEBU_CCU
++#include <asm/arch-mvebu/ccu.h>
++#endif
+ #ifdef CONFIG_MVEBU_MBUS
+ #include <asm/arch-mvebu/mbus.h>
+ #endif
+@@ -93,6 +96,9 @@ int mvebu_soc_init()
+ 	update_soc_units(soc);
+ 
+ 	/* Initialize physical memory map */
++#ifdef CONFIG_MVEBU_CCU
++	init_ccu();
++#endif
+ #ifdef CONFIG_MVEBU_MBUS
+ 	init_mbus();
+ #endif
+diff --git a/arch/arm/dts/armada-8k.dts b/arch/arm/dts/armada-8k.dts
+index 9145b33..808cc88 100644
+--- a/arch/arm/dts/armada-8k.dts
++++ b/arch/arm/dts/armada-8k.dts
+@@ -53,6 +53,12 @@
+ 				clock = <&tclk>;
+ 				status = "okay";
+ 			};
++			ccu {
++				compatible = "marvell,mvebu-ccu";
++				reg = <0x4000 0x50>;
++				max-win = <8>;
++				windows = <0xf8000000 0x2000000 0x00 /* IO window */>;
++			};
+ 		};
+ 	};
+ };
+diff --git a/arch/arm/include/asm/arch-mvebu/adec_ccu.h b/arch/arm/include/asm/arch-mvebu/adec_ccu.h
+deleted file mode 100644
+index 8aa750a..0000000
+--- a/arch/arm/include/asm/arch-mvebu/adec_ccu.h
++++ /dev/null
+@@ -1,111 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) Marvell International Ltd. and its affiliates
+- * ***************************************************************************
+- * Marvell GPL License Option
+- * If you received this File from Marvell, you may opt to use, redistribute
+- * and/or modify this File in accordance with the terms and conditions of the
+- * General Public License Version 2, June 1991 (the "GPL License"), a copy of
+- * which is available along with the File in the license.txt file or by writing
+- * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+- * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
+- *
+- * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
+- * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
+- * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
+- * warranty disclaimer.
+- * ***************************************************************************
+- */
+-
+-#include <asm/arch/regs-base.h>
+-
+-struct adec_win {
+-	u8 target_id;
+-	uintptr_t base_addr;
+-	uintptr_t win_size;
+-	u8 win_type;
+-	u8 enabled;
+-};
+-
+-enum adec_target_ids_ap {
+-	IO_0_TID	= 0x00,
+-	DRAM_0_TID	= 0x03,
+-	IO_1_TID	= 0x0F,
+-	CFG_REG_TID	= 0x10,
+-	RAR_TID		= 0x20,
+-	SRAM_TID	= 0x40,
+-	DRAM_1_TID	= 0xC0,
+-};
+-
+-enum adec_target_ids_iob {
+-	INTERNAL_TID	= 0x0,
+-	IOB_TID		= 0x1,
+-	IHB1_TID	= 0x2,
+-	PEX0_TID	= 0x3,
+-	PEX1_TID	= 0x4,
+-	PEX2_TID	= 0x5,
+-	PEX3_TID	= 0x6,
+-	NSS_TID		= 0x7,
+-	NAND_TID	= 0x8,
+-	RUNIT_TID	= 0x9,
+-	INVALID_TID	= 0xFF
+-};
+-
+-enum adec_win_type {
+-	ADEC_AP_WIN,
+-	ADEC_IOB_WIN,
+-	ADEC_RFU_WIN,
+-};
+-
+-/* common defines */
+-#define WIN_ENABLE_BIT			(0x1)
+-#define ADDRESS_SHIFT			(20)
+-#define ADDRESS_MASK			(0xFFFFFFF0)
+-#define CR_WIN_SIZE_ALIGNMENT		(0x10000)
+-
+-/* AP registers */
+-#define MAX_AP_WINDOWS			(8)
+-
+-#define AP_WIN_CR_OFFSET(win)		(MVEBU_ADEC_AP_BASE + 0x0 + (0x10 * win))
+-#define AP_TARGET_ID_OFFSET		(8)
+-#define AP_TARGET_ID_MASK		(0x7F)
+-
+-#define AP_WIN_SCR_OFFSET(win)		(MVEBU_ADEC_AP_BASE + 0x4 + (0x10 * win))
+-#define AP_WIN_ENA_READ_SECURE		(0x1)
+-#define AP_WIN_ENA_WRITE_SECURE		(0x2)
+-
+-#define AP_WIN_ALR_OFFSET(win)		(MVEBU_ADEC_AP_BASE + 0x8 + (0x10 * win))
+-#define AP_WIN_AHR_OFFSET(win)		(MVEBU_ADEC_AP_BASE + 0xC + (0x10 * win))
+-
+-#define AP_WIN_GCR_OFFSET		(MVEBU_ADEC_AP_BASE + 0xD0)
+-
+-/* RFU registers */
+-#define MAX_RFU_WINDOWS			3
+-#define BOOTROM_RFU_WINDOW_NUM		0
+-#define STM_RFU_WINDOW_NUM		1
+-#define SPI_RFU_WINDOW_NUM		2
+-
+-
+-#define RFU_WIN_ALR_OFFSET(win)		(MVEBU_ADEC_RFU_BASE + 0x0 + (0x10 * win))
+-#define RFU_WIN_AHR_OFFSET(win)		(MVEBU_ADEC_RFU_BASE + 0x8 + (0x10 * win))
+-
+-/* IOB registers */
+-#define MAX_IOB_WINDOWS			(23)
+-#define INTERNAL_REG_WIN_NUM		(0)
+-
+-#define IOB_WIN_CR_OFFSET(win)		(MVEBU_ADEC_IOB_BASE + 0x0 + (0x32 * win))
+-#define IOB_TARGET_ID_OFFSET		(8)
+-#define IOB_TARGET_ID_MASK		(0xF)
+-
+-#define IOB_WIN_SCR_OFFSET(win)		(MVEBU_ADEC_IOB_BASE + 0x4 + (0x32 * win))
+-#define IOB_WIN_ENA_CTRL_WRITE_SECURE	(0x1)
+-#define IOB_WIN_ENA_CTRL_READ_SECURE	(0x2)
+-#define IOB_WIN_ENA_WRITE_SECURE	(0x4)
+-#define IOB_WIN_ENA_READ_SECURE		(0x8)
+-
+-#define IOB_WIN_ALR_OFFSET(win)		(MVEBU_ADEC_IOB_BASE + 0x8 + (0x32 * win))
+-#define IOB_WIN_AHR_OFFSET(win)		(MVEBU_ADEC_IOB_BASE + 0xC + (0x32 * win))
+-
+-
+-void adec_dump(void);
+-int adec_init(struct adec_win *windows);
+diff --git a/arch/arm/include/asm/arch-mvebu/ccu.h b/arch/arm/include/asm/arch-mvebu/ccu.h
+new file mode 100644
+index 0000000..672071e
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/ccu.h
+@@ -0,0 +1,26 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _CCU_H_
++#define _CCU_H_
++
++void dump_ccu(void);
++int init_ccu(void);
++
++#endif /* _CCU_H_ */
++
+diff --git a/common/mvebu/cmd_misc.c b/common/mvebu/cmd_misc.c
+index d4c1d25..374b36e 100644
+--- a/common/mvebu/cmd_misc.c
++++ b/common/mvebu/cmd_misc.c
+@@ -25,6 +25,9 @@
+ #include <asm/io.h>
+ #include <asm/arch-mvebu/unit-info.h>
+ 
++#ifdef CONFIG_MVEBU_CCU
++#include <asm/arch-mvebu/ccu.h>
++#endif
+ #ifdef CONFIG_MVEBU_MBUS
+ #include <asm/arch-mvebu/mbus.h>
+ #endif
+@@ -32,6 +35,9 @@
+ int do_map_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+ 			char * const argv[])
+ {
++#ifdef CONFIG_MVEBU_CCU
++	dump_ccu();
++#endif
+ #ifdef CONFIG_MVEBU_MBUS
+ 	dump_mbus();
+ #endif
+diff --git a/configs/mvebu_armada8k_defconfig b/configs/mvebu_armada8k_defconfig
+index 5da26e3..2c51831 100644
+--- a/configs/mvebu_armada8k_defconfig
++++ b/configs/mvebu_armada8k_defconfig
+@@ -17,4 +17,5 @@ CONFIG_CMD_TIMER=y
+ +S:CONFIG_OF_CONTROL=y
+ +S:CONFIG_OF_EMBED=y
+ +S:CONFIG_DEFAULT_DEVICE_TREE="armada-8k"
++CONFIG_MVEBU_CCU=y
+ +S:CONFIG_SYS_NS16550=y
+diff --git a/doc/device-tree-bindings/misc/mvebu-ccu.txt b/doc/device-tree-bindings/misc/mvebu-ccu.txt
+new file mode 100644
+index 0000000..883c56f
+--- /dev/null
++++ b/doc/device-tree-bindings/misc/mvebu-ccu.txt
+@@ -0,0 +1,24 @@
++Marvell CCU address decoding bindings
++=====================================
++
++The CCU node include describtion about the address decoding configuration.
++
++The CCU node requires the following properties:
++	- compatible
++		should be "marvell,mvebu-ccu"
++	- reg: the base address of the CCU unit
++	- max-win: number of the max mbus windows
++	- windows: entry that include the configuration of the windows
++	  every window should have 3 parameters:
++	  - base address of the window
++	  - size of the window
++	  - target-id of the window
++
++Example:
++	map-ccu {
++		compatible = "marvell,mvebu-ccu";
++		reg = <0x0 0x50>;
++		max-win = <8>;
++		windows = <0xf8000000 0x2000000 0x00 /* IO window */>;
++	};
++
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index 135612b..2ac20e0 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -1,3 +1,12 @@
++config MVEBU_CCU
++	bool "CCU address decoding driver"
++	default n
++	help
++	  Choose this option to add support
++	  for CCU address decoding driver.
++	  This driver initialize the CCU windows
++	  only.
++
+ config MVEBU_MBUS
+ 	bool "MBUS address decoding driver"
+ 	default n
+diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
+index 39a6997..bedea26 100644
+--- a/drivers/misc/Makefile
++++ b/drivers/misc/Makefile
+@@ -28,4 +28,5 @@ obj-$(CONFIG_SMSC_LPC47M) += smsc_lpc47m.o
+ obj-$(CONFIG_STATUS_LED) += status_led.o
+ obj-$(CONFIG_TWL4030_LED) += twl4030_led.o
+ obj-$(CONFIG_FSL_IFC) += fsl_ifc.o
++obj-$(CONFIG_MVEBU_CCU) += mvebu_ccu.o
+ obj-$(CONFIG_MVEBU_MBUS) += mvebu_mbus.o
+diff --git a/drivers/misc/mvebu_ccu.c b/drivers/misc/mvebu_ccu.c
+new file mode 100644
+index 0000000..841d49a
+--- /dev/null
++++ b/drivers/misc/mvebu_ccu.c
+@@ -0,0 +1,236 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG */
++/* #define DEBUG_REG */
++
++#include <common.h>
++#include <asm/system.h>
++#include <asm/io.h>
++#include <fdtdec.h>
++#include <malloc.h>
++#include <asm/arch-mvebu/mvebu.h>
++#include <asm/arch-mvebu/fdt.h>
++#include <asm/arch-mvebu/ccu.h>
++
++/* common defines */
++#define WIN_ENABLE_BIT			(0x1)
++/* Physical address of the base of the window = {AddrLow[19:0],20’h0} */
++#define ADDRESS_SHIFT			(20 - 4)
++#define ADDRESS_MASK			(0xFFFFFFF0)
++#define CCU_WIN_ALIGNMENT		(0x100000)
++
++/* AP registers */
++#define CCU_MAX_WIN_NUM			(8)
++#define CCU_WIN_CR_OFFSET(win)		(ccu_info->ccu_base + 0x0 + (0x10 * win))
++#define CCU_TARGET_ID_OFFSET		(8)
++#define CCU_TARGET_ID_MASK		(0x7F)
++
++#define CCU_WIN_SCR_OFFSET(win)		(ccu_info->ccu_base + 0x4 + (0x10 * win))
++#define CCU_WIN_ENA_READ_SECURE		(0x1)
++#define CCU_WIN_ENA_WRITE_SECURE	(0x2)
++
++#define CCU_WIN_ALR_OFFSET(win)		(ccu_info->ccu_base + 0x8 + (0x10 * win))
++#define CCU_WIN_AHR_OFFSET(win)		(ccu_info->ccu_base + 0xC + (0x10 * win))
++
++#define CCU_WIN_GCR_OFFSET		(ccu_info->ccu_base + 0xD0)
++#define CCU_GCR_TARGET_OFFSET		(8)
++#define CCU_GCR_TARGET_MASK		(0xF)
++
++DECLARE_GLOBAL_DATA_PTR;
++
++struct ccu_configuration {
++	void __iomem *ccu_base;
++	u32 max_win;
++};
++struct ccu_configuration __attribute__((section(".data")))ccu_config;
++struct ccu_configuration __attribute__((section(".data")))*ccu_info = &ccu_config;
++
++struct ccu_win {
++	u32 base_addr;
++	u32 win_size;
++	u32 target_id;
++};
++
++enum ccu_target_ids {
++	IO_0_TID        = 0x00,
++	DRAM_0_TID      = 0x03,
++	IO_1_TID        = 0x0F,
++	CFG_REG_TID     = 0x10,
++	RAR_TID         = 0x20,
++	SRAM_TID        = 0x40,
++	DRAM_1_TID      = 0xC0,
++	CCU_MAX_TID,
++	INVALID_TID	= 0xFF
++};
++
++struct ccu_target_name_map {
++	enum ccu_target_ids trgt_id;
++	char name[10];
++};
++
++struct ccu_target_name_map ccu_target_name_table[] = {
++	{IO_0_TID,	"IO-0   "},
++	{DRAM_0_TID,	"DRAM-0 "},
++	{IO_1_TID,	"IO-1   "},
++	{CFG_REG_TID,	"CFG-REG"},
++	{RAR_TID,	"RAR    "},
++	{SRAM_TID,	"SRAM   "},
++	{DRAM_1_TID,	"DRAM-1 "},
++	{INVALID_TID,	"INVALID"},
++};
++
++static char *ccu_target_name_get(enum ccu_target_ids trgt_id)
++{
++	int i;
++
++	for (i = 0; i < CCU_MAX_TID; i++)
++		if (ccu_target_name_table[i].trgt_id == trgt_id)
++			return ccu_target_name_table[i].name;
++	return ccu_target_name_get(INVALID_TID);
++}
++
++static void ccu_win_check(struct ccu_win *win, u32 win_num)
++{
++	/* check if address is aligned to 1M */
++	if (IS_NOT_ALIGN(win->base_addr, CCU_WIN_ALIGNMENT)) {
++		win->base_addr = ALIGN_UP(win->base_addr, CCU_WIN_ALIGNMENT);
++		error("Window %d: base address unaligned to 0x%x\n", win_num, CCU_WIN_ALIGNMENT);
++		printf("Align up the base address to 0x%x\n", win->base_addr);
++	}
++
++	/* size parameter validity check */
++	if (IS_NOT_ALIGN(win->win_size, CCU_WIN_ALIGNMENT)) {
++		win->win_size = ALIGN_UP(win->win_size, CCU_WIN_ALIGNMENT);
++		error("Window %d: window size unaligned to 0x%x\n", win_num, CCU_WIN_ALIGNMENT);
++		printf("Aligning size to 0x%x\n", win->win_size);
++	}
++}
++
++static void ccu_enable_win(struct ccu_win *win, u32 win_id)
++{
++	u32 ccu_win_reg;
++	u32 alr, ahr;
++	uintptr_t end_addr;
++
++	ccu_win_reg = WIN_ENABLE_BIT;
++	ccu_win_reg |= (win->target_id & CCU_TARGET_ID_MASK) << CCU_TARGET_ID_OFFSET;
++	writel(ccu_win_reg, CCU_WIN_CR_OFFSET(win_id));
++
++	end_addr = (win->base_addr + win->win_size - 1);
++	alr = (u32)((win->base_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
++	ahr = (u32)((end_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
++
++	writel(alr, CCU_WIN_ALR_OFFSET(win_id));
++	writel(ahr, CCU_WIN_AHR_OFFSET(win_id));
++}
++
++void dump_ccu(void)
++{
++	u32 win_id, win_cr, alr, ahr;
++	u8 target_id;
++	uintptr_t start, end;
++
++	/* Dump all AP windows */
++	printf("bank  id target   start              end\n");
++	printf("----------------------------------------------------\n");
++	for (win_id = 0; win_id < ccu_info->max_win; win_id++) {
++		win_cr = readl(CCU_WIN_CR_OFFSET(win_id));
++		if (win_cr & WIN_ENABLE_BIT) {
++			target_id = (win_cr >> CCU_TARGET_ID_OFFSET) & CCU_TARGET_ID_MASK;
++			alr = readl(CCU_WIN_ALR_OFFSET(win_id));
++			ahr = readl(CCU_WIN_AHR_OFFSET(win_id));
++			start = (uintptr_t)(alr << ADDRESS_SHIFT);
++			end = (uintptr_t)((ahr + 0x10) << ADDRESS_SHIFT);
++			printf("ccu   %02x %s  0x%016lx 0x%016lx\n"
++				, win_id, ccu_target_name_get(target_id), start, end);
++		}
++	}
++	win_cr = readl(CCU_WIN_GCR_OFFSET);
++	target_id = (win_cr >> CCU_GCR_TARGET_OFFSET) & CCU_GCR_TARGET_MASK;
++	printf("ccu   GCR %s - all other transactions\n", ccu_target_name_get(target_id));
++
++	return;
++}
++
++int init_ccu(void)
++{
++	struct ccu_win *memory_map, *win;
++	const void *blob = gd->fdt_blob;
++	u32 win_id, win_reg;
++	u32 node, win_count;
++
++	debug_enter();
++	debug("Initializing CCU Address decoding\n");
++
++	/* Get address decoding node from the FDT blob */
++	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_CCU));
++	if (node < 0) {
++		error("No CCU address decoding node found in FDT blob\n");
++		return -1;
++	}
++	/* Get the base address of the address decoding CCU */
++	ccu_info->ccu_base = (void *)fdt_get_regs_offs(blob, node, "reg");
++
++	/* Get the maximum number of CCU windows supported */
++	ccu_info->max_win = fdtdec_get_int(blob, node, "max-win", 0);
++	if (ccu_info->max_win == 0) {
++		ccu_info->max_win = CCU_MAX_WIN_NUM;
++		error("failed reading max windows number, set window max size to %d\n", ccu_info->max_win);
++	}
++
++	memory_map = malloc(ccu_info->max_win * sizeof(struct ccu_win));
++	if (memory_map == 0) {
++		error("failed allocating struct to init windows configuration\n");
++		return -1;
++	}
++
++	/* Get the array of the windows and fill the map data */
++	win_count = fdtdec_get_int_array_count(blob, node, "windows", (u32 *)memory_map, ccu_info->max_win * 3);
++	if (win_count <= 0) {
++		debug("no windows configurations found\n");
++		return 0;
++	}
++	win_count = win_count/3; /* every window had 3 variables in FDT (base, size, target id) */
++
++	/* Set the default target ID to DRAM 0 */
++	win_reg = (DRAM_0_TID & CCU_GCR_TARGET_MASK) << CCU_GCR_TARGET_OFFSET;
++	writel(win_reg, CCU_WIN_GCR_OFFSET);
++
++	/* disable all AP windows, start from 1 to avoid overriding internal register */
++	for (win_id = 1; win_id < ccu_info->max_win; win_id++) {
++		win_reg = readl(CCU_WIN_CR_OFFSET(win_id));
++		win_reg &= ~WIN_ENABLE_BIT;
++		writel(win_reg, CCU_WIN_CR_OFFSET(win_id));
++
++		win_reg = ~CCU_WIN_ENA_READ_SECURE;
++		win_reg |= ~CCU_WIN_ENA_WRITE_SECURE;
++		writel(win_reg, CCU_WIN_SCR_OFFSET(win_id));
++	}
++
++	for (win_id = 1, win = memory_map; win_id < win_count + 1; win_id++, win++) {
++		ccu_win_check(win, win_id);
++		ccu_enable_win(win, win_id);
++	}
++
++	free(memory_map);
++	debug("Done CCU Address decoding Initializing\n");
++	debug_exit();
++
++	return 0;
++}
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index d356728..eba2dd9 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -129,6 +129,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_PINCTL,
+ 	COMPAT_MVEBU_MPP_BUS,
+ 	COMPAT_MVEBU_MBUS,
++	COMPAT_MVEBU_CCU,
+ 	COMPAT_COUNT,
+ };
+ 
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 4630d80..0a9d020 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -91,6 +91,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_PINCTL, "marvell,mvebu-pinctl"),
+ 	COMPAT(MVEBU_MPP_BUS, "marvell,mvebu-mpp-bus"),
+ 	COMPAT(MVEBU_MBUS, "marvell,mvebu-mbus"),
++	COMPAT(MVEBU_CCU, "marvell,mvebu-ccu"),
+ };
+ 
+ const char *fdtdec_get_compatible(enum fdt_compat_id id)
+-- 
+1.9.1
+

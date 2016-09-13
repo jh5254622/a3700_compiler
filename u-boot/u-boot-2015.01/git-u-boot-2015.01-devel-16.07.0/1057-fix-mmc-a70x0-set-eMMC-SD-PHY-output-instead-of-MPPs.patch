@@ -1,0 +1,72 @@
+From 77c9b1a0deeaa3f44720163381d104b76ab16797 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 19 Apr 2016 14:54:21 +0300
+Subject: [PATCH 1057/1240] fix: mmc: a70x0: set eMMC/SD PHY output instead of
+ MPPs
+
+- configure the eMMC/SD PHY output instead of MPPs
+- When set, SDIO/eMMC PHY is used as a MPP muxltiplexer,
+  when reset, SDIO/eMMC PHY is connected to SDIO/eMMC controller.
+
+Change-Id: I875cf267b3cc091d1888efda0ad723f6f8157e80
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29193
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/soc.c              | 15 +++++++++++++++
+ arch/arm/include/asm/arch-armada8k/regs-base.h |  4 +++-
+ 2 files changed, 18 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/soc.c b/arch/arm/cpu/armv8/armada8k/soc.c
+index f1ac6a5..42ecf3e 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc.c
++++ b/arch/arm/cpu/armv8/armada8k/soc.c
+@@ -34,8 +34,15 @@
+ #define RFU_GLOBAL_SW_RST		(MVEBU_RFU_BASE + 0x84)
+ #define RFU_SW_RESET_OFFSET		0
+ 
++#define EMMC_PHY_IO_CTRL		(MVEBU_IP_CONFIG_REG)
++#define EMMC_PHY_CTRL_SDPHY_EN		(1 << 0)
++
+ int soc_early_init_f(void)
+ {
++#ifdef CONFIG_XENON_MMC
++	u32 reg;
++#endif
++
+ #ifdef CONFIG_MVEBU_CHIP_SAR
+ 	/* Sample at reset register init */
+ 	mvebu_sar_init(gd->fdt_blob);
+@@ -43,6 +50,14 @@ int soc_early_init_f(void)
+ #ifdef CONFIG_MVEBU_PINCTL
+ 	mvebu_pinctl_probe();
+ #endif
++
++#ifdef CONFIG_XENON_MMC
++	/* set eMMC/SD PHY output instead of MPPs */
++	reg = readl(EMMC_PHY_IO_CTRL);
++	reg &= ~EMMC_PHY_CTRL_SDPHY_EN;
++	writel(reg, EMMC_PHY_IO_CTRL);
++#endif
++
+ 	return 0;
+ }
+ 
+diff --git a/arch/arm/include/asm/arch-armada8k/regs-base.h b/arch/arm/include/asm/arch-armada8k/regs-base.h
+index d8021c7..1a8f988 100644
+--- a/arch/arm/include/asm/arch-armada8k/regs-base.h
++++ b/arch/arm/include/asm/arch-armada8k/regs-base.h
+@@ -42,6 +42,8 @@
+ 
+ #define MVEBU_GENERIC_TIMER_BASE	(MVEBU_REGS_BASE + 0x581000)
+ 
+-#define MVEBU_LLC_BASE		(MVEBU_REGS_BASE + 0x8000)
++#define MVEBU_LLC_BASE			(MVEBU_REGS_BASE + 0x8000)
++
++#define MVEBU_IP_CONFIG_REG		(MVEBU_REGS_BASE + 0x6F4100)
+ 
+ #endif	/* _REGS_BASE_H_ */
+-- 
+1.9.1
+

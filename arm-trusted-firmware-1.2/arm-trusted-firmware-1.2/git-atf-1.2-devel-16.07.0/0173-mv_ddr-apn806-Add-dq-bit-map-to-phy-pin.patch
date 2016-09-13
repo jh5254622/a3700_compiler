@@ -1,0 +1,104 @@
+From fab73acbdec6a7e67c646dee6ea8b9598714db6b Mon Sep 17 00:00:00 2001
+From: Ofir Fedida <ofedida@marvell.com>
+Date: Mon, 23 May 2016 17:17:47 +0300
+Subject: [PATCH 173/239] mv_ddr: apn806: Add dq bit map to phy pin
+
+updated configuration for 70x0 and 80x0 according
+to pin mux configuration.
+
+Change-Id: I0caf55f952ad8ce53b4427f684af578a57b92f90
+Signed-off-by: Ofir Fedida <ofedida@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29887
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c | 44 +++++++++++++++++++--------
+ drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h | 10 ++++++
+ 2 files changed, 41 insertions(+), 13 deletions(-)
+
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+index c86bf8c..a45c161 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.c
+@@ -128,17 +128,32 @@ u16 apn806_odt_intercept[] = {
+ };
+ #endif /* CONFIG_DDR4 */
+ 
+-static u32 dq_bit_map_2_phy_pin[] = {
+-/*DQ0	DQ1	DQ2	DQ3	DQ4	DQ5	DQ6	DQ7	DM*/
+-	0,	1,	2,	7,	10,	9,	8,	6,/*3,phy 0*/
+-	8,	10,	1,	2,	0,	7,	9,	6,/*3,phy 1*/
+-	9,	10,	2,	7,	0,	1,	6,	8,/*3,phy 2*/
+-	2,	1,	6,	0,	8,	10,	7,	9,/*3,phy 3*/
+-	0,	0,	0,	0,	0,	0,	0,	0,/*0,phy 4*/
+-	0,	0,	0,	0,	0,	0,	0,	0,/*0,phy 5*/
+-	0,	0,	0,	0,	0,	0,	0,	0,/*0,phy 6*/
+-	0,	0,	0,	0,	0,	0,	0,	0,/*0,phy 7*/
+-	2,	8,	0,	9,	6,	7,	10,	1/*	3 phy 8 - ECC*/
++static u32 dq_bit_map_2_phy_pin[LAST_DDR_CFG_OPT][MAX_DQ_NUM] = {
++	{/* LPDDR4_DIMM */},
++	{/* LPDDR4_BRD */},
++	{/* DDR4_DIMM */
++	 /*DQ0	DQ1	DQ2	DQ3	DQ4	DQ5	DQ6	DQ7	DM*/
++	 0,	7,	2,	6,	8,	10,	9,	1,/* 3,phy 0 */
++	 6,	2,	1,	0,	8,	9,	10,	7,/* 3,phy 1 */
++	 1,	2,	0,	6,	8,	9,	10,	7,/* 3,phy 2 */
++	 1,	6,	0,	2,	8,	9,	10,	7,/* 3,phy 3 */
++	 0,	2,	1,	6,	7,	8,	9,	10,/* 3,phy 4 */
++	 0,	2,	1,	6,	7,	8,	9,	10,/* 3,phy 5 */
++	 0,	6,	1,	2,	7,	8,	9,	10,/* 3,phy 6 */
++	 0,	1,	2,	6,	7,	8,	9,	10,/* 3,phy 7 */
++	 9,	0,	8,	7,	6,	10,	2,	1/* 3 phy 8 - ECC */},
++	{/* DDR4_BRD */
++	 0,	1,	2,	7,	10,	9,	8,	6,/* 3,phy 0 */
++	 8,	10,	1,	2,	0,	7,	9,	6,/* 3,phy 1 */
++	 9,	10,	2,	7,	0,	1,	6,	8,/* 3,phy 2 */
++	 2,	1,	6,	0,	8,	10,	7,	9,/* 3,phy 3 */
++	 0,	0,	0,	0,	0,	0,	0,	0,/* 0,phy 4 */
++	 0,	0,	0,	0,	0,	0,	0,	0,/* 0,phy 5 */
++	 0,	0,	0,	0,	0,	0,	0,	0,/* 0,phy 6 */
++	 0,	0,	0,	0,	0,	0,	0,	0,/* 0,phy 7 */
++	 2,	8,	0,	9,	6,	7,	10,	1/* 3 phy 8 - ECC */},
++	{/* DDR3_DIMM */},
++	{/* DDR3_BRD */}
+ };
+ 
+ static u8 mv_ddr_tip_clk_ratio_get(u32 freq)
+@@ -509,8 +524,11 @@ static int ddr3_tip_init_apn806_silicon(u32 dev_num, u32 board_id)
+ 
+ 	ddr3_tip_init_config_func(dev_num, &config_func);
+ 
+-	ddr3_tip_register_dq_table(dev_num, dq_bit_map_2_phy_pin);
+-
++#if defined(a80x0) || defined(a80x0_cust)
++	ddr3_tip_register_dq_table(dev_num, dq_bit_map_2_phy_pin[DDR4_DIMM]);
++#else
++	ddr3_tip_register_dq_table(dev_num, dq_bit_map_2_phy_pin[DDR4_BRD]);
++#endif
+ 	/* set device attributes*/
+ 	ddr3_tip_dev_attr_init(dev_num);
+ 	ddr3_tip_dev_attr_set(dev_num, MV_ATTR_TIP_REV, MV_TIP_REV_4);
+diff --git a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
+index c12a0d7..cfc2b20 100644
+--- a/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
++++ b/drivers/marvell/mv_ddr/apn806/mv_ddr_apn806.h
+@@ -349,6 +349,16 @@ enum {
+ 	LAST_FREQ
+ };
+ 
++enum {
++	LPDDR4_DIMM,
++	LPDDR4_BRD,
++	DDR4_DIMM,
++	DDR4_BRD,
++	DDR3_DIMM,
++	DDR3_BRD,
++	LAST_DDR_CFG_OPT
++};
++
+ /* struct used for DLB configuration array */
+ struct dlb_config {
+ 	u32 reg_addr;
+-- 
+1.9.1
+

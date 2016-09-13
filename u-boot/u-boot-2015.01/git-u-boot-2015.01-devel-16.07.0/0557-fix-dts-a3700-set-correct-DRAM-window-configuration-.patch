@@ -1,0 +1,47 @@
+From bdf57f225b0862189cef1f635f1feb55f29e8939 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Mon, 30 Nov 2015 14:08:08 +0800
+Subject: [PATCH 0557/1240] fix: dts: a3700: set correct DRAM window
+ configuration in armada3700 dtsi file
+
+    for armada3700 db, the original DRAM window configuration in dtsi
+    file is for 2GB memory, which is not correct, the real DRAM window
+    configuration is for 512MB, so change it in dtsi file.
+
+    correct DRAM window configuraiton for MBUS is very important:
+    -- MBUS driver reads DRAM window configuration, configures CPU
+    Address decode window.
+    -- other unit like SATA would get the DRAM window configuration
+    from MBUS, then get the DRAM size, and configures it's own IO
+    address decode window.
+    -- u-boot itself needs to know the DRAM size in routine dram_init,
+    where gd->ram_size value is inited, so it knows where to relocate,
+    and how big mem it could use.
+    In routine dram_init, DRAM size is got from MBUS driver, then put
+    into gd->ram_size.
+
+Change-Id: I08c60d24198760e776a62f22dbee24e8dd15e119
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25395
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/dts/armada-lp.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/armada-lp.dtsi b/arch/arm/dts/armada-lp.dtsi
+index 0157c2f..70619b6 100644
+--- a/arch/arm/dts/armada-lp.dtsi
++++ b/arch/arm/dts/armada-lp.dtsi
+@@ -44,7 +44,7 @@
+ 				max-remap = <5>;
+ 				remap-size = <32>;
+ 				internal-win = <6>;
+-				windows = <0x0 0x80000000 ATTR(0x1, 0x0, 0x0)
++				windows = <0x0 0x20000000 ATTR(0x1, 0x0, 0x0)
+ 					0xE0000000 0x8000000 ATTR(0x1, 0x5, 0x0)
+ 					0xE8000000 0x8000000 ATTR(0x1, 0x2, 0x0)
+ 					0xF0000000 0x20000 ATTR(0x1, 0x7, 0x0)
+-- 
+1.9.1
+

@@ -1,0 +1,30 @@
+From 282f249aafe4de63aa7f37744d996a42b19519fb Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 23 Aug 2015 10:49:13 +0300
+Subject: [PATCH 0343/1240] pcie: rfu: fix the RFU initialization of PCIe unit
+
+Change-Id: Icf98f7162dc69dfd4207379f9cdded48d68a1f27
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23025
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/soc-init.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/soc-init.c b/arch/arm/cpu/armv8/armada8k/soc-init.c
+index f7a6fa6..a0a11cc 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc-init.c
++++ b/arch/arm/cpu/armv8/armada8k/soc-init.c
+@@ -68,7 +68,7 @@ static void soc_pcie_init(void)
+ 	reg |= (1 << 14);
+ 
+ 	/* Enable PCIe unit */
+-	reg = 1;
++	reg |= 1;
+ 
+ 	writel(reg, MVEBU_PCIE_MAC_CTL);
+ }
+-- 
+1.9.1
+

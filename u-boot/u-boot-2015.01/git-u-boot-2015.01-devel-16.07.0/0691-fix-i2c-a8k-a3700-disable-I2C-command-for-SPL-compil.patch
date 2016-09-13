@@ -1,0 +1,41 @@
+From 3c7997a16b44fab2626b9346dc20d51c699c3798 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 17 Jan 2016 18:10:15 +0200
+Subject: [PATCH 0691/1240] fix: i2c: a8k, a3700: disable I2C command for SPL
+ compilation
+
+Change-Id: Idd9f83daab3a8bd468c5b3b4d6217aec654ec176
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26832
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Haim Boot <hayim@marvell.com>
+---
+ drivers/i2c/Kconfig | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/i2c/Kconfig b/drivers/i2c/Kconfig
+index e2c2428..db3ceb5 100644
+--- a/drivers/i2c/Kconfig
++++ b/drivers/i2c/Kconfig
+@@ -12,7 +12,7 @@ config HARD_I2C
+ config MVEBU_I2C
+ 	bool "MVEBU I2C support"
+ 	default n
+-	select CMD_I2C
++	select CMD_I2C if !SPL_BUILD
+ 	help
+ 	  Choose this option to add
+ 	  support for Marvell's MVEBU
+@@ -22,7 +22,7 @@ config MVEBU_I2C
+ config I2C_MV
+ 	bool "I2C support for armada100/armadaLP"
+ 	default n
+-	select CMD_I2C
++	select CMD_I2C if !SPL_BUILD
+ 	select HARD_I2C
+ 	help
+ 	  Choose this option to
+-- 
+1.9.1
+

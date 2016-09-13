@@ -1,0 +1,32 @@
+From b545aaa87cb0eead43c6cc8d983d95de4fa959d5 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Wed, 9 Dec 2015 16:26:50 +0800
+Subject: [PATCH 0585/1240] fix: neta: mvebu: add default eth1addr env param
+
+    Add default eth1addr env param to mvebu-common.h
+
+Change-Id: I297d831500185d53747de2ca6e94771caa43265e
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25713
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ include/configs/mvebu-common.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 2c2f4fa..14ea2c8 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -349,6 +349,8 @@
+ 	#define CONFIG_NETMASK          255.255.255.0
+ 	#define CONFIG_GATEWAYIP	10.4.50.254
+ 	#define CONFIG_ETHADDR          00:00:00:00:51:81
++	#define CONFIG_HAS_ETH1
++	#define CONFIG_ETH1ADDR		00:00:00:00:51:82
+ 	#define ENV_ETH_PRIME           "e1000#0"
+ #endif /* CONFIG_CMD_NET */
+ 
+-- 
+1.9.1
+

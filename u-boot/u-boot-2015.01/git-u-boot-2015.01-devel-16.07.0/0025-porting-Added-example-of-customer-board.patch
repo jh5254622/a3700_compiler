@@ -1,0 +1,152 @@
+From 905903d1ee5dbc8aa67714568ed07edf3c455a9c Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 30 Mar 2014 18:08:54 +0300
+Subject: [PATCH 0025/1240] porting: Added example of customer board
+
+Change-Id: I0211201e84ae97118eaee06b0bfc8b6d163e7210
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ board/mvebu/armada38x/Makefile         |  1 +
+ board/mvebu/armada38x/board-info.c     |  3 ++-
+ board/mvebu/armada38x/board-info.h     |  2 ++
+ board/mvebu/armada38x/costumer-info.c  | 38 ++++++++++++++++++++++++++++++++
+ board/mvebu/armada38x/customer-board.c | 40 ++++++++++++++++++++++++++++++++++
+ 5 files changed, 83 insertions(+), 1 deletion(-)
+ create mode 100644 board/mvebu/armada38x/costumer-info.c
+ create mode 100644 board/mvebu/armada38x/customer-board.c
+
+diff --git a/board/mvebu/armada38x/Makefile b/board/mvebu/armada38x/Makefile
+index 7bf75c0..b9f26b1 100644
+--- a/board/mvebu/armada38x/Makefile
++++ b/board/mvebu/armada38x/Makefile
+@@ -21,4 +21,5 @@ obj-y	+= armada38x.o
+ obj-y	+= board-info.o
+ obj-y	+= db-88f6820-info.o
+ obj-y	+= rd-88f6820-info.o
++obj-y	+= customer-board.o
+ #obj-y	+= platform.o
+diff --git a/board/mvebu/armada38x/board-info.c b/board/mvebu/armada38x/board-info.c
+index 2897b6f..5aeca7a 100644
+--- a/board/mvebu/armada38x/board-info.c
++++ b/board/mvebu/armada38x/board-info.c
+@@ -77,7 +77,8 @@ struct cfg_data a38x_cfg = {
+ 
+ struct mvebu_board_info *a38x_board_lookup[MAX_BOARD_ID] = {
+ 	[ARMADA_38X_DB_ID] = &a38x_db_info,
+-	[ARMADA_38X_RD_ID] = &a38x_rd_info
++	[ARMADA_38X_RD_ID] = &a38x_rd_info,
++	[ARMADA_38X_CUSTOMER_ID] = &a38x_customer_info
+ };
+ 
+ struct mvebu_board_family a38x_board_family = {
+diff --git a/board/mvebu/armada38x/board-info.h b/board/mvebu/armada38x/board-info.h
+index aff5614..641bf32 100644
+--- a/board/mvebu/armada38x/board-info.h
++++ b/board/mvebu/armada38x/board-info.h
+@@ -26,11 +26,13 @@
+ enum a38x_board_types {
+ 	ARMADA_38X_DB_ID = 0,
+ 	ARMADA_38X_RD_ID,
++	ARMADA_38X_CUSTOMER_ID,
+ 	MAX_BOARD_ID
+ };
+ 
+ extern struct mvebu_board_info a38x_db_info;
+ extern struct mvebu_board_info a38x_rd_info;
++extern struct mvebu_board_info a38x_customer_info;
+ extern struct mvebu_board_family a38x_board_family;
+ 
+ #endif /* _BOARD_INFO_H_ */
+diff --git a/board/mvebu/armada38x/costumer-info.c b/board/mvebu/armada38x/costumer-info.c
+new file mode 100644
+index 0000000..d7d5560
+--- /dev/null
++++ b/board/mvebu/armada38x/costumer-info.c
+@@ -0,0 +1,38 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <linux/compiler.h>
++#include <asm/arch-mvebu/unit-info.h>
++#include "board-info.h"
++
++struct mvebu_board_config db_a38x_config = {
++	.sar_cnt = 2,
++	.active_sar = {BOOT_SRC_SAR, CPUS_NUM_SAR},
++	.cfg_cnt = 2,
++	.active_cfg = {BOARD_ID_CFG, SERDES_0_CFG}
++};
++
++struct mvebu_board_info a38x_db_info = {
++	.name = "DB-88F6820-BP",
++	.id = ARMADA_38X_DB_ID,
++	.configurable = 1,
++	.config_data = &db_a38x_config,
++};
++
+diff --git a/board/mvebu/armada38x/customer-board.c b/board/mvebu/armada38x/customer-board.c
+new file mode 100644
+index 0000000..b7e2501
+--- /dev/null
++++ b/board/mvebu/armada38x/customer-board.c
+@@ -0,0 +1,40 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) Marvell International Ltd. and its affiliates
++ * ***************************************************************************
++ * Marvell GPL License Option
++ * If you received this File from Marvell, you may opt to use, redistribute
++ * and/or modify this File in accordance with the terms and conditions of the
++ * General Public License Version 2, June 1991 (the "GPL License"), a copy of
++ * which is available along with the File in the license.txt file or by writing
++ * to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 or on the worldwide web at http://www.gnu.org/licenses/gpl.txt.
++ *
++ * THE FILE IS DISTRIBUTED AS-IS, WITHOUT WARRANTY OF ANY KIND, AND THE IMPLIED
++ * WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE ARE
++ * EXPRESSLY DISCLAIMED. The GPL License provides additional details about this
++ * warranty disclaimer.
++ * ***************************************************************************
++ */
++
++#include <common.h>
++#include <linux/compiler.h>
++#include <asm/arch-mvebu/unit-info.h>
++#include "board-info.h"
++
++/* Optionaly define which units to disable */
++u16 a38x_customer_unit_disable[MAX_UNIT_ID] = {
++	[NAND_UNIT_ID] = id_to_mask(0),
++	[SDIO_UNIT_ID] = id_to_mask(0)
++};
++
++struct mvebu_board_info a38x_customer_info = {
++	.name = "CUSTOMER-BOARD",
++	.id = ARMADA_38X_CUSTOMER_ID,
++	.unit_mask = a38x_customer_unit_disable,
++	.unit_update_mode = UNIT_INFO_DISABLE,
++	.mpp_regs = {0x22222222, 0x00000000, 0x52230044, 0x00334200,
++		     0x00004444, 0x52230044, 0x00334200, 0x22222222, 0x52230044},
++	.configurable = 0,
++};
++
+-- 
+1.9.1
+

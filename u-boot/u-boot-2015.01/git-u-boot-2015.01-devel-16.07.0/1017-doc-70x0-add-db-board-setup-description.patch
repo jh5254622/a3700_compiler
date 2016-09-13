@@ -1,0 +1,89 @@
+From f3d3da456b8a86cf4ec5ad4cfa85705580326b86 Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Thu, 7 Apr 2016 11:36:04 +0300
+Subject: [PATCH 1017/1240] doc: 70x0: add db board setup description
+
+currently, only for router setup
+
+Change-Id: I800329e2a77e3d8a6e6cbd990e906f729a2ed160
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28871
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ doc/mvebu/a7k-a8k/armada70x0-db-setup.txt | 63 +++++++++++++++++++++++++++++++
+ 1 file changed, 63 insertions(+)
+ create mode 100644 doc/mvebu/a7k-a8k/armada70x0-db-setup.txt
+
+diff --git a/doc/mvebu/a7k-a8k/armada70x0-db-setup.txt b/doc/mvebu/a7k-a8k/armada70x0-db-setup.txt
+new file mode 100644
+index 0000000..f51bfa6
+--- /dev/null
++++ b/doc/mvebu/a7k-a8k/armada70x0-db-setup.txt
+@@ -0,0 +1,63 @@
++Armada70x0 development board setup:
++-----------------------------------
++
++The Armada70x0 Development Board (DB) is a configurable board designed to test several
++combinations of SOC configurations. U-BOOT supports a defined set of those configurations
++via different device tree files.
++
++This document describes the board modifications required to setup each configuration and the
++interfaces supported (or disabled in each one).
++
++To switch to a different configuration, follow the instructions in the "board setup" section.
++Once completed change the FDT file used by U-BOOT by running the U-BOOT command "fdt_config".
++
++
++Board Setup
++------------
++
++## setup 1: Router ###
++
++  Serdes site
++   - module: SLM1524
++   - Module DIP switch
++
++
++The tables below summarizes the interface configuration of each setup
++
++Serdes PHY configuration
++------------------------
++
++setup  #	|	1	|
++name   #	|     router 	|
++---------------------------------
++SerDes:	lane0	| sgmii2	|
++	lane1	| usb3h0	|
++	lane2	| sgmii0	|
++	lane3	| sata1		|
++	lane4	| usb3h1	|
++	lane5	| pex_x1_2	|
++---------------------------------
++
++
++Multi purpose pin configurations
++--------------------------------
++
++setup  #	|	1	|
++name   #	|     router 	|
++---------------------------------
++
++MPPs: 	CP-SPI0	| N/C		|
++	CP-SPI1	| [13-16]	|
++	NAND	| N/C		|
++	RGMII0	| [0-11]	|
++	RGMII1	| [44-55]	|
++	CP-UART0| [29-30]	|
++	CP-UART1| [40-41]	|
++	SD	| [56-62]	|
++	TDM	| N/C		|
++	TWSI	| [37-38]	|
++	SATA0	| N/C		|
++	SATA1	| [28]		|
++	SMI	| [32-34]	|
++	XSMI	| [35-36]	|
++---------------------------------
+-- 
+1.9.1
+

@@ -1,0 +1,83 @@
+From cf53336cde1b576c2970990f70783032c7964a05 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 20 Jul 2014 17:02:14 +0300
+Subject: [PATCH 0041/1240] a8k: pxp: Adaptations for new palladium model
+
+	- Changed clock frequency
+	- Changed internal regs base
+	- Added temporary mappings within Aurora and MSS
+
+Change-Id: Ib576fbcb17e2ee02610267ac392a3a74a92ec91e
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/9506
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/soc-init.c         | 14 ++++++++++++++
+ arch/arm/include/asm/arch-armada8k/regs-base.h |  2 +-
+ include/configs/armada8k.h                     |  4 ++--
+ 3 files changed, 17 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/soc-init.c b/arch/arm/cpu/armv8/armada8k/soc-init.c
+index 89ba703..13ca416 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc-init.c
++++ b/arch/arm/cpu/armv8/armada8k/soc-init.c
+@@ -27,6 +27,20 @@
+ 
+ int soc_early_init_f(void)
+ {
++#if CONFIG_PALLADIUM
++	/* Temporary configs. remove in future models */
++
++	/* Define the mapping inside register space */
++	writel(0xf0500201, 0xf00040a0);
++	writel(0xf0100201, 0xf00040a4);
++	writel(0xf0400201, 0xf00040a8);
++	writel(0xf0600201, 0xf00040ac);
++
++	/* Define the address of RFU within MSS */
++	writel(0x0, 0xf0513f00);
++	writel(0x910000, 0xf0513f04);
++	writel(0x11, 0xf0513f00);
++#endif
+ 	return 0;
+ }
+ 
+diff --git a/arch/arm/include/asm/arch-armada8k/regs-base.h b/arch/arm/include/asm/arch-armada8k/regs-base.h
+index a7d4dae..8030657 100644
+--- a/arch/arm/include/asm/arch-armada8k/regs-base.h
++++ b/arch/arm/include/asm/arch-armada8k/regs-base.h
+@@ -20,7 +20,7 @@
+ #ifndef _REGS_BASE_H_
+ #define _REGS_BASE_H_
+ 
+-#define MVEBU_REGS_BASE	(0xF1000000)
++#define MVEBU_REGS_BASE	(0xF0000000)
+ 
+ #define MPP_REGS_BASE	(MVEBU_REGS_BASE + 0x1000)
+ 
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index 1508025..8d78a79 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -48,7 +48,7 @@
+ #define CONFIG_REMAKE_ELF
+ 
+ /* Clock Definitions */
+-#define COUNTER_FREQUENCY               (1008000)     /* 24MHz */
++#define COUNTER_FREQUENCY               (125000)     /* 24MHz */
+ 
+ /*
+  * Include the generic MVEBU configuration file.
+@@ -65,7 +65,7 @@
+ #define CONFIG_BOOTDELAY                -1
+ 
+ #undef CONFIG_BAUDRATE
+-#define CONFIG_BAUDRATE                 63000
++#define CONFIG_BAUDRATE                 4000
+ 
+ #undef CONFIG_BOOTARGS
+ #define CONFIG_BOOTARGS			"console=ttyS0,63000 earlyprintk root=/dev/ram0"
+-- 
+1.9.1
+

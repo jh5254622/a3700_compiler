@@ -1,0 +1,58 @@
+From d74c13dcfa49c5499a62ea774b794e352599c8b8 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Tue, 1 Dec 2015 14:34:12 +0800
+Subject: [PATCH 0550/1240] fix: bubt: mvebu: fix the compilation error for USB
+ bubt
+
+    when adding support of bubt command for Armada3700, there are
+    compilation errores, since USB_STORAGE is supported for Armada3700.
+    To fix this, include usb.h and fs.h and add the 5th input param to
+    invoke routine fs_read.
+
+    NOTE, bubt from USB has not been tested yet, this patch only fixes
+    the compilation error.
+
+Change-Id: I8eae89f073b7e02e06739da245b09eb40903a9c6
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25453
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ common/mvebu/cmd_bubt.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/common/mvebu/cmd_bubt.c b/common/mvebu/cmd_bubt.c
+index 21a5e36..94973a6 100644
+--- a/common/mvebu/cmd_bubt.c
++++ b/common/mvebu/cmd_bubt.c
+@@ -27,6 +27,9 @@
+ 
+ #include <nand.h>
+ 
++#include <usb.h>
++#include <fs.h>
++
+ #if defined(CONFIG_TARGET_ARMADA_8K)
+ #define MAIN_HDR_MAGIC		0xB105B002
+ 
+@@ -200,6 +203,8 @@ int is_nor_active(void)
+ #ifdef CONFIG_USB_STORAGE
+ static int usb_read_file(const char *file_name)
+ {
++	loff_t act_read;
++
+ 	usb_stop();
+ 
+ 	if (usb_init() < 0) {
+@@ -220,7 +225,7 @@ static int usb_read_file(const char *file_name)
+ 	}
+ 
+ 	/* Perfrom file read */
+-	return fs_read(file_name, get_load_addr(), 0, 0);
++	return fs_read(file_name, get_load_addr(), 0, 0, &act_read);
+ }
+ 
+ int is_usb_active(void)
+-- 
+1.9.1
+

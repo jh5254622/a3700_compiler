@@ -1,0 +1,61 @@
+From 0b5d8a95cb04ae72fb00c1f61de86e7a0e664ec0 Mon Sep 17 00:00:00 2001
+From: jinghua <jinghua@marvell.com>
+Date: Wed, 27 Apr 2016 21:40:46 +0800
+Subject: [PATCH 1217/1240] dts: a3700: remove ddr node from dts file
+
+- ddr driver used to read ddr node in dts and perform ddr init in
+  SPL when SPL is running in SRAM. but now SPL has been removed
+  completely, so ddr node in dts file is no longer needed,
+- now ddr init is done in TIM.
+- ddr size is passed to u-boot from ATF.
+
+Change-Id: Ic451ea68cb939512acc6db461445c9df732410b4
+Signed-off-by: jinghua <jinghua@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29394
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Victor Gu <xigu@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/dts/armada-3700-customer0.dts | 7 -------
+ arch/arm/dts/armada-3700-db.dts        | 7 -------
+ 2 files changed, 14 deletions(-)
+
+diff --git a/arch/arm/dts/armada-3700-customer0.dts b/arch/arm/dts/armada-3700-customer0.dts
+index 2d135ed..cd4994d 100644
+--- a/arch/arm/dts/armada-3700-customer0.dts
++++ b/arch/arm/dts/armada-3700-customer0.dts
+@@ -10,13 +10,6 @@
+ 
+ 	soc {
+ 		internal-regs {
+-			ddr-mac {
+-				cs_count = <1>;
+-				bus_width = <DDR_BUS_WIDTH_16>;
+-				cs0 {
+-					size = <0x00000000 0x10000000>;
+-				};
+-			};
+ 			serial: serial@12000 {
+ 				status = "okay";
+ 			};
+diff --git a/arch/arm/dts/armada-3700-db.dts b/arch/arm/dts/armada-3700-db.dts
+index ac9ea9a..9d25829 100644
+--- a/arch/arm/dts/armada-3700-db.dts
++++ b/arch/arm/dts/armada-3700-db.dts
+@@ -30,13 +30,6 @@
+ 
+ 	soc {
+ 		internal-regs {
+-			ddr-mac {
+-				cs_count = <1>;
+-				bus_width = <DDR_BUS_WIDTH_16>;
+-				cs0 {
+-					size = <0x00000000 0x20000000>;
+-				};
+-			};
+ 			serial: serial@12000 {
+ 				status = "okay";
+ 			};
+-- 
+1.9.1
+

@@ -1,0 +1,45 @@
+From 90b389eeba099b910f04e72d8332dd670dc88918 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 8 Jul 2015 12:39:00 +0300
+Subject: [PATCH 0240/1240] fdt: spl: add base address of the SoC for SPL
+
+Change-Id: If19a612b77e7f64bed47ba9adcb8f06fd902ad7f
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/21130
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/fdt.c | 4 ++++
+ arch/arm/dts/armada-385-db.dts  | 1 +
+ 2 files changed, 5 insertions(+)
+
+diff --git a/arch/arm/cpu/mvebu-common/fdt.c b/arch/arm/cpu/mvebu-common/fdt.c
+index 13fe3f9..d39e915 100644
+--- a/arch/arm/cpu/mvebu-common/fdt.c
++++ b/arch/arm/cpu/mvebu-common/fdt.c
+@@ -43,6 +43,10 @@ void *fdt_get_regs_base(void)
+ 		return gd->arch.reg_base;
+ 
+ 	node = fdt_node_offset_by_compatible(gd->fdt_blob, -1, "marvell,internal-regs");
++#ifdef CONFIG_SPL_BUILD
++	gd->arch.reg_base = (void *)((uintptr_t)fdtdec_get_addr(gd->fdt_blob, node, "reg-spl"));
++#else
+ 	gd->arch.reg_base = (void *)((uintptr_t)fdtdec_get_addr(gd->fdt_blob, node, "reg"));
++#endif
+ 	return gd->arch.reg_base;
+ }
+diff --git a/arch/arm/dts/armada-385-db.dts b/arch/arm/dts/armada-385-db.dts
+index b520a67..15a77f5 100644
+--- a/arch/arm/dts/armada-385-db.dts
++++ b/arch/arm/dts/armada-385-db.dts
+@@ -39,6 +39,7 @@
+ 			#address-cells = <1>;
+ 			#size-cells = <1>;
+ 			reg = <0xf1000000 0x4>;
++			reg-spl = <0xd0000000 0x4>;
+ 
+ 			tclk: tclk {
+ 				compatible = "marvell,tclk";
+-- 
+1.9.1
+

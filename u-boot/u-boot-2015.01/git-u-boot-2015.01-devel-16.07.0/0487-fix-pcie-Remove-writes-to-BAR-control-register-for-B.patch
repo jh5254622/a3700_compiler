@@ -1,0 +1,35 @@
+From bc5ada1222f79b945e4ff74b7429b5549280700e Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Mon, 9 Nov 2015 12:48:00 +0200
+Subject: [PATCH 0487/1240] fix: pcie: Remove writes to BAR control register
+ for BAR0
+
+	BAR control registers exist only for BAR1 & BAR2.
+
+Change-Id: If22cc48ba6482e306e4efc08ed48921c388be926
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24680
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/pci/pci_mvebu.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/drivers/pci/pci_mvebu.c b/drivers/pci/pci_mvebu.c
+index 0a040d0..94d147f 100644
+--- a/drivers/pci/pci_mvebu.c
++++ b/drivers/pci/pci_mvebu.c
+@@ -212,10 +212,8 @@ static void mvebu_pcie_setup_mapping(void __iomem *reg_base)
+ 	}
+ 
+ 	/* Config BAR 0 - to internal regs */
+-	size = (SZ_16M - 1) & 0xFFFF0000;
+ 	writel(PCIE_BAR_TYPE_MEM | MVEBU_REGS_BASE  , PCIE_BAR_LO_OFF(reg_base, 0));
+ 	writel(0, PCIE_BAR_HI_OFF(reg_base, 0));
+-	writel(size | PCIE_BAR_ENABLE, PCIE_BAR_CTRL_OFF(reg_base, 0));
+ 
+ 	/* Config BAR 1 - to 4G */
+ 	size = (SZ_4G - 1) & 0xFFFF0000;
+-- 
+1.9.1
+

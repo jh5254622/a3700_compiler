@@ -1,0 +1,71 @@
+From e53988a4e6111826b87e4ac4289b0709baead32f Mon Sep 17 00:00:00 2001
+From: Ofer Heifetz <oferh@marvell.com>
+Date: Thu, 24 Mar 2016 09:43:51 +0200
+Subject: [PATCH 46/66] Bump Buildroot 2015.11 to release 16.03.00
+
+Change-Id: I704727d840c48c2cfdec68290e313a7faeb53b47
+Signed-off-by: Ofer Heifetz <oferh@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/28494
+Tested-by: Star_Automation <star@marvell.com>
+---
+ configs/mvebu_armv7_tiny_le_defconfig | 2 +-
+ configs/mvebu_armv8_be_defconfig      | 2 +-
+ configs/mvebu_armv8_le_defconfig      | 2 +-
+ configs/mvebu_armv8_tiny_le_defconfig | 2 +-
+ 4 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/configs/mvebu_armv7_tiny_le_defconfig b/configs/mvebu_armv7_tiny_le_defconfig
+index ece37b1..3c610d1 100644
+--- a/configs/mvebu_armv7_tiny_le_defconfig
++++ b/configs/mvebu_armv7_tiny_le_defconfig
+@@ -9,7 +9,7 @@ BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="arm-marvell-linux-gnueabi"
+ BR2_TOOLCHAIN_EXTERNAL_GCC_4_6=y
+ BR2_TOOLCHAIN_EXTERNAL_HEADERS_3_2=y
+ BR2_TOOLCHAIN_EXTERNAL_CUSTOM_GLIBC=y
+-BR2_MVEBU_RELEASE_NAME="2015_T3.0.eng_drop_v1"
++BR2_MVEBU_RELEASE_NAME="16.03.0"
+ BR2_ROOTFS_OVERLAY="user_files"
+ BR2_TARGET_ROOTFS_CPIO=y
+ BR2_TARGET_ROOTFS_EXT2=y
+diff --git a/configs/mvebu_armv8_be_defconfig b/configs/mvebu_armv8_be_defconfig
+index e07bff1..ee3f825 100644
+--- a/configs/mvebu_armv8_be_defconfig
++++ b/configs/mvebu_armv8_be_defconfig
+@@ -6,7 +6,7 @@ BR2_TOOLCHAIN_EXTERNAL_GCC_5=y
+ BR2_TOOLCHAIN_EXTERNAL_HEADERS_3_18=y
+ BR2_TOOLCHAIN_EXTERNAL_CUSTOM_GLIBC=y
+ BR2_TOOLCHAIN_EXTERNAL_CXX=y
+-BR2_MVEBU_RELEASE_NAME="16.02.0 ED"
++BR2_MVEBU_RELEASE_NAME="16.03.0"
+ BR2_ROOTFS_OVERLAY="user_files/"
+ BR2_PACKAGE_BUSYBOX_SHOW_OTHERS=y
+ BR2_PACKAGE_BZIP2=y
+diff --git a/configs/mvebu_armv8_le_defconfig b/configs/mvebu_armv8_le_defconfig
+index f16ab24..74084ef 100644
+--- a/configs/mvebu_armv8_le_defconfig
++++ b/configs/mvebu_armv8_le_defconfig
+@@ -8,7 +8,7 @@ BR2_TOOLCHAIN_EXTERNAL_GCC_5=y
+ BR2_TOOLCHAIN_EXTERNAL_HEADERS_3_18=y
+ BR2_TOOLCHAIN_EXTERNAL_CUSTOM_GLIBC=y
+ BR2_TOOLCHAIN_EXTERNAL_CXX=y
+-BR2_MVEBU_RELEASE_NAME="16.02.0 ED"
++BR2_MVEBU_RELEASE_NAME="16.03.0"
+ BR2_ROOTFS_OVERLAY="user_files/"
+ BR2_LINUX_KERNEL=y
+ BR2_LINUX_KERNEL_CUSTOM_VERSION=y
+diff --git a/configs/mvebu_armv8_tiny_le_defconfig b/configs/mvebu_armv8_tiny_le_defconfig
+index 615cd7f..c6376f7 100644
+--- a/configs/mvebu_armv8_tiny_le_defconfig
++++ b/configs/mvebu_armv8_tiny_le_defconfig
+@@ -6,7 +6,7 @@ BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="aarch64-marvell-linux-gnu"
+ BR2_TOOLCHAIN_EXTERNAL_GCC_5=y
+ BR2_TOOLCHAIN_EXTERNAL_HEADERS_3_18=y
+ BR2_TOOLCHAIN_EXTERNAL_CUSTOM_GLIBC=y
+-BR2_MVEBU_RELEASE_NAME="16.02.0 ED"
++BR2_MVEBU_RELEASE_NAME="16.03.0"
+ BR2_ROOTFS_OVERLAY="user_files"
+ BR2_ROOTFS_POST_IMAGE_SCRIPT="board/marvell/scripts/filesystem-post-script.sh"
+ BR2_PACKAGE_MTD=y
+-- 
+1.9.1
+

@@ -1,0 +1,34 @@
+From f3ac0faa87c878f422e877d99b8dc49a1eae6750 Mon Sep 17 00:00:00 2001
+From: Shaker Daibes <shaker@marvell.com>
+Date: Sun, 9 Aug 2015 17:01:42 +0300
+Subject: [PATCH 0310/1240] uart: config: added explanation why we don't update
+ UART using FDT
+
+Change-Id: Ie8acd4b8bd8a4dd3dff729e84e1c705c7bdd60df
+Signed-off-by: Shaker Daibes <shaker@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22655
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/mvebu-common.h | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/include/configs/mvebu-common.h b/include/configs/mvebu-common.h
+index 19fd802..e11793d 100644
+--- a/include/configs/mvebu-common.h
++++ b/include/configs/mvebu-common.h
+@@ -198,6 +198,11 @@
+ 
+ /* UART */
+ #ifdef CONFIG_SYS_NS16550
++/* We keep the UART configuration in .h file, because the UART driver is basic driver for loading
++ * U-Boot, if there any issue in the driver or in FDT getting values or maybe in the values
++ * the U-Boot will stuck while loading it. For now we'll keep this defines here,
++ * and we can later move them to Kconfig.
++ */
+ 	#define CONFIG_SYS_NS16550_SERIAL
+ 	#define CONFIG_SYS_NS16550_MEM32
+ 	#define CONFIG_SYS_NS16550_REG_SIZE	(-4)
+-- 
+1.9.1
+

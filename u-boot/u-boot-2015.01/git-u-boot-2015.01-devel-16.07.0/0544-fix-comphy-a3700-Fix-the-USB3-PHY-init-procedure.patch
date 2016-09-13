@@ -1,0 +1,36 @@
+From 40dec60779c53998e95f972975c7e924ebbb832f Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Fri, 20 Nov 2015 05:17:39 +0200
+Subject: [PATCH 0544/1240] fix: comphy: a3700: Fix the USB3 PHY init procedure
+
+- Fix the wrong mask in USB3 PHY initialization
+
+Change-Id: I1a2c29732ea6762741a6212b1eff644e164f75ce
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25104
+Reviewed-by: Nadav Haklai <nadavh@marvell.com>
+Tested-by: Nadav Haklai <nadavh@marvell.com>
+(cherry picked from commit ad24e09a44797b030c6bd505fb9f8227b9dfaa4b)
+Reviewed-on: http://vgitil04.il.marvell.com:8080/25359
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/phy/comphy_a3700.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/phy/comphy_a3700.c b/drivers/phy/comphy_a3700.c
+index b2334f1..2830cc5 100644
+--- a/drivers/phy/comphy_a3700.c
++++ b/drivers/phy/comphy_a3700.c
+@@ -362,7 +362,7 @@ static int comphy_usb3_power_up(void)
+ 	 * 10. Release SW reset
+ 	 */
+ 	reg_set16((void __iomem *)GLOB_PHY_CTRL0_ADDR(USB3),
+-		  rb_mode_core_clk_freq_sel | rb_mode_pipe_width_32 | 0x20, bf_mode_refdiv);
++		  rb_mode_core_clk_freq_sel | rb_mode_pipe_width_32 | 0x20, 0xFFFF);
+ 
+ 	/* Wait for > 55 us to allow PCLK be enabled */
+ 	udelay(PLL_SET_DELAY_US);
+-- 
+1.9.1
+

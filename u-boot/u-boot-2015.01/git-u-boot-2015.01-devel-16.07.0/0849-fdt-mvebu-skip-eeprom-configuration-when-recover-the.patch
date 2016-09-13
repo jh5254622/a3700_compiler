@@ -1,0 +1,274 @@
+From 6320a28f244d3757fcd83ea4812b87651ee04c3b Mon Sep 17 00:00:00 2001
+From: Konstantin Porotchkin <kostap@marvell.com>
+Date: Sun, 7 Feb 2016 15:50:33 +0200
+Subject: [PATCH 0849/1240] fdt: mvebu: skip eeprom configuration when recover
+ the U-Boot image
+
+- Issue found when load bad device tree configuration stored in EEPROM,
+  load bad DT file will brick the board.
+- This patch add function that return if the U-Boot in recovery boot or not.
+- mvebu_is_in_recovery_mode() return true if load in recovery mode and false otherwise
+- for A8k: use BootROM silence flag and UART RX pin status in SPL stage .
+  The silence flag is always one when running boot from UART.
+  Additionally the RX pin is enabled in SPL when the system is
+  running boot from UART.
+- for A3700 reads the current boot device from reset sample and
+  assumes that recovery mode is activated by UART boot device.
+- SYSTEMSW-2255
+
+Change-Id: Ief7cd75003a8e98fd4ea20ca936cd570e12d0ac3
+Signed-off-by: Konstantin Porotchkin <kostap@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27323
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Hanna Hawa <hannah@marvell.com>
+---
+ arch/arm/cpu/armv8/armada8k/soc.c              | 49 ++++++++++++++++++++++++++
+ arch/arm/cpu/armv8/armadalp/mvebu_clock.c      |  1 +
+ arch/arm/cpu/armv8/armadalp/soc-init.c         | 21 ++++++++++-
+ arch/arm/include/asm/arch-armada8k/soc-info.h  |  5 +++
+ arch/arm/include/asm/arch-armadalp/clock.h     |  9 -----
+ arch/arm/include/asm/arch-armadalp/regs-base.h |  4 +++
+ arch/arm/include/asm/arch-armadalp/soc-info.h  | 19 ++++++++++
+ arch/arm/include/asm/arch-mvebu/soc.h          |  2 ++
+ arch/arm/include/asm/arch-mvebu/system_info.h  |  1 +
+ board/mvebu/common/cfg_eeprom.c                | 10 ++++--
+ 10 files changed, 108 insertions(+), 13 deletions(-)
+
+diff --git a/arch/arm/cpu/armv8/armada8k/soc.c b/arch/arm/cpu/armv8/armada8k/soc.c
+index bff34ca..840ead8 100644
+--- a/arch/arm/cpu/armv8/armada8k/soc.c
++++ b/arch/arm/cpu/armv8/armada8k/soc.c
+@@ -207,3 +207,52 @@ void board_usb_vbus_init(void)
+ 	/* TBD - implement VBUS cycle for here*/
+ }
+ #endif
++
++/************************************************************************
++   Function:  mvebu_is_in_recovery_mode
++
++   The function checks if the system currently boots into recovery mode.
++   The recovery mode is intended to bring up bricked board using UART
++   port as the boot device. This mode is either trigered by escape
++   sequence or by reset sample jumpers.
++   In case of A8K the recovery boot is always running in silent mode with
++   RX pin enabled. The UART RX pin is disabled in BootROM run time in all
++   other cases.
++
++   Return - 1 if recovery mode is active or 0 otherwise
++************************************************************************/
++bool mvebu_is_in_recovery_mode(void)
++{
++#ifdef CONFIG_SPL_BUILD
++	bool	recovery = 0;
++	/* UART RX pin numbers and their MPP functions */
++	int	uart_rx_pins[] = MPP_UART_RX_PINS;
++	int	uart_rx_func[] = MPP_UART_RX_FUNCTIONS;
++	int	i, pin, offs, func;
++
++	/* UART boot is always happen in silent mode */
++	if (gd->flags & GD_FLG_SILENT) {
++		for (i = 0; i < sizeof(uart_rx_pins)/sizeof(uart_rx_pins[0]); i++) {
++			/* Check if UART RX is enabled.
++			   This should only happen at the SPL (BIN header) stage
++			   when the system boots from UART (i.e. in recovery mode) */
++			   pin  = uart_rx_pins[i] % MPPS_PER_REG;
++			   offs = (uart_rx_pins[i] / MPPS_PER_REG) * 4;
++
++			   func = readl(MPP_REGS_BASE + offs);
++			   func >>= pin * MPP_BIT_CNT;
++			   func &= MPP_VAL_MASK;
++			if (func == uart_rx_func[i]) {
++				recovery = 1;
++				break;
++			}
++		}
++	}
++
++	set_info(RECOVERY_MODE, recovery);
++
++	return recovery;
++#else
++	return get_info(RECOVERY_MODE);
++#endif
++}
+diff --git a/arch/arm/cpu/armv8/armadalp/mvebu_clock.c b/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
+index dd9cac6..856baa0 100644
+--- a/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
++++ b/arch/arm/cpu/armv8/armadalp/mvebu_clock.c
+@@ -22,6 +22,7 @@
+ #include <asm/arch-mvebu/fdt.h>
+ #include <asm/arch-mvebu/mvebu.h>
+ #include <asm/arch-armadalp/clock.h>
++#include <asm/arch-armadalp/soc-info.h>	/* XTAL and Boot mode */
+ #include <asm/io.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+diff --git a/arch/arm/cpu/armv8/armadalp/soc-init.c b/arch/arm/cpu/armv8/armadalp/soc-init.c
+index e233ed6..2938228 100644
+--- a/arch/arm/cpu/armv8/armadalp/soc-init.c
++++ b/arch/arm/cpu/armv8/armadalp/soc-init.c
+@@ -234,4 +234,23 @@ void board_usb_vbus_init(void)
+ #endif /* CONFIG_DEVEL_BOARD */
+ 
+ }
+-#endif
++#endif /* CONFIG_USB_XHCI */
++
++/************************************************************************
++   Function:  mvebu_is_in_recovery_mode
++
++   The function checks if the system currently boots into recovery mode.
++   The recovery mode is intended to bring up bricked board using UART
++   port as the boot device. This mode is either trigered by escape
++   sequence or by reset sample jumpers.
++
++   Return - 1 if recovery mode is active or 0 otherwise
++************************************************************************/
++bool mvebu_is_in_recovery_mode(void)
++{
++	u32 regval;
++
++	/* Check if we are in UART recovery boot mode - currently selected by botstrap */
++	regval = (readl(MVEBU_TEST_PIN_LATCH_N) & MVEBU_BOOTMODE_MASK) >> MVEBU_BOOTMODE_OFFS;
++	return regval == MVEBU_BOOTMODE_UART;
++}
+diff --git a/arch/arm/include/asm/arch-armada8k/soc-info.h b/arch/arm/include/asm/arch-armada8k/soc-info.h
+index f49b4cd..4640deb 100644
+--- a/arch/arm/include/asm/arch-armada8k/soc-info.h
++++ b/arch/arm/include/asm/arch-armada8k/soc-info.h
+@@ -31,6 +31,11 @@
+ #define MPPS_PER_REG		(32 / MPP_BIT_CNT)
+ #define MAX_MPP_REGS		((MAX_MPP_ID + MPPS_PER_REG) / MPPS_PER_REG)
+ 
++/* MPP pins and functions correcsponding to UART RX connections
++   This information is used for detection of recovery boot mode (boot from UART) */
++#define MPP_UART_RX_PINS	{ 3, 5 }
++#define MPP_UART_RX_FUNCTIONS	{ 1, 2 }
++
+ /* Pin Ctrl driver definitions */
+ #define BITS_PER_PIN		4
+ #define PIN_FUNC_MASK		((1 << BITS_PER_PIN) - 1)
+diff --git a/arch/arm/include/asm/arch-armadalp/clock.h b/arch/arm/include/asm/arch-armadalp/clock.h
+index e68d226..8abf1f3 100644
+--- a/arch/arm/include/asm/arch-armadalp/clock.h
++++ b/arch/arm/include/asm/arch-armadalp/clock.h
+@@ -32,15 +32,6 @@
+ #define MVEBU_KVCO_MAX		3000
+ 
+ /****************/
+-/* REF Clock    */
+-/****************/
+-#define MVEBU_TEST_PIN_LATCH_N		(MVEBU_TESTPIN_NORTH_REG_BASE + 0x8)
+-#define MVEBU_XTAL_MODE_MASK		BIT9
+-#define MVEBU_XTAL_MODE_OFFS		9
+-#define MVEBU_XTAL_CLOCK_25MHZ		(0x0)
+-#define MVEBU_XTAL_CLOCK_40MHZ		(0x1)
+-
+-/****************/
+ /* North Bridge */
+ /****************/
+ #define MVEBU_NORTH_BRG_PLL_BASE		(MVEBU_NORTH_CLOCK_REGS_BASE + 0x200)
+diff --git a/arch/arm/include/asm/arch-armadalp/regs-base.h b/arch/arm/include/asm/arch-armadalp/regs-base.h
+index b001e20..492ea58 100644
+--- a/arch/arm/include/asm/arch-armadalp/regs-base.h
++++ b/arch/arm/include/asm/arch-armadalp/regs-base.h
+@@ -55,6 +55,9 @@
+ #define MVEBU_SOUTH_CLOCK_REGS_BASE	(MVEBU_REGS_BASE + 0x18000)
+ #define MVEBU_TESTPIN_NORTH_REG_BASE	(MVEBU_NORTH_CLOCK_REGS_BASE + 0x800)
+ 
++/* Reset sample */
++#define MVEBU_TEST_PIN_LATCH_N		(MVEBU_TESTPIN_NORTH_REG_BASE + 0x8)
++
+ /* PM */
+ #define MVEBU_NORTH_PM_REGS_BASE	(MVEBU_REGS_BASE + 0x14000)
+ #define MVEBU_SOUTH_PM_REGS_BASE	(MVEBU_REGS_BASE + 0x19000)
+@@ -65,4 +68,5 @@
+ /* AVS */
+ #define MVEBU_AVS_REGS_BASE		(MVEBU_REGS_BASE + 0x11500)
+ 
++
+ #endif	/* _REGS_BASE_H_ */
+diff --git a/arch/arm/include/asm/arch-armadalp/soc-info.h b/arch/arm/include/asm/arch-armadalp/soc-info.h
+index 68c3e51..b003717 100644
+--- a/arch/arm/include/asm/arch-armadalp/soc-info.h
++++ b/arch/arm/include/asm/arch-armadalp/soc-info.h
+@@ -42,4 +42,23 @@
+ #define PIN_REG_SHIFT		5
+ #define PIN_FIELD_MASK		((1 << PIN_REG_SHIFT) - 1)
+ 
++/********************************/
++/* REF Clock and Boot device    */
++/********************************/
++#define MVEBU_XTAL_MODE_MASK		BIT9
++#define MVEBU_XTAL_MODE_OFFS		(9)
++#define MVEBU_XTAL_CLOCK_25MHZ		(0x0)
++#define MVEBU_XTAL_CLOCK_40MHZ		(0x1)
++
++#define MVEBU_BOOTMODE_OFFS		(5)
++#define MVEBU_BOOTMODE_MASK		(0x7 << MVEBU_BOOTMODE_OFFS)
++#define MVEBU_BOOTMODE_NONE		(0)
++#define MVEBU_BOOTMODE_SPI_NOR		(1)
++#define MVEBU_BOOTMODE_EMMC_NORM	(2)
++#define MVEBU_BOOTMODE_EMMC_ALT		(3)
++#define MVEBU_BOOTMODE_SATA		(4)
++#define MVEBU_BOOTMODE_SPI_NAND		(5)
++#define MVEBU_BOOTMODE_UART		(6)
++#define MVEBU_BOOTMODE_RSRVD		(7)
++
+ #endif	/* _SOC_INFO_H_ */
+diff --git a/arch/arm/include/asm/arch-mvebu/soc.h b/arch/arm/include/asm/arch-mvebu/soc.h
+index 286d25c..ff62525 100644
+--- a/arch/arm/include/asm/arch-mvebu/soc.h
++++ b/arch/arm/include/asm/arch-mvebu/soc.h
+@@ -38,6 +38,8 @@ int mvebu_soc_init(void);
+ void mvebu_print_soc_info(void);
+ int init_func_i2c(void);
+ 
++bool mvebu_is_in_recovery_mode(void);
++
+ DECLARE_GLOBAL_DATA_PTR;
+ 
+ /* temporary - to be removed on migration of ICU */
+diff --git a/arch/arm/include/asm/arch-mvebu/system_info.h b/arch/arm/include/asm/arch-mvebu/system_info.h
+index 537bca1..94de2b2 100644
+--- a/arch/arm/include/asm/arch-mvebu/system_info.h
++++ b/arch/arm/include/asm/arch-mvebu/system_info.h
+@@ -33,6 +33,7 @@ enum sys_info_type {
+ 	DRAM_CS1,
+ 	DRAM_CS2,
+ 	DRAM_CS3,
++	RECOVERY_MODE,
+ 	MAX_OPTION,
+ };
+ 
+diff --git a/board/mvebu/common/cfg_eeprom.c b/board/mvebu/common/cfg_eeprom.c
+index 1fb21aa..45205da 100644
+--- a/board/mvebu/common/cfg_eeprom.c
++++ b/board/mvebu/common/cfg_eeprom.c
+@@ -350,7 +350,11 @@ default_id:
+ 	return MV_DEFAULT_BOARD_ID;
+ }
+ 
+-/* cfg_eeprom_init - initialize FDT configuration struct */
++/* cfg_eeprom_init - initialize FDT configuration struct
++
++   The EEPROM FDT is used if the checksum is valid and if the system
++   is not in recovery mode. Otherwise the default FDT is used.
++ */
+ int cfg_eeprom_init(void)
+ {
+ 	struct eeprom_struct eeprom_buffer;
+@@ -402,8 +406,8 @@ int cfg_eeprom_init(void)
+ 	calculate_checksum = cfg_eeprom_checksum8((uint8_t *)&eeprom_buffer.pattern,
+ 				(uint32_t) eeprom_buffer.length - 4);
+ 
+-	/* if checksum is valid */
+-	if (calculate_checksum == eeprom_buffer.checksum) {
++	/* if checksum is valid and not in recovery boot mode */
++	if (calculate_checksum == eeprom_buffer.checksum && !mvebu_is_in_recovery_mode()) {
+ 		/* update board_config_val struct with the read values from EEPROM */
+ 		board_config_val = eeprom_buffer;
+ 		/* if fdt_config is enabled, return - FDT already read in the struct from EEPROM */
+-- 
+1.9.1
+

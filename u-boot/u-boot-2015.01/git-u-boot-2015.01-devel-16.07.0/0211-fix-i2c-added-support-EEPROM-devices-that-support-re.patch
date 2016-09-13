@@ -1,0 +1,69 @@
+From ac45a8d4ae449f7b8d821961db808d1f9645a0bb Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 21 Jun 2015 19:01:53 +0300
+Subject: [PATCH 0211/1240] fix: i2c: added support EEPROM devices that support
+ read/write more than 256 byte
+
+- When using EEPROM devices that does not support more than 256 bytes offset,
+  and the read is 32bit chunk (alen = 2), the offset setting was done in 2 transactions.
+- This patch add variable to set if the EEPROM device support more than 256
+  byte offset.
+- For devices that does not support more than 256 byte, the read/write of 32bit
+  chunk (alen = 2) will be done in one transaction.
+
+Change-Id: I3ed0e80fc59be4b23d07a232fcf053ea7f05f0f2
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20330
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/dts/armada-385-db.dts | 1 +
+ drivers/i2c/mvebu_i2c.c        | 6 +++++-
+ 2 files changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm/dts/armada-385-db.dts b/arch/arm/dts/armada-385-db.dts
+index a9bcc7a..e635f2d 100644
+--- a/arch/arm/dts/armada-385-db.dts
++++ b/arch/arm/dts/armada-385-db.dts
+@@ -49,6 +49,7 @@
+ 				compatible = "marvell,mvebu-i2c";
+ 				reg = <0x11000 0x4>;
+ 				clock = <&tclk>;
++				support-256-offset;
+ 				status = "okay";
+ 			};
+ 
+diff --git a/drivers/i2c/mvebu_i2c.c b/drivers/i2c/mvebu_i2c.c
+index 56cc2e9..4869a07 100644
+--- a/drivers/i2c/mvebu_i2c.c
++++ b/drivers/i2c/mvebu_i2c.c
+@@ -70,6 +70,7 @@ struct  mvebu_i2c_regs {
+ struct mvebu_i2c_bus {
+ 	struct  mvebu_i2c_regs *i2c_reg;
+ 	u32 clock;
++	bool offset256;
+ 	bool status;
+ };
+ 
+@@ -320,7 +321,7 @@ static int mvebu_i2c_target_offset_set(int alen, uint addr)
+ 	u8 off_block[2];
+ 	u32 off_size;
+ 
+-	if (alen == 2) {
++	if (i2c_bus[gd->cur_i2c_bus].offset256) {
+ 		off_block[0] = (addr >> 8) & 0xff;
+ 		off_block[1] = addr & 0xff;
+ 		off_size = 2;
+@@ -380,6 +381,9 @@ static void mvebu_i2c_init(struct i2c_adapter *adap, int speed, int slaveaddr)
+ 			i2c_bus[gd->cur_i2c_bus].i2c_reg =
+ 				(struct  mvebu_i2c_regs *)fdt_get_regs_offs(gd->fdt_blob, node, "reg");
+ 			i2c_bus[gd->cur_i2c_bus].clock = soc_clock_get(gd->fdt_blob, node);
++			i2c_bus[gd->cur_i2c_bus].offset256 = false;
++			if (fdtdec_get_bool(gd->fdt_blob, node, "support-256-offset"))
++				i2c_bus[gd->cur_i2c_bus].offset256 = true;
+ 			i2c_bus[gd->cur_i2c_bus].status = true;
+ 		}
+ 	}
+-- 
+1.9.1
+

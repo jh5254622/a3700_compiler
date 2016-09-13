@@ -1,0 +1,43 @@
+From 492e56c3901abefbeb02a3311fc5b08add19316a Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Tue, 5 May 2015 14:54:21 +0300
+Subject: [PATCH 0182/1240] doimage: fixed baudrate option in cmd line
+ interface
+
+Change-Id: I2804cf4b48669275e71855885ef10d607fa9a6d6
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/18883
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ tools/doimage.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/tools/doimage.c b/tools/doimage.c
+index 37fa964..dd8a3ea 100644
+--- a/tools/doimage.c
++++ b/tools/doimage.c
+@@ -131,8 +131,8 @@ void usage(void)
+ 	printf("            These values are written before the execution of the boot image.\n");
+ 	printf("            Currently supports only a single file.\n");
+ 	printf("  -p        Parse and display a pre-built boot image\n");
+-	printf("  -d        Disable prints of bootrom and binary extension\n");
+-	printf("  -m        UART baudrate used for bootrom prints\n");
++	printf("  -m        Disable prints of bootrom and binary extension\n");
++	printf("  -u        UART baudrate used for bootrom prints. Must be multiple of 1200\n");
+ 	printf("  -h        Dispalys this help message\n");
+ 
+ 	exit(-1);
+@@ -721,6 +721,9 @@ int main(int argc, char *argv[])
+ 	if (opts.load_addr % 8)
+ 		usage_err("Load address must be 8 bytes aligned");
+ 
++	if (opts.baudrate % 1200)
++		usage_err("Baudrate must be a multiple of 1200");
++
+ 	/* The remaining arguments are the input
+ 	 * and potentially output file */
+ 
+-- 
+1.9.1
+

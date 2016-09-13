@@ -1,0 +1,31 @@
+From 47c8fbe0f0b09ab19149a905a833574a4719c733 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Thu, 15 Oct 2015 16:27:22 +0300
+Subject: [PATCH 0432/1240] fix: bubt: disable retry bubt command when pressing
+ enter
+
+Change-Id: I1496bf574f74a6b597c7ca63c84d934327284d41
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/24029
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ common/mvebu/cmd_bubt.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/common/mvebu/cmd_bubt.c b/common/mvebu/cmd_bubt.c
+index ca83a72..21a5e36 100644
+--- a/common/mvebu/cmd_bubt.c
++++ b/common/mvebu/cmd_bubt.c
+@@ -492,7 +492,7 @@ int do_bubt_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+ }
+ 
+ U_BOOT_CMD(
+-	bubt, 4, 1, do_bubt_cmd,
++	bubt, 4, 0, do_bubt_cmd,
+ 	"Burn a u-boot image to flash",
+ 	"[file-name] [destination [source]]\n"
+ 	"\t-file-name     The image file name to burn. default = u-boot.bin\n"
+-- 
+1.9.1
+

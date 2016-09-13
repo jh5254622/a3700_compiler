@@ -1,0 +1,43 @@
+From af5ba086fbb530087110c512b9c4deccad2d5166 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Wed, 25 Mar 2015 11:46:13 +0200
+Subject: [PATCH 0167/1240] config: changed environment to boot with ramfs
+
+Change-Id: I9f67ff133f2fca7f682781b0df421dee56f320b5
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/17825
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ include/configs/armada8k.h | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/include/configs/armada8k.h b/include/configs/armada8k.h
+index aef6094..4a29e2f 100644
+--- a/include/configs/armada8k.h
++++ b/include/configs/armada8k.h
+@@ -85,12 +85,19 @@
+ #define CONFIG_BAUDRATE                 24000
+ 
+ #undef CONFIG_BOOTARGS
+-#define CONFIG_BOOTARGS			"console=ttyS0,24000 earlycon=uart8250,mmio32,0xf0512000 mem=128M"
++#define CONFIG_BOOTARGS		"console=ttyS0,24000 earlycon=uart8250,mmio32,0xf0512000 " \
++				"mem=128M init=/bin/sh root=/dev/ram0 rw"
+ 
+ #undef  CONFIG_EXTRA_ENV_SETTINGS
+ #define CONFIG_EXTRA_ENV_SETTINGS	"kernel_addr=0x107ffc0\0"	\
+ 					"fdt_addr=0x1000000\0"		\
+-					"fdt_high=0xa0000000\0"
++					"ramfs_addr=0x3000000\0"	\
++					"fdt_high=0xa0000000\0"		\
++					"initrd_high=0xffffffffffffffff\0"
++
++#undef  CONFIG_BOOTCOMMAND
++#define CONFIG_BOOTCOMMAND		"bootm $kernel_addr $ramfs_addr $fdt_addr"
++
+ #endif /*CONFIG_PALLADIUM*/
+ 
+ 
+-- 
+1.9.1
+

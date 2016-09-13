@@ -1,0 +1,160 @@
+From c6bb3806573749f578d0cce88e83834256e20749 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Sun, 30 Aug 2015 09:50:42 +0300
+Subject: [PATCH 0384/1240] spi: Add support for 4 address cycles SPI flash
+
+	Support SPI-NOR flashes with 4 address cycles (> 16MB).
+	- Add a flag in the flash control structure to indicate support for 4
+	  address cycles.
+	- Fix address calculation to take this parameter into account when
+	  preparing the address commands.
+
+Change-Id: I8eb3c2f04d786e8cfaf95c0d969b241be1a15bec
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23293
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Neta Zur Hershkovits <neta@marvell.com>
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+---
+ drivers/mtd/spi/sf_internal.h |  4 +++-
+ drivers/mtd/spi/sf_ops.c      | 31 +++++++++++++++++++++----------
+ drivers/mtd/spi/sf_probe.c    |  1 +
+ include/spi_flash.h           |  3 +++
+ 4 files changed, 28 insertions(+), 11 deletions(-)
+
+diff --git a/drivers/mtd/spi/sf_internal.h b/drivers/mtd/spi/sf_internal.h
+index 785f7a9..982d82b 100644
+--- a/drivers/mtd/spi/sf_internal.h
++++ b/drivers/mtd/spi/sf_internal.h
+@@ -43,12 +43,14 @@ enum {
+ 	SST_BP		= 1 << 3,
+ 	SST_WP		= 1 << 4,
+ 	WR_QPP		= 1 << 5,
++	ADDR_CYC_4	= 1 << 6
+ };
+ 
+ #define SST_WR		(SST_BP | SST_WP)
+ 
+ #define SPI_FLASH_3B_ADDR_LEN		3
+-#define SPI_FLASH_CMD_LEN		(1 + SPI_FLASH_3B_ADDR_LEN)
++#define SPI_FLASH_4B_ADDR_LEN		4
++#define SPI_FLASH_CMD_LEN		(1 + SPI_FLASH_4B_ADDR_LEN)
+ #define SPI_FLASH_16MB_BOUN		0x1000000
+ 
+ /* CFI Manufacture ID's */
+diff --git a/drivers/mtd/spi/sf_ops.c b/drivers/mtd/spi/sf_ops.c
+index 34bc54e..e0fcd5d 100644
+--- a/drivers/mtd/spi/sf_ops.c
++++ b/drivers/mtd/spi/sf_ops.c
+@@ -17,12 +17,23 @@
+ 
+ #include "sf_internal.h"
+ 
+-static void spi_flash_addr(u32 addr, u8 *cmd)
++static void spi_flash_addr(u32 addr, u8 *cmd, u8 addr_cycles)
+ {
+ 	/* cmd[0] is actual command */
+-	cmd[1] = addr >> 16;
+-	cmd[2] = addr >> 8;
+-	cmd[3] = addr >> 0;
++	switch (addr_cycles) {
++	case(4):
++		cmd[1] = addr >> 24;
++		cmd[2] = addr >> 16;
++		cmd[3] = addr >> 8;
++		cmd[4] = addr;
++		break;
++	case(3):
++	default:
++		cmd[1] = addr >> 16;
++		cmd[2] = addr >> 8;
++		cmd[3] = addr >> 0;
++		break;
++	}
+ }
+ 
+ int spi_flash_cmd_read_status(struct spi_flash *flash, u8 *rs)
+@@ -270,12 +281,12 @@ int spi_flash_cmd_erase_ops(struct spi_flash *flash, u32 offset, size_t len)
+ 		if (ret < 0)
+ 			return ret;
+ #endif
+-		spi_flash_addr(erase_addr, cmd);
++		spi_flash_addr(erase_addr, cmd, flash->addr_cycles);
+ 
+ 		debug("SF: erase %2x %2x %2x %2x (%x)\n", cmd[0], cmd[1],
+ 		      cmd[2], cmd[3], erase_addr);
+ 
+-		ret = spi_flash_write_common(flash, cmd, sizeof(cmd), NULL, 0);
++		ret = spi_flash_write_common(flash, cmd, flash->addr_cycles + 1, NULL, 0);
+ 		if (ret < 0) {
+ 			debug("SF: erase failed\n");
+ 			break;
+@@ -319,12 +330,12 @@ int spi_flash_cmd_write_ops(struct spi_flash *flash, u32 offset,
+ 			chunk_len = min(chunk_len,
+ 					(size_t)flash->spi->max_write_size);
+ 
+-		spi_flash_addr(write_addr, cmd);
++		spi_flash_addr(write_addr, cmd, flash->addr_cycles);
+ 
+ 		debug("SF: 0x%p => cmd = { 0x%02x 0x%02x%02x%02x } chunk_len = %zu\n",
+ 		      buf + actual, cmd[0], cmd[1], cmd[2], cmd[3], chunk_len);
+ 
+-		ret = spi_flash_write_common(flash, cmd, sizeof(cmd),
++		ret = spi_flash_write_common(flash, cmd, flash->addr_cycles + 1,
+ 					buf + actual, chunk_len);
+ 		if (ret < 0) {
+ 			debug("SF: write failed\n");
+@@ -382,7 +393,7 @@ int spi_flash_cmd_read_ops(struct spi_flash *flash, u32 offset,
+ 		return 0;
+ 	}
+ 
+-	cmdsz = SPI_FLASH_CMD_LEN + flash->dummy_byte;
++	cmdsz = flash->addr_cycles + 1 + flash->dummy_byte;
+ 	cmd = calloc(1, cmdsz);
+ 	if (!cmd) {
+ 		debug("SF: Failed to allocate cmd\n");
+@@ -409,7 +420,7 @@ int spi_flash_cmd_read_ops(struct spi_flash *flash, u32 offset,
+ 		else
+ 			read_len = remain_len;
+ 
+-		spi_flash_addr(read_addr, cmd);
++		spi_flash_addr(read_addr, cmd, flash->addr_cycles);
+ 
+ 		ret = spi_flash_read_common(flash, cmd, cmdsz, data, read_len);
+ 		if (ret < 0) {
+diff --git a/drivers/mtd/spi/sf_probe.c b/drivers/mtd/spi/sf_probe.c
+index ce9987f..ec97b78 100644
+--- a/drivers/mtd/spi/sf_probe.c
++++ b/drivers/mtd/spi/sf_probe.c
+@@ -165,6 +165,7 @@ static int spi_flash_validate_params(struct spi_slave *spi, u8 *idcode,
+ 	}
+ 	flash->page_size <<= flash->shift;
+ 	flash->sector_size = params->sector_size << flash->shift;
++	flash->addr_cycles = ((params->flags & ADDR_CYC_4) ? 4 : 3);
+ 	flash->size = flash->sector_size * params->nr_sectors << flash->shift;
+ #ifdef CONFIG_SF_DUAL_FLASH
+ 	if (flash->dual_flash & SF_DUAL_STACKED_FLASH)
+diff --git a/include/spi_flash.h b/include/spi_flash.h
+index 5913b39..f4ae88d 100644
+--- a/include/spi_flash.h
++++ b/include/spi_flash.h
+@@ -44,6 +44,8 @@ struct spi_slave;
+  * @page_size:		Write (page) size
+  * @sector_size:	Sector size
+  * @erase_size:	Erase size
++ * @addr_cycles: Number of address cycles to be used when accessing the SPI
++ * flash (3 or 4).
+  * @bank_read_cmd:	Bank read cmd
+  * @bank_write_cmd:	Bank write cmd
+  * @bank_curr:		Current flash bank
+@@ -76,6 +78,7 @@ struct spi_flash {
+ 	u32 page_size;
+ 	u32 sector_size;
+ 	u32 erase_size;
++	u8 addr_cycles;
+ #ifdef CONFIG_SPI_FLASH_BAR
+ 	u8 bank_read_cmd;
+ 	u8 bank_write_cmd;
+-- 
+1.9.1
+

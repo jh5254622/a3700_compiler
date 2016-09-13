@@ -1,0 +1,135 @@
+From e00bd0c24d902c798b95c82850c436ca19092bbe Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Mon, 8 Feb 2016 10:40:55 +0200
+Subject: [PATCH 0832/1240] a3700: remove unused code from armv7
+
+Change-Id: I9a632b7d751faa307a7c6cebef21fbadc29c9fad
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27337
+Reviewed-by: Omri Itach <omrii@marvell.com>
+---
+ arch/arm/cpu/armv7/armadalp/Makefile   | 20 --------
+ arch/arm/cpu/armv7/armadalp/soc-init.c | 84 ----------------------------------
+ 2 files changed, 104 deletions(-)
+ delete mode 100644 arch/arm/cpu/armv7/armadalp/Makefile
+ delete mode 100644 arch/arm/cpu/armv7/armadalp/soc-init.c
+
+diff --git a/arch/arm/cpu/armv7/armadalp/Makefile b/arch/arm/cpu/armv7/armadalp/Makefile
+deleted file mode 100644
+index ad290db..0000000
+--- a/arch/arm/cpu/armv7/armadalp/Makefile
++++ /dev/null
+@@ -1,20 +0,0 @@
+-#
+-# ***************************************************************************
+-# Copyright (C) 2015 Marvell International Ltd.
+-# ***************************************************************************
+-# This program is free software: you can redistribute it and/or modify it
+-# under the terms of the GNU General Public License as published by the Free
+-# Software Foundation, either version 2 of the License, or any later version.
+-#
+-# This program is distributed in the hope that it will be useful,
+-# but WITHOUT ANY WARRANTY; without even the implied warranty of
+-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-# GNU General Public License for more details.
+-#
+-# You should have received a copy of the GNU General Public License
+-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-# ***************************************************************************
+-#
+-
+-obj-y += soc-init.o
+-obj-y += clock.o
+diff --git a/arch/arm/cpu/armv7/armadalp/soc-init.c b/arch/arm/cpu/armv7/armadalp/soc-init.c
+deleted file mode 100644
+index 980211e..0000000
+--- a/arch/arm/cpu/armv7/armadalp/soc-init.c
++++ /dev/null
+@@ -1,84 +0,0 @@
+-/*
+-* ***************************************************************************
+-* Copyright (C) 2015 Marvell International Ltd.
+-* ***************************************************************************
+-* This program is free software: you can redistribute it and/or modify it
+-* under the terms of the GNU General Public License as published by the Free
+-* Software Foundation, either version 2 of the License, or any later version.
+-*
+-* This program is distributed in the hope that it will be useful,
+-* but WITHOUT ANY WARRANTY; without even the implied warranty of
+-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-* GNU General Public License for more details.
+-*
+-* You should have received a copy of the GNU General Public License
+-* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-* ***************************************************************************
+-*/
+-
+-#define DEBUG
+-
+-#include <common.h>
+-#include <asm/io.h>
+-#include <asm/arch-mvebu/soc.h>
+-
+-int soc_early_init_f(void)
+-{
+-	return 0;
+-}
+-
+-int soc_get_id(void)
+-{
+-	/* TO-DO, get soc ID from PCIe register */
+-	/* in ArmadaLP, there is no device ID register, like A38x,
+-	    it needs to be got from PCIe register, like A370 and AXP */
+-	u32 id = 0x9991;
+-	return id;
+-}
+-
+-void soc_init(void)
+-{
+-	/* Do early SOC specific init here */
+-
+-	return;
+-}
+-
+-int dram_init(void)
+-{
+-#ifdef CONFIG_PALLADIUM
+-	/* NO DRAM init sequence in Pallaidum, so set static DRAM size of 256MB */
+-	gd->bd->bi_dram[0].start = 0;
+-	gd->bd->bi_dram[0].size = 0x10000000;
+-	gd->ram_size = gd->bd->bi_dram[0].size;
+-#else
+-	int cs;
+-	u32 ctrl, size, base;
+-
+-	gd->ram_size = 0;
+-	/*
+-	* We assume the DDR training code has configured
+-	* The SDRAM adec windows so we pull our info from there
+-	*/
+-
+-	for (cs = 0; cs < CONFIG_NR_DRAM_BANKS; cs++) {
+-		ctrl = readl(MBUS_SDRAM_CTRL_REG(cs));
+-		if (ctrl & MBUS_SDRAM_WIN_ENABLE) {
+-			base = readl(MBUS_SDRAM_BASE_REG(cs));
+-			size = (ctrl & MBUS_SDRAM_SIZE_MASK) + MBUS_SDRAM_SIZE_ALIGN;
+-			gd->bd->bi_dram[cs].start = base;
+-			gd->bd->bi_dram[cs].size = size;
+-
+-			gd->ram_size += size;
+-
+-			debug("DRAM bank %d base 0x%08x size 0x%x ", cs, base, size);
+-		}
+-	}
+-
+-	if (gd->ram_size == 0) {
+-		error("No DRAM banks detected");
+-		return 1;
+-	}
+-#endif
+-
+-	return 0;
+-}
+-- 
+1.9.1
+

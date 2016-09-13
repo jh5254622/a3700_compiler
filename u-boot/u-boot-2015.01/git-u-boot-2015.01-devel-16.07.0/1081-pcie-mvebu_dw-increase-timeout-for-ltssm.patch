@@ -1,0 +1,34 @@
+From 34e2826ed3299339bfd94de00508bdac4ed77f77 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Wed, 13 Apr 2016 11:03:44 +0300
+Subject: [PATCH 1081/1240] pcie: mvebu_dw: increase timeout for ltssm
+
+- With some devices LTSSM takes a lot of time to
+  reach the link up state, e.g.
+  with current 50ms timeout SSD's are never detected.
+- Increased timeout x2 (100ms).
+
+Change-Id: I070eda56a03c9a42043dc17beeceb48a38b26704
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29184
+Tested-by: Star_Automation <star@marvell.com>
+---
+ drivers/pci/pcie_mvebu_dw.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/pci/pcie_mvebu_dw.c b/drivers/pci/pcie_mvebu_dw.c
+index f7e978c..16b695d 100644
+--- a/drivers/pci/pcie_mvebu_dw.c
++++ b/drivers/pci/pcie_mvebu_dw.c
+@@ -63,7 +63,7 @@ static int mvebu_pcie_link_up(uintptr_t regs_base)
+ 		if ((reg & mask) == mask)
+ 			return 1;
+ 
+-		udelay(5);
++		udelay(10);
+ 		timeout--;
+ 	}
+ 
+-- 
+1.9.1
+

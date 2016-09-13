@@ -1,0 +1,631 @@
+From f3c649fb7640da6be4054cf7d9e6613bd81f1452 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 8 Jul 2015 13:44:37 +0300
+Subject: [PATCH 0249/1240] comphy: added basic support for COMPHY
+ initialization
+
+- The comphy driver:
+	- Read comphy configuration from FDT blob
+	- Initialize the MUX driver
+	- Run power up sequence
+
+Change-Id: I29d5b71df9f4cea96213b02430f8f8e1629e7d87
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/21131
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/include/asm/arch-mvebu/comphy.h      |  78 +++++++
+ doc/device-tree-bindings/README.mvebu         |   2 +
+ doc/device-tree-bindings/phy/mvebu_comphy.txt |  43 ++++
+ drivers/Kconfig                               |   2 +
+ drivers/phy/Kconfig                           |  10 +
+ drivers/phy/Makefile                          |   1 +
+ drivers/phy/comphy_core.c                     | 324 ++++++++++++++++++++++++++
+ include/dt-bindings/comphy/comphy_data.h      |  51 ++++
+ include/fdtdec.h                              |   2 +
+ lib/fdtdec.c                                  |   2 +
+ 10 files changed, 515 insertions(+)
+ create mode 100644 arch/arm/include/asm/arch-mvebu/comphy.h
+ create mode 100644 doc/device-tree-bindings/phy/mvebu_comphy.txt
+ create mode 100644 drivers/phy/Kconfig
+ create mode 100644 drivers/phy/Makefile
+ create mode 100644 drivers/phy/comphy_core.c
+ create mode 100644 include/dt-bindings/comphy/comphy_data.h
+
+diff --git a/arch/arm/include/asm/arch-mvebu/comphy.h b/arch/arm/include/asm/arch-mvebu/comphy.h
+new file mode 100644
+index 0000000..35f4a61
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/comphy.h
+@@ -0,0 +1,78 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _COMPHY_H_
++#define _COMPHY_H_
++
++#define MAX_LANE_OPTIONS 10
++
++enum phy_speed {
++	__1_25gbps,
++	__1_5gbps,
++	__2_5gbps,
++	__3gbps,
++	__3_125gbps,
++	__5gbps,
++	__6gbps,
++	__6_25gbps,
++	MAX_SERDES_SPEED,
++	INVALID_SPEED = 0xff
++};
++
++enum phy_type {
++	UNCONNECTED,
++	PEX0,
++	PEX1,
++	PEX2,
++	PEX3,
++	SATA0,
++	SATA1,
++	SATA2,
++	SATA3,
++	SGMII0,
++	SGMII1,
++	SGMII2,
++	QSGMII,
++	USB3_HOST0,
++	USB3_HOST1,
++	USB3_DEVICE,
++	XAUI,
++	RXAUI,
++	MAX_PHY_TYPE,
++	INVALID_TYPE = 0xff
++};
++
++struct comphy_map {
++	enum phy_type type;
++	enum phy_speed speed;
++};
++
++u32 comphy_init(const void *blob);
++
++#ifdef CONFIG_TARGET_ARMADA_38X
++struct comphy_mux_data *get_a38x_comphy_mux_data(void);
++#endif
++#ifdef CONFIG_TARGET_ARMADA_8K
++struct comphy_mux_data *get_ap806_comphy_mux_data(void);
++#endif
++#ifdef CONFIG_TARGET_CP110
++struct comphy_mux_data *get_cp110_comphy_mux_data(void);
++#endif
++
++#endif /* _COMPHY_H_ */
++
+diff --git a/doc/device-tree-bindings/README.mvebu b/doc/device-tree-bindings/README.mvebu
+index ee3bb7a..f3ec199 100644
+--- a/doc/device-tree-bindings/README.mvebu
++++ b/doc/device-tree-bindings/README.mvebu
+@@ -49,6 +49,8 @@ Group Ltd.
+ 			2.1.4 /soc/internal-regs/map-<DRIVER>:
+ 				Specify the address decoding interface, check doc/device-tree-bindings/misc/mvebu-bus-DRIVER.txt
+ 				DRIVER = ccu/iob/rfu/mbus
++			2.1.5 /soc/internal-regs/comphy:
++				Specify the COMPHY interface, check doc/device-tree-bindings/comphy/mvebu_comphy.txt
+ 
+ 3) /sar/ node:
+ 	Specify the sample at reset database, check
+diff --git a/doc/device-tree-bindings/phy/mvebu_comphy.txt b/doc/device-tree-bindings/phy/mvebu_comphy.txt
+new file mode 100644
+index 0000000..04da437
+--- /dev/null
++++ b/doc/device-tree-bindings/phy/mvebu_comphy.txt
+@@ -0,0 +1,43 @@
++Marvell COMPHY SerDes lane bindings
++=====================================
++
++The COMPHY node include description about the COMPHY SerDes lane configuration.
++The comphy driver initialize the MUX of the SerDes lanes, and power up the serdes
++by dependencies on the FDT blob configurations
++
++The COMPHY node requires the following properties:
++	- compatible:
++		the compatible should include "marvell,mvebu-comphy"
++		and the COMPHY per chip compatible:
++		"marvell,comphy-armada38x" for Armada-38x
++		the COMPHY per chip used to set which MUX configuration to use, and COMPHY power-up revision
++	- reg-comphy: the base address of the COMPHY units
++	- reg-hpipe3: the base address of the hpipe3 units
++	- max-lanes: maximum number of comphy lanes
++	- mux-bitcount: number of bits that allocated for every mux in the comphy-selector register
++	- phy: entry that include the configuration of the phy
++	  every phy should have the below parameters:
++	  - phy-type: the PHY type (SGMII0/SATA1/PEX2...), the posible modes under include/dt-bindings/comphy/comphy_data.h
++	  - phy-speed: the PHY speed (1G/1.5G...), the posible speeds under include/dt-bindings/comphy/comphy_data.h
++
++Example:
++	comphy {
++		compatible = "marvell,mvebu-comphy", "marvell,comphy-armada38x";
++		mux-bitcount = <4>;
++		max-comphy = <6>;
++		reg-comphy = <0x18300 0x100>;
++		reg-hpipe3 = <0xa0000 0x800>;
++		phy0 {
++			phy-type = <PHY_TYPE_SATA0>;
++			phy-speed = <PHY_SPEED_1_25G>;
++		};
++		phy1 {
++			phy-type = <PHY_TYPE_PEX0>;
++			phy-speed = <PHY_SPEED_5G>;
++		};
++		phy2 {
++			phy-type = <PHY_TYPE_PEX1>;
++			phy-speed = <PHY_SPEED_5G>;
++		};
++	};
++
+diff --git a/drivers/Kconfig b/drivers/Kconfig
+index 128736d..c560560 100644
+--- a/drivers/Kconfig
++++ b/drivers/Kconfig
+@@ -48,4 +48,6 @@ source "drivers/dma/Kconfig"
+ 
+ source "drivers/crypto/Kconfig"
+ 
++source "drivers/phy/Kconfig"
++
+ endmenu
+diff --git a/drivers/phy/Kconfig b/drivers/phy/Kconfig
+new file mode 100644
+index 0000000..01cab9f
+--- /dev/null
++++ b/drivers/phy/Kconfig
+@@ -0,0 +1,10 @@
++config MVEBU_COMPHY_SUPPORT
++	bool "ComPhy SerDes driver"
++	depends on SPL
++	default n
++	help
++	  Choose this option to add support
++	  for Comphy driver.
++	  This driver passes over the lanes
++	  and initialize the lane depends on the
++	  type and speed.
+diff --git a/drivers/phy/Makefile b/drivers/phy/Makefile
+new file mode 100644
+index 0000000..40b9cf8
+--- /dev/null
++++ b/drivers/phy/Makefile
+@@ -0,0 +1 @@
++obj-y += comphy_core.o
+diff --git a/drivers/phy/comphy_core.c b/drivers/phy/comphy_core.c
+new file mode 100644
+index 0000000..0811049
+--- /dev/null
++++ b/drivers/phy/comphy_core.c
+@@ -0,0 +1,324 @@
++/*
++* ***************************************************************************
++* Copyright (C) 2015 Marvell International Ltd.
++* ***************************************************************************
++* This program is free software: you can redistribute it and/or modify it
++* under the terms of the GNU General Public License as published by the Free
++* Software Foundation, either version 2 of the License, or any later version.
++*
++* This program is distributed in the hope that it will be useful,
++* but WITHOUT ANY WARRANTY; without even the implied warranty of
++* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++* GNU General Public License for more details.
++*
++* You should have received a copy of the GNU General Public License
++* along with this program.  If not, see <http://www.gnu.org/licenses/>.
++* ***************************************************************************
++*/
++/* #define DEBUG */
++#include <common.h>
++#include <fdtdec.h>
++#include <asm/io.h>
++#include <asm/arch-mvebu/fdt.h>
++#include <asm/arch-mvebu/mvebu.h>
++#include <asm/arch-mvebu/comphy.h>
++
++#define COMPHY_MAX_CHIP 4
++
++struct comphy_mux_options {
++	enum phy_type type;
++	u32 mux_value;
++};
++
++struct comphy_mux_data {
++	u32 max_lane_values;
++	struct comphy_mux_options mux_values[MAX_LANE_OPTIONS];
++};
++
++struct comphy_mux_data a38x_comphy_mux_data[] = {
++	{4, {{UNCONNECTED, 0x0}, {PEX0, 0x1}, {SATA0, 0x2}, {SGMII0, 0x3} } },
++	{8, {{UNCONNECTED, 0x0}, {PEX0, 0x1}, {PEX0, 0x2}, {SATA0, 0x3},
++		{SGMII0, 0x4}, {SGMII1, 0x5}, {USB3_HOST0, 0x6}, {QSGMII, 0x7} } },
++	{5, {{UNCONNECTED, 0x0}, {PEX1, 0x1}, {PEX0, 0x2}, {SATA1, 0x3}, {SGMII1, 0x4} } },
++	{7, {{UNCONNECTED, 0x0}, {PEX3, 0x1}, {PEX0, 0x2}, {SATA3, 0x3}, {SGMII2, 0x4},
++		{USB3_HOST0, 0x5}, {USB3_DEVICE, 0x6} } },
++	{7, {{UNCONNECTED, 0x0}, {PEX1, 0x1}, {SATA1, 0x2}, {SGMII1, 0x3}, {USB3_HOST0, 0x4},
++		{USB3_DEVICE, 0x5}, {SATA2, 0x6} } },
++	{6, {{UNCONNECTED, 0x0}, {PEX2, 0x1}, {SATA2, 0x2}, {SGMII2, 0x3}, {USB3_HOST1, 0x4},
++		{USB3_DEVICE, 0x5} } },
++};
++
++struct comphy_mux_data ap806_comphy_mux_data[] = {
++	{4, {{UNCONNECTED, 0x0}, {PEX0, 0x1}, {SATA0, 0x2}, {SGMII0, 0x3} } },
++	{8, {{UNCONNECTED, 0x0}, {PEX0, 0x1}, {PEX0, 0x2}, {SATA0, 0x3},
++		{SGMII0, 0x4}, {SGMII1, 0x5}, {USB3_HOST0, 0x6}, {QSGMII, 0x7} } },
++	{5, {{UNCONNECTED, 0x0}, {PEX1, 0x1}, {PEX0, 0x2}, {SATA1, 0x3}, {SGMII1, 0x4} } },
++	{7, {{UNCONNECTED, 0x0}, {PEX3, 0x1}, {PEX0, 0x2}, {SATA3, 0x3}, {SGMII2, 0x4},
++		{USB3_HOST0, 0x5}, {USB3_DEVICE, 0x6} } },
++	{7, {{UNCONNECTED, 0x0}, {PEX1, 0x1}, {SATA1, 0x2}, {SGMII1, 0x3}, {USB3_HOST0, 0x4},
++		{USB3_DEVICE, 0x5}, {SATA2, 0x6} } },
++	{6, {{UNCONNECTED, 0x0}, {PEX2, 0x1}, {SATA2, 0x2}, {SGMII2, 0x3}, {USB3_HOST1, 0x4},
++		{USB3_DEVICE, 0x5} } },
++};
++
++struct comphy_mux_data cp110_comphy_mux_data[] = {
++	{4, {{UNCONNECTED, 0x0}, {PEX0, 0x1}, {SATA0, 0x2}, {SGMII0, 0x3} } },
++	{8, {{UNCONNECTED, 0x0}, {PEX0, 0x1}, {PEX0, 0x2}, {SATA0, 0x3},
++		{SGMII0, 0x4}, {SGMII1, 0x5}, {USB3_HOST0, 0x6}, {QSGMII, 0x7} } },
++	{5, {{UNCONNECTED, 0x0}, {PEX1, 0x1}, {PEX0, 0x2}, {SATA1, 0x3}, {SGMII1, 0x4} } },
++	{7, {{UNCONNECTED, 0x0}, {PEX3, 0x1}, {PEX0, 0x2}, {SATA3, 0x3}, {SGMII2, 0x4},
++		{USB3_HOST0, 0x5}, {USB3_DEVICE, 0x6} } },
++	{7, {{UNCONNECTED, 0x0}, {PEX1, 0x1}, {SATA1, 0x2}, {SGMII1, 0x3}, {USB3_HOST0, 0x4},
++		{USB3_DEVICE, 0x5}, {SATA2, 0x6} } },
++	{6, {{UNCONNECTED, 0x0}, {PEX2, 0x1}, {SATA2, 0x2}, {SGMII2, 0x3}, {USB3_HOST1, 0x4},
++		{USB3_DEVICE, 0x5} } },
++};
++
++struct chip_serdes_phy_config {
++	enum fdt_compat_id compat;
++	struct comphy_mux_data *mux_data;
++	int (*ptr_serdes_phy_power_up)(struct chip_serdes_phy_config *, struct comphy_map *);
++	u32 comphy_base_addr;
++	u32 hpipe3_base_addr;
++	u32 comphy_lanes_count;
++	u32 comphy_mux_bitcount;
++};
++
++static int comphy_rev_2_1_power_up(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy_map *comphy_map_data)
++{
++	printf("COMPHY power up sequence revision 2.1\n");
++	return 0;
++}
++
++struct chip_serdes_phy_config chip_config[] = {
++#ifdef CONFIG_TARGET_ARMADA_38X
++	{.compat = COMPAT_COMPHY_ARMADA_38X,
++	 .mux_data = a38x_comphy_mux_data,
++	 .ptr_serdes_phy_power_up = comphy_rev_2_1_power_up },
++#endif
++#ifdef CONFIG_TARGET_ARMADA_8K
++	{.compat = COMPAT_COMPHY_AP806,
++	 .mux_data = ap806_comphy_mux_data,
++	 .ptr_serdes_phy_power_up = comphy_rev_2_1_power_up },
++#endif
++#ifdef CONFIG_TARGET_CP110
++	{.compat = CP110,
++	 .mux_data = cp110_comphy_mux_data,
++	 .ptr_serdes_phy_power_up = comphy_rev_3_1_power_up },
++#endif
++	{.compat = COMPAT_UNKNOWN}
++};
++
++struct chip_serdes_phy_config *get_chip_config(enum fdt_compat_id compat)
++{
++	struct chip_serdes_phy_config *ptr_chip_config = chip_config;
++
++	while (ptr_chip_config->compat != COMPAT_UNKNOWN) {
++		if (ptr_chip_config->compat == compat)
++			return ptr_chip_config;
++		ptr_chip_config++;
++	}
++	return NULL;
++}
++
++static char *get_speed_string(enum phy_speed speed)
++{
++	char *speed_strings[] = {"1.25Gbps", "1.5Gbps", "2.5Gbps", "3.0Gbps",
++				"3.25Gbps", "5Gbps", "6Gbps", "6.25Gbps"};
++	if (speed < __1_25gbps || speed > __6_25gbps)
++		return "invalid";
++	return speed_strings[speed];
++}
++
++static char *get_type_string(enum phy_type type)
++{
++	char *type_strings[] = {"unconnected", "PEX0", "PEX1", "PEX2", "PEX3",
++				"SATA0", "SATA1", "SATA2", "SATA3", "SGMII0",
++				"SGMII1", "SGMII2", "QSGMII", "USB3_HOST0",
++				"USB3_HOST1", "USB3_DEVICE", "XAUI", "RXAUI"};
++	if (type < UNCONNECTED || type > RXAUI)
++		return "invalid";
++	return type_strings[type];
++}
++
++/* comphy_mux_check_config
++ * description: this function passes over the COMPHY lanes and check if the type
++ *              is valid for specific lane. If the type is not valid, the function
++ *              update the struct and set the type of the lane as UNCONNECTED */
++static void comphy_mux_check_config(struct comphy_mux_data *mux_data,
++		struct comphy_map *comphy_map_data, int comphy_max_lanes)
++{
++	struct comphy_mux_options *ptr_mux_opt;
++	int lane, opt, valid;
++	debug_enter();
++
++	for (lane = 0; lane < comphy_max_lanes; lane++, comphy_map_data++, mux_data++) {
++		ptr_mux_opt = mux_data->mux_values;
++		for (opt = 0, valid = 0; opt < mux_data->max_lane_values; opt++, ptr_mux_opt++) {
++			if (ptr_mux_opt->type == comphy_map_data->type) {
++				valid = 1;
++				break;
++			}
++		}
++		if (valid == 0) {
++			debug("lane number %d, had invalid type %d\n", lane, comphy_map_data->type);
++			debug("set lane %d as type %d\n", lane, UNCONNECTED);
++			comphy_map_data->type = UNCONNECTED;
++		} else {
++			debug("lane number %d, has type %d\n", lane, comphy_map_data->type);
++		}
++	}
++	debug_exit();
++}
++
++static u32 comphy_mux_get_mux_value(struct comphy_mux_data *mux_data, enum phy_type type, int lane)
++{
++	struct comphy_mux_options *ptr_mux_opt;
++	int opt;
++	ptr_mux_opt = mux_data->mux_values;
++	for (opt = 0 ; opt < mux_data->max_lane_values; opt++, ptr_mux_opt++)
++		if (ptr_mux_opt->type == type)
++			return ptr_mux_opt->mux_value;
++	return 0;
++}
++
++static void comphy_mux_reg_write(struct comphy_mux_data *mux_data,
++		struct comphy_map *comphy_map_data, int comphy_max_lanes, u32 base_addr, u32 bitcount)
++{
++	u32 lane, reg_val;
++	u32 value, offset, mask;
++	u32 comphy_selector_base = base_addr + 0xfc;
++
++	for (lane = 0; lane < comphy_max_lanes; lane++, comphy_map_data++, mux_data++) {
++		offset = lane * bitcount;
++		mask = (((1 << bitcount) - 1) << offset);
++		value = (comphy_mux_get_mux_value(mux_data, comphy_map_data->type, lane) << offset);
++		reg_val = readl(comphy_selector_base);
++		debug("Write to address = %#010x, data = %#010x (mask = %#010x) - ", comphy_selector_base, value, mask);
++		debug("old value = %#010x ==> ", readl(comphy_selector_base));
++		reg_val &= ~mask;
++		reg_val |= value;
++		writel(reg_val, comphy_selector_base);
++		debug("new value %#010x\n", readl(comphy_selector_base));
++	}
++}
++
++static void comphy_mux_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy_map *comphy_map_data)
++{
++	struct comphy_mux_data *mux_data;
++	u32 comphy_base, mux_bitcount;
++	u32 comphy_max_lanes;
++
++	debug_enter();
++
++	comphy_max_lanes = ptr_chip_cfg->comphy_lanes_count;
++	mux_data = ptr_chip_cfg->mux_data;
++	comphy_base = ptr_chip_cfg->comphy_base_addr;
++	mux_bitcount = ptr_chip_cfg->comphy_mux_bitcount;
++
++	/* check if the configuration is valid */
++	comphy_mux_check_config(mux_data, comphy_map_data, comphy_max_lanes);
++	/* Init COMPHY selectors */
++	comphy_mux_reg_write(mux_data, comphy_map_data,	comphy_max_lanes, comphy_base, mux_bitcount);
++
++	debug_exit();
++}
++
++void comphy_print(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy_map *comphy_map_data)
++{
++	u32 lane;
++	char *speed_str, *type_str;
++
++	printf("COMPHY lanes details:\n");
++	printf(" | Lane # | Speed     | Type         |\n");
++	printf(" -------------------------------------\n");
++	for (lane = 0; lane < ptr_chip_cfg->comphy_lanes_count; lane++, comphy_map_data++) {
++		speed_str = get_speed_string(comphy_map_data->speed);
++		type_str = get_type_string(comphy_map_data->type);
++		printf(" |    %-4d| %-10s| %-13s|\n", lane, speed_str, type_str);
++	}
++	printf(" -------------------------------------\n");
++}
++
++u32 comphy_init(const void *blob)
++{
++	int node, sub_node, comphy_list[COMPHY_MAX_CHIP];
++	u32 lane, chip_count, i, max_comphy_count;
++	struct comphy_map comphy_map_data[MAX_LANE_OPTIONS];
++	struct chip_serdes_phy_config *ptr_chip_cfg;
++
++	debug_enter();
++	chip_count = fdtdec_find_aliases_for_id(blob, "comphy",
++			COMPAT_MVEBU_COMPHY, comphy_list, COMPHY_MAX_CHIP);
++
++	if (chip_count <= 0)
++		return 1;
++
++	printf("COMPHY init sequence\n");
++	for (i = 0; i < chip_count ; i++) {
++		node = comphy_list[i];
++		if (node <= 0)
++			continue;
++
++		ptr_chip_cfg = get_chip_config(fdtdec_next_lookup(blob, node, COMPAT_MVEBU_COMPHY));
++		if (ptr_chip_cfg == NULL) {
++			error("comaptible of comphy-chip is wrong\n");
++			continue;
++		}
++		ptr_chip_cfg->comphy_lanes_count = fdtdec_get_int(blob, node, "max-lanes", 0);
++		if (ptr_chip_cfg->comphy_lanes_count <= 0) {
++			error("comphy max lanes is wrong, skip PHY%d\n", i);
++			continue;
++		}
++		ptr_chip_cfg->comphy_mux_bitcount = fdtdec_get_int(blob, node, "mux-bitcount", 0);
++		if (ptr_chip_cfg->comphy_mux_bitcount <= 0) {
++			error("comphy mux bitcount is wrong, skip PHY%d\n", i);
++			continue;
++		}
++		ptr_chip_cfg->comphy_base_addr = (u32)fdt_get_regs_offs(blob, node, "reg-comphy");
++		if (ptr_chip_cfg->comphy_base_addr == 0) {
++			error("comphy base address is NULL, skip PHY%d\n", i);
++			continue;
++		}
++		ptr_chip_cfg->hpipe3_base_addr = (u32)fdt_get_regs_offs(blob, node, "reg-hpipe3");
++		if (ptr_chip_cfg->hpipe3_base_addr == 0) {
++			error("comphy hpipe3 address is NULL, skip PHY%d\n", i);
++			continue;
++		}
++
++		/* GET the count of the SerDes of the spesific chip */
++		sub_node = fdt_first_subnode(blob, node);
++		if (!sub_node) {
++			error("No configuration per PHY found\n");
++			continue;
++		}
++		max_comphy_count = ptr_chip_cfg->comphy_lanes_count;
++		lane = 0;
++		do {
++			comphy_map_data[lane].speed = fdtdec_get_int(blob, sub_node, "phy-speed", INVALID_SPEED);
++			comphy_map_data[lane].type = fdtdec_get_int(blob, sub_node, "phy-type", INVALID_TYPE);
++			if (comphy_map_data[lane].speed == INVALID_SPEED || comphy_map_data[lane].type == INVALID_TYPE)
++				printf("no phy speed or type for lane %d, setting lane as unconnedted\n", lane + 1);
++			sub_node = fdt_next_subnode(blob, sub_node);
++			lane++;
++		} while (sub_node > 0);
++		while (lane < max_comphy_count) {
++			printf("no phy configuration for lane %d, setting lane as unconnected\n", lane + 1);
++			comphy_map_data[lane].type = UNCONNECTED;
++			comphy_map_data[lane].speed = INVALID_SPEED;
++			lane++;
++		}
++
++		/* PHY mux initialize */
++		if (ptr_chip_cfg->comphy_base_addr != 0)
++			comphy_mux_init(ptr_chip_cfg, comphy_map_data);
++
++		/* PHY print SerDes status */
++		comphy_print(ptr_chip_cfg, comphy_map_data);
++		/* PHY power UP sequence */
++		ptr_chip_cfg->ptr_serdes_phy_power_up(ptr_chip_cfg, comphy_map_data);
++	}
++	debug_exit();
++
++	return 0;
++}
+diff --git a/include/dt-bindings/comphy/comphy_data.h b/include/dt-bindings/comphy/comphy_data.h
+new file mode 100644
+index 0000000..fc2613a
+--- /dev/null
++++ b/include/dt-bindings/comphy/comphy_data.h
+@@ -0,0 +1,51 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _COMPHY_DATA_H_
++#define _COMPHY_DATA_H_
++
++#define PHY_SPEED_1_25G		0
++#define PHY_SPEED_1_5G		1
++#define PHY_SPEED_2_5G		2
++#define PHY_SPEED_3G		3
++#define PHY_SPEED_3_125G		4
++#define PHY_SPEED_5G		5
++#define PHY_SPEED_6G		6
++#define PHY_SPEED_6_25G		7
++
++#define PHY_TYPE_UNCONNECTED		0
++#define PHY_TYPE_PEX0		1
++#define PHY_TYPE_PEX1		2
++#define PHY_TYPE_PEX2		3
++#define PHY_TYPE_PEX3		4
++#define PHY_TYPE_SATA0		5
++#define PHY_TYPE_SATA1		6
++#define PHY_TYPE_SATA2		7
++#define PHY_TYPE_SATA3		8
++#define PHY_TYPE_SGMII0		9
++#define PHY_TYPE_SGMII1		10
++#define PHY_TYPE_SGMII2		11
++#define PHY_TYPE_QSGMII		12
++#define PHY_TYPE_USB3_HOST0		13
++#define PHY_TYPE_USB3_HOST1		14
++#define PHY_TYPE_USB3_DEVICE		15
++#define PHY_TYPE_XAUI		16
++#define PHY_TYPE_RXAUI		17
++
++#endif /* _COMPHY_DATA_H_ */
++
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index f94a6e4..089ebcf 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -133,6 +133,8 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_RFU,
+ 	COMPAT_MVEBU_IOB,
+ 	COMPAT_MVEBU_PCIE,
++	COMPAT_MVEBU_COMPHY,
++	COMPAT_COMPHY_ARMADA_38X,
+ 
+ 	COMPAT_COUNT,
+ };
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index aeeaa2d..5387a37 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -95,6 +95,8 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_RFU, "marvell,mvebu-rfu"),
+ 	COMPAT(MVEBU_IOB, "marvell,mvebu-iob"),
+ 	COMPAT(MVEBU_PCIE, "marvell,mvebu-pcie"),
++	COMPAT(MVEBU_COMPHY, "marvell,mvebu-comphy"),
++	COMPAT(COMPHY_ARMADA_38X, "marvell,comphy-armada38x"),
+ };
+ 
+ const char *fdtdec_get_compatible(enum fdt_compat_id id)
+-- 
+1.9.1
+

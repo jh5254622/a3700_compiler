@@ -1,0 +1,32 @@
+From 2c370ccb858ac720c81ea37c64ffb1674b520062 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 5 Aug 2015 17:30:27 +0300
+Subject: [PATCH 0307/1240] ap806: update board name of AP-806 to
+ DB-88FA806-DDR4-MODULAR
+
+Change-Id: Ib532dea75bdab5af0e4d3c9458f0dd9f2a8d4623
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/22567
+Tested-by: Star_Automation <star@marvell.com>
+---
+ board/mvebu/armada8k/board-info.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/board/mvebu/armada8k/board-info.c b/board/mvebu/armada8k/board-info.c
+index 6adbee0..933b45d 100644
+--- a/board/mvebu/armada8k/board-info.c
++++ b/board/mvebu/armada8k/board-info.c
+@@ -26,8 +26,8 @@
+ /* Assuming their location is equal on all boards */
+ struct cfg_var a8k_cfg_lookup[MAX_CFG] = {
+ 	[BOARD_ID_CFG] = {0, 0, 3, 4, 0,
+-		{{ARMADA_8021_DB_ID, "DB-8021", VAR_IS_DEFUALT},
+-		 {ARMADA_8021_RD_ID, "RD-8021", 0},
++		{{ARMADA_8021_DB_ID, "DB-88FA806-DDR4-MODULAR", VAR_IS_DEFUALT},
++		 {ARMADA_8021_RD_ID, "RD-88FA806-DDR4-MODULAR", 0},
+ 		 {ARMADA_8022_DB_ID, "DB-8022", 0},
+ 		 {ARMADA_8022_RD_ID, "RD-8022", 0} },
+ 	},
+-- 
+1.9.1
+

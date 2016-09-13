@@ -1,0 +1,233 @@
+From b3728394cc0f969beceebb1cd89fac9f4e5e7e93 Mon Sep 17 00:00:00 2001
+From: Ken Ma <make@marvell.com>
+Date: Mon, 22 Feb 2016 22:47:30 +0800
+Subject: [PATCH 1132/1240] gpio: a3700: remove old armada3700 GPIO
+ implementation completely
+
+- Since now new general GPIO APIs and pinctrl are implementated and
+  applied, so the duplicated pin-ctrl codes are removed;
+- After the pin-ctrl clear work, the left unused old source file -
+  arch/arm/cpu/armv8/armada3700/mvebu_gpio.c is removed.
+
+Change-Id: I2a3ce38dd1685d15d05e3cdd0c8096ec9d524b86
+Signed-off-by: Ken Ma <make@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/27835
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Omri Itach <omrii@marvell.com>
+Reviewed-by: Wilson Ding <dingwei@marvell.com>
+---
+ arch/arm/cpu/armv8/armada3700/Makefile      |  1 -
+ arch/arm/cpu/armv8/armada3700/mvebu_gpio.c  | 89 -----------------------------
+ arch/arm/cpu/armv8/armada3700/spl.c         | 20 -------
+ arch/arm/include/asm/arch-armada3700/gpio.h | 12 ----
+ drivers/gpio/Kconfig                        | 10 ----
+ drivers/pci/pci_advk.c                      |  3 -
+ 6 files changed, 135 deletions(-)
+ delete mode 100644 arch/arm/cpu/armv8/armada3700/mvebu_gpio.c
+
+diff --git a/arch/arm/cpu/armv8/armada3700/Makefile b/arch/arm/cpu/armv8/armada3700/Makefile
+index 650b93d..11513a8 100644
+--- a/arch/arm/cpu/armv8/armada3700/Makefile
++++ b/arch/arm/cpu/armv8/armada3700/Makefile
+@@ -21,7 +21,6 @@ obj-$(CONFIG_SPL_BUILD) += spl.o
+ obj-y += clock.o
+ obj-$(CONFIG_ARMV8_PSCI)	+= psci.o
+ obj-$(CONFIG_MVEBU_A3700_IO_ADDR_DEC) += mvebu_io_addr_dec.o
+-obj-$(CONFIG_MVEBU_SPL_A3700_GPIO) += mvebu_gpio.o
+ obj-$(CONFIG_MVEBU_GPIO) += gpio.o
+ obj-$(CONFIG_MVEBU_A3700_MISC_INIT) += mvebu_misc_init.o
+ obj-$(CONFIG_MVEBU_A3700_CLOCK) += mvebu_clock.o
+diff --git a/arch/arm/cpu/armv8/armada3700/mvebu_gpio.c b/arch/arm/cpu/armv8/armada3700/mvebu_gpio.c
+deleted file mode 100644
+index 8e4873e..0000000
+--- a/arch/arm/cpu/armv8/armada3700/mvebu_gpio.c
++++ /dev/null
+@@ -1,89 +0,0 @@
+-/*
+- * ***************************************************************************
+- * Copyright (C) 2015 Marvell International Ltd.
+- * ***************************************************************************
+- * This program is free software: you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the Free
+- * Software Foundation, either version 2 of the License, or any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+- * ***************************************************************************
+- */
+-
+-#include <common.h>
+-#include <asm/io.h>
+-#include <asm/arch/gpio.h>
+-
+-/*
+- * reset PCIe device
+- */
+-void mvebu_reset_pcie_dev(void)
+-{
+-	u32 reg_val;
+-
+-	/* Set PCIe to GPIO mode */
+-	reg_val = readl(MVEBU_GPIO_SB_SEL_REG);
+-	reg_val |= (1 << MVEBU_GPIO_PCIE_EN_OFF);
+-	writel(reg_val, MVEBU_GPIO_SB_SEL_REG);
+-}
+-
+-/*
+- * initialize SB SDIO device
+- */
+-void mvebu_init_sdio(void)
+-{
+-	u32 reg_val;
+-
+-	/* Set test pin to SDIO mode */
+-	reg_val = readl(MVEBU_GPIO_SB_SEL_REG);
+-	reg_val &= ~(1 << MVEBU_GPIO_SB_SDIO_EN_OFF);
+-	writel(reg_val, MVEBU_GPIO_SB_SEL_REG);
+-}
+-
+-/*
+- * mvebu_init_gpio
+- *
+- * This function sets GPIO configuration for Armada3700
+- * by hardcoded value.
+- * And this routine (patch) will be removed (revert),
+- * and implemented by MPP/PIN-CTRL driver later.
+- *
+- */
+-void mvebu_init_gpio(void)
+-{
+-	u32 reg_val;
+-
+-	/*
+-	 * NETA GPIO
+-	 * on Palladium, RGMII is used
+-	 */
+-	reg_val = readl(MVEBU_GPIO_SB_SEL_REG);
+-	reg_val = reg_val & (~(1 << MVEBU_GPIO_RGMII_GPIO_EN_OFF));
+-	writel(reg_val, MVEBU_GPIO_SB_SEL_REG);
+-
+-	/*
+-	 * I2C, SPI GPIO
+-	 */
+-	reg_val = readl(MVEBU_GPIO_NB_SEL_REG);
+-	/* enable GPIO for I2C */
+-	reg_val = reg_val & (~(1 << MVEBU_GPIO_TW1_GPIO_EN_OFF));
+-	/* enable GPIO for SPI
+-	 * In A3700 Register Spec, it says that In North bridge GPIO configuration,
+-	 * bit 18 is for SPI quad mode, but this is not accurate description.
+-	 * In fact, bit 18 controls HOLD and WP pins for SPI, which is needed for all
+-	 * SPI mode, single, dual, and quad.
+-	 */
+-	reg_val = reg_val & (~(1 << MVEBU_GPIO_SPI_GPIO_EN_OFF));
+-	writel(reg_val, MVEBU_GPIO_NB_SEL_REG);
+-
+-	/* Set test pin to SDIO mode */
+-	mvebu_init_sdio();
+-
+-	return;
+-}
+diff --git a/arch/arm/cpu/armv8/armada3700/spl.c b/arch/arm/cpu/armv8/armada3700/spl.c
+index 6234ab3..7d676dc 100644
+--- a/arch/arm/cpu/armv8/armada3700/spl.c
++++ b/arch/arm/cpu/armv8/armada3700/spl.c
+@@ -21,7 +21,6 @@
+ #include <asm/arch-mvebu/io_addr_dec.h>
+ #include <asm/arch/clock.h>
+ #include <asm/arch-mvebu/mbus.h>
+-#include <asm/arch/gpio.h>
+ #include <asm/arch-mvebu/mvebu_misc.h>
+ #include <asm/arch/boot_mode.h>
+ #include <asm/arch-mvebu/ddr.h>
+@@ -51,25 +50,6 @@ void board_init_f(ulong silent)
+ 	     tree for the SoC, required for i2c initialization to read EEPROM data */
+ 	setup_fdt();
+ 
+-/* multi FDT feature reads eeprom, which requires I2C support
+- * but for Armada3700, I2C feature depends on GPIO configuration,
+- * so mvebu_setup_fdt need to be invoked after it.
+- *
+- * but GPIO driver also need to read FDT file, for reg base and
+- * other configurations. For reg base it is OK, since all the fdt
+- * files for all the boards should have the same value.
+- *
+- * as far as the I2C related GPIO settings, we will demand from HW that
+- * all Marvell boards will use the same set of I2C pins setup.
+- *
+- * GPIO need to be split into two stages: static shared (for I2C),
+- * and then dynamic-fdt-based. the first step will be done before
+- * mvebu_setup_fdt(), and the second one will be after it.
+- */
+-#ifdef CONFIG_MVEBU_SPL_A3700_GPIO
+-	mvebu_init_gpio();
+-#endif
+-
+ #ifdef CONFIG_BOARD_CONFIG_EEPROM
+ 	cfg_eeprom_init();
+ #endif
+diff --git a/arch/arm/include/asm/arch-armada3700/gpio.h b/arch/arm/include/asm/arch-armada3700/gpio.h
+index f82523f..f84b11e 100644
+--- a/arch/arm/include/asm/arch-armada3700/gpio.h
++++ b/arch/arm/include/asm/arch-armada3700/gpio.h
+@@ -20,20 +20,8 @@
+ #define _MVEBU_GPIO_H_
+ #include <asm/arch-mvebu/gpio.h>
+ 
+-#define MVEBU_GPIO_NB_SEL_REG			(MVEBU_GPIO_NB_REG_BASE + 0x30)
+-#define MVEBU_GPIO_TW1_GPIO_EN_OFF		(10)
+-#define MVEBU_GPIO_SPI_GPIO_EN_OFF		(18)
+-
+-#define MVEBU_GPIO_SB_SEL_REG			(MVEBU_GPIO_SB_REG_BASE + 0x30)
+-#define MVEBU_GPIO_SB_SDIO_EN_OFF		(2)
+-#define MVEBU_GPIO_RGMII_GPIO_EN_OFF		(3)
+-#define MVEBU_GPIO_PCIE_EN_OFF			(4)
+-
+ #define MVEBU_GPIO_MAX_PORTS	2	/* max number of ports per bank */
+ #define MVEBU_GPIO_BANKS	2	/* number of banks */
+ #define MVEBU_GPIOS_PER_PORT	32	/* number of gpios per port */
+ 
+-void mvebu_reset_pcie_dev(void);
+-void mvebu_init_gpio(void);
+-
+ #endif /* _MVEBU_GPIO_H_ */
+diff --git a/drivers/gpio/Kconfig b/drivers/gpio/Kconfig
+index ade18aa..dc530bd 100644
+--- a/drivers/gpio/Kconfig
++++ b/drivers/gpio/Kconfig
+@@ -35,14 +35,4 @@ config MVEBU_MPP_BUS
+ 	  for the mpp-bus driver. This driver
+ 	  is used for enabling or disabling mpp
+ 	  buses at runtime
+-
+-config MVEBU_SPL_A3700_GPIO
+-	bool "GPIO configuration for A3700 in SPL"
+-	depends on TARGET_ARMADA_3700
+-	default y
+-	help
+-	  Choose this option to enable GPIO
+-	  configuration for A3700 in SPL.
+-	  This will be removed later, and be
+-	  implemented by MPP/PIN-CTRL driver.
+ endmenu
+diff --git a/drivers/pci/pci_advk.c b/drivers/pci/pci_advk.c
+index d029cc6..408ccd8 100644
+--- a/drivers/pci/pci_advk.c
++++ b/drivers/pci/pci_advk.c
+@@ -437,9 +437,6 @@ static int advk_pcie_init(int host_id,
+ 	memset(hose, 0, sizeof(hose));
+ 
+ 	/* reset PCIe device in RC mode */
+-	/* now the gpio setting for reset is splitted from mvebu_reset_pcie_dev to advk_pcie_reset_dev */
+-	/* mvebu_reset_pcie_dev only do the pinctrl work, it will be removed in the future */
+-	mvebu_reset_pcie_dev();
+ 	advk_pcie_reset_dev(gpio);
+ 
+ 	/* start link training */
+-- 
+1.9.1
+

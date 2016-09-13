@@ -1,0 +1,58 @@
+From c4b0b6330ebe43e9f8960f0fc23cf6b305004f6a Mon Sep 17 00:00:00 2001
+From: Wilson Ding <dingwei@marvell.com>
+Date: Wed, 18 May 2016 00:22:19 +0800
+Subject: [PATCH 153/239] fix: a3700: clean up the build objects
+
+- fix the 'clean' section in wtp and wtmi Makefiles
+- move the atf_ntim.txt and ATF_TIM.bin to build folder
+
+Change-Id: I54b1dfcb68504ae304d369a30d6403a8a118291b
+Signed-off-by: Wilson Ding <dingwei@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29777
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Victor Gu <xigu@marvell.com>
+Reviewed-by: Kostya Porotchkin <kostap@marvell.com>
+---
+ Makefile                | 1 +
+ tools/wtp/Makefile      | 6 ++++--
+ tools/wtp/wtmi/Makefile | 2 +-
+ 3 files changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index e722f1e..16cfb59 100644
+--- a/Makefile
++++ b/Makefile
+@@ -693,6 +693,7 @@ fip: ${BUILD_PLAT}/${FIP_NAME} ${DOIMAGETOOL}
+ 	sed -i 's|BOOT_IMAGE|$(BUILD_PLAT)/$(BOOT_IMAGE)|1' $(DOIMAGE_CFG)
+ 	$(DOIMAGETOOL) $(DOIMAGE_FLAGS)
+ 	$(TIM2IMG) $(TIM2IMGARGS) -o $(BUILD_PLAT)/$(FLASH_IMAGE)
++	@mv -t $(BUILD_PLAT) $(TIM_IMAGE) $(DOIMAGE_CFG)
+ else
+ fip: ${BUILD_PLAT}/${FIP_NAME} ${DOIMAGETOOL} ${BUILD_PLAT}/ble.bin
+ 	$(shell truncate -s %128K ${BUILD_PLAT}/bl1.bin)
+diff --git a/tools/wtp/Makefile b/tools/wtp/Makefile
+index 26c7e9a..476c9da 100644
+--- a/tools/wtp/Makefile
++++ b/tools/wtp/Makefile
+@@ -1,4 +1,6 @@
+-
++all:
++	${MAKE} -C wtmi
+ 
+ clean:
+-	${MAKE} -C wtmi
++	${Q}${MAKE} --no-print-directory -C wtmi clean
++	@rm -f atf-ntim.txt
+diff --git a/tools/wtp/wtmi/Makefile b/tools/wtp/wtmi/Makefile
+index 9b7d6dc..7252700 100644
+--- a/tools/wtp/wtmi/Makefile
++++ b/tools/wtp/wtmi/Makefile
+@@ -7,4 +7,4 @@ all:
+ #	$(CROSS)objdump -D -S wtmi.elf > wtmi.dis
+ 
+ clean:
+-	@rm *.elf *.bin *dis 2>/dev/null
++	@rm -f *.o *.elf *.bin *dis
+-- 
+1.9.1
+

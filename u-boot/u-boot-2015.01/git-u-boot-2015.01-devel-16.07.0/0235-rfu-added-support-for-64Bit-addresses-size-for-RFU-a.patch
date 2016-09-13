@@ -1,0 +1,192 @@
+From 7702947c08cc39e30e6550759af4bb3902777a64 Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Tue, 30 Jun 2015 14:03:49 +0300
+Subject: [PATCH 0235/1240] rfu: added support for 64Bit addresses/size for RFU
+ address decoding driver
+
+Change-Id: Ia84691871fdcf53c58b43331e00fc1c039d578a6
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20594
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/dts/apn-806.dtsi                   |  4 +--
+ doc/device-tree-bindings/misc/mvebu-rfu.txt | 26 +++++++++++----
+ drivers/misc/mvebu_rfu.c                    | 50 ++++++++++++++++++-----------
+ 3 files changed, 54 insertions(+), 26 deletions(-)
+
+diff --git a/arch/arm/dts/apn-806.dtsi b/arch/arm/dts/apn-806.dtsi
+index f09eec4..ebbd1f0 100644
+--- a/arch/arm/dts/apn-806.dtsi
++++ b/arch/arm/dts/apn-806.dtsi
+@@ -79,8 +79,8 @@
+ 			rfu {
+ 				compatible = "marvell,mvebu-rfu";
+ 				reg = <0x6f0000 0x50>;
+-				windows = <0xfe000000 0x1f00000 0x05 /* PCIe window 31Mb for PCIe port*/
+-					0xffe00000 0x100000 0x03 /* PCI-REG window 64Kb for PCIe-reg*/>;
++				windows = <0x0 0xfe000000 0x0 0x1f00000 0x05 /* PCIe window 31Mb for PCIe port*/
++					0x0 0xffe00000 0x0 0x100000 0x03 /* PCI-REG window 64Kb for PCIe-reg*/>;
+ 			};
+ 		};
+ 		pcie-controller {
+diff --git a/doc/device-tree-bindings/misc/mvebu-rfu.txt b/doc/device-tree-bindings/misc/mvebu-rfu.txt
+index 88b43f0..b54f875 100644
+--- a/doc/device-tree-bindings/misc/mvebu-rfu.txt
++++ b/doc/device-tree-bindings/misc/mvebu-rfu.txt
+@@ -13,19 +13,33 @@ following targets:
+ 	0x5 = PCIe port
+ 
+ The RFU node requires the following properties:
+-	- compatible: the compatible of the driver
++	- compatible
++		should be "marvell,mvebu-rfu"
+ 	- reg: the base address of the RFU window
+ 	- max-win: number of the max mbus windows
+ 	- windows: entry that include the configuration of the windows
+-	  every window should have 3 parameters:
+-	  - base address of the window
+-	  - size of the window
++	  every window should have 5 parameters:
++	  - high base address of the window
++	  - low base address of the window
++	  - high size of the window
++	  - low size of the window
+ 	  - target-id of the window
+ 
++Note: if the base address is more than 32bit, it divided into high and low,
++	same for size field, if it more that 32bit, it divided for high and low.
++	Base example:
++		base address: 0x10f0000000 should divided into:
++		base address high: 0x10
++		base address low: 0xf0000000
++	Size example:
++		size: 0x1E00F00000 should divided into:
++		size high: 0x1E
++		size low: 0x00F00000
++
+ Example:
+ 	rfu {
+ 		compatible = "marvell,mvebu-rfu";
+ 		reg = <0x6f0000 0x50>;
+-		windows = <0xf2000000 0x40000000 0x05 /* PCIe window */
+-			0xf6000000 0x20000000 0x02 /* SPI window */>;
++		windows = <0x0 0xf2000000 0x0 0x40000000 0x05 /* PCIe window */
++			0x0 0xf6000000 0x0 0x20000000 0x02 /* SPI window */>;
+ 	};
+diff --git a/drivers/misc/mvebu_rfu.c b/drivers/misc/mvebu_rfu.c
+index 4bb6af2..d10aa1d 100644
+--- a/drivers/misc/mvebu_rfu.c
++++ b/drivers/misc/mvebu_rfu.c
+@@ -41,8 +41,10 @@ DECLARE_GLOBAL_DATA_PTR;
+ void __iomem *rfu_base;
+ 
+ struct rfu_win {
+-	u32 base_addr;
+-	u32 win_size;
++	u32 base_addr_high;
++	u32 base_addr_low;
++	u32 win_size_high;
++	u32 win_size_low;
+ 	u32 target_id;
+ };
+ 
+@@ -58,13 +60,17 @@ enum rfu_target_ids {
+ 
+ static void rfu_win_check(struct rfu_win *win, u32 win_num)
+ {
++	u64 base_addr, win_size;
+ 	u32 alignment_value = RFU_WIN_ALIGNMENT_1M;
+ 	/* for RFU The base is always 1M aligned */
+ 	/* check if address is aligned to 1M */
+-	if (IS_NOT_ALIGN(win->base_addr, RFU_WIN_ALIGNMENT_1M)) {
+-		win->base_addr = ALIGN_UP(win->base_addr, RFU_WIN_ALIGNMENT_1M);
++	base_addr = ((u64)win->base_addr_high << 32) + win->base_addr_low;
++	if (IS_NOT_ALIGN(base_addr, RFU_WIN_ALIGNMENT_1M)) {
++		base_addr = ALIGN_UP(base_addr, RFU_WIN_ALIGNMENT_1M);
+ 		error("Window %d: base address unaligned to 0x%x\n", win_num, RFU_WIN_ALIGNMENT_1M);
+-		printf("Align up the base address to 0x%x\n", win->base_addr);
++		printf("Align up the base address to 0x%llx\n", base_addr);
++		win->base_addr_high = (u32)(base_addr >> 32);
++		win->base_addr_low = (u32)(base_addr);
+ 	}
+ 
+ 	/* targets that have AHR must have size aligned to 1M.
+@@ -72,10 +78,13 @@ static void rfu_win_check(struct rfu_win *win, u32 win_num)
+ 	if (win->target_id == BOOTROM_TID || win->target_id == PCIE_REGS_TID)
+ 		alignment_value = RFU_WIN_ALIGNMENT_64K;
+ 	/* size parameter validity check */
+-	if (IS_NOT_ALIGN(win->win_size, alignment_value)) {
+-		win->win_size = ALIGN_UP(win->win_size, alignment_value);
++	win_size = ((u64)win->win_size_high << 32) + win->win_size_low;
++	if (IS_NOT_ALIGN(win_size, alignment_value)) {
++		win_size = ALIGN_UP(win_size, alignment_value);
+ 		error("Window %d: window size unaligned to 0x%x\n", win_num, alignment_value);
+-		printf("Aligning size to 0x%x\n", win->win_size);
++		printf("Aligning size to 0x%llx\n", win_size);
++		win->win_size_high = (u32)(win_size >> 32);
++		win->win_size_low = (u32)(win_size);
+ 	}
+ }
+ 
+@@ -104,10 +113,11 @@ static void *rfu_ahr_offset_get(u32 trgt_id)
+ static void rfu_enable_win(struct rfu_win *win, u32 trgt_id)
+ {
+ 	u32 alr, ahr;
+-	uintptr_t end_addr;
++	u64 start_addr, end_addr;
+ 
+-	end_addr = (win->base_addr + win->win_size - 1);
+-	alr = (u32)((win->base_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
++	start_addr = ((u64)win->base_addr_high << 32) + win->base_addr_low;
++	end_addr = (start_addr + (((u64)win->win_size_high << 32) + win->win_size_low) - 1);
++	alr = (u32)((start_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
+ 	alr |= WIN_ENABLE_BIT;
+ 	writel(alr, rfu_alr_offset_get(trgt_id));
+ 
+@@ -123,7 +133,7 @@ void dump_rfu(void)
+ {
+ 	u32 trgt_id;
+ 	u32 alr, ahr;
+-	uintptr_t start, end;
++	u64 start, end;
+ 	char *rfu_target_name[RFU_MAX_TID] = {"BootRoom ", "STM      ", "SPI      ",
+ 					"PCIe-reg ", "IHB-Port ", "PCIe-Port"};
+ 
+@@ -134,10 +144,13 @@ void dump_rfu(void)
+ 		alr = readl(rfu_alr_offset_get(trgt_id));
+ 		if (alr & WIN_ENABLE_BIT) {
+ 			alr &= ~WIN_ENABLE_BIT;
+-			ahr = readl(rfu_ahr_offset_get(trgt_id));
+-			start = (uintptr_t)(alr << ADDRESS_SHIFT);
+-			end = (uintptr_t)((ahr + 0x10) << ADDRESS_SHIFT);
+-			printf("rfu   %s  0x%016lx 0x%016lx\n", rfu_target_name[trgt_id], start, end);
++			if (trgt_id == BOOTROM_TID || trgt_id == PCIE_REGS_TID)
++				ahr = alr;
++			else
++				ahr = readl(rfu_ahr_offset_get(trgt_id));
++			start = ((u64)alr << ADDRESS_SHIFT);
++			end = (((u64)ahr + 0x10) << ADDRESS_SHIFT);
++			printf("rfu   %s  0x%016llx 0x%016llx\n", rfu_target_name[trgt_id], start, end);
+ 		}
+ 	}
+ 	printf("rfu   PIDI-port  - all other IO transactions\n");
+@@ -171,12 +184,13 @@ int init_rfu(void)
+ 	}
+ 
+ 	/* Get the array of the windows and fill the map data */
+-	win_count = fdtdec_get_int_array_count(blob, node, "windows", (u32 *)memory_map, RFU_MAX_TID * 3);
++	win_count = fdtdec_get_int_array_count(blob, node, "windows", (u32 *)memory_map, RFU_MAX_TID * 5);
+ 	if (win_count <= 0) {
+ 		debug("no windows configurations found\n");
+ 		return 0;
+ 	}
+-	win_count = win_count/3; /* every window had 3 variables in FDT (base, size, target id) */
++	win_count = win_count/5; /* every window had 5 variables in FDT:
++				    base high, base low, size high, size low, target id) */
+ 
+ 	/* disable all RFU windows */
+ 	for (trgt_id = 0; trgt_id < RFU_MAX_TID; trgt_id++) {
+-- 
+1.9.1
+

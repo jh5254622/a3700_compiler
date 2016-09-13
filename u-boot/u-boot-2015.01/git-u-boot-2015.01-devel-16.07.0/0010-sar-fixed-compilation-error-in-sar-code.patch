@@ -1,0 +1,32 @@
+From cb00cb7d1a2bb4a9ae1e021ed13de2269ace9a7c Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Tue, 25 Feb 2014 13:59:20 +0200
+Subject: [PATCH 0010/1240] sar: fixed compilation error in sar code
+
+Change-Id: I1e83367c620fcca30b186013a3e5bf24b3fc1d54
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ board/mvebu/common/board-common.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/board/mvebu/common/board-common.c b/board/mvebu/common/board-common.c
+index b6d8d48..6c229d8 100644
+--- a/board/mvebu/common/board-common.c
++++ b/board/mvebu/common/board-common.c
+@@ -66,10 +66,10 @@ int common_board_init(struct mvebu_board_family *board_family)
+ 				 curr_board->unit_update_mode);
+ 
+ 	/* Update sar tables */
+-	if (curr_board->configurable) {
++	/*if (curr_board->configurable) {
+ 		if (curr_board->config_data->sar_override)
+-			/* update_sar_table();*/
+-	}
++			update_sar_table();
++	}*/
+ 
+ 	return 0;
+ }
+-- 
+1.9.1
+

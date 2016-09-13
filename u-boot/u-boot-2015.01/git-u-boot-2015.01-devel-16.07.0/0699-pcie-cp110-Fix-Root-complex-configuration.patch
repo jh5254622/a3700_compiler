@@ -1,0 +1,32 @@
+From 81b61f23d3b9cde07cde45d99f9b2d3ad4f0a442 Mon Sep 17 00:00:00 2001
+From: Shadi Ammouri <shadi@marvell.com>
+Date: Mon, 18 Jan 2016 13:47:15 +0200
+Subject: [PATCH 0699/1240] pcie: cp110: Fix Root complex configuration
+
+	Set PCIe root complex correctly in PCIe global control regs.
+
+Change-Id: I4a8f5f731d8569f303851efbe891ed5377eb0173
+Signed-off-by: Shadi Ammouri <shadi@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/26840
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ drivers/pci/pcie_mvebu_dw.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/pci/pcie_mvebu_dw.c b/drivers/pci/pcie_mvebu_dw.c
+index b036841..d10c984 100644
+--- a/drivers/pci/pcie_mvebu_dw.c
++++ b/drivers/pci/pcie_mvebu_dw.c
+@@ -40,7 +40,7 @@ DECLARE_GLOBAL_DATA_PTR;
+ #define PCIE_DEVICE_TYPE_MASK		(0xF)
+ #define PCIE_DEVICE_TYPE_EP		(0x0) /* Endpoint */
+ #define PCIE_DEVICE_TYPE_LEP		(0x1) /* Legacy endpoint */
+-#define PCIE_DEVICE_TYPE_RC		(0x2) /* Root complex */
++#define PCIE_DEVICE_TYPE_RC		(0x4) /* Root complex */
+ 
+ #define PCIE_GLOBAL_STATUS		0x8008
+ #define PCIE_GLB_STS_RDLH_LINK_UP	(1 << 1)
+-- 
+1.9.1
+

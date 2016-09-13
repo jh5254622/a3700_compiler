@@ -1,0 +1,419 @@
+From 6ec9fbfe2e8768cb98e81121221ab8c82b926cac Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Sun, 21 Jun 2015 14:04:08 +0300
+Subject: [PATCH 0216/1240] address decoding: add IOB driver, with FDT support
+
+Change-Id: Ia68483df1347cf743a2aa50bb118de0884860b3c
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/20311
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/soc-init.c        |   6 +
+ arch/arm/include/asm/arch-mvebu/iob.h       |  26 ++++
+ common/mvebu/cmd_misc.c                     |   6 +
+ doc/device-tree-bindings/misc/mvebu-iob.txt |  40 ++++++
+ drivers/misc/Kconfig                        |   9 ++
+ drivers/misc/Makefile                       |   1 +
+ drivers/misc/mvebu_iob.c                    | 205 ++++++++++++++++++++++++++++
+ include/fdtdec.h                            |   1 +
+ lib/fdtdec.c                                |   1 +
+ 9 files changed, 295 insertions(+)
+ create mode 100644 arch/arm/include/asm/arch-mvebu/iob.h
+ create mode 100644 doc/device-tree-bindings/misc/mvebu-iob.txt
+ create mode 100644 drivers/misc/mvebu_iob.c
+
+diff --git a/arch/arm/cpu/mvebu-common/soc-init.c b/arch/arm/cpu/mvebu-common/soc-init.c
+index 1f48170..26acd16 100644
+--- a/arch/arm/cpu/mvebu-common/soc-init.c
++++ b/arch/arm/cpu/mvebu-common/soc-init.c
+@@ -33,6 +33,9 @@
+ #ifdef CONFIG_MVEBU_RFU
+ #include <asm/arch-mvebu/rfu.h>
+ #endif
++#ifdef CONFIG_MVEBU_IOB
++#include <asm/arch-mvebu/iob.h>
++#endif
+ #ifdef CONFIG_MVEBU_MBUS
+ #include <asm/arch-mvebu/mbus.h>
+ #endif
+@@ -105,6 +108,9 @@ int mvebu_soc_init()
+ #ifdef CONFIG_MVEBU_RFU
+ 	init_rfu();
+ #endif
++#ifdef CONFIG_MVEBU_IOB
++	init_iob();
++#endif
+ #ifdef CONFIG_MVEBU_MBUS
+ 	init_mbus();
+ #endif
+diff --git a/arch/arm/include/asm/arch-mvebu/iob.h b/arch/arm/include/asm/arch-mvebu/iob.h
+new file mode 100644
+index 0000000..5aa28ca
+--- /dev/null
++++ b/arch/arm/include/asm/arch-mvebu/iob.h
+@@ -0,0 +1,26 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++#ifndef _IOB_H_
++#define _IOB_H_
++
++void dump_iob(void);
++int init_iob(void);
++
++#endif /* _IOB_H_ */
++
+diff --git a/common/mvebu/cmd_misc.c b/common/mvebu/cmd_misc.c
+index 99074c3..12880a1 100644
+--- a/common/mvebu/cmd_misc.c
++++ b/common/mvebu/cmd_misc.c
+@@ -31,6 +31,9 @@
+ #ifdef CONFIG_MVEBU_RFU
+ #include <asm/arch-mvebu/rfu.h>
+ #endif
++#ifdef CONFIG_MVEBU_IOB
++#include <asm/arch-mvebu/iob.h>
++#endif
+ #ifdef CONFIG_MVEBU_MBUS
+ #include <asm/arch-mvebu/mbus.h>
+ #endif
+@@ -44,6 +47,9 @@ int do_map_cmd(cmd_tbl_t *cmdtp, int flag, int argc,
+ #ifdef CONFIG_MVEBU_RFU
+ 	dump_rfu();
+ #endif
++#ifdef CONFIG_MVEBU_IOB
++	dump_iob();
++#endif
+ #ifdef CONFIG_MVEBU_MBUS
+ 	dump_mbus();
+ #endif
+diff --git a/doc/device-tree-bindings/misc/mvebu-iob.txt b/doc/device-tree-bindings/misc/mvebu-iob.txt
+new file mode 100644
+index 0000000..e6b6418
+--- /dev/null
++++ b/doc/device-tree-bindings/misc/mvebu-iob.txt
+@@ -0,0 +1,40 @@
++Marvell IOB address decoding bindings
++=====================================
++
++The IOB node include describtion about the address decoding configuration.
++
++IOB supports up to n (in CP110 n=24) windows for external memory transaction.
++When a transaction passes through the IOB, its address is compared to each of
++the enabled windows. If there is a hit and it passes the security checks it is
++advances to the target port.
++
++The IOB node requires the following properties:
++	- compatible
++		should be "marvell,mvebu-iob"
++	- reg: the base address of the IOB unit
++	- max-win: number of the max mbus windows
++	- windows: entry that include the configuration of the windows
++	  every window should have 3 parameters:
++	  - base address of the window
++	  - size of the window
++	  - target-id of the window
++
++Target ID options:
++	- 0x0 = Internal configuration space
++	- 0x1 = IHB0
++	- 0x2 = PEX1_X1
++	- 0x3 = PEX2_X1
++	- 0x4 = PEX0_X4
++	- 0x5 = NAND flash
++	- 0x6 = RUNIT (NOR/SPI/BootRoom)
++	- 0x7 = IHB1
++
++Example:
++	map-iob {
++		compatible = "marvell,mvebu-iob";
++		reg = <0x190000 0x50>;
++		max-win = <24>;
++		windows = <0xf8000000 0x1000000 0x2 /* PEX1_X1 window */
++				0xf9000000 0x1000000 0x5 /* NAND window */>;
++	};
++
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index 601ad42..ec01255 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -7,6 +7,15 @@ config MVEBU_CCU
+ 	  This driver initialize the CCU windows
+ 	  only.
+ 
++config MVEBU_IOB
++	bool "IOB address decoding driver"
++	default n
++	help
++	  Choose this option to add support
++	  for IOB address decoding driver.
++	  This driver initialize the IOB windows
++	  only.
++
+ config MVEBU_RFU
+ 	bool "RFU address decoding driver"
+ 	default n
+diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
+index d415af8..04cbe11 100644
+--- a/drivers/misc/Makefile
++++ b/drivers/misc/Makefile
+@@ -30,4 +30,5 @@ obj-$(CONFIG_TWL4030_LED) += twl4030_led.o
+ obj-$(CONFIG_FSL_IFC) += fsl_ifc.o
+ obj-$(CONFIG_MVEBU_CCU) += mvebu_ccu.o
+ obj-$(CONFIG_MVEBU_RFU) += mvebu_rfu.o
++obj-$(CONFIG_MVEBU_IOB) += mvebu_iob.o
+ obj-$(CONFIG_MVEBU_MBUS) += mvebu_mbus.o
+diff --git a/drivers/misc/mvebu_iob.c b/drivers/misc/mvebu_iob.c
+new file mode 100644
+index 0000000..494d1b8
+--- /dev/null
++++ b/drivers/misc/mvebu_iob.c
+@@ -0,0 +1,205 @@
++/*
++ * ***************************************************************************
++ * Copyright (C) 2015 Marvell International Ltd.
++ * ***************************************************************************
++ * This program is free software: you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the Free
++ * Software Foundation, either version 2 of the License, or any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ * ***************************************************************************
++ */
++
++/* #define DEBUG */
++/* #define DEBUG_REG */
++
++#include <common.h>
++#include <asm/system.h>
++#include <asm/io.h>
++#include <fdtdec.h>
++#include <malloc.h>
++#include <asm/arch-mvebu/mvebu.h>
++#include <asm/arch-mvebu/fdt.h>
++#include <asm/arch-mvebu/iob.h>
++
++/* common defines */
++#define WIN_ENABLE_BIT			(0x1)
++/* Physical address of the base of the window = {AddrLow[19:0],20`h0} */
++#define ADDRESS_SHIFT			(20 - 4)
++#define ADDRESS_MASK			(0xFFFFFFF0)
++#define IOB_WIN_ALIGNMENT		(0x100000)
++
++/* IOB registers */
++#define IOB_MAX_WIN_NUM			(24)
++
++#define IOB_WIN_CR_OFFSET(win)		(iob_info->iob_base + 0x0 + (0x32 * win))
++#define IOB_TARGET_ID_OFFSET		(8)
++#define IOB_TARGET_ID_MASK		(0xF)
++
++#define IOB_WIN_SCR_OFFSET(win)		(iob_info->iob_base + 0x4 + (0x32 * win))
++#define IOB_WIN_ENA_CTRL_WRITE_SECURE	(0x1)
++#define IOB_WIN_ENA_CTRL_READ_SECURE	(0x2)
++#define IOB_WIN_ENA_WRITE_SECURE	(0x4)
++#define IOB_WIN_ENA_READ_SECURE		(0x8)
++
++#define IOB_WIN_ALR_OFFSET(win)		(iob_info->iob_base + 0x8 + (0x32 * win))
++#define IOB_WIN_AHR_OFFSET(win)		(iob_info->iob_base + 0xC + (0x32 * win))
++
++DECLARE_GLOBAL_DATA_PTR;
++
++struct iob_configuration {
++	void __iomem *iob_base;
++	u32 max_win;
++};
++struct iob_configuration __attribute__((section(".data")))iob_config;
++struct iob_configuration __attribute__((section(".data")))*iob_info = &iob_config;
++
++struct iob_win {
++	u32 base_addr;
++	u32 win_size;
++	u32 target_id;
++};
++
++enum target_ids_iob {
++	INTERNAL_TID    = 0x0,
++	IHB0_TID        = 0x1,
++	PEX1_TID        = 0x2,
++	PEX2_TID        = 0x3,
++	PEX0_TID        = 0x4,
++	NAND_TID        = 0x5,
++	RUNIT_TID       = 0x6,
++	IHB1_TID        = 0x7,
++	IOB_MAX_TID
++};
++
++static void iob_win_check(struct iob_win *win, u32 win_num)
++{
++	/* check if address is aligned to the size */
++	if (IS_NOT_ALIGN(win->base_addr, IOB_WIN_ALIGNMENT)) {
++		win->base_addr = ALIGN_UP(win->base_addr, IOB_WIN_ALIGNMENT);
++		error("Window %d: base address unaligned to 0x%x\n", win_num, IOB_WIN_ALIGNMENT);
++		printf("Align up the base address to 0x%x\n", win->base_addr);
++	}
++
++	/* size parameter validity check */
++	if (IS_NOT_ALIGN(win->win_size, IOB_WIN_ALIGNMENT)) {
++		win->win_size = ALIGN_UP(win->win_size, IOB_WIN_ALIGNMENT);
++		error("Window %d: window size unaligned to 0x%x\n", win_num, IOB_WIN_ALIGNMENT);
++		printf("Aligning size to 0x%x\n", win->win_size);
++	}
++}
++
++static void iob_enable_win(struct iob_win *win, u32 win_id)
++{
++	u32 iob_win_reg;
++	u32 alr, ahr;
++	uintptr_t end_addr;
++
++	iob_win_reg = WIN_ENABLE_BIT;
++	iob_win_reg |= (win->target_id & IOB_TARGET_ID_MASK) << IOB_TARGET_ID_OFFSET;
++	writel(iob_win_reg, IOB_WIN_CR_OFFSET(win_id));
++
++	end_addr = (win->base_addr + win->win_size - 1);
++	alr = (u32)((win->base_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
++	ahr = (u32)((end_addr >> ADDRESS_SHIFT) & ADDRESS_MASK);
++
++	writel(alr, IOB_WIN_ALR_OFFSET(win_id));
++	writel(ahr, IOB_WIN_AHR_OFFSET(win_id));
++}
++
++void dump_iob(void)
++{
++	u32 win_id, win_cr, alr, ahr;
++	u8 target_id;
++	uintptr_t start, end;
++	char *iob_target_name[IOB_MAX_TID] = {"IHB0 ", "PEX1 ", "PEX2 ", "PEX0 ",
++						"NAND ", "RUNIT", "IHB1 "};
++
++	/* Dump all IOB windows */
++	printf("bank  id target  start              end\n");
++	printf("----------------------------------------------------\n");
++	for (win_id = 0; win_id < iob_info->max_win; win_id++) {
++		win_cr = readl(IOB_WIN_CR_OFFSET(win_id));
++		if (win_cr & WIN_ENABLE_BIT) {
++			target_id = (win_cr >> IOB_TARGET_ID_OFFSET) & IOB_TARGET_ID_MASK;
++			alr = readl(IOB_WIN_ALR_OFFSET(win_id));
++			ahr = readl(IOB_WIN_AHR_OFFSET(win_id));
++			start = (uintptr_t)(alr << ADDRESS_SHIFT);
++			end = (uintptr_t)((ahr + 0x10) << ADDRESS_SHIFT);
++			printf("iob   %02d %s   0x%016lx 0x%016lx\n"
++					, win_id, iob_target_name[target_id], start, end);
++		}
++	}
++
++	return;
++}
++
++int init_iob(void)
++{
++	struct iob_win *memory_map, *win;
++	const void *blob = gd->fdt_blob;
++	u32 win_id, win_reg;
++	u32 node, win_count;
++
++	debug_enter();
++	debug("Initializing IOB Address decoding\n");
++
++	/* Get address decoding node from the FDT blob */
++	node = fdt_node_offset_by_compatible(blob, -1, fdtdec_get_compatible(COMPAT_MVEBU_IOB));
++	if (node < 0) {
++		error("No IOB address decoding node found in FDT blob\n");
++		return -1;
++	}
++	/* Get the base address of the address decoding MBUS */
++	iob_info->iob_base = (void *)fdt_get_regs_offs(blob, node, "reg");
++
++	/* Get the maximum number of iob windows supported */
++	iob_info->max_win = fdtdec_get_int(blob, node, "max-win", 0);
++	if (iob_info->max_win == 0) {
++		iob_info->max_win = IOB_MAX_WIN_NUM;
++		error("failed reading max windows number\n");
++	}
++
++	memory_map = malloc(iob_info->max_win * sizeof(struct iob_win));
++	if (memory_map == 0) {
++		error("failed allocating struct to init windows configuration\n");
++		return -1;
++	}
++
++	/* Get the array of the windows and fill the map data */
++	win_count = fdtdec_get_int_array_count(blob, node, "windows", (u32 *)memory_map, iob_info->max_win * 3);
++	if (win_count <= 0) {
++		debug("no windows configurations found\n");
++		return 0;
++	}
++	win_count = win_count/3; /* every window had 3 variables in FDT (base, size, target id) */
++
++	/* disable all IOB windows, start from win_id = 1 because can't disable internal register window */
++	for (win_id = 1; win_id < iob_info->max_win; win_id++) {
++		win_reg = readl(IOB_WIN_CR_OFFSET(win_id));
++		win_reg &= ~WIN_ENABLE_BIT;
++		writel(win_reg, IOB_WIN_CR_OFFSET(win_id));
++
++		win_reg = ~IOB_WIN_ENA_CTRL_WRITE_SECURE;
++		win_reg |= ~IOB_WIN_ENA_CTRL_READ_SECURE;
++		win_reg |= ~IOB_WIN_ENA_WRITE_SECURE;
++		win_reg |= ~IOB_WIN_ENA_READ_SECURE;
++		writel(win_reg, IOB_WIN_SCR_OFFSET(win_id));
++	}
++
++	for (win_id = 1, win = memory_map; win_id < win_count + 1; win_id++, win++) {
++		iob_win_check(win, win_id);
++		iob_enable_win(win, win_id);
++	}
++
++	debug("Done IOB Address decoding Initializing\n");
++	debug_exit();
++
++	return 0;
++}
+diff --git a/include/fdtdec.h b/include/fdtdec.h
+index fa73f86..09bfdf4 100644
+--- a/include/fdtdec.h
++++ b/include/fdtdec.h
+@@ -131,6 +131,7 @@ enum fdt_compat_id {
+ 	COMPAT_MVEBU_MBUS,
+ 	COMPAT_MVEBU_CCU,
+ 	COMPAT_MVEBU_RFU,
++	COMPAT_MVEBU_IOB,
+ 	COMPAT_COUNT,
+ };
+ 
+diff --git a/lib/fdtdec.c b/lib/fdtdec.c
+index 0392125..a9571cf 100644
+--- a/lib/fdtdec.c
++++ b/lib/fdtdec.c
+@@ -93,6 +93,7 @@ static const char * const compat_names[COMPAT_COUNT] = {
+ 	COMPAT(MVEBU_MBUS, "marvell,mvebu-mbus"),
+ 	COMPAT(MVEBU_CCU, "marvell,mvebu-ccu"),
+ 	COMPAT(MVEBU_RFU, "marvell,mvebu-rfu"),
++	COMPAT(MVEBU_IOB, "marvell,mvebu-iob"),
+ };
+ 
+ const char *fdtdec_get_compatible(enum fdt_compat_id id)
+-- 
+1.9.1
+

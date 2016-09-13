@@ -1,0 +1,50 @@
+From 2f6d40f78e7164044f6dac4b193737ff4f94cde1 Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Sun, 29 May 2016 18:14:17 +0300
+Subject: [PATCH 191/239] fix: aurora: set point-of-coherency (POC) to DDR
+
+- Point of coherency is set by default to LLC.
+- This caused problem with SATA since it uses
+  SW-cache-coherency.
+- This patch configures to POC to DDR.
+
+Change-Id: I6298be69bdfec0c5321d53479b70c9b358c0fbe2
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/30124
+Reviewed-by: Shadi Ammouri <shadi@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ plat/marvell/a8k/a70x0/apn806_setup.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/plat/marvell/a8k/a70x0/apn806_setup.c b/plat/marvell/a8k/a70x0/apn806_setup.c
+index c28e04d..a76d508 100644
+--- a/plat/marvell/a8k/a70x0/apn806_setup.c
++++ b/plat/marvell/a8k/a70x0/apn806_setup.c
+@@ -46,6 +46,9 @@
+ #define CCU_GSPMU_CR				(MVEBU_CCU_BASE + 0x3F0)
+ #define GSPMU_CPU_CONTROL			(0x1 << 0)
+ 
++#define CCU_HTC_CR				(MVEBU_CCU_BASE + 0x200)
++#define CCU_SET_POC_OFFSET			5
++
+ #define IHB_MAX_UNIT_ID				2
+ #define IHBX4_REG_START_ADDRESS_REG(unit_id)	(MVEBU_REGS_BASE + 0x6F4218 + (unit_id * 0x20))
+ #define IHB_REMAP_OFF_SHIFT			8
+@@ -170,6 +173,13 @@ void init_aurora2(void)
+ 	llc_enable(1);
+ #endif /* AP806-Z1 */
+ #endif
++
++	/* Set point of coherency to DDR.
++	   This is required by units which have
++	   SW cache coherency */
++	reg = mmio_read_32(CCU_HTC_CR);
++	reg |= (0x1 << CCU_SET_POC_OFFSET);
++	mmio_write_32(CCU_HTC_CR, reg);
+ }
+ 
+ void apn806_init(void)
+-- 
+1.9.1
+

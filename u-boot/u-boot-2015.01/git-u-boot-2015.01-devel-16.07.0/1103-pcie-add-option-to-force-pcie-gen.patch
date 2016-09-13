@@ -1,0 +1,154 @@
+From 13a8197a489f762b750b6381974ab8d4ab9b720d Mon Sep 17 00:00:00 2001
+From: Haim Boot <hayim@marvell.com>
+Date: Sun, 8 May 2016 15:57:03 +0300
+Subject: [PATCH 1103/1240] pcie: add option to force pcie gen
+
+using force_gen property in the device tree,
+there is an option to set the pcie gen.
+default is Gen 3.
+
+Change-Id: I278542259ffa13ec1d06021c385e6c1fffed0639
+Signed-off-by: Haim Boot <hayim@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/29600
+Reviewed-by: Hanna Hawa <hannah@marvell.com>
+Tested-by: Star_Automation <star@marvell.com>
+---
+ arch/arm/dts/armada-70x0-pd.dts |  7 +++++++
+ drivers/pci/pcie_dw.c           |  8 ++++----
+ drivers/pci/pcie_dw.h           |  4 ++--
+ drivers/pci/pcie_mvebu_dw.c     | 17 ++++++++++++++---
+ 4 files changed, 27 insertions(+), 9 deletions(-)
+
+diff --git a/arch/arm/dts/armada-70x0-pd.dts b/arch/arm/dts/armada-70x0-pd.dts
+index 50f69c4..42bbc21 100644
+--- a/arch/arm/dts/armada-70x0-pd.dts
++++ b/arch/arm/dts/armada-70x0-pd.dts
+@@ -33,6 +33,13 @@
+ 
+ 	cp110-master {
+ 		internal-regs {
++			pcie-controller {
++				pcie@0,0 {
++					status = "disabled";
++					force_cap_speed = <1>;
++				};
++			};
++
+ 			pinctl@440000 {
+ 					/*   0 1 2 3 4 5 6 7 8 9 */
+ 				pin-func = < 0 0 0 0 0 0 0 0 0 0
+diff --git a/drivers/pci/pcie_dw.c b/drivers/pci/pcie_dw.c
+index 1c239c6..791dc72 100644
+--- a/drivers/pci/pcie_dw.c
++++ b/drivers/pci/pcie_dw.c
+@@ -207,7 +207,7 @@ static int dw_pcie_write_config(struct pci_controller *hose, pci_dev_t bdf,
+ 	return 0;
+ }
+ 
+-void dw_pcie_configure(uintptr_t regs_base)
++void dw_pcie_configure(uintptr_t regs_base, u32 cap_speed)
+ {
+ 	u32 reg;
+ 
+@@ -215,7 +215,7 @@ void dw_pcie_configure(uintptr_t regs_base)
+ 	/*  Set link to GEN 1 */;
+ 	reg  = readl(regs_base + PCIE_LINK_CTL_2);
+ 	reg &= ~TARGET_LINK_SPEED_MASK;
+-	reg |= LINK_SPEED_GEN_1;
++	reg |= cap_speed;
+ 	writel(reg, regs_base + PCIE_LINK_CTL_2);
+ 
+ 	reg  = readl(regs_base + PCIE_GEN3_RELATED);
+@@ -229,12 +229,12 @@ void dw_pcie_configure(uintptr_t regs_base)
+ 	/*  Set link to GEN 3 */;
+ 	reg  = readl(regs_base + PCIE_LINK_CTL_2);
+ 	reg &= ~TARGET_LINK_SPEED_MASK;
+-	reg |= LINK_SPEED_GEN_3;
++	reg |= cap_speed;
+ 	writel(reg, regs_base + PCIE_LINK_CTL_2);
+ 
+ 	reg  = readl(regs_base + PCIE_LINK_CAPABILITY);
+ 	reg &= ~TARGET_LINK_SPEED_MASK;
+-	reg |= LINK_SPEED_GEN_3;
++	reg |= cap_speed;
+ 	writel(reg, regs_base + PCIE_LINK_CAPABILITY);
+ 
+ 	reg = readl(regs_base + PCIE_GEN3_EQU_CTRL);
+diff --git a/drivers/pci/pcie_dw.h b/drivers/pci/pcie_dw.h
+index c19c1ba..c277af4 100644
+--- a/drivers/pci/pcie_dw.h
++++ b/drivers/pci/pcie_dw.h
+@@ -33,11 +33,11 @@ struct dw_host_params {
+ 	int is_endpoint;
+ };
+ 
+-int dw_pcie_link_up(uintptr_t regs_base);
++int dw_pcie_link_up(uintptr_t regs_base, u32 cap_speed);
+ int dw_pcie_init(int host_id, uintptr_t regs_base, struct pcie_win *mem_win,
+ 		struct pcie_win *cfg_win, int first_busno);
+ int dw_pcie_set_endpoint(u32 hid, u32 regs_base);
+-void dw_pcie_configure(uintptr_t regs_base);
++void dw_pcie_configure(uintptr_t regs_base, u32 cap_speed);
+ int dw_pcie_get_link_speed(uintptr_t regs_base);
+ int dw_pcie_get_link_width(uintptr_t regs_base);
+ 
+diff --git a/drivers/pci/pcie_mvebu_dw.c b/drivers/pci/pcie_mvebu_dw.c
+index 16b695d..f44c47e 100644
+--- a/drivers/pci/pcie_mvebu_dw.c
++++ b/drivers/pci/pcie_mvebu_dw.c
+@@ -51,6 +51,9 @@ DECLARE_GLOBAL_DATA_PTR;
+ #define ARCACHE_SHAREABLE_CACHEABLE	0x3511
+ #define AWCACHE_SHAREABLE_CACHEABLE	0x5311
+ 
++#define LINK_SPEED_GEN_1                0x1
++#define LINK_SPEED_GEN_2                0x2
++#define LINK_SPEED_GEN_3                0x3
+ 
+ static int mvebu_pcie_link_up(uintptr_t regs_base)
+ {
+@@ -70,7 +73,7 @@ static int mvebu_pcie_link_up(uintptr_t regs_base)
+ 	return 0;
+ }
+ 
+-int dw_pcie_link_up(uintptr_t regs_base)
++int dw_pcie_link_up(uintptr_t regs_base, u32 cap_speed)
+ {
+ 	u32 reg;
+ 
+@@ -87,7 +90,7 @@ int dw_pcie_link_up(uintptr_t regs_base)
+ 	writel(AWCACHE_SHAREABLE_CACHEABLE, regs_base + PCIE_AWCACHE_TRC);
+ 
+ 	/* DW pre link configurations */
+-	dw_pcie_configure(regs_base);
++	dw_pcie_configure(regs_base, cap_speed);
+ 
+ 	/* Configuration done. Start LTSSM */
+ 	reg = readl(regs_base + PCIE_GLOBAL_CONTROL);
+@@ -102,6 +105,7 @@ void pci_init_board(void)
+ 	int host_id = -1;
+ 	int first_busno = 0;
+ 	int bus_node, port_node, count;
++	u32 cap_speed;
+ 	const void *blob = gd->fdt_blob;
+ 	struct pcie_win mem_win, cfg_win;
+ 	uintptr_t regs_base;
+@@ -130,8 +134,15 @@ void pci_init_board(void)
+ 			continue;
+ 		}
+ 
++		cap_speed = fdtdec_get_int(blob, port_node, "force_cap_speed", LINK_SPEED_GEN_3);
++
++		if (cap_speed < LINK_SPEED_GEN_1 || cap_speed > LINK_SPEED_GEN_3) {
++			debug("invalid PCIe Gen %d. Forcing to Gen 3\n", cap_speed);
++			cap_speed = LINK_SPEED_GEN_3;
++		}
++
+ 		/* Don't register host if link is down */
+-		if (!dw_pcie_link_up(regs_base)) {
++		if (!dw_pcie_link_up(regs_base, cap_speed)) {
+ 			printf("PCIE-%d: Link down\n", host_id);
+ 			continue;
+ 		}
+-- 
+1.9.1
+

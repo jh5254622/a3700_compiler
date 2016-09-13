@@ -1,0 +1,200 @@
+From 37c9d6cf7e35d1701bf0bd4b6a76f3ac4197857b Mon Sep 17 00:00:00 2001
+From: Hanna Hawa <hannah@marvell.com>
+Date: Wed, 9 Sep 2015 10:45:01 +0300
+Subject: [PATCH 0416/1240] fix: comphy: ap806: updated PCIe init sequence for
+ PCIe-By4
+
+- Set PLL calibration to max
+- Added reg_set_silent function to write to registers without any delay
+
+Change-Id: Ie3d704789de32d43de52110b9d95871b2c7db334
+Signed-off-by: Hanna Hawa <hannah@marvell.com>
+Reviewed-on: http://vgitil04.il.marvell.com:8080/23502
+Tested-by: Star_Automation <star@marvell.com>
+Reviewed-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/include/asm/arch-mvebu/comphy.h       |  1 +
+ arch/arm/include/asm/arch-mvebu/comphy_hpipe.h | 11 ++++++
+ drivers/phy/comphy_ap806_z1.c                  | 48 +++++++++++++++++++-------
+ drivers/phy/comphy_core.c                      |  9 +++--
+ 4 files changed, 55 insertions(+), 14 deletions(-)
+
+diff --git a/arch/arm/include/asm/arch-mvebu/comphy.h b/arch/arm/include/asm/arch-mvebu/comphy.h
+index f0d7ff5..c793b69 100644
+--- a/arch/arm/include/asm/arch-mvebu/comphy.h
++++ b/arch/arm/include/asm/arch-mvebu/comphy.h
+@@ -85,6 +85,7 @@ struct chip_serdes_phy_config {
+ };
+ 
+ void reg_set(void __iomem *addr, u32 data, u32 mask);
++void reg_set_silent(void __iomem *addr, u32 data, u32 mask);
+ u32 comphy_init(const void *blob);
+ 
+ #ifdef CONFIG_TARGET_ARMADA_38X
+diff --git a/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h b/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h
+index 6407045..0769d9f 100644
+--- a/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h
++++ b/arch/arm/include/asm/arch-mvebu/comphy_hpipe.h
+@@ -25,6 +25,10 @@
+ #define HPIPE_PWR_PLL_PHY_MODE_OFFSET		5
+ #define HPIPE_PWR_PLL_PHY_MODE_MASK		(0xe << HPIPE_PWR_PLL_PHY_MODE_OFFSET)
+ 
++#define HPIPE_KVCO_CALIB_CTRL_REG		0x8
++#define HPIPE_KVCO_CALIB_CTRL_MAX_PLL_OFFSET	12
++#define HPIPE_KVCO_CALIB_CTRL_MAX_PLL_MASK	(0x1 << HPIPE_KVCO_CALIB_CTRL_MAX_PLL_OFFSET)
++
+ #define HPIPE_SQUELCH_FFE_SETTING_REG           0x018
+ #define HPIPE_DFE_REG0                          0x01C
+ #define HPIPE_G1_SETTINGS_0_REG                 0x034
+@@ -70,6 +74,13 @@
+ #define HPIPE_G1_SETTINGS_4_REG                 0x444
+ #define HPIPE_G2_SETTINGS_3_REG                 0x448
+ #define HPIPE_G2_SETTINGS_4_REG                 0x44C
++
++#define HPIPE_LANE_CONFIG0_REG			0x604
++#define HPIPE_LANE_CONFIG0_MAX_PLL_OFFSET	9
++#define HPIPE_LANE_CONFIG0_MAX_PLL_MASK		(0x1 << HPIPE_LANE_CONFIG0_MAX_PLL_OFFSET)
++#define HPIPE_LANE_CONFIG0_GEN2_PLL_OFFSET	10
++#define HPIPE_LANE_CONFIG0_GEN2_PLL_MASK	(0x1 << HPIPE_LANE_CONFIG0_GEN2_PLL_OFFSET)
++
+ #define HPIPE_LANE_STATUS0_REG			0x60C
+ #define HPIPE_LANE_STATUS0_PCLK_EN_OFFSET	0
+ #define HPIPE_LANE_STATUS0_PCLK_EN_MASK		(0x1 << HPIPE_LANE_STATUS0_PCLK_EN_OFFSET)
+diff --git a/drivers/phy/comphy_ap806_z1.c b/drivers/phy/comphy_ap806_z1.c
+index c3e29e1..a48ac85 100644
+--- a/drivers/phy/comphy_ap806_z1.c
++++ b/drivers/phy/comphy_ap806_z1.c
+@@ -23,6 +23,7 @@
+ #include <asm/arch-mvebu/comphy_hpipe.h>
+ #include <asm/arch-mvebu/mvebu.h>
+ 
++#define HPIPE_ADDR(base, lane)		(base + 0x800 * lane)
+ #define COMPHY_RESET_REG		0x120
+ 
+ #define COMPHY_RESET_SW_OFFSET		14
+@@ -42,6 +43,14 @@
+ 
+ static void comphy_pcie_release_soft_reset(void __iomem *hpipe_addr)
+ {
++	/* Set MAX PLL Calibration */
++	reg_set(hpipe_addr + HPIPE_KVCO_CALIB_CTRL_REG,
++		0x1 << HPIPE_KVCO_CALIB_CTRL_MAX_PLL_OFFSET, HPIPE_KVCO_CALIB_CTRL_MAX_PLL_MASK);
++	reg_set(hpipe_addr + HPIPE_LANE_CONFIG0_REG,
++		0x1 << HPIPE_LANE_CONFIG0_MAX_PLL_OFFSET, HPIPE_LANE_CONFIG0_MAX_PLL_MASK);
++	reg_set(hpipe_addr + HPIPE_LANE_CONFIG0_REG,
++		0x1 << HPIPE_LANE_CONFIG0_GEN2_PLL_OFFSET, HPIPE_LANE_CONFIG0_GEN2_PLL_MASK);
++
+ 	/* DFE reset sequence */
+ 	reg_set(hpipe_addr + HPIPE_PWR_CTR_REG,
+ 		0x1 << HPIPE_PWR_CTR_RST_DFE_OFFSET, HPIPE_PWR_CTR_RST_DFE_MASK);
+@@ -55,10 +64,6 @@ static void comphy_pcie_release_soft_reset(void __iomem *hpipe_addr)
+ 	udelay(10);
+ 	reg_set(hpipe_addr + HPIPE_PWR_CTR_REG,
+ 		0x0 << HPIPE_PWR_CTR_SFT_RST_OFFSET, HPIPE_PWR_CTR_SFT_RST_MASK);
+-
+-	/* release PIPE RESET - release PHY from reset */
+-	reg_set(hpipe_addr + HPIPE_RST_CLK_CTRL_REG,
+-		0x0 << HPIPE_RST_CLK_CTRL_PIPE_RST_OFFSET, HPIPE_RST_CLK_CTRL_PIPE_RST_MASK);
+ }
+ 
+ static int comphy_pcie_power_up(u32 lane, u32 pcie_by4, void __iomem *hpipe_addr)
+@@ -123,10 +128,16 @@ static int comphy_pcie_power_up(u32 lane, u32 pcie_by4, void __iomem *hpipe_addr
+ 	reg_set(hpipe_addr + HPIPE_CLK_SRC_HI_REG,
+ 		master_val << HPIPE_CLK_SRC_HI_LANE_MASTER_OFFSET, HPIPE_CLK_SRC_HI_LANE_MASTER_MASK);
+ 
+-	/* SW reset for PCIe by 1 - for PCIe by4 need to reset after configure all 4 lanes*/
+-	if (!pcie_by4)
+-		comphy_pcie_release_soft_reset(hpipe_addr);
++	/* For PCIe by4 need to reset after configure all 4 lanes */
++	if (pcie_by4) {
++		debug_exit();
++		return 1;
++	}
+ 
++	comphy_pcie_release_soft_reset(hpipe_addr);
++	/* release PIPE RESET - release PHY from reset */
++	reg_set(hpipe_addr + HPIPE_RST_CLK_CTRL_REG,
++		0x0 << HPIPE_RST_CLK_CTRL_PIPE_RST_OFFSET, HPIPE_RST_CLK_CTRL_PIPE_RST_MASK);
+ 	udelay(20000);
+ 
+ 	debug_exit();
+@@ -138,7 +149,6 @@ int comphy_ap806_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy
+ {
+ 	struct comphy_map *ptr_comphy_map;
+ 	void __iomem *comphy_base_addr, *hpipe_base_addr;
+-	void __iomem *hpipe_addr;
+ 	u32 comphy_max_count, lane, ret = 0;
+ 	u32 pcie_by4 = 1;
+ 
+@@ -163,7 +173,6 @@ int comphy_ap806_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy
+ 	for (lane = 0, ptr_comphy_map = serdes_map; lane < comphy_max_count; lane++, ptr_comphy_map++) {
+ 		debug("Initialize serdes number %d\n", lane);
+ 		debug("Serdes type = 0x%x\n", ptr_comphy_map->type);
+-		hpipe_addr = hpipe_base_addr + 0x800 * lane;
+ 		switch (ptr_comphy_map->type) {
+ 		case UNCONNECTED:
+ 			continue;
+@@ -172,7 +181,7 @@ int comphy_ap806_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy
+ 		case PEX1:
+ 		case PEX2:
+ 		case PEX3:
+-			ret = comphy_pcie_power_up(lane, pcie_by4, hpipe_addr);
++			ret = comphy_pcie_power_up(lane, pcie_by4, HPIPE_ADDR(hpipe_base_addr, lane));
+ 			udelay(20);
+ 			break;
+ 		default:
+@@ -186,8 +195,23 @@ int comphy_ap806_init(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy
+ 	/* SW reset for PCIe for all lanes after power up */
+ 	if (pcie_by4) {
+ 		for (lane = 0; lane < 4; lane++) {
+-			hpipe_addr = hpipe_base_addr + 0x800 * lane;
+-			comphy_pcie_release_soft_reset(hpipe_addr);
++			comphy_pcie_release_soft_reset(HPIPE_ADDR(hpipe_base_addr, lane));
++		}
++
++		/* release PIPE RESET - release PHY from reset
++		   need to release the lanes withot delay between them */
++		debug("%s: Release PIPE reset for PCIe-By4, write to Reset Clock control register\n", __func__);
++		for (lane = 0; lane < 4; lane++) {
++			reg_set_silent(HPIPE_ADDR(hpipe_base_addr, lane) + HPIPE_RST_CLK_CTRL_REG,
++				       0x0 << HPIPE_RST_CLK_CTRL_PIPE_RST_OFFSET, HPIPE_RST_CLK_CTRL_PIPE_RST_MASK);
++		}
++
++		udelay(20000);
++		for (lane = 0; lane < 4; lane++) {
++			ret = readl(HPIPE_ADDR(hpipe_base_addr, lane) +
++				   HPIPE_LANE_STATUS0_REG) & HPIPE_LANE_STATUS0_PCLK_EN_MASK;
++			if (ret == 0)
++				error("PLL is not locked - Failed to initialize lane %d\n", lane);
+ 		}
+ 	}
+ 
+diff --git a/drivers/phy/comphy_core.c b/drivers/phy/comphy_core.c
+index bf7d804..03296ef 100644
+--- a/drivers/phy/comphy_core.c
++++ b/drivers/phy/comphy_core.c
+@@ -75,14 +75,19 @@ static char *get_type_string(enum phy_type type)
+ 
+ void reg_set(void __iomem *addr, u32 data, u32 mask)
+ {
+-	u32 reg_data;
+ 	debug("Write to address = %#010lx, data = %#010x (mask = %#010x) - ", (unsigned long)addr, data, mask);
+ 	debug("old value = %#010x ==> ", readl(addr));
++	reg_set_silent(addr, data, mask);
++	debug("new value %#010x\n", readl(addr));
++}
++
++void reg_set_silent(void __iomem *addr, u32 data, u32 mask)
++{
++	u32 reg_data;
+ 	reg_data = readl(addr);
+ 	reg_data &= ~mask;
+ 	reg_data |= data;
+ 	writel(reg_data, addr);
+-	debug("new value %#010x\n", readl(addr));
+ }
+ 
+ void comphy_print(struct chip_serdes_phy_config *ptr_chip_cfg, struct comphy_map *comphy_map_data)
+-- 
+1.9.1
+

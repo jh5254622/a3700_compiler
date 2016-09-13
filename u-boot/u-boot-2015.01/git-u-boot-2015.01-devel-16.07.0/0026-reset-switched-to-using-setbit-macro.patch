@@ -1,0 +1,37 @@
+From a361a4554e43e024435cb2954f72818596e7bb25 Mon Sep 17 00:00:00 2001
+From: Yehuda Yitschak <yehuday@marvell.com>
+Date: Sun, 30 Mar 2014 18:10:11 +0300
+Subject: [PATCH 0026/1240] reset: switched to using setbit macro
+
+Change-Id: I448246fd655527bce0477f08998dbcf5ba1ca9b1
+Signed-off-by: Yehuda Yitschak <yehuday@marvell.com>
+---
+ arch/arm/cpu/mvebu-common/misc.c | 9 ++-------
+ 1 file changed, 2 insertions(+), 7 deletions(-)
+
+diff --git a/arch/arm/cpu/mvebu-common/misc.c b/arch/arm/cpu/mvebu-common/misc.c
+index 4a0c63e..464993e 100644
+--- a/arch/arm/cpu/mvebu-common/misc.c
++++ b/arch/arm/cpu/mvebu-common/misc.c
+@@ -115,16 +115,11 @@ int print_cpuinfo(void)
+ 
+ void __reset_cpu(ulong addr)
+ {
+-	u32 reg;
+ 	/* Enable global system reset */
+-	reg = readl(MVEBU_RESET_MASK_REG);
+-	reg |= 1;
+-	writel(reg, MVEBU_RESET_MASK_REG);
++	setbits_le32(MVEBU_RESET_MASK_REG, 0x1);
+ 
+ 	/* Trigger reset */
+-	reg = readl(MVEBU_SOFT_RESET_REG);
+-	reg |= 1;
+-	writel(reg, MVEBU_SOFT_RESET_REG);
++	setbits_le32(MVEBU_SOFT_RESET_REG, 0x1);
+ }
+ 
+ void reset_cpu(ulong addr) __attribute__((weak, alias("__reset_cpu")));
+-- 
+1.9.1
+
